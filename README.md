@@ -15,18 +15,18 @@ Programa auxiliar para realizar a síntese de dados do programa NEWAVE em arquiv
 
 |   AGERGAÇÃO TEMPORAL   |  MNEMÔNICO  |
 | ---------------------- | ----------- |
-| Mês (Estágio)          |     EST     |
+| Mês (Estágio)          |     MES     |
 | Patamar                |     PAT     |
 
 
 |          VARIÁVEL          | AGERGAÇÃO ESPACIAL | AGREGAÇÃO TEMPORAL |  MNEMÔNICO |
 | -------------------------- | ------------------ | ------------------ | ---------- |
-| Volume Armazenado          | UHE                | EST                | VARM       |
-| Volume Armazenado (%)      | UHE                | EST                | VARP       |
-| Energia Armazenada         | REE, SBM, SIN      | EST                | EARM       |
-| Energia Armazenada (%)     | REE, SBM, SIN      | EST                | EARP       |
-| Vazão Afluente             | UHE                | EST                | VAFL       |
-| Vazão Incremental          | UHE                | EST                | VINC       |
+| Volume Armazenado          | UHE                | MES                | VARM       |
+| Volume Armazenado (%)      | UHE                | MES                | VARP       |
+| Energia Armazenada         | REE, SBM, SIN      | MES                | EARM       |
+| Energia Armazenada (%)     | REE, SBM, SIN      | MES                | EARP       |
+| Vazão Afluente             | UHE                | MES                | VAFL       |
+| Vazão Incremental          | UHE                | MES                | VINC       |
 | Energia Natural Afluente   | REE, SBM, SIN      | ...                | ENA        |
 | Velocidade do Vento        | UEE                |                    | VEN        |
 | Geração Térmica            | UTE, SBM, SIN      |                    | GTER       |
