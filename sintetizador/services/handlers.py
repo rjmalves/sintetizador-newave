@@ -28,8 +28,11 @@ def synthetize_nwlistop(
             )
         elif command.spatialresolution == SpatialResolution.SUBMERCADO:
             sistema = uow.files.get_sistema()
-            sbms_idx = sistema.custo_deficit["Num. Subsistema"]
-            sbms_name = sistema.custo_deficit["Nome"]
+            sistemas_reais = sistema.custo_deficit.loc[
+                sistema.custo_deficit["Fictício"] == 0, :
+            ]
+            sbms_idx = sistemas_reais["Num. Subsistema"]
+            sbms_name = sistemas_reais["Nome"]
             df = pd.DataFrame()
             for s, n in zip(sbms_idx, sbms_name):
                 Log.log().info(f"Processando arquivo do submercado: {s} - {n}")

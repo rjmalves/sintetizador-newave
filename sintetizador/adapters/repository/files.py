@@ -77,10 +77,9 @@ class RawFilesRepository(AbstractFilesRepository):
         ).valores,
     }
 
-    def __init__(self, path: str, tmppath: str):
-        self.__path = path
+    def __init__(self, tmppath: str):
         self.__tmppath = tmppath
-        self.__caso = Caso.le_arquivo(str(self.__path))
+        self.__caso = Caso.le_arquivo(str(self.__tmppath))
         self.__arquivos: Optional[Arquivos] = None
 
     @property
@@ -91,21 +90,21 @@ class RawFilesRepository(AbstractFilesRepository):
     def arquivos(self) -> Arquivos:
         if self.__arquivos is None:
             self.__arquivos = Arquivos.le_arquivo(
-                self.__path, self.__caso.arquivos
+                self.__tmppath, self.__caso.arquivos
             )
         return self.__arquivos
 
     def get_dger(self) -> DGer:
         Log.log().info(f"Lendo arquivo {self.arquivos.dger}")
-        return DGer.le_arquivo(self.__path, self.arquivos.dger)
+        return DGer.le_arquivo(self.__tmppath, self.arquivos.dger)
 
     def get_ree(self) -> REE:
         Log.log().info(f"Lendo arquivo {self.arquivos.ree}")
-        return REE.le_arquivo(self.__path, self.arquivos.ree)
+        return REE.le_arquivo(self.__tmppath, self.arquivos.ree)
 
     def get_sistema(self) -> Sistema:
         Log.log().info(f"Lendo arquivo {self.arquivos.sistema}")
-        return Sistema.le_arquivo(self.__path, self.arquivos.sistema)
+        return Sistema.le_arquivo(self.__tmppath, self.arquivos.sistema)
 
     def get_nwlistop(
         self,
