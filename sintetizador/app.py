@@ -55,7 +55,7 @@ def nwlistop(variaveis):
         uow = factory(
             "FS",
             Settings().basedir,
-            os.path.join(Settings().basedir, Settings().synthesis_dir),
+            Settings().synthesis_dir,
         )
         for v in variaveis:
             command = commands.SynthetizeNwlistop(v[0], v[1], v[2])

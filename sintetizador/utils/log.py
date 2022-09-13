@@ -7,11 +7,11 @@ from sintetizador.utils.singleton import Singleton
 
 class Log(metaclass=Singleton):
 
-    ARQUIVO = "adequa.log"
+    ARQUIVO = "sintetiza.log"
     LOGGER = None
 
     @classmethod
-    def configura_logging(cls, diretorio: str):
+    def configure_logging(cls, diretorio: str):
         root = logging.getLogger("main")
         h = logging.handlers.RotatingFileHandler(
             join(diretorio, cls.ARQUIVO), "a", 10000, 0, "utf-8"

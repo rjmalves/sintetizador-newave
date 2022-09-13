@@ -1,4 +1,5 @@
 from sintetizador.app import app
+from sintetizador.utils.log import Log
 from dotenv import load_dotenv
 import os
 import pathlib
@@ -13,4 +14,5 @@ os.environ["APP_BASEDIR"] = str(BASEDIR)
 load_dotenv(BASEDIR.joinpath("sintese.cfg"), override=True)
 
 if __name__ == "__main__":
+    Log.configure_logging(BASEDIR)
     app()
