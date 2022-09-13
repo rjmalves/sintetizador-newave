@@ -21,6 +21,7 @@ def synthetize_nwlistop(
                 command.variable,
                 command.spatialresolution,
                 command.temporalresolution,
+                "",
             )
         elif command.spatialresolution == SpatialResolution.SUBMERCADO:
             sbms_idx = uow.files.get_sistema().custo_deficit["Num. Subsistema"]
