@@ -1,1 +1,0 @@
-PADRAO_ZIP_SAIDAS_NWLISTOP = "_out\.zip"

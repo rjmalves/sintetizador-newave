@@ -1,4 +1,5 @@
 click
 pandas
+pyarrow
 inewave
 python-dotenv

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Type, Optional, Tuple, Callable
-import pandas as pd
+import pandas as pd  # type: ignore
 import pathlib
 
 from inewave.newave.caso import Caso
@@ -73,8 +73,8 @@ class RawFilesRepository(AbstractFilesRepository):
             Variable.ENERGIA_ARMAZENADA_PERCENTUAL,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
             TemporalResolution.MES,
-        ): lambda sbm: Earmfp.le_arquivo(
-            ".", f"earmfp{str(sbm).zfill(3)}.out"
+        ): lambda ree: Earmfp.le_arquivo(
+            ".", f"earmfp{str(ree).zfill(3)}.out"
         ).valores,
     }
 
@@ -102,7 +102,7 @@ class RawFilesRepository(AbstractFilesRepository):
     def get_dger(self) -> DGer:
         return DGer.le_arquivo(self.__path, self.arquivos.dger)
 
-    def get_ree(self) -> Sistema:
+    def get_ree(self) -> REE:
         return REE.le_arquivo(self.__path, self.arquivos.ree)
 
     def get_sistema(self) -> Sistema:
