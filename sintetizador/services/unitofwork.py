@@ -139,7 +139,7 @@ class FSUnitOfWork(AbstractUnitOfWork):
 
     def extract_deck(self) -> bool:
         zipname = FSUnitOfWork.__deck_zip_name()
-        Log.log().info(f"Extracting deck in {zipname} to {Settings().tmpdir}")
+        Log.log().info(f"Extraindo deck em {zipname} para {Settings().tmpdir}")
         if zipname is not None:
             with ZipFile(zipname, "r") as obj_zip:
                 obj_zip.extractall(Settings().tmpdir)
@@ -147,7 +147,7 @@ class FSUnitOfWork(AbstractUnitOfWork):
     def extract_outputs(self) -> bool:
         zipname = FSUnitOfWork.__out_zip_name()
         Log.log().info(
-            f"Extracting outputs in {zipname} to {Settings().tmpdir}"
+            f"Extraindo outputs em {zipname} para {Settings().tmpdir}"
         )
         if zipname is not None:
             with ZipFile(zipname, "r") as obj_zip:
@@ -156,7 +156,7 @@ class FSUnitOfWork(AbstractUnitOfWork):
     def extract_nwlistop(self) -> bool:
         zipname = FSUnitOfWork.__nwlistop_zip_name()
         Log.log().info(
-            f"Extracting nwlistop in {zipname} to {Settings().tmpdir}"
+            f"Extraindo nwlistop em {zipname} para {Settings().tmpdir}"
         )
         if zipname is not None:
             with ZipFile(zipname, "r") as obj_zip:
@@ -165,7 +165,7 @@ class FSUnitOfWork(AbstractUnitOfWork):
     def extract_nwlistcf(self) -> bool:
         zipname = FSUnitOfWork.__nwlistcf_zip_name()
         Log.log().info(
-            f"Extracting nwlistcf in {zipname} to {Settings().tmpdir}"
+            f"Extracting nwlistcf em {zipname} para {Settings().tmpdir}"
         )
         if zipname is not None:
             with ZipFile(zipname, "r") as obj_zip:

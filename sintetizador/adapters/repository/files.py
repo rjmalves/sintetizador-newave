@@ -65,14 +65,14 @@ class RawFilesRepository(AbstractFilesRepository):
             Variable.ENERGIA_ARMAZENADA_PERCENTUAL,
             SpatialResolution.SUBMERCADO,
             TemporalResolution.MES,
-        ): lambda dir, sbm: Earmfpm.le_arquivo(
-            dir, f"earmfpm{str(sbm).zfill(3)}.out"
+        ): lambda dir, submercado=1: Earmfpm.le_arquivo(
+            dir, f"earmfpm{str(submercado).zfill(3)}.out"
         ).valores,
         (
             Variable.ENERGIA_ARMAZENADA_PERCENTUAL,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
             TemporalResolution.MES,
-        ): lambda dir, ree: Earmfp.le_arquivo(
+        ): lambda dir, ree=1: Earmfp.le_arquivo(
             dir, f"earmfp{str(ree).zfill(3)}.out"
         ).valores,
     }
