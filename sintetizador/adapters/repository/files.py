@@ -78,14 +78,11 @@ class RawFilesRepository(AbstractFilesRepository):
         ).valores,
     }
 
-    def __init__(self, path: str):
+    def __init__(self, path: str, tmppath: str):
         self.__path = path
+        self.__tmppath = tmppath
         self.__caso = Caso.le_arquivo(str(self.__path))
         self.__arquivos: Optional[Arquivos] = None
-
-    @property
-    def caminho(self) -> pathlib.Path:
-        return pathlib.Path(self.__path)
 
     @property
     def caso(self) -> Caso:
@@ -126,7 +123,7 @@ class RawFilesRepository(AbstractFilesRepository):
             return None
         return RawFilesRepository.REGRAS[
             (variable, spatial_resolution, temporal_resolution)
-        ](self.__path, *args, **kwargs)
+        ](self.__tmppath, *args, **kwargs)
 
 
 def factory(kind: str, *args, **kwargs) -> AbstractFilesRepository:

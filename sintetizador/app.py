@@ -54,7 +54,7 @@ def nwlistop(variaveis):
         os.environ["TMPDIR"] = tmpdirname
         uow = factory(
             "FS",
-            Settings().basedir,
+            Settings().tmpdir,
             Settings().synthesis_dir,
         )
         for v in variaveis:
