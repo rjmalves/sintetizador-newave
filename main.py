@@ -15,4 +15,6 @@ load_dotenv(BASEDIR.joinpath("sintese.cfg"), override=True)
 
 if __name__ == "__main__":
     Log.configure_logging(BASEDIR)
+    Log.log().info("## APLICAÇÂO CLI PARA SÍNTESE DO PROGRAMA NEWAVE ##")
     app()
+    Log.log().info("## FIM DA EXECUÇÃO ##")

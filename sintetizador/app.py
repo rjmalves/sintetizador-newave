@@ -9,6 +9,7 @@ from sintetizador.model.temporalresolution import TemporalResolution
 import sintetizador.domain.commands as commands
 import sintetizador.services.handlers as handlers
 from sintetizador.services.unitofwork import factory
+from sintetizador.utils.log import Log
 
 
 @click.group()
@@ -49,6 +50,8 @@ def nwlistop(variaveis):
     """
     if variaveis is None:
         variaveis = DEFAULT_NWLISTOP_SYNTHESIS_ARGS
+
+    Log.log().info("Realizando síntese do NWLISTOP... ")
 
     with tempfile.TemporaryDirectory() as tmpdirname:
         os.environ["TMPDIR"] = tmpdirname

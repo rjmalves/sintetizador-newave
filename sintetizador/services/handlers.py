@@ -1,5 +1,6 @@
 import pandas as pd  # type: ignore
 
+from sintetizador.utils.log import Log
 import sintetizador.domain.commands as commands
 from sintetizador.model.spatialresolution import SpatialResolution
 from sintetizador.services.unitofwork import AbstractUnitOfWork
@@ -16,7 +17,9 @@ def synthetize_nwlistop(
             + "_"
             + command.temporalresolution.value
         )
+        Log.log().info(f"Realizando síntese de {filename}")
         if command.spatialresolution == SpatialResolution.SISTEMA_INTERLIGADO:
+            Log.log().info(f"Processando arquivo do SIN")
             df = uow.files.get_nwlistop(
                 command.variable,
                 command.spatialresolution,
@@ -24,10 +27,12 @@ def synthetize_nwlistop(
                 "",
             )
         elif command.spatialresolution == SpatialResolution.SUBMERCADO:
-            sbms_idx = uow.files.get_sistema().custo_deficit["Num. Subsistema"]
-            sbms_name = uow.files.get_sistema().custo_deficit["Nome"]
+            sistema = uow.files.get_sistema()
+            sbms_idx = sistema.custo_deficit["Num. Subsistema"]
+            sbms_name = sistema.custo_deficit["Nome"]
             df = pd.DataFrame()
             for s, n in zip(sbms_idx, sbms_name):
+                Log.log().info(f"Processando arquivo do submercado: {s} - {n}")
                 df_sbm = uow.files.get_nwlistop(
                     command.variable,
                     command.spatialresolution,
@@ -45,10 +50,12 @@ def synthetize_nwlistop(
             command.spatialresolution
             == SpatialResolution.RESERVATORIO_EQUIVALENTE
         ):
-            rees_idx = uow.files.get_ree().rees["Número"]
-            rees_name = uow.files.get_ree().rees["Nome"]
+            ree = uow.files.get_ree()
+            rees_idx = ree.rees["Número"]
+            rees_name = ree.rees["Nome"]
             df = pd.DataFrame()
             for s, n in zip(rees_idx, rees_name):
+                Log.log().info(f"Processando arquivo do REE: {s} - {n}")
                 df_sbm = uow.files.get_nwlistop(
                     command.variable,
                     command.spatialresolution,

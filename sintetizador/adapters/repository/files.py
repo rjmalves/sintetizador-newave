@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Type, Optional, Tuple, Callable
 import pandas as pd  # type: ignore
-import pathlib
 
 from inewave.newave.caso import Caso
 from inewave.newave.arquivos import Arquivos
@@ -11,7 +10,7 @@ from inewave.newave.sistema import Sistema
 from inewave.nwlistop.earmfp import Earmfp
 from inewave.nwlistop.earmfpm import Earmfpm
 from inewave.nwlistop.earmfpsin import EarmfpSIN
-
+from sintetizador.utils.log import Log
 from sintetizador.model.variable import Variable
 from sintetizador.model.spatialresolution import SpatialResolution
 from sintetizador.model.temporalresolution import TemporalResolution
@@ -97,12 +96,15 @@ class RawFilesRepository(AbstractFilesRepository):
         return self.__arquivos
 
     def get_dger(self) -> DGer:
+        Log.log().info(f"Lendo arquivo {self.arquivos.dger}")
         return DGer.le_arquivo(self.__path, self.arquivos.dger)
 
     def get_ree(self) -> REE:
+        Log.log().info(f"Lendo arquivo {self.arquivos.ree}")
         return REE.le_arquivo(self.__path, self.arquivos.ree)
 
     def get_sistema(self) -> Sistema:
+        Log.log().info(f"Lendo arquivo {self.arquivos.sistema}")
         return Sistema.le_arquivo(self.__path, self.arquivos.sistema)
 
     def get_nwlistop(
