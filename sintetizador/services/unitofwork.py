@@ -94,10 +94,11 @@ class FSUnitOfWork(AbstractUnitOfWork):
             for r in listdir()
             if re.match(Settings().newave_deck_pattern, r) is not None
         ]
-        if len(deck_zip) == 1:
-            return deck_zip[0]
-        else:
+        if len(deck_zip) == 0:
             return None
+        else:
+            # Lógica adicional para tratar diretório com múltiplos "deck_"
+            return [d for d in deck_zip if Path(curdir).resolve().stem in d][0]
 
     @staticmethod
     def __out_zip_name() -> Optional[str]:
