@@ -67,6 +67,7 @@ class FSUnitOfWork(AbstractUnitOfWork):
         if len(listdir(Settings().tmpdir)) == 0:
             self.extract_deck()
             self.extract_nwlistop()
+        Log.log().info(f"Arquivo extraídos: {listdir(Settings().tmpdir)}")
         self._files = RawFilesRepository(
             str(self._current_path), str(self._tmp_path)
         )
