@@ -58,18 +58,18 @@ class AbstractUnitOfWork(ABC):
 class FSUnitOfWork(AbstractUnitOfWork):
     def __init__(self, path: str, directory: str):
         self._current_path = Path(curdir).resolve()
-        self._newave_path = Path(path).resolve()
+        self._tmp_path = Path(path).resolve()
         self._synthesis_directory = directory
 
     def __enter__(self) -> "FSUnitOfWork":
-        chdir(self._newave_path)
+        chdir(self._current_path)
         # TODO - melhorar essa inicialização
         if len(listdir(Settings().tmpdir)) == 0:
             self.extract_deck()
             self.extract_nwlistop()
-        self._files = RawFilesRepository(str(self._newave_path))
+        self._files = RawFilesRepository(str(self._tmp_path))
         self._synthetizer = ParquetSynthesisRepository(
-            str(self._newave_path.joinpath(self._synthesis_directory))
+            str(self._tmp_path.joinpath(self._synthesis_directory))
         )
         return super().__enter__()
 
