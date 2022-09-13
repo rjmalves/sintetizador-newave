@@ -52,7 +52,11 @@ def nwlistop(variaveis):
 
     with tempfile.TemporaryDirectory() as tmpdirname:
         os.environ["TMPDIR"] = tmpdirname
-        uow = factory("FS", Settings().basedir, Settings().synthesis_dir)
+        uow = factory(
+            "FS",
+            Settings().basedir,
+            os.path.join(Settings().basedir, Settings().synthesis_dir),
+        )
         for v in variaveis:
             command = commands.SynthetizeNwlistop(v[0], v[1], v[2])
             handlers.synthetize_nwlistop(command, uow)
