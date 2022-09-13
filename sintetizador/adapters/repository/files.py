@@ -7,9 +7,37 @@ from inewave.newave.arquivos import Arquivos
 from inewave.newave.dger import DGer
 from inewave.newave.ree import REE
 from inewave.newave.sistema import Sistema
+
+from inewave.nwlistop.cmargmed import CmargMed
+from inewave.nwlistop.cterm import Cterm
+from inewave.nwlistop.ctermsin import CtermSIN
+from inewave.nwlistop.coper import Coper
+from inewave.nwlistop.eafb import Eafb
+from inewave.nwlistop.eafbm import Eafbm
+from inewave.nwlistop.eafbsin import EafbSIN
+
+# from inewave.nwlistop.vento import Vento
 from inewave.nwlistop.earmfp import Earmfp
 from inewave.nwlistop.earmfpm import Earmfpm
 from inewave.nwlistop.earmfpsin import EarmfpSIN
+from inewave.nwlistop.earmfm import Earmfm
+from inewave.nwlistop.earmfsin import EarmfSIN
+from inewave.nwlistop.gttot import Gttot
+from inewave.nwlistop.gttotsin import GttotSIN
+
+# from inewave.nwlistop.geol import Geol
+# from inewave.nwlistop.geolm import Geolm
+# from inewave.nwlistop.geolsin import GeolSIN
+# from inewave.nwlistop.verturb import Verturb
+# from inewave.nwlistop.verturbm import Verturbm
+# from inewave.nwlistop.verturbsin import VerturbSIN
+# from inewave.nwlistop.qafluh import QaflUH
+# from inewave.nwlistop.qincruh import QincrUH
+# from inewave.nwlistop.vturuh import VturUH
+# from inewave.nwlistop.vertuh import VertUH
+# from inewave.nwlistop.varmuh import VarmUH
+# from inewave.nwlistop.varmpuh import VarmpUH
+
 from sintetizador.utils.log import Log
 from sintetizador.model.variable import Variable
 from sintetizador.model.spatialresolution import SpatialResolution
@@ -57,10 +85,55 @@ class RawFilesRepository(AbstractFilesRepository):
         Tuple[Variable, SpatialResolution, TemporalResolution], Callable
     ] = {
         (
-            Variable.ENERGIA_ARMAZENADA_PERCENTUAL,
+            Variable.CUSTO_MARGINAL_OPERACAO,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.MES,
+        ): lambda dir, submercado=1: CmargMed.le_arquivo(
+            dir, f"cmarg{str(submercado).zfill(3)}-med.out"
+        ).valores,
+        (
+            Variable.CUSTO_GERACAO_TERMICA,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.MES,
+        ): lambda dir, submercado=1: Cterm.le_arquivo(
+            dir, f"cterm{str(submercado).zfill(3)}.out"
+        ).valores,
+        (
+            Variable.CUSTO_GERACAO_TERMICA,
             SpatialResolution.SISTEMA_INTERLIGADO,
             TemporalResolution.MES,
-        ): lambda dir, _: EarmfpSIN.le_arquivo(dir, "earmfpsin.out").valores,
+        ): lambda dir, _: CtermSIN.le_arquivo(dir, f"ctermsin.out").valores,
+        (
+            Variable.CUSTO_OPERACAO,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+            TemporalResolution.MES,
+        ): lambda dir, _: Coper.le_arquivo(dir, f"coper.out").valores,
+        (
+            Variable.ENERGIA_NATURAL_AFLUENTE,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.MES,
+        ): lambda dir, ree=1: Eafb.le_arquivo(
+            dir, f"eafb{str(ree).zfill(3)}.out"
+        ).valores,
+        (
+            Variable.ENERGIA_NATURAL_AFLUENTE,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.MES,
+        ): lambda dir, submercado=1: Eafbm.le_arquivo(
+            dir, f"eafbm{str(submercado).zfill(3)}.out"
+        ).valores,
+        (
+            Variable.ENERGIA_NATURAL_AFLUENTE,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+            TemporalResolution.MES,
+        ): lambda dir, _: EafbSIN.le_arquivo(dir, f"eafbsin.out").valores,
+        (
+            Variable.ENERGIA_ARMAZENADA_PERCENTUAL,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.MES,
+        ): lambda dir, ree=1: Earmfp.le_arquivo(
+            dir, f"earmfp{str(ree).zfill(3)}.out"
+        ).valores,
         (
             Variable.ENERGIA_ARMAZENADA_PERCENTUAL,
             SpatialResolution.SUBMERCADO,
@@ -70,11 +143,33 @@ class RawFilesRepository(AbstractFilesRepository):
         ).valores,
         (
             Variable.ENERGIA_ARMAZENADA_PERCENTUAL,
-            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            SpatialResolution.SISTEMA_INTERLIGADO,
             TemporalResolution.MES,
-        ): lambda dir, ree=1: Earmfp.le_arquivo(
-            dir, f"earmfp{str(ree).zfill(3)}.out"
+        ): lambda dir, _: EarmfpSIN.le_arquivo(dir, "earmfpsin.out").valores,
+        (
+            Variable.ENERGIA_ARMAZENADA_ABSOLUTA,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.MES,
+        ): lambda dir, submercado=1: Earmfm.le_arquivo(
+            dir, f"earmfm{str(submercado).zfill(3)}.out"
         ).valores,
+        (
+            Variable.ENERGIA_ARMAZENADA_ABSOLUTA,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+            TemporalResolution.MES,
+        ): lambda dir, _: EarmfSIN.le_arquivo(dir, "earmfsin.out").valores,
+        (
+            Variable.GERACAO_TERMICA,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.MES,
+        ): lambda dir, submercado=1: Gttot.le_arquivo(
+            dir, f"gttot{str(submercado).zfill(3)}.out"
+        ).valores,
+        (
+            Variable.GERACAO_TERMICA,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+            TemporalResolution.MES,
+        ): lambda dir, _: GttotSIN.le_arquivo(dir, "gttotsin.out").valores,
     }
 
     def __init__(self, tmppath: str):
