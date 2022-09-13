@@ -48,6 +48,7 @@ def nwlistop(variaveis):
     """
     Realiza a síntese do NWLISTOP.
     """
+    Log.log().info("## APLICAÇÂO CLI PARA SÍNTESE DO PROGRAMA NEWAVE ##")
     if variaveis is None:
         variaveis = DEFAULT_NWLISTOP_SYNTHESIS_ARGS
 
@@ -63,6 +64,8 @@ def nwlistop(variaveis):
         for v in variaveis:
             command = commands.SynthetizeNwlistop(v[0], v[1], v[2])
             handlers.synthetize_nwlistop(command, uow)
+
+    Log.log().info("## FIM DA EXECUÇÃO ##")
 
 
 app.add_command(nwlistop)
