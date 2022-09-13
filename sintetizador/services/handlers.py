@@ -20,7 +20,7 @@ def format_nwlistop_series_df(
     df_series = pd.DataFrame()
     for a in anos:
         df_ano = command.df.loc[command.df["Ano"] == a, MESES_DF].T
-        df_ano.columns = list(range(1, df_ano.shape[1] + 1))
+        df_ano.columns = [str(s) for s in list(range(1, df_ano.shape[1] + 1))]
         df_series = pd.concat([df_series, df_ano], ignore_index=True)
     cols = df_series.columns.tolist()
     df_series["Data"] = labels
