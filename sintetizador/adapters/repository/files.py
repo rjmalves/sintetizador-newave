@@ -61,20 +61,20 @@ class RawFilesRepository(AbstractFilesRepository):
             Variable.ENERGIA_ARMAZENADA_PERCENTUAL,
             SpatialResolution.SISTEMA_INTERLIGADO,
             TemporalResolution.MES,
-        ): lambda _: EarmfpSIN.le_arquivo(".", "earmfpsin.out").valores,
+        ): lambda dir, _: EarmfpSIN.le_arquivo(dir, "earmfpsin.out").valores,
         (
             Variable.ENERGIA_ARMAZENADA_PERCENTUAL,
             SpatialResolution.SUBMERCADO,
             TemporalResolution.MES,
-        ): lambda sbm: Earmfpm.le_arquivo(
-            ".", f"earmfpm{str(sbm).zfill(3)}.out"
+        ): lambda dir, sbm: Earmfpm.le_arquivo(
+            dir, f"earmfpm{str(sbm).zfill(3)}.out"
         ).valores,
         (
             Variable.ENERGIA_ARMAZENADA_PERCENTUAL,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
             TemporalResolution.MES,
-        ): lambda ree: Earmfp.le_arquivo(
-            ".", f"earmfp{str(ree).zfill(3)}.out"
+        ): lambda dir, ree: Earmfp.le_arquivo(
+            dir, f"earmfp{str(ree).zfill(3)}.out"
         ).valores,
     }
 
@@ -126,11 +126,11 @@ class RawFilesRepository(AbstractFilesRepository):
             return None
         return RawFilesRepository.REGRAS[
             (variable, spatial_resolution, temporal_resolution)
-        ](*args, **kwargs)
+        ](self.__path, *args, **kwargs)
 
 
-def factory(kind: str) -> AbstractFilesRepository:
+def factory(kind: str, *args, **kwargs) -> AbstractFilesRepository:
     mapping: Dict[str, Type[AbstractFilesRepository]] = {
         "FS": RawFilesRepository
     }
-    return mapping.get(kind)()
+    return mapping.get(kind)(*args, **kwargs)
