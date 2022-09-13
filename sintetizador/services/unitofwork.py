@@ -71,9 +71,11 @@ class FSUnitOfWork(AbstractUnitOfWork):
         self._files = RawFilesRepository(
             str(self._current_path), str(self._tmp_path)
         )
-        self._synthetizer = ParquetSynthesisRepository(
-            str(self._tmp_path.joinpath(self._synthesis_directory))
+        synthesis_outdir = self._current_path.joinpath(
+            self._synthesis_directory
         )
+        synthesis_outdir.mkdir(parents=True, exist_ok=True)
+        self._synthetizer = ParquetSynthesisRepository(str(synthesis_outdir))
         return super().__enter__()
 
     def __exit__(self, *args):
