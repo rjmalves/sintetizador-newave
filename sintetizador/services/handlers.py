@@ -87,8 +87,9 @@ def process_sin_data(
         )
         if df is not None:
             return format_nwlistop_df(
-                commands.FormatNwlistopDataframe(df),
-                command.temporalresolution,
+                commands.FormatNwlistopDataframe(
+                    df, command.temporalresolution
+                )
             )
         else:
             return pd.DataFrame()
