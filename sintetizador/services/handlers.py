@@ -65,12 +65,13 @@ def format_nwlistop_series_patamar_df(
             ]
             df_ano_patamar.columns = cols
             df_ano_patamar["Patamar"] = p
-            df_ano_patamar["Data"] = labels
-            df_ano_patamar = df_ano_patamar[["Data", "Patamar"] + cols]
+            df_ano_patamar = df_ano_patamar[["Patamar"] + cols]
             df_series = pd.concat(
                 [df_series, df_ano_patamar], ignore_index=True
             )
-    return df_series
+    cols = df_series.columns.tolist()
+    df_series["Data"] = labels * len(patamares)
+    return df_series[["Data"] + cols]
 
 
 def process_sin_data(
