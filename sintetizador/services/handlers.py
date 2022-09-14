@@ -52,7 +52,7 @@ def format_nwlistop_series_patamar_df(
         datetime(year=anos[0], month=1, day=1),
         datetime(year=anos[-1], month=12, day=1),
         freq="MS",
-    )
+    ).tolist()
     df_series = pd.DataFrame()
     for a in anos:
         for p in patamares:
