@@ -65,7 +65,7 @@ def format_nwlistop_series_patamar_df(
             ]
             df_ano_patamar.columns = cols
             df_ano_patamar["Patamar"] = p
-            df_series["Data"] = labels
+            df_ano_patamar["Data"] = labels
             df_ano_patamar = df_ano_patamar[["Data", "Patamar"] + cols]
             df_series = pd.concat(
                 [df_series, df_ano_patamar], ignore_index=True
