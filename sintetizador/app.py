@@ -81,6 +81,21 @@ DEFAULT_NWLISTOP_SYNTHESIS_ARGS: List[
         TemporalResolution.MES,
     ),
     (
+        Variable.GERACAO_HIDRAULICA,
+        SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.GERACAO_HIDRAULICA,
+        SpatialResolution.SUBMERCADO,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.GERACAO_HIDRAULICA,
+        SpatialResolution.SISTEMA_INTERLIGADO,
+        TemporalResolution.MES,
+    ),
+    (
         Variable.GERACAO_TERMICA,
         SpatialResolution.SUBMERCADO,
         TemporalResolution.MES,
@@ -89,6 +104,31 @@ DEFAULT_NWLISTOP_SYNTHESIS_ARGS: List[
         Variable.GERACAO_TERMICA,
         SpatialResolution.SISTEMA_INTERLIGADO,
         TemporalResolution.MES,
+    ),
+    (
+        Variable.GERACAO_HIDRAULICA,
+        SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        TemporalResolution.PATAMAR,
+    ),
+    (
+        Variable.GERACAO_HIDRAULICA,
+        SpatialResolution.SUBMERCADO,
+        TemporalResolution.PATAMAR,
+    ),
+    (
+        Variable.GERACAO_HIDRAULICA,
+        SpatialResolution.SISTEMA_INTERLIGADO,
+        TemporalResolution.PATAMAR,
+    ),
+    (
+        Variable.GERACAO_TERMICA,
+        SpatialResolution.SUBMERCADO,
+        TemporalResolution.PATAMAR,
+    ),
+    (
+        Variable.GERACAO_TERMICA,
+        SpatialResolution.SISTEMA_INTERLIGADO,
+        TemporalResolution.PATAMAR,
     ),
 ]
 

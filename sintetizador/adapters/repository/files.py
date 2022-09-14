@@ -5,6 +5,9 @@ import pandas as pd  # type: ignore
 from inewave.newave.caso import Caso
 from inewave.newave.arquivos import Arquivos
 from inewave.newave.dger import DGer
+from inewave.newave.confhd import Confhd
+from inewave.newave.conft import ConfT
+from inewave.newave.eolicacadastro import EolicaCadastro
 from inewave.newave.ree import REE
 from inewave.newave.sistema import Sistema
 
@@ -16,27 +19,32 @@ from inewave.nwlistop.eafb import Eafb
 from inewave.nwlistop.eafbm import Eafbm
 from inewave.nwlistop.eafbsin import EafbSIN
 
-# from inewave.nwlistop.vento import Vento
 from inewave.nwlistop.earmfp import Earmfp
 from inewave.nwlistop.earmfpm import Earmfpm
 from inewave.nwlistop.earmfpsin import EarmfpSIN
 from inewave.nwlistop.earmfm import Earmfm
 from inewave.nwlistop.earmfsin import EarmfSIN
+from inewave.nwlistop.ghtot import Ghtot
+from inewave.nwlistop.ghtotm import Ghtotm
+from inewave.nwlistop.ghtotsin import GhtotSIN
 from inewave.nwlistop.gttot import Gttot
 from inewave.nwlistop.gttotsin import GttotSIN
+from inewave.nwlistop.verturb import Verturb
+from inewave.nwlistop.verturbm import Verturbm
+from inewave.nwlistop.verturbsin import VerturbSIN
 
+# from inewave.nwlistop.vento import Vento
 # from inewave.nwlistop.geol import Geol
 # from inewave.nwlistop.geolm import Geolm
 # from inewave.nwlistop.geolsin import GeolSIN
-# from inewave.nwlistop.verturb import Verturb
-# from inewave.nwlistop.verturbm import Verturbm
-# from inewave.nwlistop.verturbsin import VerturbSIN
-# from inewave.nwlistop.qafluh import QaflUH
+
+from inewave.nwlistop.qafluh import QaflUH
+
 # from inewave.nwlistop.qincruh import QincrUH
 # from inewave.nwlistop.vturuh import VturUH
 # from inewave.nwlistop.vertuh import VertUH
-# from inewave.nwlistop.varmuh import VarmUH
-# from inewave.nwlistop.varmpuh import VarmpUH
+from inewave.nwlistop.varmuh import VarmUH
+from inewave.nwlistop.varmpuh import VarmpUH
 
 from sintetizador.utils.log import Log
 from sintetizador.model.variable import Variable
@@ -60,6 +68,14 @@ class AbstractFilesRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def get_confhd(self) -> Confhd:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_conft(self) -> ConfT:
+        raise NotImplementedError
+
+    @abstractmethod
     def get_ree(self) -> REE:
         raise NotImplementedError
 
@@ -80,6 +96,10 @@ class AbstractFilesRepository(ABC):
 
 
 class RawFilesRepository(AbstractFilesRepository):
+    def __extrai_patamares_df(
+        df: pd.DataFrame, patamares: list
+    ) -> pd.DataFrame:
+        return df.loc[df["Patamar"].isin(patamares), :]
 
     REGRAS: Dict[
         Tuple[Variable, SpatialResolution, TemporalResolution], Callable
@@ -159,17 +179,129 @@ class RawFilesRepository(AbstractFilesRepository):
             TemporalResolution.MES,
         ): lambda dir, _: EarmfSIN.le_arquivo(dir, "earmfsin.out").valores,
         (
+            Variable.GERACAO_HIDRAULICA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.MES,
+        ): lambda dir, ree=1: RawFilesRepository.__extrai_patamares_df(
+            Ghtot.le_arquivo(dir, f"ghtot{str(ree).zfill(3)}.out").valores,
+            ["TOTAL"],
+        ),
+        (
+            Variable.GERACAO_HIDRAULICA,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.MES,
+        ): lambda dir, submercado=1: RawFilesRepository.__extrai_patamares_df(
+            Ghtotm.le_arquivo(
+                dir, f"ghtotm{str(submercado).zfill(3)}.out"
+            ).valores,
+            ["TOTAL"],
+        ),
+        (
+            Variable.GERACAO_HIDRAULICA,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+            TemporalResolution.MES,
+        ): lambda dir, _: RawFilesRepository.__extrai_patamares_df(
+            GhtotSIN.le_arquivo(dir, "ghtotsin.out").valores, ["TOTAL"]
+        ),
+        (
+            Variable.GERACAO_HIDRAULICA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.PATAMAR,
+        ): lambda dir, ree=1: RawFilesRepository.__extrai_patamares_df(
+            Ghtot.le_arquivo(dir, f"ghtot{str(ree).zfill(3)}.out").valores,
+            ["1", "2", "3"],
+        ),
+        (
+            Variable.GERACAO_HIDRAULICA,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.PATAMAR,
+        ): lambda dir, submercado=1: RawFilesRepository.__extrai_patamares_df(
+            Ghtotm.le_arquivo(
+                dir, f"ghtotm{str(submercado).zfill(3)}.out"
+            ).valores,
+            ["1", "2", "3"],
+        ),
+        (
+            Variable.GERACAO_HIDRAULICA,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+            TemporalResolution.PATAMAR,
+        ): lambda dir, _: RawFilesRepository.__extrai_patamares_df(
+            GhtotSIN.le_arquivo(dir, "ghtotsin.out").valores, ["1", "2", "3"]
+        ),
+        (
             Variable.GERACAO_TERMICA,
             SpatialResolution.SUBMERCADO,
             TemporalResolution.MES,
-        ): lambda dir, submercado=1: Gttot.le_arquivo(
-            dir, f"gttot{str(submercado).zfill(3)}.out"
-        ).valores,
+        ): lambda dir, submercado=1: RawFilesRepository.__extrai_patamares_df(
+            Gttot.le_arquivo(
+                dir, f"gttot{str(submercado).zfill(3)}.out"
+            ).valores,
+            ["TOTAL"],
+        ),
         (
             Variable.GERACAO_TERMICA,
             SpatialResolution.SISTEMA_INTERLIGADO,
             TemporalResolution.MES,
-        ): lambda dir, _: GttotSIN.le_arquivo(dir, "gttotsin.out").valores,
+        ): lambda dir, _: RawFilesRepository.__extrai_patamares_df(
+            GttotSIN.le_arquivo(dir, "gttotsin.out").valores, ["TOTAL"]
+        ),
+        (
+            Variable.GERACAO_TERMICA,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.PATAMAR,
+        ): lambda dir, submercado=1: RawFilesRepository.__extrai_patamares_df(
+            Gttot.le_arquivo(
+                dir, f"gttot{str(submercado).zfill(3)}.out"
+            ).valores,
+            ["1", "2", "3"],
+        ),
+        (
+            Variable.GERACAO_TERMICA,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+            TemporalResolution.PATAMAR,
+        ): lambda dir, _: RawFilesRepository.__extrai_patamares_df(
+            GttotSIN.le_arquivo(dir, "gttotsin.out").valores, ["1", "2", "3"]
+        ),
+        (
+            Variable.ENERGIA_VERTIDA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.MES,
+        ): lambda dir, ree=1: Verturb.le_arquivo(
+            dir, f"verturb{str(ree).zfill(3)}.out"
+        ).valores,
+        (
+            Variable.ENERGIA_VERTIDA,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.MES,
+        ): lambda dir, submercado=1: Verturbm.le_arquivo(
+            dir, f"verturbm{str(submercado).zfill(3)}.out"
+        ).valores,
+        (
+            Variable.ENERGIA_VERTIDA,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+            TemporalResolution.MES,
+        ): lambda dir, _: VerturbSIN.le_arquivo(dir, "verturbsin.out").valores,
+        (
+            Variable.VAZAO_AFLUENTE,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.MES,
+        ): lambda dir, uhe=1: QaflUH.le_arquivo(
+            dir, f"qafluh{str(uhe).zfill(3)}.out"
+        ).valores,
+        (
+            Variable.VOLUME_ARMAZENADO_ABSOLUTO,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.MES,
+        ): lambda dir, uhe=1: VarmUH.le_arquivo(
+            dir, f"varmuh{str(uhe).zfill(3)}.out"
+        ).valores,
+        (
+            Variable.VOLUME_ARMAZENADO_PERCENTUAL,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.MES,
+        ): lambda dir, uhe=1: VarmpUH.le_arquivo(
+            dir, f"varmpuh{str(uhe).zfill(3)}.out"
+        ).valores,
     }
 
     def __init__(self, tmppath: str):
@@ -192,6 +324,14 @@ class RawFilesRepository(AbstractFilesRepository):
     def get_dger(self) -> DGer:
         Log.log().info(f"Lendo arquivo {self.arquivos.dger}")
         return DGer.le_arquivo(self.__tmppath, self.arquivos.dger)
+
+    def get_confhd(self) -> Confhd:
+        Log.log().info(f"Lendo arquivo {self.arquivos.confhd}")
+        return Confhd.le_arquivo(self.__tmppath, self.arquivos.confhd)
+
+    def get_conft(self) -> ConfT:
+        Log.log().info(f"Lendo arquivo {self.arquivos.conft}")
+        return ConfT.le_arquivo(self.__tmppath, self.arquivos.conft)
 
     def get_ree(self) -> REE:
         Log.log().info(f"Lendo arquivo {self.arquivos.ree}")
@@ -217,9 +357,24 @@ class RawFilesRepository(AbstractFilesRepository):
             spatial_resolution == SpatialResolution.RESERVATORIO_EQUIVALENTE
         ) and ("ree" not in kwargs.keys()):
             return None
-        return RawFilesRepository.REGRAS[
-            (variable, spatial_resolution, temporal_resolution)
-        ](self.__tmppath, *args, **kwargs)
+        if (spatial_resolution == SpatialResolution.USINA_HIDROELETRICA) and (
+            "uhe" not in kwargs.keys()
+        ):
+            return None
+        if (spatial_resolution == SpatialResolution.USINA_TERMELETRICA) and (
+            "ute" not in kwargs.keys()
+        ):
+            return None
+        if (spatial_resolution == SpatialResolution.USINA_EOLICA) and (
+            "uee" not in kwargs.keys()
+        ):
+            return None
+        try:
+            return RawFilesRepository.REGRAS[
+                (variable, spatial_resolution, temporal_resolution)
+            ](self.__tmppath, *args, **kwargs)
+        except FileNotFoundError:
+            return None
 
 
 def factory(kind: str, *args, **kwargs) -> AbstractFilesRepository:
