@@ -20,91 +20,91 @@ def app():
 DEFAULT_NWLISTOP_SYNTHESIS_ARGS: List[
     Tuple[Variable, SpatialResolution, TemporalResolution]
 ] = [
-    # (
-    #     Variable.CUSTO_MARGINAL_OPERACAO,
-    #     SpatialResolution.SUBMERCADO,
-    #     TemporalResolution.MES,
-    # ),
-    # (
-    #     Variable.CUSTO_GERACAO_TERMICA,
-    #     SpatialResolution.SUBMERCADO,
-    #     TemporalResolution.MES,
-    # ),
-    # (
-    #     Variable.CUSTO_GERACAO_TERMICA,
-    #     SpatialResolution.SISTEMA_INTERLIGADO,
-    #     TemporalResolution.MES,
-    # ),
-    # (
-    #     Variable.CUSTO_OPERACAO,
-    #     SpatialResolution.SISTEMA_INTERLIGADO,
-    #     TemporalResolution.MES,
-    # ),
-    # (
-    #     Variable.ENERGIA_NATURAL_AFLUENTE,
-    #     SpatialResolution.RESERVATORIO_EQUIVALENTE,
-    #     TemporalResolution.MES,
-    # ),
-    # (
-    #     Variable.ENERGIA_NATURAL_AFLUENTE,
-    #     SpatialResolution.SUBMERCADO,
-    #     TemporalResolution.MES,
-    # ),
-    # (
-    #     Variable.ENERGIA_NATURAL_AFLUENTE,
-    #     SpatialResolution.SISTEMA_INTERLIGADO,
-    #     TemporalResolution.MES,
-    # ),
-    # (
-    #     Variable.ENERGIA_ARMAZENADA_PERCENTUAL,
-    #     SpatialResolution.RESERVATORIO_EQUIVALENTE,
-    #     TemporalResolution.MES,
-    # ),
-    # (
-    #     Variable.ENERGIA_ARMAZENADA_PERCENTUAL,
-    #     SpatialResolution.SUBMERCADO,
-    #     TemporalResolution.MES,
-    # ),
-    # (
-    #     Variable.ENERGIA_ARMAZENADA_PERCENTUAL,
-    #     SpatialResolution.SISTEMA_INTERLIGADO,
-    #     TemporalResolution.MES,
-    # ),
-    # (
-    #     Variable.ENERGIA_ARMAZENADA_ABSOLUTA,
-    #     SpatialResolution.SUBMERCADO,
-    #     TemporalResolution.MES,
-    # ),
-    # (
-    #     Variable.ENERGIA_ARMAZENADA_ABSOLUTA,
-    #     SpatialResolution.SISTEMA_INTERLIGADO,
-    #     TemporalResolution.MES,
-    # ),
-    # (
-    #     Variable.GERACAO_HIDRAULICA,
-    #     SpatialResolution.RESERVATORIO_EQUIVALENTE,
-    #     TemporalResolution.MES,
-    # ),
-    # (
-    #     Variable.GERACAO_HIDRAULICA,
-    #     SpatialResolution.SUBMERCADO,
-    #     TemporalResolution.MES,
-    # ),
-    # (
-    #     Variable.GERACAO_HIDRAULICA,
-    #     SpatialResolution.SISTEMA_INTERLIGADO,
-    #     TemporalResolution.MES,
-    # ),
-    # (
-    #     Variable.GERACAO_TERMICA,
-    #     SpatialResolution.SUBMERCADO,
-    #     TemporalResolution.MES,
-    # ),
-    # (
-    #     Variable.GERACAO_TERMICA,
-    #     SpatialResolution.SISTEMA_INTERLIGADO,
-    #     TemporalResolution.MES,
-    # ),
+    (
+        Variable.CUSTO_MARGINAL_OPERACAO,
+        SpatialResolution.SUBMERCADO,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.CUSTO_GERACAO_TERMICA,
+        SpatialResolution.SUBMERCADO,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.CUSTO_GERACAO_TERMICA,
+        SpatialResolution.SISTEMA_INTERLIGADO,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.CUSTO_OPERACAO,
+        SpatialResolution.SISTEMA_INTERLIGADO,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.ENERGIA_NATURAL_AFLUENTE,
+        SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.ENERGIA_NATURAL_AFLUENTE,
+        SpatialResolution.SUBMERCADO,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.ENERGIA_NATURAL_AFLUENTE,
+        SpatialResolution.SISTEMA_INTERLIGADO,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.ENERGIA_ARMAZENADA_PERCENTUAL,
+        SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.ENERGIA_ARMAZENADA_PERCENTUAL,
+        SpatialResolution.SUBMERCADO,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.ENERGIA_ARMAZENADA_PERCENTUAL,
+        SpatialResolution.SISTEMA_INTERLIGADO,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.ENERGIA_ARMAZENADA_ABSOLUTA,
+        SpatialResolution.SUBMERCADO,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.ENERGIA_ARMAZENADA_ABSOLUTA,
+        SpatialResolution.SISTEMA_INTERLIGADO,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.GERACAO_HIDRAULICA,
+        SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.GERACAO_HIDRAULICA,
+        SpatialResolution.SUBMERCADO,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.GERACAO_HIDRAULICA,
+        SpatialResolution.SISTEMA_INTERLIGADO,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.GERACAO_TERMICA,
+        SpatialResolution.SUBMERCADO,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.GERACAO_TERMICA,
+        SpatialResolution.SISTEMA_INTERLIGADO,
+        TemporalResolution.MES,
+    ),
     (
         Variable.GERACAO_HIDRAULICA,
         SpatialResolution.RESERVATORIO_EQUIVALENTE,
