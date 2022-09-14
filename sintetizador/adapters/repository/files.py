@@ -32,6 +32,7 @@ from inewave.nwlistop.gttotsin import GttotSIN
 from inewave.nwlistop.verturb import Verturb
 from inewave.nwlistop.verturbm import Verturbm
 from inewave.nwlistop.verturbsin import VerturbSIN
+from inewave.nwlistop.vagua import Vagua
 
 # from inewave.nwlistop.vento import Vento
 # from inewave.nwlistop.geol import Geol
@@ -110,6 +111,13 @@ class RawFilesRepository(AbstractFilesRepository):
             TemporalResolution.MES,
         ): lambda dir, submercado=1: CmargMed.le_arquivo(
             dir, f"cmarg{str(submercado).zfill(3)}-med.out"
+        ).valores,
+        (
+            Variable.VALOR_AGUA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.MES,
+        ): lambda dir, ree=1: Vagua.le_arquivo(
+            dir, f"vagua{str(ree).zfill(3)}.out"
         ).valores,
         (
             Variable.CUSTO_GERACAO_TERMICA,

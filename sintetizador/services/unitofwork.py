@@ -138,10 +138,16 @@ class FSUnitOfWork(AbstractUnitOfWork):
 
     def extract_deck(self) -> bool:
         zipname = FSUnitOfWork.__deck_zip_name()
+        if zipname is None:
+            Log.log().error(
+                "Erro ao processar o deck de entrada: não encontrado."
+            )
+            return False
         Log.log().info(f"Extraindo deck em {zipname} para {Settings().tmpdir}")
         if zipname is not None:
             with ZipFile(zipname, "r") as obj_zip:
                 obj_zip.extractall(Settings().tmpdir)
+        return True
 
     def extract_outputs(self) -> bool:
         zipname = FSUnitOfWork.__out_zip_name()

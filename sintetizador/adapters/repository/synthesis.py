@@ -28,8 +28,22 @@ class ParquetSynthesisRepository(AbstractSynthesisRepository):
         pass
 
 
+class CSVSynthesisRepository(AbstractSynthesisRepository):
+    def __init__(self, path: str):
+        self.__path = path
+
+    @property
+    def path(self) -> pathlib.Path:
+        return pathlib.Path(self.__path)
+
+    def synthetize_df(self, df: pd.DataFrame, filename: str) -> bool:
+        df.to_csv(self.path.joinpath(filename + ".csv"))
+        pass
+
+
 def factory(kind: str, *args, **kwargs) -> AbstractSynthesisRepository:
     mapping: Dict[str, Type[AbstractSynthesisRepository]] = {
-        "PARQUET": ParquetSynthesisRepository
+        "PARQUET": ParquetSynthesisRepository,
+        "CSV": CSVSynthesisRepository,
     }
     return mapping.get(kind)(*args, **kwargs)

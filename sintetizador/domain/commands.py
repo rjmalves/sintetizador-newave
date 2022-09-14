@@ -1,9 +1,14 @@
 import pandas as pd  # type: ignore
-from typing import Optional
+from typing import Optional, List
 from dataclasses import dataclass
 from sintetizador.model.variable import Variable
 from sintetizador.model.spatialresolution import SpatialResolution
 from sintetizador.model.temporalresolution import TemporalResolution
+
+
+@dataclass
+class ProcessVariableArguments:
+    args: List[str]
 
 
 @dataclass

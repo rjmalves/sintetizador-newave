@@ -1,12 +1,31 @@
 import pandas as pd  # type: ignore
-from typing import Optional
+from typing import Optional, List, Tuple
 from datetime import datetime
 from inewave.config import MESES_DF
 from sintetizador.utils.log import Log
 import sintetizador.domain.commands as commands
+from sintetizador.model.variable import Variable
 from sintetizador.model.temporalresolution import TemporalResolution
 from sintetizador.model.spatialresolution import SpatialResolution
 from sintetizador.services.unitofwork import AbstractUnitOfWork
+
+
+def process_nwlistop_variable_arguments(
+    command: commands.ProcessVariableArguments,
+) -> List[Tuple[Variable, SpatialResolution, TemporalResolution]]:
+    args_data = [c.split("_") for c in command.args]
+    for a in args_data:
+        if len(a) != 3:
+            Log.log(f"Erro no argumento fornecido: {a}")
+            return []
+    return [
+        (
+            Variable.factory(a[0]),
+            SpatialResolution.factory(a[1]),
+            TemporalResolution.factory(a[2]),
+        )
+        for a in args_data
+    ]
 
 
 def format_nwlistop_df(

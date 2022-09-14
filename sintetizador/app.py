@@ -26,6 +26,11 @@ DEFAULT_NWLISTOP_SYNTHESIS_ARGS: List[
         TemporalResolution.MES,
     ),
     (
+        Variable.VALOR_AGUA,
+        SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        TemporalResolution.MES,
+    ),
+    (
         Variable.CUSTO_GERACAO_TERMICA,
         SpatialResolution.SUBMERCADO,
         TemporalResolution.MES,
@@ -68,6 +73,11 @@ DEFAULT_NWLISTOP_SYNTHESIS_ARGS: List[
     (
         Variable.ENERGIA_ARMAZENADA_PERCENTUAL,
         SpatialResolution.SISTEMA_INTERLIGADO,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.ENERGIA_ARMAZENADA_ABSOLUTA,
+        SpatialResolution.RESERVATORIO_EQUIVALENTE,
         TemporalResolution.MES,
     ),
     (
@@ -134,20 +144,23 @@ DEFAULT_NWLISTOP_SYNTHESIS_ARGS: List[
 
 
 @click.command("nwlistop")
-@click.option(
-    "--variaveis",
-    default=None,
-    help="mnemônicos das variáveis a serem sintetizadas",
+@click.argument(
+    "variaveis",
+    nargs=-1,
 )
 def nwlistop(variaveis):
     """
     Realiza a síntese do NWLISTOP.
     """
-    Log.log().info("## APLICAÇÂO CLI PARA SÍNTESE DO PROGRAMA NEWAVE ##")
-    if variaveis is None:
+    Log.log().info("# Realizando síntese do NWLISTOP #")
+    if len(variaveis) == 0:
         variaveis = DEFAULT_NWLISTOP_SYNTHESIS_ARGS
+    else:
+        variaveis = handlers.process_nwlistop_variable_arguments(
+            commands.ProcessVariableArguments(variaveis)
+        )
 
-    Log.log().info("Realizando síntese do NWLISTOP... ")
+    Log.log().info(f"Variáveis: {variaveis}")
 
     with tempfile.TemporaryDirectory() as tmpdirname:
         os.environ["TMPDIR"] = tmpdirname
@@ -160,7 +173,7 @@ def nwlistop(variaveis):
             command = commands.SynthetizeNwlistop(v[0], v[1], v[2])
             handlers.synthetize_nwlistop(command, uow)
 
-    Log.log().info("## FIM DA EXECUÇÃO ##")
+    Log.log().info("# Fim da síntese #")
 
 
 app.add_command(nwlistop)
