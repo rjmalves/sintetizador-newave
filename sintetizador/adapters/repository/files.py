@@ -22,6 +22,7 @@ from inewave.nwlistop.eafbsin import EafbSIN
 from inewave.nwlistop.earmfp import Earmfp
 from inewave.nwlistop.earmfpm import Earmfpm
 from inewave.nwlistop.earmfpsin import EarmfpSIN
+from inewave.nwlistop.earmf import Earmf
 from inewave.nwlistop.earmfm import Earmfm
 from inewave.nwlistop.earmfsin import EarmfSIN
 from inewave.nwlistop.ghtot import Ghtot
@@ -174,6 +175,13 @@ class RawFilesRepository(AbstractFilesRepository):
             SpatialResolution.SISTEMA_INTERLIGADO,
             TemporalResolution.MES,
         ): lambda dir, _: EarmfpSIN.le_arquivo(dir, "earmfpsin.out").valores,
+        (
+            Variable.ENERGIA_ARMAZENADA_ABSOLUTA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.MES,
+        ): lambda dir, ree=1: Earmf.le_arquivo(
+            dir, f"earmfm{str(ree).zfill(3)}.out"
+        ).valores,
         (
             Variable.ENERGIA_ARMAZENADA_ABSOLUTA,
             SpatialResolution.SUBMERCADO,

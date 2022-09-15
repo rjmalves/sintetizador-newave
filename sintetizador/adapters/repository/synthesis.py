@@ -37,7 +37,7 @@ class CSVSynthesisRepository(AbstractSynthesisRepository):
         return pathlib.Path(self.__path)
 
     def synthetize_df(self, df: pd.DataFrame, filename: str) -> bool:
-        df.to_csv(self.path.joinpath(filename + ".csv"))
+        df.to_csv(self.path.joinpath(filename + ".csv"), index=False)
         pass
 
 
