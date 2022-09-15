@@ -13,7 +13,9 @@ from sintetizador.adapters.repository.files import (
 )
 from sintetizador.adapters.repository.synthesis import (
     AbstractSynthesisRepository,
-    ParquetSynthesisRepository,
+)
+from sintetizador.adapters.repository.synthesis import (
+    factory as synthesis_factory,
 )
 
 
@@ -72,7 +74,9 @@ class FSUnitOfWork(AbstractUnitOfWork):
             self._synthesis_directory
         )
         synthesis_outdir.mkdir(parents=True, exist_ok=True)
-        self._synthetizer = ParquetSynthesisRepository(str(synthesis_outdir))
+        self._synthetizer = synthesis_factory(
+            Settings().synthesis_format, str(synthesis_outdir)
+        )
         return super().__enter__()
 
     def __exit__(self, *args):
@@ -84,7 +88,7 @@ class FSUnitOfWork(AbstractUnitOfWork):
         return self._files
 
     @property
-    def synthetizer(self) -> ParquetSynthesisRepository:
+    def synthetizer(self) -> AbstractSynthesisRepository:
         return self._synthetizer
 
     @staticmethod

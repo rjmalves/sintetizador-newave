@@ -148,10 +148,14 @@ DEFAULT_NWLISTOP_SYNTHESIS_ARGS: List[
     "variaveis",
     nargs=-1,
 )
-def nwlistop(variaveis):
+@click.option(
+    "--formato", default="PARQUET", help="formato para escrita da síntese"
+)
+def nwlistop(variaveis, formato):
     """
     Realiza a síntese do NWLISTOP.
     """
+    os.environ["FORMATO_SINTESE"] = formato
     Log.log().info("# Realizando síntese do NWLISTOP #")
     if len(variaveis) == 0:
         variaveis = DEFAULT_NWLISTOP_SYNTHESIS_ARGS
