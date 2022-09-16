@@ -180,7 +180,7 @@ class RawFilesRepository(AbstractFilesRepository):
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
             TemporalResolution.MES,
         ): lambda dir, ree=1: Earmf.le_arquivo(
-            dir, f"earmfm{str(ree).zfill(3)}.out"
+            dir, f"earmf{str(ree).zfill(3)}.out"
         ).valores,
         (
             Variable.ENERGIA_ARMAZENADA_ABSOLUTA,
