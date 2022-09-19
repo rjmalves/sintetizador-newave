@@ -541,7 +541,11 @@ class RawFilesRepository(AbstractFilesRepository):
                 )
                 return None
             return regra(self.__tmppath, *args, **kwargs)
-        except FileNotFoundError:
+        except FileNotFoundError as f:
+            Log.log().warning(
+                "Arquivo não encontrado para "
+                + (variable, spatial_resolution, temporal_resolution)
+            )
             return None
 
 
