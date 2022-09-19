@@ -261,7 +261,7 @@ def nwlistop(variaveis, formato):
             variaveis_sintese = []
             dger = uow.files.get_dger()
             ree = uow.files.get_ree()
-            indiv = ree.rees["Mês Fim Individuializado"].isna().sum() == 0
+            indiv = ree.rees["Mês Fim Individualizado"].isna().sum() == 0
             for v in variaveis:
                 if (
                     v[1] == SpatialResolution.USINA_EOLICA
