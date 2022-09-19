@@ -28,48 +28,6 @@ class FormatNwlistopPatamarDataframe:
 
 
 @dataclass
-class ProcessSINData:
-    variable: Variable
-    spatialresolution: SpatialResolution
-    temporalresolution: TemporalResolution
-
-
-@dataclass
-class ProcessSubmercadoData:
-    variable: Variable
-    spatialresolution: SpatialResolution
-    temporalresolution: TemporalResolution
-
-
-@dataclass
-class ProcessREEData:
-    variable: Variable
-    spatialresolution: SpatialResolution
-    temporalresolution: TemporalResolution
-
-
-@dataclass
-class ProcessUHEData:
-    variable: Variable
-    spatialresolution: SpatialResolution
-    temporalresolution: TemporalResolution
-
-
-@dataclass
-class ProcessUTEData:
-    variable: Variable
-    spatialresolution: SpatialResolution
-    temporalresolution: TemporalResolution
-
-
-@dataclass
-class ProcessUEEData:
-    variable: Variable
-    spatialresolution: SpatialResolution
-    temporalresolution: TemporalResolution
-
-
-@dataclass
 class SynthetizeNwlistop:
     variable: Variable
     spatialresolution: SpatialResolution

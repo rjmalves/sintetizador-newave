@@ -140,6 +140,91 @@ DEFAULT_NWLISTOP_SYNTHESIS_ARGS: List[
         SpatialResolution.SISTEMA_INTERLIGADO,
         TemporalResolution.PATAMAR,
     ),
+    (
+        Variable.ENERGIA_VERTIDA,
+        SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.ENERGIA_VERTIDA,
+        SpatialResolution.SUBMERCADO,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.ENERGIA_VERTIDA,
+        SpatialResolution.SISTEMA_INTERLIGADO,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.VAZAO_AFLUENTE,
+        SpatialResolution.USINA_HIDROELETRICA,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.VAZAO_INCREMENTAL,
+        SpatialResolution.USINA_HIDROELETRICA,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.VOLUME_TURBINADO,
+        SpatialResolution.USINA_HIDROELETRICA,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.VOLUME_VERTIDO,
+        SpatialResolution.USINA_HIDROELETRICA,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.VOLUME_ARMAZENADO_ABSOLUTO,
+        SpatialResolution.USINA_HIDROELETRICA,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.VOLUME_ARMAZENADO_PERCENTUAL,
+        SpatialResolution.USINA_HIDROELETRICA,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.GERACAO_HIDRAULICA,
+        SpatialResolution.USINA_HIDROELETRICA,
+        TemporalResolution.PATAMAR,
+    ),
+    (
+        Variable.VELOCIDADE_VENTO,
+        SpatialResolution.USINA_EOLICA,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.GERACAO_EOLICA,
+        SpatialResolution.USINA_EOLICA,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.GERACAO_EOLICA,
+        SpatialResolution.SUBMERCADO,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.GERACAO_EOLICA,
+        SpatialResolution.SISTEMA_INTERLIGADO,
+        TemporalResolution.MES,
+    ),
+    (
+        Variable.GERACAO_EOLICA,
+        SpatialResolution.USINA_EOLICA,
+        TemporalResolution.PATAMAR,
+    ),
+    (
+        Variable.GERACAO_EOLICA,
+        SpatialResolution.SUBMERCADO,
+        TemporalResolution.PATAMAR,
+    ),
+    (
+        Variable.GERACAO_EOLICA,
+        SpatialResolution.SISTEMA_INTERLIGADO,
+        TemporalResolution.PATAMAR,
+    ),
 ]
 
 
@@ -164,8 +249,6 @@ def nwlistop(variaveis, formato):
             commands.ProcessVariableArguments(variaveis)
         )
 
-    Log.log().info(f"Variáveis: {variaveis}")
-
     with tempfile.TemporaryDirectory() as tmpdirname:
         os.environ["TMPDIR"] = tmpdirname
         uow = factory(
@@ -173,7 +256,23 @@ def nwlistop(variaveis, formato):
             Settings().tmpdir,
             Settings().synthesis_dir,
         )
-        for v in variaveis:
+        # Preprocess
+        with uow:
+            variaveis_sintese = []
+            dger = uow.files.get_dger()
+            ree = uow.files.get_ree()
+            indiv = ree.rees["Mês Fim Individuializado"].isna().sum() == 0
+            for v in variaveis:
+                if (
+                    v[1] == SpatialResolution.USINA_EOLICA
+                    and not dger.considera_geracao_eolica
+                ):
+                    continue
+                if v[1] == SpatialResolution.USINA_HIDROELETRICA and not indiv:
+                    continue
+                variaveis_sintese.append(v)
+            Log.log().info(f"Variáveis: {variaveis_sintese}")
+        for v in variaveis_sintese:
             command = commands.SynthetizeNwlistop(v[0], v[1], v[2])
             handlers.synthetize_nwlistop(command, uow)
 

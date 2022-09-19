@@ -94,7 +94,7 @@ def format_nwlistop_series_patamar_df(
 
 
 def process_sin_data(
-    command: commands.ProcessSINData, uow: AbstractUnitOfWork
+    command: commands.SynthetizeNwlistop, uow: AbstractUnitOfWork
 ) -> pd.DataFrame:
     with uow:
         Log.log().info(f"Processando arquivo do SIN")
@@ -115,7 +115,7 @@ def process_sin_data(
 
 
 def process_submercado_data(
-    command: commands.ProcessSubmercadoData, uow: AbstractUnitOfWork
+    command: commands.SynthetizeNwlistop, uow: AbstractUnitOfWork
 ) -> pd.DataFrame:
     with uow:
         sistema = uow.files.get_sistema()
@@ -151,7 +151,7 @@ def process_submercado_data(
 
 
 def process_ree_data(
-    command: commands.ProcessREEData, uow: AbstractUnitOfWork
+    command: commands.SynthetizeNwlistop, uow: AbstractUnitOfWork
 ) -> pd.DataFrame:
     with uow:
         ree = uow.files.get_ree()
@@ -184,7 +184,7 @@ def process_ree_data(
 
 
 def process_uhe_data(
-    command: commands.ProcessUHEData, uow: AbstractUnitOfWork
+    command: commands.SynthetizeNwlistop, uow: AbstractUnitOfWork
 ) -> pd.DataFrame:
     with uow:
         confhd = uow.files.get_confhd()
@@ -217,7 +217,7 @@ def process_uhe_data(
 
 
 def process_ute_data(
-    command: commands.ProcessUTEData, uow: AbstractUnitOfWork
+    command: commands.SynthetizeNwlistop, uow: AbstractUnitOfWork
 ) -> pd.DataFrame:
     with uow:
         conft = uow.files.get_conft()
@@ -249,6 +249,46 @@ def process_ute_data(
         return df
 
 
+def process_uee_data(
+    command: commands.SynthetizeNwlistop, uow: AbstractUnitOfWork
+) -> pd.DataFrame:
+    with uow:
+        eolica_cadastro = uow.files.get_eolicacadastro()
+        uees_idx = []
+        uees_name = []
+        regs = eolica_cadastro.eolica_cadastro()
+        df = pd.DataFrame()
+        if regs is None:
+            return df
+        elif isinstance(regs, list):
+            for r in regs:
+                uees_idx.append(r.codigo_eolica)
+                uees_name.append(r.nome_eolica)
+        for s, n in zip(uees_idx, uees_name):
+            Log.log().info(f"Processando arquivo da UEE: {s} - {n}")
+            df_uee = format_nwlistop_df(
+                commands.FormatNwlistopDataframe(
+                    uow.files.get_nwlistop(
+                        command.variable,
+                        command.spatialresolution,
+                        command.temporalresolution,
+                        uee=s,
+                    ),
+                    command.temporalresolution,
+                )
+            )
+            if df_uee is None:
+                continue
+            cols = df_uee.columns.tolist()
+            df_uee["UEE"] = n
+            df_uee = df_uee[["UEE"] + cols]
+            df = pd.concat(
+                [df, df_uee],
+                ignore_index=True,
+            )
+        return df
+
+
 def synthetize_nwlistop(
     command: commands.SynthetizeNwlistop, uow: AbstractUnitOfWork
 ):
@@ -262,52 +302,18 @@ def synthetize_nwlistop(
         )
     Log.log().info(f"Realizando síntese de {filename}")
     if command.spatialresolution == SpatialResolution.SISTEMA_INTERLIGADO:
-        df = process_sin_data(
-            commands.ProcessSINData(
-                command.variable,
-                command.spatialresolution,
-                command.temporalresolution,
-            ),
-            uow,
-        )
+        df = process_sin_data(command, uow)
     elif command.spatialresolution == SpatialResolution.SUBMERCADO:
-        df = process_submercado_data(
-            commands.ProcessSubmercadoData(
-                command.variable,
-                command.spatialresolution,
-                command.temporalresolution,
-            ),
-            uow,
-        )
+        df = process_submercado_data(command, uow)
     elif (
         command.spatialresolution == SpatialResolution.RESERVATORIO_EQUIVALENTE
     ):
-        df = process_ree_data(
-            commands.ProcessREEData(
-                command.variable,
-                command.spatialresolution,
-                command.temporalresolution,
-            ),
-            uow,
-        )
+        df = process_ree_data(command, uow)
     elif command.spatialresolution == SpatialResolution.USINA_HIDROELETRICA:
-        df = process_uhe_data(
-            commands.ProcessUHEData(
-                command.variable,
-                command.spatialresolution,
-                command.temporalresolution,
-            ),
-            uow,
-        )
+        df = process_uhe_data(command, uow)
     elif command.spatialresolution == SpatialResolution.USINA_TERMELETRICA:
-        df = process_ute_data(
-            commands.ProcessUTEData(
-                command.variable,
-                command.spatialresolution,
-                command.temporalresolution,
-            ),
-            uow,
-        )
-
+        df = process_ute_data(command, uow)
+    elif command.spatialresolution == SpatialResolution.USINA_EOLICA:
+        df = process_uee_data(command, uow)
     with uow:
         uow.synthetizer.synthetize_df(df, filename)
