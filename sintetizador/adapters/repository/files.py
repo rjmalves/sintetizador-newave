@@ -508,22 +508,27 @@ class RawFilesRepository(AbstractFilesRepository):
         if (spatial_resolution == SpatialResolution.SUBMERCADO) and (
             "submercado" not in kwargs.keys()
         ):
+            Log.log().error("Erro no processamento da informação por SBM")
             return None
         if (
             spatial_resolution == SpatialResolution.RESERVATORIO_EQUIVALENTE
         ) and ("ree" not in kwargs.keys()):
+            Log.log().error("Erro no processamento da informação por REE")
             return None
         if (spatial_resolution == SpatialResolution.USINA_HIDROELETRICA) and (
             "uhe" not in kwargs.keys()
         ):
+            Log.log().error("Erro no processamento da informação por UHE")
             return None
         if (spatial_resolution == SpatialResolution.USINA_TERMELETRICA) and (
             "ute" not in kwargs.keys()
         ):
+            Log.log().error("Erro no processamento da informação por UTE")
             return None
         if (spatial_resolution == SpatialResolution.USINA_EOLICA) and (
             "uee" not in kwargs.keys()
         ):
+            Log.log().error("Erro no processamento da informação por UEE")
             return None
         try:
             regra = self.__regras.get(
