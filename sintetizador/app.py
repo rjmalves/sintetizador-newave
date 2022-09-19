@@ -262,7 +262,7 @@ def nwlistop(variaveis, formato):
             dger = uow.files.get_dger()
             ree = uow.files.get_ree()
             indiv = ree.rees["Mês Fim Individualizado"].isna().sum() == 0
-            eolica = dger.considera_geracao_eolica
+            eolica = dger.considera_geracao_eolica != 0
             Log.log().info(f"Caso com geração de cenários de eólica: {eolica}")
             Log.log().info(f"Caso com modelagem híbrida: {indiv}")
             for v in variaveis:

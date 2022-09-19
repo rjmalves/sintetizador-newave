@@ -199,7 +199,7 @@ def process_uhe_data(
                         command.variable,
                         command.spatialresolution,
                         command.temporalresolution,
-                        ree=s,
+                        uhe=s,
                     ),
                     command.temporalresolution,
                 )
@@ -232,7 +232,7 @@ def process_ute_data(
                         command.variable,
                         command.spatialresolution,
                         command.temporalresolution,
-                        ree=s,
+                        ute=s,
                     ),
                     command.temporalresolution,
                 )
