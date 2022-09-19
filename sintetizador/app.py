@@ -264,7 +264,8 @@ def nwlistop(variaveis, formato):
             indiv = ree.rees["Mês Fim Individualizado"].isna().sum() == 0
             for v in variaveis:
                 if (
-                    v[1] == SpatialResolution.USINA_EOLICA
+                    v[0]
+                    in [Variable.VELOCIDADE_VENTO, Variable.GERACAO_EOLICA]
                     and not dger.considera_geracao_eolica
                 ):
                     continue
@@ -273,7 +274,7 @@ def nwlistop(variaveis, formato):
                 variaveis_sintese.append(v)
             Log.log().info(f"Variáveis: {variaveis_sintese}")
         for v in variaveis_sintese:
-            command = commands.SynthetizeNwlistop(v[0], v[1], v[2])
+            command = commands.SynthetizeNwlistop(*v)
             handlers.synthetize_nwlistop(command, uow)
 
     Log.log().info("# Fim da síntese #")

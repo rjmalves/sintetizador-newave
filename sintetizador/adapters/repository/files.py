@@ -111,6 +111,13 @@ class RawFilesRepository(AbstractFilesRepository):
         self.__tmppath = tmppath
         self.__caso = Caso.le_arquivo(str(self.__tmppath))
         self.__arquivos: Optional[Arquivos] = None
+        self.__dger: Optional[DGer] = None
+        self.__patamar: Optional[Patamar] = None
+        self.__sistema: Optional[Sistema] = None
+        self.__ree: Optional[REE] = None
+        self.__confhd: Optional[Confhd] = None
+        self.__conft: Optional[ConfT] = None
+        self.__eolicacadastro: Optional[EolicaCadastro] = None
         self.__regras: Dict[
             Tuple[Variable, SpatialResolution, TemporalResolution], Callable
         ] = {
@@ -439,31 +446,56 @@ class RawFilesRepository(AbstractFilesRepository):
         return self.__arquivos
 
     def get_dger(self) -> DGer:
-        Log.log().info(f"Lendo arquivo {self.arquivos.dger}")
-        return DGer.le_arquivo(self.__tmppath, self.arquivos.dger)
+        if self.__dger is None:
+            Log.log().info(f"Lendo arquivo {self.arquivos.dger}")
+            self.__dger = DGer.le_arquivo(self.__tmppath, self.arquivos.dger)
+        return self.__dger
 
     def get_patamar(self) -> Patamar:
-        return Patamar.le_arquivo(self.__tmppath, self.arquivos.patamar)
+        if self.__patamar is None:
+            Log.log().info(f"Lendo arquivo {self.arquivos.patamar}")
+            self.__patamar = Patamar.le_arquivo(
+                self.__tmppath, self.arquivos.patamar
+            )
+        return self.__patamar
 
     def get_confhd(self) -> Confhd:
-        Log.log().info(f"Lendo arquivo {self.arquivos.confhd}")
-        return Confhd.le_arquivo(self.__tmppath, self.arquivos.confhd)
+        if self.__confhd is None:
+            Log.log().info(f"Lendo arquivo {self.arquivos.confhd}")
+            self.__confhd = Confhd.le_arquivo(
+                self.__tmppath, self.arquivos.confhd
+            )
+        return self.__confhd
 
     def get_conft(self) -> ConfT:
-        Log.log().info(f"Lendo arquivo {self.arquivos.conft}")
-        return ConfT.le_arquivo(self.__tmppath, self.arquivos.conft)
+        if self.__conft is None:
+            Log.log().info(f"Lendo arquivo {self.arquivos.conft}")
+            self.__conft = ConfT.le_arquivo(
+                self.__tmppath, self.arquivos.conft
+            )
+        return self.__conft
 
     def get_ree(self) -> REE:
-        Log.log().info(f"Lendo arquivo {self.arquivos.ree}")
-        return REE.le_arquivo(self.__tmppath, self.arquivos.ree)
+        if self.__ree is None:
+            Log.log().info(f"Lendo arquivo {self.arquivos.ree}")
+            self.__ree = REE.le_arquivo(self.__tmppath, self.arquivos.ree)
+        return self.__ree
 
     def get_sistema(self) -> Sistema:
-        Log.log().info(f"Lendo arquivo {self.arquivos.sistema}")
-        return Sistema.le_arquivo(self.__tmppath, self.arquivos.sistema)
+        if self.__sistema is None:
+            Log.log().info(f"Lendo arquivo {self.arquivos.sistema}")
+            self.__sistema = Sistema.le_arquivo(
+                self.__tmppath, self.arquivos.sistema
+            )
+        return self.__sistema
 
     def get_eolicacadastro(self) -> EolicaCadastro:
-        Log.log().info(f"Lendo arquivo eolica-cadastro.csv")
-        return EolicaCadastro.le_arquivo(self.__tmppath, "eolica-cadastro.csv")
+        if self.__eolicacadastro is None:
+            Log.log().info(f"Lendo arquivo eolica-cadastro.csv")
+            self.__eolicacadastro = EolicaCadastro.le_arquivo(
+                self.__tmppath, "eolica-cadastro.csv"
+            )
+        return self.__eolicacadastro
 
     def get_nwlistop(
         self,
