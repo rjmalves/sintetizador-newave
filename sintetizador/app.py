@@ -262,11 +262,14 @@ def nwlistop(variaveis, formato):
             dger = uow.files.get_dger()
             ree = uow.files.get_ree()
             indiv = ree.rees["Mês Fim Individualizado"].isna().sum() == 0
+            eolica = dger.considera_geracao_eolica
+            Log.log().info(f"Caso com geração de cenários de eólica: {eolica}")
+            Log.log().info(f"Caso com modelagem híbrida: {indiv}")
             for v in variaveis:
                 if (
                     v[0]
                     in [Variable.VELOCIDADE_VENTO, Variable.GERACAO_EOLICA]
-                    and not dger.considera_geracao_eolica
+                    and not eolica
                 ):
                     continue
                 if v[1] == SpatialResolution.USINA_HIDROELETRICA and not indiv:
