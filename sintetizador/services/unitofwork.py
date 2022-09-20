@@ -92,7 +92,7 @@ class FSUnitOfWork(AbstractUnitOfWork):
         return self._files
 
     @property
-    def exporter(self) -> AbstractExportRepository:
+    def export(self) -> AbstractExportRepository:
         return self._exporter
 
     @staticmethod
