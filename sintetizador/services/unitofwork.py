@@ -59,7 +59,12 @@ class AbstractUnitOfWork(ABC):
 
 class FSUnitOfWork(AbstractUnitOfWork):
 
-    OUT_FILES_TO_EXTRACT = ["pmo.dat", "parp.dat", "parpeol.dat"]
+    OUT_FILES_TO_EXTRACT = [
+        "pmo.dat",
+        "parp.dat",
+        "parpeol.dat",
+        "parpvaz.dat",
+    ]
 
     def __init__(self, path: str, directory: str):
         self._current_path = Path(curdir).resolve()
@@ -164,9 +169,12 @@ class FSUnitOfWork(AbstractUnitOfWork):
         )
         if zipname is not None:
             with ZipFile(zipname, "r") as obj_zip:
-                obj_zip.extractall(
-                    Settings().tmpdir, FSUnitOfWork.OUT_FILES_TO_EXTRACT
-                )
+                existing_files = [
+                    f
+                    for f in FSUnitOfWork.OUT_FILES_TO_EXTRACT
+                    if f in obj_zip.namelist()
+                ]
+                obj_zip.extractall(Settings().tmpdir, existing_files)
 
     def extract_nwlistop(self) -> bool:
         zipname = FSUnitOfWork.__nwlistop_zip_name()
