@@ -18,12 +18,12 @@ class ExecutionSynthetizer:
         "TEMPO",
     ]
 
-    # @classmethod
-    # def _default_args(cls) -> List[ExecutionSynthesis]:
-    #     return [
-    #         ExecutionSynthesis.factory(a)
-    #         for a in cls.DEFAULT_EXECUTION_SYNTHESIS_ARGS
-    #     ]
+    @classmethod
+    def _default_args(cls) -> List[ExecutionSynthesis]:
+        return [
+            ExecutionSynthesis.factory(a)
+            for a in cls.DEFAULT_EXECUTION_SYNTHESIS_ARGS
+        ]
 
     # @classmethod
     # def _process_variable_arguments(

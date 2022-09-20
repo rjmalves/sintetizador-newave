@@ -45,8 +45,7 @@ def execucao(variaveis, formato):
     Log.log().info("# Fim da síntese #")
 
 
-# TODO - padronização para 'operacao'
-@click.command("nwlistop")
+@click.command("operacao")
 @click.argument(
     "variaveis",
     nargs=-1,
