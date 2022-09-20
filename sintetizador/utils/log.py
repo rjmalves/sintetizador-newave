@@ -7,7 +7,7 @@ from sintetizador.utils.singleton import Singleton
 
 class Log(metaclass=Singleton):
 
-    ARQUIVO = "sintetiza.log"
+    ARQUIVO = "sintese.log"
     LOGGER = None
 
     @classmethod
