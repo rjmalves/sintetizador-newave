@@ -28,7 +28,7 @@ Informações sobre a política operativa construída (ou lida) pelo modelo (TOD
 
 Informações da operação fornecida como saída pelo modelo. Estas informações são formadas a partir de três especificações: 
 
-- Variável
+#### Variável
 
 
 |          VARIÁVEL          |  MNEMÔNICO |
@@ -57,7 +57,7 @@ Informações da operação fornecida como saída pelo modelo. Estas informaçõ
 | Volume Turbinado           |    VTUR    |
 
 
-- Agregação Espacial
+#### Agregação Espacial
 
 
 |   AGERGAÇÃO ESPACIAL     |  MNEMÔNICO |
@@ -71,7 +71,7 @@ Informações da operação fornecida como saída pelo modelo. Estas informaçõ
 | Par de Submercados       |     SBP    |
 
 
-- Agregação Temporal
+#### Agregação Temporal
 
 |   AGERGAÇÃO TEMPORAL   |  MNEMÔNICO  |
 | ---------------------- | ----------- |
@@ -96,7 +96,6 @@ Vale destacar que nem todas as combinações de mnemônicos estão disponíveis 
 | EVER                       | REE, SBM, SIN      | MES                |
 | QAFL                       | UHE                | MES                |
 | QINC                       | UHE                | MES                |
-| QTUR                       | UHE                | MES                |
 | VENTO                      | UEE                | MES                |
 | INT                        | SBP                | MES, PAT           |
 | VARM                       | UHE                | MES                |
@@ -106,8 +105,13 @@ Vale destacar que nem todas as combinações de mnemônicos estão disponíveis 
 
 
 Exemplos de chaves de dados:
-EARP_SBM_MES
-VARP_UHE_MES
-GHID_UHE_PAT
-CMO_SBM_MES
-CMO_SBM_PAT
+- EARP_SBM_MES
+- VARP_UHE_MES
+- GHID_UHE_PAT
+- CMO_SBM_MES
+- CMO_SBM_PAT
+
+
+## Guia de Uso
+
+Para usar o `sintetizador-newave`, ...
