@@ -13,7 +13,11 @@ class OperationSynthesis:
 
     def __repr__(self) -> str:
         return "_".join(
-            [self.variable, self.spatial_resolution, self.temporal_resolution]
+            [
+                str(self.variable),
+                str(self.spatial_resolution),
+                str(self.temporal_resolution),
+            ]
         )
 
     @classmethod
