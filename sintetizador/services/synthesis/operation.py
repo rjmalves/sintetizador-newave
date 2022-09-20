@@ -5,10 +5,10 @@ from datetime import datetime
 
 from sintetizador.services.unitofwork import AbstractUnitOfWork
 from sintetizador.utils.log import Log
-from sintetizador.model.variable import Variable
-from sintetizador.model.spatialresolution import SpatialResolution
-from sintetizador.model.temporalresolution import TemporalResolution
-from sintetizador.model.operationsynthesis import OperationSynthesis
+from sintetizador.model.operation.variable import Variable
+from sintetizador.model.operation.spatialresolution import SpatialResolution
+from sintetizador.model.operation.temporalresolution import TemporalResolution
+from sintetizador.model.operation.operationsynthesis import OperationSynthesis
 
 
 class OperationSynthetizer:

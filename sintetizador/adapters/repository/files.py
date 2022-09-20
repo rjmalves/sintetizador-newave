@@ -50,9 +50,9 @@ from inewave.nwlistop.varmuh import VarmUH
 from inewave.nwlistop.varmpuh import VarmpUH
 
 from sintetizador.utils.log import Log
-from sintetizador.model.variable import Variable
-from sintetizador.model.spatialresolution import SpatialResolution
-from sintetizador.model.temporalresolution import TemporalResolution
+from sintetizador.model.operation.variable import Variable
+from sintetizador.model.operation.spatialresolution import SpatialResolution
+from sintetizador.model.operation.temporalresolution import TemporalResolution
 
 
 class AbstractFilesRepository(ABC):

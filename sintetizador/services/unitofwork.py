@@ -70,14 +70,6 @@ class FSUnitOfWork(AbstractUnitOfWork):
         self._current_path = Path(curdir).resolve()
         self._tmp_path = Path(path).resolve()
         self._synthesis_directory = directory
-
-    def __enter__(self) -> "FSUnitOfWork":
-        chdir(self._current_path)
-        # TODO - melhorar essa inicialização
-        if len(listdir(Settings().tmpdir)) == 0:
-            self.extract_deck()
-            self.extract_outputs()
-            self.extract_nwlistop()
         self._files = RawFilesRepository(str(self._tmp_path))
         synthesis_outdir = self._current_path.joinpath(
             self._synthesis_directory
@@ -86,6 +78,13 @@ class FSUnitOfWork(AbstractUnitOfWork):
         self._exporter = export_factory(
             Settings().synthesis_format, str(synthesis_outdir)
         )
+
+    def __enter__(self) -> "FSUnitOfWork":
+        chdir(self._current_path)
+        if len(listdir(Settings().tmpdir)) == 0:
+            self.extract_deck()
+            self.extract_outputs()
+            self.extract_nwlistop()
         return super().__enter__()
 
     def __exit__(self, *args):

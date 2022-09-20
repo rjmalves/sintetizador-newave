@@ -1,15 +1,9 @@
 import click
 import os
 import tempfile
-from typing import List, Tuple
 from sintetizador.model.settings import Settings
-from sintetizador.model.operationsynthesis import OperationSynthesis
-from sintetizador.model.variable import Variable
-from sintetizador.model.spatialresolution import SpatialResolution
-from sintetizador.model.temporalresolution import TemporalResolution
 import sintetizador.domain.commands as commands
 import sintetizador.services.handlers as handlers
-from sintetizador.services.synthesis.operation import OperationSynthetizer
 from sintetizador.services.unitofwork import factory
 from sintetizador.utils.log import Log
 
@@ -21,6 +15,34 @@ def app():
     um modelo unificado de dados para o NEWAVE.
     """
     pass
+
+
+@click.command("execucao")
+@click.argument(
+    "variaveis",
+    nargs=-1,
+)
+@click.option(
+    "--formato", default="PARQUET", help="formato para escrita da síntese"
+)
+def execucao(variaveis, formato):
+    """
+    Realiza a síntese dos dados da execução do NEWAVE.
+    """
+    os.environ["FORMATO_SINTESE"] = formato
+    Log.log().info("# Realizando síntese da EXECUÇÃO #")
+
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        os.environ["TMPDIR"] = tmpdirname
+        uow = factory(
+            "FS",
+            Settings().tmpdir,
+            Settings().synthesis_dir,
+        )
+        command = commands.SynthetizeExecution(variaveis)
+        handlers.synthetize_execution(command, uow)
+
+    Log.log().info("# Fim da síntese #")
 
 
 # TODO - padronização para 'operacao'
@@ -60,5 +82,39 @@ def limpeza():
     handlers.clean()
 
 
+@click.command("completa")
+@click.option(
+    "-execucao", multiple=True, help="variável da execução para síntese"
+)
+@click.option(
+    "-operacao", multiple=True, help="variável da operação para síntese"
+)
+@click.option(
+    "--formato", default="PARQUET", help="formato para escrita da síntese"
+)
+def completa(execucao, operacao, formato):
+    """
+    Realiza a síntese completa do NEWAVE.
+    """
+    os.environ["FORMATO_SINTESE"] = formato
+    Log.log().info("# Realizando síntese da EXECUÇÃO #")
+
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        os.environ["TMPDIR"] = tmpdirname
+        uow = factory(
+            "FS",
+            Settings().tmpdir,
+            Settings().synthesis_dir,
+        )
+        command = commands.SynthetizeExecution(execucao)
+        handlers.synthetize_execution(command, uow)
+        command = commands.SynthetizeOperation(operacao)
+        handlers.synthetize_operation(command, uow)
+
+    Log.log().info("# Fim da síntese #")
+
+
+app.add_command(completa)
+app.add_command(execucao)
 app.add_command(operacao)
 app.add_command(limpeza)

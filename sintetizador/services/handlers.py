@@ -1,9 +1,16 @@
 import pathlib
 import shutil
 from sintetizador.model.settings import Settings
-from sintetizador.services.synthesis.operation import OperationSynthetizer
 import sintetizador.domain.commands as commands
 from sintetizador.services.unitofwork import AbstractUnitOfWork
+from sintetizador.services.synthesis.execution import ExecutionSynthetizer
+from sintetizador.services.synthesis.operation import OperationSynthetizer
+
+
+def synthetize_execution(
+    command: commands.SynthetizeExecution, uow: AbstractUnitOfWork
+):
+    ExecutionSynthetizer.synthetize(command.variables, uow)
 
 
 def synthetize_operation(
