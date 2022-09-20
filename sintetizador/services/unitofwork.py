@@ -93,8 +93,8 @@ class FSUnitOfWork(AbstractUnitOfWork):
 
     def __enter__(self) -> "FSUnitOfWork":
         chdir(self._current_path)
-        self.__create_repository()
         self.__extract_files()
+        self.__create_repository()
         return super().__enter__()
 
     def __exit__(self, *args):
