@@ -70,21 +70,31 @@ class FSUnitOfWork(AbstractUnitOfWork):
         self._current_path = Path(curdir).resolve()
         self._tmp_path = Path(path).resolve()
         self._synthesis_directory = directory
-        self._files = RawFilesRepository(str(self._tmp_path))
-        synthesis_outdir = self._current_path.joinpath(
-            self._synthesis_directory
-        )
-        synthesis_outdir.mkdir(parents=True, exist_ok=True)
-        self._exporter = export_factory(
-            Settings().synthesis_format, str(synthesis_outdir)
-        )
+        self._files = None
+        self._exporter = None
 
-    def __enter__(self) -> "FSUnitOfWork":
-        chdir(self._current_path)
+    def __create_repository(self):
+        if self._files is None:
+            self._files = RawFilesRepository(str(self._tmp_path))
+        if self._exporter is None:
+            synthesis_outdir = self._current_path.joinpath(
+                self._synthesis_directory
+            )
+            synthesis_outdir.mkdir(parents=True, exist_ok=True)
+            self._exporter = export_factory(
+                Settings().synthesis_format, str(synthesis_outdir)
+            )
+
+    def __extract_files(self):
         if len(listdir(Settings().tmpdir)) == 0:
             self.extract_deck()
             self.extract_outputs()
             self.extract_nwlistop()
+
+    def __enter__(self) -> "FSUnitOfWork":
+        chdir(self._current_path)
+        self.__create_repository()
+        self.__extract_files()
         return super().__enter__()
 
     def __exit__(self, *args):
