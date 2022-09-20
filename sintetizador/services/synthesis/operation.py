@@ -60,7 +60,8 @@ class OperationSynthetizer:
     @classmethod
     def _default_args(cls) -> List[OperationSynthesis]:
         return [
-            OperationSynthesis(a) for a in cls.DEFAULT_OPERATION_SYNTHESIS_ARGS
+            OperationSynthesis.factory(a)
+            for a in cls.DEFAULT_OPERATION_SYNTHESIS_ARGS
         ]
 
     @classmethod
