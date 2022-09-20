@@ -1,34 +1,7 @@
-import pandas as pd  # type: ignore
-from typing import Optional, List
+from typing import List
 from dataclasses import dataclass
-from sintetizador.model.variable import Variable
-from sintetizador.model.spatialresolution import SpatialResolution
-from sintetizador.model.temporalresolution import TemporalResolution
 
 
 @dataclass
-class ProcessVariableArguments:
-    args: List[str]
-
-
-@dataclass
-class FormatNwlistopDataframe:
-    df: Optional[pd.DataFrame]
-    temporalresolution: TemporalResolution
-
-
-@dataclass
-class FormatNwlistopSeriesDataframe:
-    df: pd.DataFrame
-
-
-@dataclass
-class FormatNwlistopPatamarDataframe:
-    df: pd.DataFrame
-
-
-@dataclass
-class SynthetizeNwlistop:
-    variable: Variable
-    spatialresolution: SpatialResolution
-    temporalresolution: TemporalResolution
+class SynthetizeOperation:
+    variables: List[str]

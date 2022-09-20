@@ -4,7 +4,7 @@ import pandas as pd  # type: ignore
 import pathlib
 
 
-class AbstractSynthesisRepository(ABC):
+class AbstractExportRepository(ABC):
     def __init__(self) -> None:
         super().__init__()
 
@@ -13,7 +13,7 @@ class AbstractSynthesisRepository(ABC):
         pass
 
 
-class ParquetSynthesisRepository(AbstractSynthesisRepository):
+class ParquetExportRepository(AbstractExportRepository):
     def __init__(self, path: str):
         self.__path = path
 
@@ -28,7 +28,7 @@ class ParquetSynthesisRepository(AbstractSynthesisRepository):
         pass
 
 
-class CSVSynthesisRepository(AbstractSynthesisRepository):
+class CSVExportRepository(AbstractExportRepository):
     def __init__(self, path: str):
         self.__path = path
 
@@ -41,9 +41,9 @@ class CSVSynthesisRepository(AbstractSynthesisRepository):
         pass
 
 
-def factory(kind: str, *args, **kwargs) -> AbstractSynthesisRepository:
-    mapping: Dict[str, Type[AbstractSynthesisRepository]] = {
-        "PARQUET": ParquetSynthesisRepository,
-        "CSV": CSVSynthesisRepository,
+def factory(kind: str, *args, **kwargs) -> AbstractExportRepository:
+    mapping: Dict[str, Type[AbstractExportRepository]] = {
+        "PARQUET": ParquetExportRepository,
+        "CSV": CSVExportRepository,
     }
     return mapping.get(kind)(*args, **kwargs)

@@ -11,11 +11,11 @@ from sintetizador.adapters.repository.files import (
     AbstractFilesRepository,
     RawFilesRepository,
 )
-from sintetizador.adapters.repository.synthesis import (
-    AbstractSynthesisRepository,
+from sintetizador.adapters.repository.export import (
+    AbstractExportRepository,
 )
-from sintetizador.adapters.repository.synthesis import (
-    factory as synthesis_factory,
+from sintetizador.adapters.repository.export import (
+    factory as export_factory,
 )
 
 
@@ -53,11 +53,14 @@ class AbstractUnitOfWork(ABC):
 
     @property
     @abstractmethod
-    def synthetizer(self) -> AbstractSynthesisRepository:
+    def export(self) -> AbstractExportRepository:
         raise NotImplementedError
 
 
 class FSUnitOfWork(AbstractUnitOfWork):
+
+    OUT_FILES_TO_EXTRACT = ["pmo.dat", "parp.dat", "parpeol.dat"]
+
     def __init__(self, path: str, directory: str):
         self._current_path = Path(curdir).resolve()
         self._tmp_path = Path(path).resolve()
@@ -68,13 +71,14 @@ class FSUnitOfWork(AbstractUnitOfWork):
         # TODO - melhorar essa inicialização
         if len(listdir(Settings().tmpdir)) == 0:
             self.extract_deck()
+            self.extract_outputs()
             self.extract_nwlistop()
         self._files = RawFilesRepository(str(self._tmp_path))
         synthesis_outdir = self._current_path.joinpath(
             self._synthesis_directory
         )
         synthesis_outdir.mkdir(parents=True, exist_ok=True)
-        self._synthetizer = synthesis_factory(
+        self._exporter = export_factory(
             Settings().synthesis_format, str(synthesis_outdir)
         )
         return super().__enter__()
@@ -88,8 +92,8 @@ class FSUnitOfWork(AbstractUnitOfWork):
         return self._files
 
     @property
-    def synthetizer(self) -> AbstractSynthesisRepository:
-        return self._synthetizer
+    def exporter(self) -> AbstractExportRepository:
+        return self._exporter
 
     @staticmethod
     def __deck_zip_name() -> Optional[str]:
@@ -156,11 +160,13 @@ class FSUnitOfWork(AbstractUnitOfWork):
     def extract_outputs(self) -> bool:
         zipname = FSUnitOfWork.__out_zip_name()
         Log.log().info(
-            f"Extraindo outputs em {zipname} para {Settings().tmpdir}"
+            f"Extraindo saídas em {zipname} para {Settings().tmpdir}"
         )
         if zipname is not None:
             with ZipFile(zipname, "r") as obj_zip:
-                obj_zip.extractall(Settings().tmpdir)
+                obj_zip.extractall(
+                    Settings().tmpdir, FSUnitOfWork.OUT_FILES_TO_EXTRACT
+                )
 
     def extract_nwlistop(self) -> bool:
         zipname = FSUnitOfWork.__nwlistop_zip_name()
