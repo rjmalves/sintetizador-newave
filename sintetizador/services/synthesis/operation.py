@@ -425,6 +425,7 @@ class OperationSynthetizer:
         RESOLUTION_FUNCTION_MAP: Dict[SpatialResolution, Callable] = {
             SpatialResolution.SISTEMA_INTERLIGADO: cls.__resolve_SIN,
             SpatialResolution.SUBMERCADO: cls.__resolve_SBM,
+            SpatialResolution.PAR_SUBMERCADOS: cls.__resolve_SBP,
             SpatialResolution.RESERVATORIO_EQUIVALENTE: cls.__resolve_REE,
             SpatialResolution.USINA_HIDROELETRICA: cls.__resolve_UHE,
             SpatialResolution.USINA_TERMELETRICA: cls.__resolve_UTE,
