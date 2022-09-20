@@ -8,6 +8,7 @@ class SpatialResolution(Enum):
     USINA_HIDROELETRICA = "UHE"
     USINA_TERMELETRICA = "UTE"
     USINA_EOLICA = "UEE"
+    PAR_SUBMERCADOS = "SBP"
 
     @classmethod
     def factory(cls, val: str) -> "SpatialResolution":

@@ -21,6 +21,7 @@ class Variable(Enum):
     VOLUME_ARMAZENADO_PERCENTUAL = "VARP"
     VOLUME_VERTIDO = "VVER"
     VOLUME_TURBINADO = "VTUR"
+    INTERCAMBIO = "INT"
 
     @classmethod
     def factory(cls, val: str) -> "Variable":

@@ -12,6 +12,7 @@ from inewave.newave.eolicacadastro import EolicaCadastro
 from inewave.newave.ree import REE
 from inewave.newave.sistema import Sistema
 
+from inewave.nwlistop.cmarg import Cmarg
 from inewave.nwlistop.cmargmed import CmargMed
 from inewave.nwlistop.cterm import Cterm
 from inewave.nwlistop.ctermsin import CtermSIN
@@ -19,6 +20,7 @@ from inewave.nwlistop.coper import Coper
 from inewave.nwlistop.eafb import Eafb
 from inewave.nwlistop.eafbm import Eafbm
 from inewave.nwlistop.eafbsin import EafbSIN
+from inewave.nwlistop.intercambio import Intercambio
 
 from inewave.nwlistop.earmfp import Earmfp
 from inewave.nwlistop.earmfpm import Earmfpm
@@ -127,6 +129,13 @@ class RawFilesRepository(AbstractFilesRepository):
                 TemporalResolution.MES,
             ): lambda dir, submercado=1: CmargMed.le_arquivo(
                 dir, f"cmarg{str(submercado).zfill(3)}-med.out"
+            ).valores,
+            (
+                Variable.CUSTO_MARGINAL_OPERACAO,
+                SpatialResolution.SUBMERCADO,
+                TemporalResolution.PATAMAR,
+            ): lambda dir, submercado=1: Cmarg.le_arquivo(
+                dir, f"cmarg{str(submercado).zfill(3)}.out"
             ).valores,
             (
                 Variable.VALOR_AGUA,
@@ -420,6 +429,29 @@ class RawFilesRepository(AbstractFilesRepository):
                 TemporalResolution.PATAMAR,
             ): lambda dir, _: self.__extrai_patamares_df(
                 GeolSIN.le_arquivo(dir, f"geolsin.out").valores
+            ),
+            (
+                Variable.INTERCAMBIO,
+                SpatialResolution.PAR_SUBMERCADOS,
+                TemporalResolution.MES,
+            ): lambda dir, submercados=(1, 2): self.__extrai_patamares_df(
+                Intercambio.le_arquivo(
+                    dir,
+                    f"int{str(submercados[0]).zfill(3)}"
+                    + f"{str(submercados[1]).zfill(3)}.out",
+                ).valores,
+                ["TOTAL"],
+            ),
+            (
+                Variable.INTERCAMBIO,
+                SpatialResolution.PAR_SUBMERCADOS,
+                TemporalResolution.PATAMAR,
+            ): lambda dir, submercados=(1, 2): self.__extrai_patamares_df(
+                Intercambio.le_arquivo(
+                    dir,
+                    f"int{str(submercados[0]).zfill(3)}"
+                    + f"{str(submercados[1]).zfill(3)}.out",
+                ).valores
             ),
         }
 

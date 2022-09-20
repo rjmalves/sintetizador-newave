@@ -15,6 +15,7 @@ class OperationSynthetizer:
 
     DEFAULT_OPERATION_SYNTHESIS_ARGS: List[str] = [
         "CMO_SBM_MES",
+        "CMO_SBM_PAT",
         "VAGUA_REE_MES",
         "CTER_SBM_MES",
         "CTER_SIN_MES",
@@ -55,6 +56,8 @@ class OperationSynthetizer:
         "GEOL_UEE_PAT",
         "GEOL_SBM_PAT",
         "GEOL_SIN_PAT",
+        "INT_SBP_MES",
+        "INT_SBP_PAT",
     ]
 
     @classmethod
@@ -84,6 +87,7 @@ class OperationSynthetizer:
         RESOLUTION_ARGS_MAP: Dict[SpatialResolution, List[str]] = {
             SpatialResolution.SISTEMA_INTERLIGADO: [],
             SpatialResolution.SUBMERCADO: ["submercado"],
+            SpatialResolution.PAR_SUBMERCADOS: ["submercados"],
             SpatialResolution.RESERVATORIO_EQUIVALENTE: ["ree"],
             SpatialResolution.USINA_HIDROELETRICA: ["uhe"],
             SpatialResolution.USINA_TERMELETRICA: ["ute"],
@@ -236,6 +240,50 @@ class OperationSynthetizer:
                     [df, df_sbm],
                     ignore_index=True,
                 )
+            return df
+
+    @classmethod
+    def __resolve_SBP(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        with uow:
+            sistema = uow.files.get_sistema()
+            sistemas_reais = sistema.custo_deficit.loc[
+                sistema.custo_deficit["Fictício"] == 0, :
+            ]
+            sbms_idx = sistemas_reais["Num. Subsistema"]
+            sbms_name = sistemas_reais["Nome"]
+            df = pd.DataFrame()
+            for s1, n1 in zip(sbms_idx, sbms_name):
+                for s2, n2 in zip(sbms_idx, sbms_name):
+                    # Ignora o mesmo SBM
+                    if s1 == s2:
+                        continue
+                    Log.log().info(
+                        "Processando arquivo do par de "
+                        + f"submercados: {s1} - {n1} | {s2} - {n2}"
+                    )
+                    df_sbm = cls._resolve_temporal_resolution(
+                        synthesis,
+                        uow.files.get_nwlistop(
+                            synthesis.variable,
+                            synthesis.spatial_resolution,
+                            synthesis.temporal_resolution,
+                            submercados=(s1, s2),
+                        ),
+                    )
+                    if df_sbm is None:
+                        continue
+                    cols = df_sbm.columns.tolist()
+                    df_sbm["Submercado De"] = n1
+                    df_sbm["Submercado Para"] = n2
+                    df_sbm = df_sbm[
+                        ["Submercado De", "Submercado Para"] + cols
+                    ]
+                    df = pd.concat(
+                        [df, df_sbm],
+                        ignore_index=True,
+                    )
             return df
 
     @classmethod

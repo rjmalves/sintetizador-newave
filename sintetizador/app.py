@@ -97,7 +97,7 @@ def completa(execucao, operacao, formato):
     Realiza a síntese completa do NEWAVE.
     """
     os.environ["FORMATO_SINTESE"] = formato
-    Log.log().info("# Realizando síntese da EXECUÇÃO #")
+    Log.log().info("# Realizando síntese COMPLETA #")
 
     with tempfile.TemporaryDirectory() as tmpdirname:
         os.environ["TMPDIR"] = tmpdirname
