@@ -14,9 +14,9 @@ class OperationSynthesis:
     def __repr__(self) -> str:
         return "_".join(
             [
-                str(self.variable),
-                str(self.spatial_resolution),
-                str(self.temporal_resolution),
+                self.variable.value,
+                self.spatial_resolution.value,
+                self.temporal_resolution.value,
             ]
         )
 

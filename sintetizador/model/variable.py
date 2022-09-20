@@ -29,5 +29,5 @@ class Variable(Enum):
                 return v
         return cls.ENERGIA_ARMAZENADA_PERCENTUAL
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.value
