@@ -551,7 +551,8 @@ class RawFilesRepository(AbstractFilesRepository):
         except FileNotFoundError as f:
             Log.log().warning(
                 "Arquivo não encontrado para "
-                + (variable, spatial_resolution, temporal_resolution)
+                + f"{variable.value}_{spatial_resolution.value}"
+                + f"_{temporal_resolution.value}"
             )
             return None
 

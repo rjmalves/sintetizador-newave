@@ -257,7 +257,7 @@ class OperationSynthetizer:
             for s1, n1 in zip(sbms_idx, sbms_name):
                 for s2, n2 in zip(sbms_idx, sbms_name):
                     # Ignora o mesmo SBM
-                    if s1 == s2:
+                    if s1 >= s2:
                         continue
                     Log.log().info(
                         "Processando arquivo do par de "
