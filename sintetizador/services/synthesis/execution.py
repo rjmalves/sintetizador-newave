@@ -16,7 +16,7 @@ class ExecutionSynthetizer:
     DEFAULT_EXECUTION_SYNTHESIS_ARGS: List[str] = [
         "CONVERGENCIA",
         "TEMPO",
-        "CUSTO",
+        "COMPOSICAO_CUSTOS",
     ]
 
     @classmethod
@@ -44,7 +44,7 @@ class ExecutionSynthetizer:
     ) -> pd.DataFrame:
         RULES: Dict[Variable, Callable] = {
             Variable.CONVERGENCIA: cls._resolve_convergence,
-            Variable.CUSTO: cls._resolve_cost,
+            Variable.COMPOSICAO_CUSTOS: cls._resolve_cost,
             Variable.TEMPO_EXECUCAO: cls._resolve_runtime,
         }
         return RULES[synthesis.variable](uow)
