@@ -64,6 +64,7 @@ class FSUnitOfWork(AbstractUnitOfWork):
         "parp.dat",
         "parpeol.dat",
         "parpvaz.dat",
+        "newave.tim",
     ]
 
     def __init__(self, path: str, directory: str):
