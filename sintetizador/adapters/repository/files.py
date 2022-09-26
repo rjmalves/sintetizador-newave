@@ -11,6 +11,8 @@ from inewave.newave.conft import ConfT
 from inewave.newave.eolicacadastro import EolicaCadastro
 from inewave.newave.ree import REE
 from inewave.newave.sistema import Sistema
+from inewave.newave.pmo import PMO
+from inewave.newave.newavetim import NewaveTim
 
 from inewave.nwlistop.cmarg import Cmarg
 from inewave.nwlistop.cmargmed import CmargMed
@@ -93,6 +95,14 @@ class AbstractFilesRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def get_pmo(self) -> PMO:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_newavetim(self) -> NewaveTim:
+        raise NotImplementedError
+
+    @abstractmethod
     def get_eolicacadastro(self) -> EolicaCadastro:
         raise NotImplementedError
 
@@ -116,6 +126,8 @@ class RawFilesRepository(AbstractFilesRepository):
         self.__dger: Optional[DGer] = None
         self.__patamar: Optional[Patamar] = None
         self.__sistema: Optional[Sistema] = None
+        self.__pmo: Optional[PMO] = None
+        self.__newavetim: Optional[NewaveTim] = None
         self.__ree: Optional[REE] = None
         self.__confhd: Optional[Confhd] = None
         self.__conft: Optional[ConfT] = None
@@ -520,6 +532,20 @@ class RawFilesRepository(AbstractFilesRepository):
                 self.__tmppath, self.arquivos.sistema
             )
         return self.__sistema
+
+    def get_pmo(self) -> PMO:
+        if self.__pmo is None:
+            Log.log().info(f"Lendo arquivo {self.arquivos.pmo}")
+            self.__pmo = PMO.le_arquivo(self.__tmppath, self.arquivos.pmo)
+        return self.__pmo
+
+    def get_newavetim(self) -> NewaveTim:
+        if self.__newavetim is None:
+            Log.log().info(f"Lendo arquivo newave.tim")
+            self.__newavetim = NewaveTim.le_arquivo(
+                self.__tmppath, "newave.tim"
+            )
+        return self.__newavetim
 
     def get_eolicacadastro(self) -> EolicaCadastro:
         if self.__eolicacadastro is None:

@@ -4,6 +4,7 @@ from enum import Enum
 class Variable(Enum):
     CONVERGENCIA = "CONVERGENCIA"
     TEMPO_EXECUCAO = "TEMPO"
+    CUSTO = "CUSTO"
 
     @classmethod
     def factory(cls, val: str) -> "Variable":
