@@ -42,7 +42,7 @@ class ExecutionSynthetizer:
     def _resolve(
         cls, synthesis: ExecutionSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-        RULES = Dict[Variable, Callable] = {
+        RULES: Dict[Variable, Callable] = {
             Variable.CONVERGENCIA: cls._resolve_convergence,
             Variable.CUSTO: cls._resolve_cost,
             Variable.TEMPO_EXECUCAO: cls._resolve_runtime,
