@@ -2,6 +2,7 @@ from typing import Callable, Dict, List, Tuple
 import pandas as pd
 from inewave.config import MESES_DF
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
 
 from sintetizador.services.unitofwork import AbstractUnitOfWork
 from sintetizador.utils.log import Log
@@ -14,49 +15,49 @@ from sintetizador.model.operation.operationsynthesis import OperationSynthesis
 class OperationSynthetizer:
 
     DEFAULT_OPERATION_SYNTHESIS_ARGS: List[str] = [
-        "CMO_SBM_MES",
+        "CMO_SBM_EST",
         "CMO_SBM_PAT",
-        "VAGUA_REE_MES",
-        "CTER_SBM_MES",
-        "CTER_SIN_MES",
-        "COP_SIN_MES",
-        "ENA_REE_MES",
-        "ENA_SBM_MES",
-        "ENA_SIN_MES",
-        "EARP_REE_MES",
-        "EARP_SBM_MES",
-        "EARP_SIN_MES",
-        "EARM_REE_MES",
-        "EARM_SBM_MES",
-        "EARM_SIN_MES",
-        "GHID_REE_MES",
-        "GHID_SBM_MES",
-        "GHID_SIN_MES",
-        "GTER_SBM_MES",
-        "GTER_SIN_MES",
+        "VAGUA_REE_EST",
+        "CTER_SBM_EST",
+        "CTER_SIN_EST",
+        "COP_SIN_EST",
+        "ENAA_REE_EST",
+        "ENAA_SBM_EST",
+        "ENAA_SIN_EST",
+        "EARPF_REE_EST",
+        "EARPF_SBM_EST",
+        "EARPF_SIN_EST",
+        "EARMF_REE_EST",
+        "EARMF_SBM_EST",
+        "EARMF_SIN_EST",
+        "GHID_REE_EST",
+        "GHID_SBM_EST",
+        "GHID_SIN_EST",
+        "GTER_SBM_EST",
+        "GTER_SIN_EST",
         "GHID_REE_PAT",
         "GHID_SBM_PAT",
         "GHID_SIN_PAT",
         "GTER_SBM_PAT",
         "GTER_SIN_PAT",
-        "EVER_REE_MES",
-        "EVER_SBM_MES",
-        "EVER_SIN_MES",
-        "QAFL_UHE_MES",
-        "QINC_UHE_MES",
-        "VTUR_UHE_MES",
-        "VVER_UHE_MES",
-        "VARM_UHE_MES",
-        "VARP_UHE_MES",
+        "EVERT_REE_EST",
+        "EVERT_SBM_EST",
+        "EVERT_SIN_EST",
+        "QAFL_UHE_EST",
+        "QINC_UHE_EST",
+        "VTUR_UHE_EST",
+        "VVER_UHE_EST",
+        "VARMF_UHE_EST",
+        "VARPF_UHE_EST",
         "GHID_UHE_PAT",
-        "VENTO_UEE_MES",
-        "GEOL_UEE_MES",
-        "GEOL_SBM_MES",
-        "GEOL_SIN_MES",
+        "VENTO_UEE_EST",
+        "GEOL_UEE_EST",
+        "GEOL_SBM_EST",
+        "GEOL_SIN_EST",
         "GEOL_UEE_PAT",
         "GEOL_SBM_PAT",
         "GEOL_SIN_PAT",
-        "INT_SBP_MES",
+        "INT_SBP_EST",
         "INT_SBP_PAT",
     ]
 
@@ -131,7 +132,7 @@ class OperationSynthetizer:
         return valid_variables
 
     @classmethod
-    def __resolve_MES(cls, df: pd.DataFrame) -> pd.DataFrame:
+    def __resolve_EST(cls, df: pd.DataFrame) -> pd.DataFrame:
         anos = df["Ano"].unique().tolist()
         labels = pd.date_range(
             datetime(year=anos[0], month=1, day=1),
@@ -146,8 +147,12 @@ class OperationSynthetizer:
             ]
             df_series = pd.concat([df_series, df_ano], ignore_index=True)
         cols = df_series.columns.tolist()
-        df_series["Data"] = labels
-        return df_series[["Data"] + cols]
+        df_series["Estagio"] = list(range(1, len(labels) + 1))
+        df_series["Data Inicio"] = labels
+        df_series["Data Fim"] = df_series["Data Inicio"] + relativedelta(
+            months=1
+        )
+        return df_series[["Estagio", "Data Inicio", "Data Fim"] + cols]
 
     @classmethod
     def __resolve_PAT(cls, df: pd.DataFrame) -> pd.DataFrame:
@@ -175,8 +180,12 @@ class OperationSynthetizer:
                     [df_series, df_ano_patamar], ignore_index=True
                 )
         cols = df_series.columns.tolist()
-        df_series["Data"] = labels * len(patamares)
-        return df_series[["Data"] + cols]
+        df_series["Estagio"] = list(range(1, len(labels) + 1)) * len(patamares)
+        df_series["Data Inicio"] = labels * len(patamares)
+        df_series["Data Fim"] = df_series["Data Inicio"] + relativedelta(
+            months=1
+        )
+        return df_series[["Data Inicio", "Data Fim"] + cols]
 
     @classmethod
     def _resolve_temporal_resolution(
@@ -184,7 +193,7 @@ class OperationSynthetizer:
     ) -> pd.DataFrame:
 
         RESOLUTION_FUNCTION_MAP: Dict[TemporalResolution, Callable] = {
-            TemporalResolution.MES: cls.__resolve_MES,
+            TemporalResolution.ESTAGIO: cls.__resolve_EST,
             TemporalResolution.PATAMAR: cls.__resolve_PAT,
         }
 
@@ -340,8 +349,8 @@ class OperationSynthetizer:
                 if df_uhe is None:
                     continue
                 cols = df_uhe.columns.tolist()
-                df_uhe["UHE"] = n
-                df_uhe = df_uhe[["UHE"] + cols]
+                df_uhe["Usina"] = n
+                df_uhe = df_uhe[["Usina"] + cols]
                 df = pd.concat(
                     [df, df_uhe],
                     ignore_index=True,
@@ -371,8 +380,8 @@ class OperationSynthetizer:
                 if df_ute is None:
                     continue
                 cols = df_ute.columns.tolist()
-                df_ute["UTE"] = n
-                df_ute = df_ute[["UTE"] + cols]
+                df_ute["Usina"] = n
+                df_ute = df_ute[["Usina"] + cols]
                 df = pd.concat(
                     [df, df_ute],
                     ignore_index=True,
@@ -409,8 +418,8 @@ class OperationSynthetizer:
                 if df_uee is None:
                     continue
                 cols = df_uee.columns.tolist()
-                df_uee["UEE"] = n
-                df_uee = df_uee[["UEE"] + cols]
+                df_uee["Usina"] = n
+                df_uee = df_uee[["Usina"] + cols]
                 df = pd.concat(
                     [df, df_uee],
                     ignore_index=True,
@@ -436,6 +445,17 @@ class OperationSynthetizer:
         return solver(synthesis, uow)
 
     @classmethod
+    def _resolve_starting_stage(
+        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
+    ):
+        with uow:
+            dger = uow.files.get_dger()
+        starting_date = datetime(
+            year=dger.ano_inicio_estudo, month=dger.mes_inicio_estudo, day=1
+        )
+        return df.loc[df["Data Inicio"] < starting_date]
+
+    @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
         if len(variables) == 0:
             variables = OperationSynthetizer._default_args()
@@ -450,5 +470,6 @@ class OperationSynthetizer:
             filename = str(s)
             Log.log().info(f"Realizando síntese de {filename}")
             df = cls._resolve_spatial_resolution(s, uow)
+            df = cls._resolve_starting_stage(df, uow)
             with uow:
                 uow.export.synthetize_df(df, filename)

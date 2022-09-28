@@ -3,6 +3,7 @@ from enum import Enum
 
 class TemporalResolution(Enum):
     MES = "MES"
+    ESTAGIO = "EST"
     PATAMAR = "PAT"
 
     @classmethod
