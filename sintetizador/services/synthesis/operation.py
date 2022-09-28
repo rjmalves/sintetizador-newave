@@ -149,9 +149,8 @@ class OperationSynthetizer:
         cols = df_series.columns.tolist()
         df_series["Estagio"] = list(range(1, len(labels) + 1))
         df_series["Data Inicio"] = labels
-        df_series["Data Fim"] = df_series["Data Inicio"] + relativedelta(
-            months=1
-        )
+        f = lambda x: x["Data Inicio"] + relativedelta(months=1)
+        df_series["Data Fim"] = df_series.apply(f, axis=1)
         return df_series[["Estagio", "Data Inicio", "Data Fim"] + cols]
 
     @classmethod
@@ -182,9 +181,8 @@ class OperationSynthetizer:
         cols = df_series.columns.tolist()
         df_series["Estagio"] = list(range(1, len(labels) + 1)) * len(patamares)
         df_series["Data Inicio"] = labels * len(patamares)
-        df_series["Data Fim"] = df_series["Data Inicio"] + relativedelta(
-            months=1
-        )
+        f = lambda x: x["Data Inicio"] + relativedelta(months=1)
+        df_series["Data Fim"] = df_series.apply(f, axis=1)
         return df_series[["Data Inicio", "Data Fim"] + cols]
 
     @classmethod
