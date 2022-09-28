@@ -183,7 +183,7 @@ class OperationSynthetizer:
         df_series["Data Inicio"] = labels * len(patamares)
         f = lambda x: x["Data Inicio"] + relativedelta(months=1)
         df_series["Data Fim"] = df_series.apply(f, axis=1)
-        return df_series[["Data Inicio", "Data Fim"] + cols]
+        return df_series[["Estagio", "Data Inicio", "Data Fim"] + cols]
 
     @classmethod
     def _resolve_temporal_resolution(
@@ -451,7 +451,7 @@ class OperationSynthetizer:
         starting_date = datetime(
             year=dger.ano_inicio_estudo, month=dger.mes_inicio_estudo, day=1
         )
-        return df.loc[df["Data Inicio"] < starting_date]
+        return df.loc[df["Data Inicio"] >= starting_date]
 
     @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
