@@ -84,6 +84,7 @@ class ExecutionSynthetizer:
         with uow:
             tim = uow.files.get_newavetim()
             df = tim.tempos_etapas
+            df["Tempo"] = df["Tempo"].dt.total_seconds()
         return df
 
     @classmethod
