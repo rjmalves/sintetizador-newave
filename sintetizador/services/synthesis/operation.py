@@ -451,9 +451,11 @@ class OperationSynthetizer:
         starting_date = datetime(
             year=dger.ano_inicio_estudo, month=dger.mes_inicio_estudo, day=1
         )
-        df_starting = df.loc[df["Data Inicio"] >= starting_date]
-        df_starting.loc[:, "Estagio"] -= int(df_starting["Estagio"].min()) - 1
-        return df.loc[df["Data Inicio"] >= starting_date]
+        df.loc[df["Data Inicio"] >= starting_date, "Estagio"] -= (
+            int(df.loc[df["Data Inicio"] >= starting_date, "Estagio"].min())
+            - 1
+        )
+        return df.loc[df["Data Inicio"] >= starting_date].copy()
 
     @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
