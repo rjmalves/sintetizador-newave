@@ -452,7 +452,7 @@ class OperationSynthetizer:
             year=dger.ano_inicio_estudo, month=dger.mes_inicio_estudo, day=1
         )
         df_starting = df.loc[df["Data Inicio"] >= starting_date]
-        df_starting["Estagio"] -= int(df_starting["Estagio"].min()) - 1
+        df_starting.loc[:, "Estagio"] -= int(df_starting["Estagio"].min()) - 1
         return df.loc[df["Data Inicio"] >= starting_date]
 
     @classmethod
