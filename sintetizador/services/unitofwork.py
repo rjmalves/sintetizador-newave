@@ -39,7 +39,7 @@ class AbstractUnitOfWork(ABC):
 
 
 class FSUnitOfWork(AbstractUnitOfWork):
-    def __init__(self, path: str, directory: str):
+    def __init__(self, directory: str):
         self._current_path = Path(curdir).resolve()
         self._synthesis_directory = directory
         self._files = None
