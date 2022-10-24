@@ -147,11 +147,11 @@ class OperationSynthetizer:
             ]
             df_series = pd.concat([df_series, df_ano], ignore_index=True)
         cols = df_series.columns.tolist()
-        df_series["Estagio"] = list(range(1, len(labels) + 1))
-        df_series["Data Inicio"] = labels
-        f = lambda x: x["Data Inicio"] + relativedelta(months=1)
-        df_series["Data Fim"] = df_series.apply(f, axis=1)
-        return df_series[["Estagio", "Data Inicio", "Data Fim"] + cols]
+        df_series["estagio"] = list(range(1, len(labels) + 1))
+        df_series["dataInicio"] = labels
+        f = lambda x: x["dataInicio"] + relativedelta(months=1)
+        df_series["dataFim"] = df_series.apply(f, axis=1)
+        return df_series[["estagio", "dataInicio", "dataFim"] + cols]
 
     @classmethod
     def __resolve_PAT(cls, df: pd.DataFrame) -> pd.DataFrame:
@@ -173,17 +173,17 @@ class OperationSynthetizer:
                     str(s) for s in list(range(1, df_ano_patamar.shape[1] + 1))
                 ]
                 df_ano_patamar.columns = cols
-                df_ano_patamar["Patamar"] = p
-                df_ano_patamar = df_ano_patamar[["Patamar"] + cols]
+                df_ano_patamar["patamar"] = p
+                df_ano_patamar = df_ano_patamar[["patamar"] + cols]
                 df_series = pd.concat(
                     [df_series, df_ano_patamar], ignore_index=True
                 )
         cols = df_series.columns.tolist()
-        df_series["Estagio"] = list(range(1, len(labels) + 1)) * len(patamares)
-        df_series["Data Inicio"] = labels * len(patamares)
-        f = lambda x: x["Data Inicio"] + relativedelta(months=1)
-        df_series["Data Fim"] = df_series.apply(f, axis=1)
-        return df_series[["Estagio", "Data Inicio", "Data Fim"] + cols]
+        df_series["estagio"] = list(range(1, len(labels) + 1)) * len(patamares)
+        df_series["dataInicio"] = labels * len(patamares)
+        f = lambda x: x["dataInicio"] + relativedelta(months=1)
+        df_series["dataFim"] = df_series.apply(f, axis=1)
+        return df_series[["estagio", "dataInicio", "dataFim"] + cols]
 
     @classmethod
     def _resolve_temporal_resolution(
@@ -241,8 +241,8 @@ class OperationSynthetizer:
                 if df_sbm is None:
                     continue
                 cols = df_sbm.columns.tolist()
-                df_sbm["Submercado"] = n
-                df_sbm = df_sbm[["Submercado"] + cols]
+                df_sbm["submercado"] = n
+                df_sbm = df_sbm[["submercado"] + cols]
                 df = pd.concat(
                     [df, df_sbm],
                     ignore_index=True,
@@ -282,11 +282,9 @@ class OperationSynthetizer:
                     if df_sbm is None:
                         continue
                     cols = df_sbm.columns.tolist()
-                    df_sbm["Submercado De"] = n1
-                    df_sbm["Submercado Para"] = n2
-                    df_sbm = df_sbm[
-                        ["Submercado De", "Submercado Para"] + cols
-                    ]
+                    df_sbm["submercadoDe"] = n1
+                    df_sbm["submercadoPara"] = n2
+                    df_sbm = df_sbm[["submercadoDe", "submercadoPara"] + cols]
                     df = pd.concat(
                         [df, df_sbm],
                         ignore_index=True,
@@ -316,8 +314,8 @@ class OperationSynthetizer:
                 if df_ree is None:
                     continue
                 cols = df_ree.columns.tolist()
-                df_ree["REE"] = n
-                df_ree = df_ree[["REE"] + cols]
+                df_ree["ree"] = n
+                df_ree = df_ree[["ree"] + cols]
                 df = pd.concat(
                     [df, df_ree],
                     ignore_index=True,
@@ -347,8 +345,8 @@ class OperationSynthetizer:
                 if df_uhe is None:
                     continue
                 cols = df_uhe.columns.tolist()
-                df_uhe["Usina"] = n
-                df_uhe = df_uhe[["Usina"] + cols]
+                df_uhe["usina"] = n
+                df_uhe = df_uhe[["usina"] + cols]
                 df = pd.concat(
                     [df, df_uhe],
                     ignore_index=True,
@@ -378,8 +376,8 @@ class OperationSynthetizer:
                 if df_ute is None:
                     continue
                 cols = df_ute.columns.tolist()
-                df_ute["Usina"] = n
-                df_ute = df_ute[["Usina"] + cols]
+                df_ute["usina"] = n
+                df_ute = df_ute[["usina"] + cols]
                 df = pd.concat(
                     [df, df_ute],
                     ignore_index=True,
@@ -416,8 +414,8 @@ class OperationSynthetizer:
                 if df_uee is None:
                     continue
                 cols = df_uee.columns.tolist()
-                df_uee["Usina"] = n
-                df_uee = df_uee[["Usina"] + cols]
+                df_uee["usina"] = n
+                df_uee = df_uee[["usina"] + cols]
                 df = pd.concat(
                     [df, df_uee],
                     ignore_index=True,
@@ -451,8 +449,8 @@ class OperationSynthetizer:
         starting_date = datetime(
             year=dger.ano_inicio_estudo, month=dger.mes_inicio_estudo, day=1
         )
-        starting_df = df.loc[df["Data Inicio"] >= starting_date].copy()
-        starting_df.loc[:, "Estagio"] -= starting_date.month - 1
+        starting_df = df.loc[df["dataInicio"] >= starting_date].copy()
+        starting_df.loc[:, "estagio"] -= starting_date.month - 1
         return starting_df.copy()
 
     @classmethod
