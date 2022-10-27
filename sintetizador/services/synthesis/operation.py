@@ -1,5 +1,6 @@
 from typing import Callable, Dict, List, Tuple
 import pandas as pd
+import numpy as np
 from inewave.config import MESES_DF
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -48,14 +49,21 @@ class OperationSynthetizer:
         "EVERT_SBM_EST",
         "EVERT_SIN_EST",
         "QAFL_UHE_EST",
-        "QDEF_UHE_EST",
         "QINC_UHE_EST",
+        "QDEF_UHE_EST",
+        "QDEF_UHE_PAT",
         "VTUR_UHE_EST",
+        "VTUR_UHE_PAT",
         "QTUR_UHE_EST",
+        "QTUR_UHE_PAT",
         "VVER_UHE_EST",
+        "VVER_UHE_PAT",
+        "QVER_UHE_EST",
+        "QVER_UHE_PAT",
         "VARMF_UHE_EST",
         "VARPF_UHE_EST",
         "GHID_UHE_PAT",
+        "GHID_UHE_EST",
         "VENTO_UEE_EST",
         "GEOL_UEE_EST",
         "GEOL_SBM_EST",
@@ -355,7 +363,7 @@ class OperationSynthetizer:
                     uow.files.get_nwlistop(
                         variable_map[synthesis.variable],
                         synthesis.spatial_resolution,
-                        synthesis.temporal_resolution,
+                        TemporalResolution.PATAMAR,
                         uhe=s,
                     ),
                 )
@@ -368,12 +376,29 @@ class OperationSynthetizer:
                     [df, df_uhe],
                     ignore_index=True,
                 )
-            cols_cenarios = [
-                c
-                for c in df.columns.tolist()
-                if c
-                not in ["estagio", "dataInicio", "dataFim", "patamar", "usina"]
+            cols_nao_cenarios = [
+                "estagio",
+                "dataInicio",
+                "dataFim",
+                "patamar",
+                "usina",
             ]
+            cols_cenarios = [
+                c for c in df.columns.tolist() if c not in cols_nao_cenarios
+            ]
+            if synthesis.temporal_resolution == TemporalResolution.ESTAGIO:
+                patamares = df["patamar"].unique().tolist()
+                cenarios_patamares: List[np.ndarray] = []
+                p0 = patamares[0]
+                for p in patamares:
+                    cenarios_patamares.append(
+                        df.loc[df["patamar"] == p, cols_cenarios].to_numpy()
+                    )
+                df.loc[df["patamar"] == p0, cols_cenarios] = 0.0
+                for c in cenarios_patamares:
+                    df.loc[df["patamar"] == p0, cols_cenarios] += c
+                df = df.loc[df["patanar"] == p0, :]
+
             df.loc[:, cols_cenarios] *= FATOR_HM3_M3S
             df = df.loc[df["dataInicio"] < fim, :]
             return df
@@ -398,10 +423,15 @@ class OperationSynthetizer:
             ),
             uow,
         )
+        cols_nao_cenarios = [
+            "estagio",
+            "dataInicio",
+            "dataFim",
+            "patamar",
+            "usina",
+        ]
         cols_cenarios = [
-            c
-            for c in df_tur.columns
-            if c not in ["estagio", "dataInicio", "dataFim", "patamar"]
+            c for c in df_ver.columns.tolist() if c not in cols_nao_cenarios
         ]
         df_ver.loc[:, cols_cenarios] = (
             df_tur[cols_cenarios].to_numpy() + df_ver[cols_cenarios].to_numpy()
