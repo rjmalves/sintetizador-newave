@@ -558,7 +558,7 @@ class OperationSynthetizer:
                     [df, df_uhe],
                     ignore_index=True,
                 )
-            df = df.loc[df["dataInicio"] >= fim, :]
+            df = df.loc[df["dataInicio"] < fim, :]
             return df
 
     @classmethod
