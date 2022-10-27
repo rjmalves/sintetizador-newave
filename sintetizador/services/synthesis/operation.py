@@ -527,8 +527,8 @@ class OperationSynthetizer:
             ree = uow.files.get_ree()
             # Obtem o fim do peroodo individualizado
             fim = datetime(
-                year=ree.rees["Ano Fim Individualizado"].tolist()[0],
-                month=ree.rees["Mês Fim Individualizado"].tolist()[0],
+                year=int(ree.rees["Ano Fim Individualizado"].tolist()[0]),
+                month=int(ree.rees["Mês Fim Individualizado"].tolist()[0]),
                 day=1,
             )
             uhes_idx = confhd.usinas["Número"]
