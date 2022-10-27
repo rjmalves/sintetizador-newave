@@ -359,7 +359,11 @@ class OperationSynthetizer:
             for s, n in zip(uhes_idx, uhes_name):
                 Log.log().info(f"Processando arquivo da UHE: {s} - {n}")
                 df_uhe = cls._resolve_temporal_resolution(
-                    synthesis,
+                    OperationSynthesis(
+                        variable=synthesis.variable,
+                        spatial_resolution=synthesis.spatial_resolution,
+                        temporal_resolution=TemporalResolution.PATAMAR,
+                    ),
                     uow.files.get_nwlistop(
                         variable_map[synthesis.variable],
                         synthesis.spatial_resolution,
@@ -386,7 +390,6 @@ class OperationSynthetizer:
             cols_cenarios = [
                 c for c in df.columns.tolist() if c not in cols_nao_cenarios
             ]
-            print(df)
             if synthesis.temporal_resolution == TemporalResolution.ESTAGIO:
                 patamares = df["patamar"].unique().tolist()
                 cenarios_patamares: List[np.ndarray] = []
