@@ -386,6 +386,7 @@ class OperationSynthetizer:
             cols_cenarios = [
                 c for c in df.columns.tolist() if c not in cols_nao_cenarios
             ]
+            print(df)
             if synthesis.temporal_resolution == TemporalResolution.ESTAGIO:
                 patamares = df["patamar"].unique().tolist()
                 cenarios_patamares: List[np.ndarray] = []
@@ -397,7 +398,7 @@ class OperationSynthetizer:
                 df.loc[df["patamar"] == p0, cols_cenarios] = 0.0
                 for c in cenarios_patamares:
                     df.loc[df["patamar"] == p0, cols_cenarios] += c
-                df = df.loc[df["patanar"] == p0, :]
+                df = df.loc[df["patamar"] == p0, :]
 
             df.loc[:, cols_cenarios] *= FATOR_HM3_M3S
             df = df.loc[df["dataInicio"] < fim, :]
