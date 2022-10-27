@@ -12,6 +12,10 @@ from sintetizador.model.operation.temporalresolution import TemporalResolution
 from sintetizador.model.operation.operationsynthesis import OperationSynthesis
 
 
+HORAS_ESTAGIO = 730.0
+FATOR_HM3_M3S = HORAS_ESTAGIO / 1e6
+
+
 class OperationSynthetizer:
 
     DEFAULT_OPERATION_SYNTHESIS_ARGS: List[str] = [
@@ -46,6 +50,7 @@ class OperationSynthetizer:
         "QAFL_UHE_EST",
         "QINC_UHE_EST",
         "VTUR_UHE_EST",
+        "QTUR_UHE_EST",
         "VVER_UHE_EST",
         "VARMF_UHE_EST",
         "VARPF_UHE_EST",
@@ -328,6 +333,13 @@ class OperationSynthetizer:
     ) -> pd.DataFrame:
         with uow:
             confhd = uow.files.get_confhd()
+            ree = uow.files.get_ree()
+            # Obtem o fim do peroodo individualizado
+            fim = datetime(
+                year=ree.rees["Ano Fim Individualizado"].tolist()[0],
+                month=ree.rees["Mês Fim Individualizado"].tolist()[0],
+                day=1,
+            )
             uhes_idx = confhd.usinas["Número"]
             uhes_name = confhd.usinas["Nome"]
             df = pd.DataFrame()
@@ -351,6 +363,7 @@ class OperationSynthetizer:
                     [df, df_uhe],
                     ignore_index=True,
                 )
+            df = df.loc[df["dataInicio"] >= fim, :]
             return df
 
     @classmethod
