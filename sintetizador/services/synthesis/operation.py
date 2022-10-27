@@ -375,7 +375,7 @@ class OperationSynthetizer:
                 not in ["estagio", "dataInicio", "dataFim", "patamar", "usina"]
             ]
             df.loc[:, cols_cenarios] /= FATOR_HM3_M3S
-            df = df.loc[df["dataInicio"] >= fim, :]
+            df = df.loc[df["dataInicio"] < fim, :]
             return df
 
     @classmethod
