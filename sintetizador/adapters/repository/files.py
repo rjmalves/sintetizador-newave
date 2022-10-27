@@ -353,14 +353,14 @@ class RawFilesRepository(AbstractFilesRepository):
             (
                 Variable.VOLUME_TURBINADO,
                 SpatialResolution.USINA_HIDROELETRICA,
-                TemporalResolution.ESTAGIO,
+                TemporalResolution.PATAMAR,
             ): lambda dir, uhe=1: VturUH.le_arquivo(
                 dir, f"vturuh{str(uhe).zfill(3)}.out"
             ).valores,
             (
                 Variable.VOLUME_VERTIDO,
                 SpatialResolution.USINA_HIDROELETRICA,
-                TemporalResolution.ESTAGIO,
+                TemporalResolution.PATAMAR,
             ): lambda dir, uhe=1: VertUH.le_arquivo(
                 dir, f"vertuh{str(uhe).zfill(3)}.out"
             ).valores,
