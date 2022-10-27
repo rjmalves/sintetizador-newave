@@ -13,7 +13,7 @@ from sintetizador.model.operation.operationsynthesis import OperationSynthesis
 
 
 HORAS_ESTAGIO = 730.0
-FATOR_HM3_M3S = HORAS_ESTAGIO / 1e6
+FATOR_HM3_M3S = 1e6 / (HORAS_ESTAGIO * 3600)
 
 
 class OperationSynthetizer:
@@ -374,7 +374,7 @@ class OperationSynthetizer:
                 if c
                 not in ["estagio", "dataInicio", "dataFim", "patamar", "usina"]
             ]
-            df.loc[:, cols_cenarios] /= FATOR_HM3_M3S
+            df.loc[:, cols_cenarios] *= FATOR_HM3_M3S
             df = df.loc[df["dataInicio"] < fim, :]
             return df
 
