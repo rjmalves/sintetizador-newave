@@ -337,6 +337,73 @@ class OperationSynthetizer:
             return df
 
     @classmethod
+    def __stub_GHID(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        with uow:
+            confhd = uow.files.get_confhd()
+            ree = uow.files.get_ree()
+            # Obtem o fim do peroodo individualizado
+            fim = datetime(
+                year=int(ree.rees["Ano Fim Individualizado"].tolist()[0]),
+                month=int(ree.rees["Mês Fim Individualizado"].tolist()[0]),
+                day=1,
+            )
+            uhes_idx = confhd.usinas["Número"]
+            uhes_name = confhd.usinas["Nome"]
+            df = pd.DataFrame()
+            for s, n in zip(uhes_idx, uhes_name):
+                Log.log().info(f"Processando arquivo da UHE: {s} - {n}")
+                df_uhe = cls._resolve_temporal_resolution(
+                    OperationSynthesis(
+                        variable=synthesis.variable,
+                        spatial_resolution=synthesis.spatial_resolution,
+                        temporal_resolution=TemporalResolution.PATAMAR,
+                    ),
+                    uow.files.get_nwlistop(
+                        synthesis.variable,
+                        synthesis.spatial_resolution,
+                        TemporalResolution.PATAMAR,
+                        uhe=s,
+                    ),
+                )
+                if df_uhe is None:
+                    continue
+                cols = df_uhe.columns.tolist()
+                df_uhe["usina"] = n
+                df_uhe = df_uhe[["usina"] + cols]
+                df = pd.concat(
+                    [df, df_uhe],
+                    ignore_index=True,
+                )
+            cols_nao_cenarios = [
+                "estagio",
+                "dataInicio",
+                "dataFim",
+                "patamar",
+                "usina",
+            ]
+            cols_cenarios = [
+                c for c in df.columns.tolist() if c not in cols_nao_cenarios
+            ]
+            if synthesis.temporal_resolution == TemporalResolution.ESTAGIO:
+                patamares = df["patamar"].unique().tolist()
+                cenarios_patamares: List[np.ndarray] = []
+                p0 = patamares[0]
+                for p in patamares:
+                    cenarios_patamares.append(
+                        df.loc[df["patamar"] == p, cols_cenarios].to_numpy()
+                    )
+                df.loc[df["patamar"] == p0, cols_cenarios] = 0.0
+                for c in cenarios_patamares:
+                    df.loc[df["patamar"] == p0, cols_cenarios] += c
+                df = df.loc[df["patamar"] == p0, :]
+
+            df.loc[:, cols_cenarios] *= FATOR_HM3_M3S
+            df = df.loc[df["dataInicio"] < fim, :]
+            return df
+
+    @classmethod
     def __stub_QTUR_QVER(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
@@ -453,6 +520,8 @@ class OperationSynthetizer:
             return cls.__stub_QTUR_QVER(synthesis, uow)
         elif synthesis.variable == Variable.VAZAO_DEFLUENTE:
             return cls.__stub_QDEF(synthesis, uow)
+        elif synthesis.variable == Variable.GERACAO_HIDRAULICA:
+            return cls.__stub_GHID(synthesis, uow)
         with uow:
             confhd = uow.files.get_confhd()
             ree = uow.files.get_ree()
