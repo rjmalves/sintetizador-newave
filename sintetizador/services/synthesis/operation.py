@@ -48,6 +48,7 @@ class OperationSynthetizer:
         "EVERT_SBM_EST",
         "EVERT_SIN_EST",
         "QAFL_UHE_EST",
+        "QDEF_UHE_EST",
         "QINC_UHE_EST",
         "VTUR_UHE_EST",
         "QTUR_UHE_EST",
@@ -328,9 +329,95 @@ class OperationSynthetizer:
             return df
 
     @classmethod
+    def __stub_QTUR_QVER(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        variable_map = {
+            Variable.VAZAO_VERTIDA: Variable.VOLUME_VERTIDO,
+            Variable.VAZAO_TURBINADA: Variable.VOLUME_TURBINADO,
+        }
+        with uow:
+            confhd = uow.files.get_confhd()
+            ree = uow.files.get_ree()
+            # Obtem o fim do peroodo individualizado
+            fim = datetime(
+                year=ree.rees["Ano Fim Individualizado"].tolist()[0],
+                month=ree.rees["Mês Fim Individualizado"].tolist()[0],
+                day=1,
+            )
+            uhes_idx = confhd.usinas["Número"]
+            uhes_name = confhd.usinas["Nome"]
+            df = pd.DataFrame()
+            for s, n in zip(uhes_idx, uhes_name):
+                Log.log().info(f"Processando arquivo da UHE: {s} - {n}")
+                df_uhe = cls._resolve_temporal_resolution(
+                    synthesis,
+                    uow.files.get_nwlistop(
+                        variable_map[synthesis.variable],
+                        synthesis.spatial_resolution,
+                        synthesis.temporal_resolution,
+                        uhe=s,
+                    ),
+                )
+                if df_uhe is None:
+                    continue
+                cols = df_uhe.columns.tolist()
+                df_uhe["usina"] = n
+                df_uhe = df_uhe[["usina"] + cols]
+                df = pd.concat(
+                    [df, df_uhe],
+                    ignore_index=True,
+                )
+            cols_cenarios = [
+                c
+                for c in df.columns
+                if c not in ["estagio", "dataInicio", "dataFim", "patamar"]
+            ]
+            df[cols_cenarios] /= FATOR_HM3_M3S
+            df = df.loc[df["dataInicio"] >= fim, :]
+            return df
+
+    @classmethod
+    def __stub_QDEF(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        df_tur = cls.__stub_QTUR_QVER(
+            OperationSynthesis(
+                Variable.VAZAO_TURBINADA,
+                synthesis.spatial_resolution,
+                synthesis.temporal_resolution,
+            ),
+            uow,
+        )
+        df_ver = cls.__stub_QTUR_QVER(
+            OperationSynthesis(
+                Variable.VAZAO_VERTIDA,
+                synthesis.spatial_resolution,
+                synthesis.temporal_resolution,
+            ),
+            uow,
+        )
+        cols_cenarios = [
+            c
+            for c in df_tur.columns
+            if c not in ["estagio", "dataInicio", "dataFim", "patamar"]
+        ]
+        df_ver.loc[:, cols_cenarios] = (
+            df_tur[cols_cenarios].to_numpy() + df_ver[cols_cenarios].to_numpy()
+        )
+        return df_ver
+
+    @classmethod
     def __resolve_UHE(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
+        if synthesis.variable in [
+            Variable.VAZAO_TURBINADA,
+            Variable.VAZAO_VERTIDA,
+        ]:
+            return cls.__stub_QTUR_QVER(synthesis, uow)
+        elif synthesis.variable == Variable.VAZAO_DEFLUENTE:
+            return cls.__stub_QDEF(synthesis, uow)
         with uow:
             confhd = uow.files.get_confhd()
             ree = uow.files.get_ree()
