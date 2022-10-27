@@ -371,7 +371,8 @@ class OperationSynthetizer:
             cols_cenarios = [
                 c
                 for c in df.columns.tolist()
-                if c not in ["estagio", "dataInicio", "dataFim", "patamar"]
+                if c
+                not in ["estagio", "dataInicio", "dataFim", "patamar", "usina"]
             ]
             df.loc[:, cols_cenarios] /= FATOR_HM3_M3S
             df = df.loc[df["dataInicio"] >= fim, :]
