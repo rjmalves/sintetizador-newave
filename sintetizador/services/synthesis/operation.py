@@ -337,7 +337,7 @@ class OperationSynthetizer:
             return df
 
     @classmethod
-    def __stub_GHID(
+    def __stub_GHID_VTUR_VVER(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         with uow:
@@ -520,8 +520,12 @@ class OperationSynthetizer:
             return cls.__stub_QTUR_QVER(synthesis, uow)
         elif synthesis.variable == Variable.VAZAO_DEFLUENTE:
             return cls.__stub_QDEF(synthesis, uow)
-        elif synthesis.variable == Variable.GERACAO_HIDRAULICA:
-            return cls.__stub_GHID(synthesis, uow)
+        elif synthesis.variable in [
+            Variable.GERACAO_HIDRAULICA,
+            Variable.VOLUME_TURBINADO,
+            Variable.VOLUME_VERTIDO,
+        ]:
+            return cls.__stub_GHID_VTUR_VVER(synthesis, uow)
         with uow:
             confhd = uow.files.get_confhd()
             ree = uow.files.get_ree()
