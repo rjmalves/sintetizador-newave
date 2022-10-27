@@ -173,7 +173,7 @@ class OperationSynthetizer:
                     str(s) for s in list(range(1, df_ano_patamar.shape[1] + 1))
                 ]
                 df_ano_patamar.columns = cols
-                df_ano_patamar["patamar"] = p
+                df_ano_patamar["patamar"] = str(p)
                 df_ano_patamar = df_ano_patamar[["patamar"] + cols]
                 df_series = pd.concat(
                     [df_series, df_ano_patamar], ignore_index=True
