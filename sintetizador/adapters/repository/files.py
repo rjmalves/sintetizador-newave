@@ -578,7 +578,7 @@ class RawFilesRepository(AbstractFilesRepository):
             Log.log().warning(
                 "Arquivo não encontrado para "
                 + f"{variable.value}_{spatial_resolution.value}"
-                + f"_{temporal_resolution.value}"
+                + f"_{temporal_resolution.value}: {kwargs}"
             )
             return None
 
