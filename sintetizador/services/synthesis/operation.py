@@ -204,6 +204,9 @@ class OperationSynthetizer:
         cls, synthesis: OperationSynthesis, df: pd.DataFrame
     ) -> pd.DataFrame:
 
+        if df is None:
+            return None
+
         RESOLUTION_FUNCTION_MAP: Dict[TemporalResolution, Callable] = {
             TemporalResolution.ESTAGIO: cls.__resolve_EST,
             TemporalResolution.PATAMAR: cls.__resolve_PAT,
