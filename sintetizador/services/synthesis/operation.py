@@ -13,8 +13,7 @@ from sintetizador.model.operation.temporalresolution import TemporalResolution
 from sintetizador.model.operation.operationsynthesis import OperationSynthesis
 
 
-HORAS_ESTAGIO = 730.0
-FATOR_HM3_M3S = 1e6 / (HORAS_ESTAGIO * 3600)
+FATOR_HM3_M3S = 1.0 / 2.63
 
 
 class OperationSynthetizer:
