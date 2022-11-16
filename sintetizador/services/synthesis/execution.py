@@ -16,7 +16,7 @@ class ExecutionSynthetizer:
     DEFAULT_EXECUTION_SYNTHESIS_ARGS: List[str] = [
         "CONVERGENCIA",
         "TEMPO",
-        "COMPOSICAO_CUSTOS",
+        "CUSTOS",
     ]
 
     @classmethod
@@ -56,11 +56,11 @@ class ExecutionSynthetizer:
             df = pmo.convergencia
             df_processed = pd.DataFrame(
                 data={
-                    "Iteracao": df["Iteração"][2::3].to_numpy(),
-                    "Zinf": df["ZINF"][2::3].to_numpy(),
-                    "Delta Zinf": df["Delta ZINF"][2::3].to_numpy(),
-                    "Zsup": df["ZSUP Iteração"][2::3].to_numpy(),
-                    "Tempo": df["Tempo"][::3].to_numpy(),
+                    "iter": df["Iteração"][2::3].to_numpy(),
+                    "zinf": df["ZINF"][2::3].to_numpy(),
+                    "dZinf": df["Delta ZINF"][2::3].to_numpy(),
+                    "zsup": df["ZSUP Iteração"][2::3].to_numpy(),
+                    "tempo": df["Tempo"][::3].to_numpy(),
                 }
             )
         return df_processed
@@ -72,9 +72,9 @@ class ExecutionSynthetizer:
             df = pmo.custo_operacao_series_simuladas
             df_processed = df.rename(
                 columns={
-                    "Valor Esperado": "Media",
-                    "Desvio Padrão do VE": "Desvio",
-                    "(%)": "Percentual",
+                    "Parcela": "parcela",
+                    "Valor Esperado": "mean",
+                    "Desvio Padrão do VE": "std",
                 }
             )
         return df_processed
@@ -85,6 +85,7 @@ class ExecutionSynthetizer:
             tim = uow.files.get_newavetim()
             df = tim.tempos_etapas
             df["Tempo"] = df["Tempo"].dt.total_seconds()
+            df = df.rename(columns={"Etapa": "etapa", "Tempo": "tempo"})
         return df
 
     @classmethod
