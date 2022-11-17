@@ -81,6 +81,10 @@ class OperationSynthetizer:
         "GEOL_SIN_PAT",
         "INT_SBP_EST",
         "INT_SBP_PAT",
+        "DEF_SBM_EST",
+        "DEF_SBM_PAT",
+        "DEF_SIN_EST",
+        "DEF_SIN_PAT",
     ]
 
     @classmethod

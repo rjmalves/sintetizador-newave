@@ -23,6 +23,8 @@ from inewave.nwlistop.eafb import Eafb
 from inewave.nwlistop.eafbm import Eafbm
 from inewave.nwlistop.eafbsin import EafbSIN
 from inewave.nwlistop.intercambio import Intercambio
+from inewave.nwlistop.deficit import Def
+from inewave.nwlistop.defsin import DefSIN
 
 from inewave.nwlistop.earmfp import Earmfp
 from inewave.nwlistop.earmfpm import Earmfpm
@@ -485,6 +487,39 @@ class RawFilesRepository(AbstractFilesRepository):
                 TemporalResolution.PATAMAR,
             ): lambda dir, _: self.__extrai_patamares_df(
                 GeolSIN.le_arquivo(dir, f"geolsin.out").valores
+            ),
+            (
+                Variable.DEFICIT,
+                SpatialResolution.SUBMERCADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, submercado=1: self.__extrai_patamares_df(
+                Def.le_arquivo(
+                    dir, f"def{str(submercado).zfill(3)}.out"
+                ).valores,
+                ["TOTAL"],
+            ),
+            (
+                Variable.DEFICIT,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, _: self.__extrai_patamares_df(
+                Def.le_arquivo(dir, f"defsin.out").valores, ["TOTAL"]
+            ),
+            (
+                Variable.DEFICIT,
+                SpatialResolution.SUBMERCADO,
+                TemporalResolution.PATAMAR,
+            ): lambda dir, submercado=1: self.__extrai_patamares_df(
+                Def.le_arquivo(
+                    dir, f"def{str(submercado).zfill(3)}.out"
+                ).valores
+            ),
+            (
+                Variable.DEFICIT,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+                TemporalResolution.PATAMAR,
+            ): lambda dir, _: self.__extrai_patamares_df(
+                Def.le_arquivo(dir, f"defsin.out").valores
             ),
             (
                 Variable.INTERCAMBIO,
