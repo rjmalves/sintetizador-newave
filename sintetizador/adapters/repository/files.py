@@ -494,7 +494,7 @@ class RawFilesRepository(AbstractFilesRepository):
                 TemporalResolution.ESTAGIO,
             ): lambda dir, submercado=1: self.__extrai_patamares_df(
                 Def.le_arquivo(
-                    dir, f"def{str(submercado).zfill(3)}.out"
+                    dir, f"def{str(submercado).zfill(3)}p001.out"
                 ).valores,
                 ["TOTAL"],
             ),
@@ -503,7 +503,7 @@ class RawFilesRepository(AbstractFilesRepository):
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.ESTAGIO,
             ): lambda dir, _: self.__extrai_patamares_df(
-                Def.le_arquivo(dir, f"defsin.out").valores, ["TOTAL"]
+                Def.le_arquivo(dir, f"defsinp001.out").valores, ["TOTAL"]
             ),
             (
                 Variable.DEFICIT,
@@ -511,7 +511,7 @@ class RawFilesRepository(AbstractFilesRepository):
                 TemporalResolution.PATAMAR,
             ): lambda dir, submercado=1: self.__extrai_patamares_df(
                 Def.le_arquivo(
-                    dir, f"def{str(submercado).zfill(3)}.out"
+                    dir, f"def{str(submercado).zfill(3)}p001.out"
                 ).valores
             ),
             (
@@ -519,7 +519,7 @@ class RawFilesRepository(AbstractFilesRepository):
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.PATAMAR,
             ): lambda dir, _: self.__extrai_patamares_df(
-                Def.le_arquivo(dir, f"defsin.out").valores
+                Def.le_arquivo(dir, f"defsinp001.out").valores
             ),
             (
                 Variable.INTERCAMBIO,
