@@ -35,6 +35,12 @@ from inewave.nwlistop.ghtotm import Ghtotm
 from inewave.nwlistop.ghtotsin import GhtotSIN
 from inewave.nwlistop.gttot import Gttot
 from inewave.nwlistop.gttotsin import GttotSIN
+from inewave.nwlistop.evert import Evert
+from inewave.nwlistop.evertm import Evertm
+from inewave.nwlistop.evertsin import EvertSIN
+from inewave.nwlistop.perdf import Perdf
+from inewave.nwlistop.perdfm import Perdfm
+from inewave.nwlistop.perdfsin import PerdfSIN
 from inewave.nwlistop.verturb import Verturb
 from inewave.nwlistop.verturbm import Verturbm
 from inewave.nwlistop.verturbsin import VerturbSIN
@@ -316,21 +322,59 @@ class RawFilesRepository(AbstractFilesRepository):
                 GttotSIN.le_arquivo(dir, "gttotsin.out").valores,
             ),
             (
-                Variable.ENERGIA_VERTIDA_TURBINAVEL,
+                Variable.ENERGIA_VERTIDA_RESERV,
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, ree=1: Evert.le_arquivo(
+                dir, f"evert{str(ree).zfill(3)}.out"
+            ).valores,
+            (
+                Variable.ENERGIA_VERTIDA_RESERV,
+                SpatialResolution.SUBMERCADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, submercado=1: Evertm.le_arquivo(
+                dir, f"evertm{str(submercado).zfill(3)}.out"
+            ).valores,
+            (
+                Variable.ENERGIA_VERTIDA_RESERV,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, _: EvertSIN.le_arquivo(dir, "evertsin.out").valores,
+            (
+                Variable.ENERGIA_VERTIDA_FIO,
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, ree=1: Perdf.le_arquivo(
+                dir, f"perdf{str(ree).zfill(3)}.out"
+            ).valores,
+            (
+                Variable.ENERGIA_VERTIDA_FIO,
+                SpatialResolution.SUBMERCADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, submercado=1: Perdfm.le_arquivo(
+                dir, f"perdfm{str(submercado).zfill(3)}.out"
+            ).valores,
+            (
+                Variable.ENERGIA_VERTIDA_FIO,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, _: PerdfSIN.le_arquivo(dir, "perdfsin.out").valores,
+            (
+                Variable.ENERGIA_VERTIDA_FIO_TURBINAVEL,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
                 TemporalResolution.ESTAGIO,
             ): lambda dir, ree=1: Verturb.le_arquivo(
                 dir, f"verturb{str(ree).zfill(3)}.out"
             ).valores,
             (
-                Variable.ENERGIA_VERTIDA_TURBINAVEL,
+                Variable.ENERGIA_VERTIDA_FIO_TURBINAVEL,
                 SpatialResolution.SUBMERCADO,
                 TemporalResolution.ESTAGIO,
             ): lambda dir, submercado=1: Verturbm.le_arquivo(
                 dir, f"verturbm{str(submercado).zfill(3)}.out"
             ).valores,
             (
-                Variable.ENERGIA_VERTIDA_TURBINAVEL,
+                Variable.ENERGIA_VERTIDA_FIO_TURBINAVEL,
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.ESTAGIO,
             ): lambda dir, _: VerturbSIN.le_arquivo(

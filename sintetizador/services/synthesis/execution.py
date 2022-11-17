@@ -8,8 +8,6 @@ from sintetizador.utils.log import Log
 from sintetizador.model.execution.variable import Variable
 from sintetizador.model.execution.executionsynthesis import ExecutionSynthesis
 
-# TODO
-
 
 class ExecutionSynthetizer:
 

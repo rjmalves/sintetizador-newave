@@ -44,9 +44,18 @@ class OperationSynthetizer:
         "GHID_SIN_PAT",
         "GTER_SBM_PAT",
         "GTER_SIN_PAT",
-        "EVERT_REE_EST",
-        "EVERT_SBM_EST",
-        "EVERT_SIN_EST",
+        "EVER_REE_EST",
+        "EVER_SBM_EST",
+        "EVER_SIN_EST",
+        "EVERR_REE_EST",
+        "EVERR_SBM_EST",
+        "EVERR_SIN_EST",
+        "EVERF_REE_EST",
+        "EVERF_SBM_EST",
+        "EVERF_SIN_EST",
+        "EVERFT_REE_EST",
+        "EVERFT_SBM_EST",
+        "EVERFT_SIN_EST",
         "QAFL_UHE_EST",
         "QINC_UHE_EST",
         "QDEF_UHE_EST",
@@ -512,6 +521,44 @@ class OperationSynthetizer:
         return df_ver
 
     @classmethod
+    def __stub_EVER(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        df_reserv = cls._resolve_spatial_resolution(
+            OperationSynthesis(
+                Variable.ENERGIA_VERTIDA_RESERV,
+                synthesis.spatial_resolution,
+                synthesis.temporal_resolution,
+            ),
+            uow,
+        )
+        df_fio = cls._resolve_spatial_resolution(
+            OperationSynthesis(
+                Variable.ENERGIA_VERTIDA_FIO,
+                synthesis.spatial_resolution,
+                synthesis.temporal_resolution,
+            ),
+            uow,
+        )
+        cols_nao_cenarios = [
+            "estagio",
+            "dataInicio",
+            "dataFim",
+            "patamar",
+            "usina",
+            "ree",
+            "submercado",
+        ]
+        cols_cenarios = [
+            c for c in df_reserv.columns.tolist() if c not in cols_nao_cenarios
+        ]
+        df_reserv.loc[:, cols_cenarios] = (
+            df_fio[cols_cenarios].to_numpy()
+            + df_reserv[cols_cenarios].to_numpy()
+        )
+        return df_reserv
+
+    @classmethod
     def __resolve_UHE(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
@@ -677,7 +724,10 @@ class OperationSynthetizer:
         for s in valid_synthesis:
             filename = str(s)
             Log.log().info(f"Realizando síntese de {filename}")
-            df = cls._resolve_spatial_resolution(s, uow)
+            if s.variable == Variable.ENERGIA_VERTIDA:
+                df = cls.__stub_EVER(s, uow)
+            else:
+                df = cls._resolve_spatial_resolution(s, uow)
             df = cls._resolve_starting_stage(df, uow)
             with uow:
                 uow.export.synthetize_df(df, filename)

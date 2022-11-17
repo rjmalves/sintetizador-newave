@@ -18,7 +18,7 @@ Informações da execução do modelo, como ambiente escolhido, recursos computa
 
 |          VARIÁVEL          |     MNEMÔNICO     |
 | -------------------------- | ----------------- |
-| Composição de Custos       | COMPOSICAO_CUSTOS |
+| Composição de Custos       |       CUSTOS      |
 | Tempo de Execução          |       TEMPO       |
 | Convergência               |   CONVERGENCIA    |
 
@@ -39,39 +39,45 @@ Informações da operação fornecida como saída pelo modelo. Estas informaçõ
 #### Variável
 
 
-|          VARIÁVEL                 |  MNEMÔNICO |
-| --------------------------        | ---------- |
-| Custo de Operação                 |    COP     |
-| Custo Futuro                      |    CFU     |
-| Custo Marginal de Operação        |    CMO     |
-| Valor da Água                     |    VAGUA   |
-| Custo da Geração Térmica          |    CTER    |
-| Energia Natural Afluente Absoluta |    ENAA    |
-| Energia Natural Afluente MLT      |    ENAM    |
-| Energia Armazenada Inicial        |    EARMI   |
-| Energia Armazenada Inicial (%)    |    EARPI   |
-| Energia Armazenada Final          |    EARMF   |
-| Energia Armazenada Final (%)      |    EARPF   |
-| Geração Hidráulica                |    GHID    |
-| Geração Térmica                   |    GTER    |
-| Geração Eólica                    |    GEOL    |
-| Energia Vertida                   |    EVER    |
-| Energia Vertida Turbinável        |    EVERT   |
-| Energia Vertida Não-Turbinável    |    EVERNT  |
-| Vazão Afluente                    |    QAFL    |
-| Vazão Defluente                   |    QDEF    |
-| Vazão Incremental                 |    QINC    |
-| Vazão Turbinada                   |    QTUR    |
-| Velocidade do Vento               |    VENTO   |
-| Vazão Vertida                     |    VVER    |
-| Déficit                           |    DEF     |
-| Intercâmbio                       |    INT     |
-| Volume Armazenado Inicial         |    VARMI   |
-| Volume Armazenado Inicial (%)     |    VARPI   |
-| Volume Armazenado Final           |    VARMF   |
-| Volume Armazenado Final (%)       |    VARPF   |
-| Volume Vertido                    |    VVER    |
-| Volume Turbinado                  |    VTUR    |
+|                      VARIÁVEL                     |  MNEMÔNICO |
+| ------------------------------------------------- | ---------- |
+| Custo de Operação                                 |  COP       |
+| Custo Futuro                                      |  CFU       |
+| Custo Marginal de Operação                        |  CMO       |
+| Valor da Água                                     |  VAGUA     |
+| Custo da Geração Térmica                          |  CTER      |
+| Energia Natural Afluente Absoluta                 |  ENAA      |
+| Energia Natural Afluente MLT                      |  ENAM      |
+| Energia Armazenada Inicial                        |  EARMI     |
+| Energia Armazenada Inicial (%)                    |  EARPI     |
+| Energia Armazenada Final                          |  EARMF     |
+| Energia Armazenada Final (%)                      |  EARPF     |
+| Geração Hidráulica                                |  GHID      |
+| Geração Térmica                                   |  GTER      |
+| Geração Eólica                                    |  GEOL      |
+| Energia Vertida                                   |  EVER      |
+| Energia Vertida Turbinável                        |  EVERT     |
+| Energia Vertida Não-Turbinável                    |  EVERNT    |
+| Energia Vertida em Reservatórios                  |  EVERR     |
+| Energia Vertida Turbinável em Reservatórios       |  EVERRT    |
+| Energia Vertida Não-Turbinável em Reservatórios   |  EVERRNT   |
+| Energia Vertida em Fio d'Água                     |  EVERF     |
+| Energia Vertida Turbinável em Fio d'Água          |  EVERFT    |
+| Energia Vertida Não-Turbinável em Fio d'Água      |  EVERFNT   |
+| Vazão Afluente                                    |  QAFL      |
+| Vazão Defluente                                   |  QDEF      |
+| Vazão Incremental                                 |  QINC      |
+| Vazão Turbinada                                   |  QTUR      |
+| Velocidade do Vento                               |  VENTO     |
+| Vazão Vertida                                     |  VVER      |
+| Déficit                                           |  DEF       |
+| Intercâmbio                                       |  INT       |
+| Volume Armazenado Inicial                         |  VARMI     |
+| Volume Armazenado Inicial (%)                     |  VARPI     |
+| Volume Armazenado Final                           |  VARMF     |
+| Volume Armazenado Final (%)                       |  VARPF     |
+| Volume Vertido                                    |  VVER      |
+| Volume Turbinado                                  |  VTUR      |
 
 
 #### Agregação Espacial
