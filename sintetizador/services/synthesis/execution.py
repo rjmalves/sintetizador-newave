@@ -77,16 +77,34 @@ class ExecutionSynthetizer:
                     "Desvio Padrão do VE": "std",
                 }
             )
-        return df_processed
+        return df_processed[["parcela", "mean", "std"]]
 
     @classmethod
     def _resolve_runtime(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         with uow:
             tim = uow.files.get_newavetim()
             df = tim.tempos_etapas
-            df["Tempo"] = df["Tempo"].dt.total_seconds()
-            df = df.rename(columns={"Etapa": "etapa", "Tempo": "tempo"})
+        df = df.rename(columns={"Etapa": "etapa", "Tempo": "tempo"})
+        df["tempo"] = df["tempo"].dt.total_seconds()
         return df
+        # PREPROCESS_STAGES = ["Leitura de Dados", "Calculos Iniciais"]
+        # CONVERGENCE_STAGES = ["Calculo da Politica"]
+        # SIMULATION_STAGES = ["Simulacao Final"]
+        # dfp = pd.DataFrame(columns=["etapa", "tempo"])
+        # dfp.loc[dfp.shape[0]] = [
+        #     "preprocessamento",
+        #     float(df.loc[df["Etapa"].isin(PREPROCESS_STAGES), "Tempo"].sum()),
+        # ]
+        # dfp.loc[dfp.shape[0]] = [
+        #     "convergencia",
+        #     float(df.loc[df["Etapa"].isin(CONVERGENCE_STAGES), "Tempo"].sum()),
+        # ]
+        # dfp.loc[dfp.shape[0]] = [
+        #     "simulacao",
+        #     float(df.loc[df["Etapa"].isin(SIMULATION_STAGES), "Tempo"].sum()),
+        # ]
+        # dfp["tempo"] = dfp["tempo"].dt.total_seconds()
+        # return dfp
 
     @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
