@@ -1,4 +1,4 @@
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, Dict, List, Optional
 import pandas as pd
 import numpy as np
 from inewave.config import MESES_DF
@@ -17,6 +17,16 @@ FATOR_HM3_M3S = 1.0 / 2.63
 
 
 class OperationSynthetizer:
+
+    IDENTIFICATION_COLUMNS = [
+        "estagio",
+        "submercado",
+        "submercadoDe",
+        "submercadoPara",
+        "ree",
+        "usina",
+        "patamar",
+    ]
 
     DEFAULT_OPERATION_SYNTHESIS_ARGS: List[str] = [
         "CMO_SBM_EST",
@@ -715,6 +725,84 @@ class OperationSynthetizer:
         return starting_df.copy()
 
     @classmethod
+    def _processa_media(
+        cls, df: pd.DataFrame, probabilities: Optional[pd.DataFrame] = None
+    ) -> pd.DataFrame:
+        cols_cenarios = [
+            col
+            for col in df.columns.tolist()
+            if col not in cls.IDENTIFICATION_COLUMNS
+        ]
+        estagios = [int(e) for e in df["estagio"].unique()]
+        if probabilities is not None:
+            df["mean"] = 0.0
+            for e in estagios:
+                df_estagio = probabilities.loc[
+                    probabilities["estagio"] == e, :
+                ]
+                probabilidades = {
+                    str(int(linha["cenario"])): linha["Probabilidade"]
+                    for _, linha in df_estagio.iterrows()
+                }
+                probabilidades = {
+                    **probabilidades,
+                    **{
+                        c: 0.0
+                        for c in cols_cenarios
+                        if c not in probabilidades.keys()
+                    },
+                }
+                df_cenarios_estagio = df.loc[
+                    df["estagio"] == e, cols_cenarios
+                ].mul(probabilidades, fill_value=0.0)
+                df.loc[df["estagio"] == e, "mean"] = df_cenarios_estagio[
+                    list(probabilidades.keys())
+                ].sum(axis=1)
+        else:
+            df["mean"] = df[cols_cenarios].mean(axis=1)
+        return df.drop(columns=cols_cenarios)
+
+    @classmethod
+    def _processa_quantis(
+        cls, df: pd.DataFrame, quantiles: List[float]
+    ) -> pd.DataFrame:
+        cols_cenarios = [
+            col
+            for col in df.columns.tolist()
+            if col not in cls.IDENTIFICATION_COLUMNS
+        ]
+        for q in quantiles:
+            if q == 0:
+                label = "min"
+            elif q == 1:
+                label = "max"
+            elif q == 0.5:
+                label = "median"
+            else:
+                label = f"p{int(100 * q)}"
+            df[label] = df[cols_cenarios].quantile(q, axis=1)
+        return df.drop(columns=cols_cenarios)
+
+    @classmethod
+    def _postprocess(cls, df: pd.DataFrame) -> pd.DataFrame:
+        df = cls._processa_quantis(df, [0.05 * i for i in range(21)])
+        df = cls._processa_media(df, None)
+        cols_not_scenarios = [
+            c for c in df.columns if c in cls.IDENTIFICATION_COLUMNS
+        ]
+        cols_scenarios = [
+            c for c in df.columns if c not in cls.IDENTIFICATION_COLUMNS
+        ]
+        df = pd.melt(
+            df,
+            id_vars=cols_not_scenarios,
+            value_vars=cols_scenarios,
+            var_name="cenario",
+            value_name="valor",
+        )
+        return df
+
+    @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
         if len(variables) == 0:
             variables = OperationSynthetizer._default_args()
@@ -734,4 +822,5 @@ class OperationSynthetizer:
                 df = cls._resolve_spatial_resolution(s, uow)
             df = cls._resolve_starting_stage(df, uow)
             with uow:
+                df = cls._postprocess(df)
                 uow.export.synthetize_df(df, filename)
