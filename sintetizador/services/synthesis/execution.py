@@ -56,7 +56,7 @@ class ExecutionSynthetizer:
 
     @classmethod
     def _resolve_program(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        return pd.DataFrame(data={"programa": ["DECOMP"]})
+        return pd.DataFrame(data={"programa": ["NEWAVE"]})
 
     @classmethod
     def _resolve_convergence(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
