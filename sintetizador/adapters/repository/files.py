@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Type, Optional, Tuple, Callable
 import pandas as pd  # type: ignore
+import pathlib
+import asyncio
 
 from inewave.newave.caso import Caso
 from inewave.newave.arquivos import Arquivos
@@ -62,6 +64,8 @@ from inewave.nwlistop.varmuh import VarmUH
 from inewave.nwlistop.varmpuh import VarmpUH
 
 from sintetizador.utils.log import Log
+from sintetizador.model.settings import Settings
+from sintetizador.utils.encoding import converte_codificacao
 from sintetizador.model.operation.variable import Variable
 from sintetizador.model.operation.spatialresolution import SpatialResolution
 from sintetizador.model.operation.temporalresolution import TemporalResolution
@@ -570,6 +574,11 @@ class RawFilesRepository(AbstractFilesRepository):
 
     def get_dger(self) -> DGer:
         if self.__dger is None:
+            caminho = pathlib.Path(self.__tmppath).joinpath(self.arquivos.dger)
+            script = pathlib.Path(Settings().installdir).joinpath(
+                Settings().encoding_script
+            )
+            asyncio.run(converte_codificacao(caminho, script))
             Log.log().info(f"Lendo arquivo {self.arquivos.dger}")
             self.__dger = DGer.le_arquivo(self.__tmppath, self.arquivos.dger)
         return self.__dger
