@@ -747,7 +747,7 @@ class OperationSynthetizer:
                     probabilities["estagio"] == e, :
                 ]
                 probabilidades = {
-                    str(int(linha["cenario"])): linha["Probabilidade"]
+                    str(int(linha["cenario"])): linha["probabilidade"]
                     for _, linha in df_estagio.iterrows()
                 }
                 probabilidades = {
