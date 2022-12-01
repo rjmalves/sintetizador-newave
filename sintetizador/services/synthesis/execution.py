@@ -55,7 +55,7 @@ class ExecutionSynthetizer:
         return RULES[synthesis.variable](uow)
 
     @classmethod
-    def _resolve_program(cls) -> pd.DataFrame:
+    def _resolve_program(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         return pd.DataFrame(data={"programa": ["DECOMP"]})
 
     @classmethod
