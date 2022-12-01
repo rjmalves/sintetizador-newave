@@ -19,6 +19,8 @@ FATOR_HM3_M3S = 1.0 / 2.63
 class OperationSynthetizer:
 
     IDENTIFICATION_COLUMNS = [
+        "dataInicio",
+        "dataFim",
         "estagio",
         "submercado",
         "submercadoDe",
@@ -785,11 +787,8 @@ class OperationSynthetizer:
 
     @classmethod
     def _postprocess(cls, df: pd.DataFrame) -> pd.DataFrame:
-        print(df)
         df = cls._processa_quantis(df, [0.05 * i for i in range(21)])
-        print(df.columns)
         df = cls._processa_media(df, None)
-        print(df.columns)
         cols_not_scenarios = [
             c for c in df.columns if c in cls.IDENTIFICATION_COLUMNS
         ]
