@@ -735,6 +735,10 @@ class OperationSynthetizer:
             for col in df.columns.tolist()
             if col not in cls.IDENTIFICATION_COLUMNS
         ]
+        cols_cenarios = [
+            c for c in cols_cenarios if c not in ["min", "max", "median"]
+        ]
+        cols_cenarios = [c for c in cols_cenarios if "p" not in c]
         estagios = [int(e) for e in df["estagio"].unique()]
         if probabilities is not None:
             df["mean"] = 0.0
