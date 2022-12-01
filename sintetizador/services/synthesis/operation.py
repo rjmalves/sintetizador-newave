@@ -760,7 +760,7 @@ class OperationSynthetizer:
                 ].sum(axis=1)
         else:
             df["mean"] = df[cols_cenarios].mean(axis=1)
-        return df.drop(columns=cols_cenarios)
+        return df
 
     @classmethod
     def _processa_quantis(
@@ -781,7 +781,7 @@ class OperationSynthetizer:
             else:
                 label = f"p{int(100 * q)}"
             df[label] = df[cols_cenarios].quantile(q, axis=1)
-        return df.drop(columns=cols_cenarios)
+        return df
 
     @classmethod
     def _postprocess(cls, df: pd.DataFrame) -> pd.DataFrame:
