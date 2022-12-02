@@ -118,7 +118,7 @@ class ExecutionSynthetizer:
             file = "monitor-job.csv"
             if pathlib.Path(file).exists():
                 df_job = pd.read_csv("monitor-job.csv")
-        if not df_job:
+        if df_job is None:
             return None
         jobTimeInstants = pd.to_datetime(df_job["timeInstant"]).tolist()
         # REGRA DE NEGOCIO: arquivos do hpc-job-monitor
