@@ -69,7 +69,7 @@ class ExecutionSynthetizer:
                     "zinf": df["ZINF"][2::3].to_numpy(),
                     "dZinf": df["Delta ZINF"][2::3].to_numpy(),
                     "zsup": df["ZSUP Iteração"][2::3].to_numpy(),
-                    "tempo": df["Tempo"][::3].to_numpy(),
+                    "tempo": df["Tempo"][::3].dt.total_seconds().to_numpy(),
                 }
             )
         return df_processed
