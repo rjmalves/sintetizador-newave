@@ -72,7 +72,7 @@ class ExecutionSynthetizer:
                     "tempo": df["Tempo"][::3].dt.total_seconds().to_numpy(),
                 }
             )
-            df_processed = df_processed.astype({"tempo": "np.int64"})
+            df_processed = df_processed.astype({"tempo": int})
         return df_processed
 
     @classmethod
