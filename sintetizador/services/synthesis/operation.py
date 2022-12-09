@@ -1,5 +1,6 @@
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, Dict, List, Optional
 import pandas as pd
+import numpy as np
 from inewave.config import MESES_DF
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -12,7 +13,22 @@ from sintetizador.model.operation.temporalresolution import TemporalResolution
 from sintetizador.model.operation.operationsynthesis import OperationSynthesis
 
 
+FATOR_HM3_M3S = 1.0 / 2.63
+
+
 class OperationSynthetizer:
+
+    IDENTIFICATION_COLUMNS = [
+        "dataInicio",
+        "dataFim",
+        "estagio",
+        "submercado",
+        "submercadoDe",
+        "submercadoPara",
+        "ree",
+        "usina",
+        "patamar",
+    ]
 
     DEFAULT_OPERATION_SYNTHESIS_ARGS: List[str] = [
         "CMO_SBM_EST",
@@ -40,16 +56,34 @@ class OperationSynthetizer:
         "GHID_SIN_PAT",
         "GTER_SBM_PAT",
         "GTER_SIN_PAT",
-        "EVERT_REE_EST",
-        "EVERT_SBM_EST",
-        "EVERT_SIN_EST",
+        "EVER_REE_EST",
+        "EVER_SBM_EST",
+        "EVER_SIN_EST",
+        "EVERR_REE_EST",
+        "EVERR_SBM_EST",
+        "EVERR_SIN_EST",
+        "EVERF_REE_EST",
+        "EVERF_SBM_EST",
+        "EVERF_SIN_EST",
+        "EVERFT_REE_EST",
+        "EVERFT_SBM_EST",
+        "EVERFT_SIN_EST",
         "QAFL_UHE_EST",
         "QINC_UHE_EST",
+        "QDEF_UHE_EST",
+        "QDEF_UHE_PAT",
         "VTUR_UHE_EST",
+        "VTUR_UHE_PAT",
+        "QTUR_UHE_EST",
+        "QTUR_UHE_PAT",
         "VVER_UHE_EST",
+        "VVER_UHE_PAT",
+        "QVER_UHE_EST",
+        "QVER_UHE_PAT",
         "VARMF_UHE_EST",
         "VARPF_UHE_EST",
         "GHID_UHE_PAT",
+        "GHID_UHE_EST",
         "VENTO_UEE_EST",
         "GEOL_UEE_EST",
         "GEOL_SBM_EST",
@@ -59,6 +93,10 @@ class OperationSynthetizer:
         "GEOL_SIN_PAT",
         "INT_SBP_EST",
         "INT_SBP_PAT",
+        "DEF_SBM_EST",
+        "DEF_SBM_PAT",
+        "DEF_SIN_EST",
+        "DEF_SIN_PAT",
     ]
 
     @classmethod
@@ -147,11 +185,11 @@ class OperationSynthetizer:
             ]
             df_series = pd.concat([df_series, df_ano], ignore_index=True)
         cols = df_series.columns.tolist()
-        df_series["Estagio"] = list(range(1, len(labels) + 1))
-        df_series["Data Inicio"] = labels
-        f = lambda x: x["Data Inicio"] + relativedelta(months=1)
-        df_series["Data Fim"] = df_series.apply(f, axis=1)
-        return df_series[["Estagio", "Data Inicio", "Data Fim"] + cols]
+        df_series["estagio"] = list(range(1, len(labels) + 1))
+        df_series["dataInicio"] = labels
+        f = lambda x: x["dataInicio"] + relativedelta(months=1)
+        df_series["dataFim"] = df_series.apply(f, axis=1)
+        return df_series[["estagio", "dataInicio", "dataFim"] + cols]
 
     @classmethod
     def __resolve_PAT(cls, df: pd.DataFrame) -> pd.DataFrame:
@@ -173,22 +211,25 @@ class OperationSynthetizer:
                     str(s) for s in list(range(1, df_ano_patamar.shape[1] + 1))
                 ]
                 df_ano_patamar.columns = cols
-                df_ano_patamar["Patamar"] = p
-                df_ano_patamar = df_ano_patamar[["Patamar"] + cols]
+                df_ano_patamar["patamar"] = str(p)
+                df_ano_patamar = df_ano_patamar[["patamar"] + cols]
                 df_series = pd.concat(
                     [df_series, df_ano_patamar], ignore_index=True
                 )
         cols = df_series.columns.tolist()
-        df_series["Estagio"] = list(range(1, len(labels) + 1)) * len(patamares)
-        df_series["Data Inicio"] = labels * len(patamares)
-        f = lambda x: x["Data Inicio"] + relativedelta(months=1)
-        df_series["Data Fim"] = df_series.apply(f, axis=1)
-        return df_series[["Estagio", "Data Inicio", "Data Fim"] + cols]
+        df_series["estagio"] = list(range(1, len(labels) + 1)) * len(patamares)
+        df_series["dataInicio"] = labels * len(patamares)
+        f = lambda x: x["dataInicio"] + relativedelta(months=1)
+        df_series["dataFim"] = df_series.apply(f, axis=1)
+        return df_series[["estagio", "dataInicio", "dataFim"] + cols]
 
     @classmethod
     def _resolve_temporal_resolution(
         cls, synthesis: OperationSynthesis, df: pd.DataFrame
     ) -> pd.DataFrame:
+
+        if df is None:
+            return None
 
         RESOLUTION_FUNCTION_MAP: Dict[TemporalResolution, Callable] = {
             TemporalResolution.ESTAGIO: cls.__resolve_EST,
@@ -241,8 +282,8 @@ class OperationSynthetizer:
                 if df_sbm is None:
                     continue
                 cols = df_sbm.columns.tolist()
-                df_sbm["Submercado"] = n
-                df_sbm = df_sbm[["Submercado"] + cols]
+                df_sbm["submercado"] = n
+                df_sbm = df_sbm[["submercado"] + cols]
                 df = pd.concat(
                     [df, df_sbm],
                     ignore_index=True,
@@ -282,11 +323,9 @@ class OperationSynthetizer:
                     if df_sbm is None:
                         continue
                     cols = df_sbm.columns.tolist()
-                    df_sbm["Submercado De"] = n1
-                    df_sbm["Submercado Para"] = n2
-                    df_sbm = df_sbm[
-                        ["Submercado De", "Submercado Para"] + cols
-                    ]
+                    df_sbm["submercadoDe"] = n1
+                    df_sbm["submercadoPara"] = n2
+                    df_sbm = df_sbm[["submercadoDe", "submercadoPara"] + cols]
                     df = pd.concat(
                         [df, df_sbm],
                         ignore_index=True,
@@ -316,8 +355,8 @@ class OperationSynthetizer:
                 if df_ree is None:
                     continue
                 cols = df_ree.columns.tolist()
-                df_ree["REE"] = n
-                df_ree = df_ree[["REE"] + cols]
+                df_ree["ree"] = n
+                df_ree = df_ree[["ree"] + cols]
                 df = pd.concat(
                     [df, df_ree],
                     ignore_index=True,
@@ -325,11 +364,242 @@ class OperationSynthetizer:
             return df
 
     @classmethod
-    def __resolve_UHE(
+    def __stub_GHID_VTUR_VVER(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         with uow:
             confhd = uow.files.get_confhd()
+            ree = uow.files.get_ree()
+            # Obtem o fim do peroodo individualizado
+            fim = datetime(
+                year=int(ree.rees["Ano Fim Individualizado"].tolist()[0]),
+                month=int(ree.rees["Mês Fim Individualizado"].tolist()[0]),
+                day=1,
+            )
+            uhes_idx = confhd.usinas["Número"]
+            uhes_name = confhd.usinas["Nome"]
+            df = pd.DataFrame()
+            for s, n in zip(uhes_idx, uhes_name):
+                Log.log().info(f"Processando arquivo da UHE: {s} - {n}")
+                df_uhe = cls._resolve_temporal_resolution(
+                    OperationSynthesis(
+                        variable=synthesis.variable,
+                        spatial_resolution=synthesis.spatial_resolution,
+                        temporal_resolution=TemporalResolution.PATAMAR,
+                    ),
+                    uow.files.get_nwlistop(
+                        synthesis.variable,
+                        synthesis.spatial_resolution,
+                        TemporalResolution.PATAMAR,
+                        uhe=s,
+                    ),
+                )
+                if df_uhe is None:
+                    continue
+                cols = df_uhe.columns.tolist()
+                df_uhe["usina"] = n
+                df_uhe = df_uhe[["usina"] + cols]
+                df = pd.concat(
+                    [df, df_uhe],
+                    ignore_index=True,
+                )
+            cols_nao_cenarios = [
+                "estagio",
+                "dataInicio",
+                "dataFim",
+                "patamar",
+                "usina",
+            ]
+            cols_cenarios = [
+                c for c in df.columns.tolist() if c not in cols_nao_cenarios
+            ]
+            if synthesis.temporal_resolution == TemporalResolution.ESTAGIO:
+                patamares = df["patamar"].unique().tolist()
+                cenarios_patamares: List[np.ndarray] = []
+                p0 = patamares[0]
+                for p in patamares:
+                    cenarios_patamares.append(
+                        df.loc[df["patamar"] == p, cols_cenarios].to_numpy()
+                    )
+                df.loc[df["patamar"] == p0, cols_cenarios] = 0.0
+                for c in cenarios_patamares:
+                    df.loc[df["patamar"] == p0, cols_cenarios] += c
+                df = df.loc[df["patamar"] == p0, :]
+
+            df.loc[:, cols_cenarios] *= FATOR_HM3_M3S
+            df = df.loc[df["dataInicio"] < fim, :]
+            return df
+
+    @classmethod
+    def __stub_QTUR_QVER(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        variable_map = {
+            Variable.VAZAO_VERTIDA: Variable.VOLUME_VERTIDO,
+            Variable.VAZAO_TURBINADA: Variable.VOLUME_TURBINADO,
+        }
+        with uow:
+            confhd = uow.files.get_confhd()
+            ree = uow.files.get_ree()
+            # Obtem o fim do peroodo individualizado
+            fim = datetime(
+                year=int(ree.rees["Ano Fim Individualizado"].tolist()[0]),
+                month=int(ree.rees["Mês Fim Individualizado"].tolist()[0]),
+                day=1,
+            )
+            uhes_idx = confhd.usinas["Número"]
+            uhes_name = confhd.usinas["Nome"]
+            df = pd.DataFrame()
+            for s, n in zip(uhes_idx, uhes_name):
+                Log.log().info(f"Processando arquivo da UHE: {s} - {n}")
+                df_uhe = cls._resolve_temporal_resolution(
+                    OperationSynthesis(
+                        variable=synthesis.variable,
+                        spatial_resolution=synthesis.spatial_resolution,
+                        temporal_resolution=TemporalResolution.PATAMAR,
+                    ),
+                    uow.files.get_nwlistop(
+                        variable_map[synthesis.variable],
+                        synthesis.spatial_resolution,
+                        TemporalResolution.PATAMAR,
+                        uhe=s,
+                    ),
+                )
+                if df_uhe is None:
+                    continue
+                cols = df_uhe.columns.tolist()
+                df_uhe["usina"] = n
+                df_uhe = df_uhe[["usina"] + cols]
+                df = pd.concat(
+                    [df, df_uhe],
+                    ignore_index=True,
+                )
+            cols_nao_cenarios = [
+                "estagio",
+                "dataInicio",
+                "dataFim",
+                "patamar",
+                "usina",
+            ]
+            cols_cenarios = [
+                c for c in df.columns.tolist() if c not in cols_nao_cenarios
+            ]
+            if synthesis.temporal_resolution == TemporalResolution.ESTAGIO:
+                patamares = df["patamar"].unique().tolist()
+                cenarios_patamares: List[np.ndarray] = []
+                p0 = patamares[0]
+                for p in patamares:
+                    cenarios_patamares.append(
+                        df.loc[df["patamar"] == p, cols_cenarios].to_numpy()
+                    )
+                df.loc[df["patamar"] == p0, cols_cenarios] = 0.0
+                for c in cenarios_patamares:
+                    df.loc[df["patamar"] == p0, cols_cenarios] += c
+                df = df.loc[df["patamar"] == p0, :]
+
+            df.loc[:, cols_cenarios] *= FATOR_HM3_M3S
+            df = df.loc[df["dataInicio"] < fim, :]
+            return df
+
+    @classmethod
+    def __stub_QDEF(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        df_tur = cls.__stub_QTUR_QVER(
+            OperationSynthesis(
+                Variable.VAZAO_TURBINADA,
+                synthesis.spatial_resolution,
+                synthesis.temporal_resolution,
+            ),
+            uow,
+        )
+        df_ver = cls.__stub_QTUR_QVER(
+            OperationSynthesis(
+                Variable.VAZAO_VERTIDA,
+                synthesis.spatial_resolution,
+                synthesis.temporal_resolution,
+            ),
+            uow,
+        )
+        cols_nao_cenarios = [
+            "estagio",
+            "dataInicio",
+            "dataFim",
+            "patamar",
+            "usina",
+        ]
+        cols_cenarios = [
+            c for c in df_ver.columns.tolist() if c not in cols_nao_cenarios
+        ]
+        df_ver.loc[:, cols_cenarios] = (
+            df_tur[cols_cenarios].to_numpy() + df_ver[cols_cenarios].to_numpy()
+        )
+        return df_ver
+
+    @classmethod
+    def __stub_EVER(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        df_reserv = cls._resolve_spatial_resolution(
+            OperationSynthesis(
+                Variable.ENERGIA_VERTIDA_RESERV,
+                synthesis.spatial_resolution,
+                synthesis.temporal_resolution,
+            ),
+            uow,
+        )
+        df_fio = cls._resolve_spatial_resolution(
+            OperationSynthesis(
+                Variable.ENERGIA_VERTIDA_FIO,
+                synthesis.spatial_resolution,
+                synthesis.temporal_resolution,
+            ),
+            uow,
+        )
+        cols_nao_cenarios = [
+            "estagio",
+            "dataInicio",
+            "dataFim",
+            "patamar",
+            "usina",
+            "ree",
+            "submercado",
+        ]
+        cols_cenarios = [
+            c for c in df_reserv.columns.tolist() if c not in cols_nao_cenarios
+        ]
+        df_reserv.loc[:, cols_cenarios] = (
+            df_fio[cols_cenarios].to_numpy()
+            + df_reserv[cols_cenarios].to_numpy()
+        )
+        return df_reserv
+
+    @classmethod
+    def __resolve_UHE(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        if synthesis.variable in [
+            Variable.VAZAO_TURBINADA,
+            Variable.VAZAO_VERTIDA,
+        ]:
+            return cls.__stub_QTUR_QVER(synthesis, uow)
+        elif synthesis.variable == Variable.VAZAO_DEFLUENTE:
+            return cls.__stub_QDEF(synthesis, uow)
+        elif synthesis.variable in [
+            Variable.GERACAO_HIDRAULICA,
+            Variable.VOLUME_TURBINADO,
+            Variable.VOLUME_VERTIDO,
+        ]:
+            return cls.__stub_GHID_VTUR_VVER(synthesis, uow)
+        with uow:
+            confhd = uow.files.get_confhd()
+            ree = uow.files.get_ree()
+            # Obtem o fim do peroodo individualizado
+            fim = datetime(
+                year=int(ree.rees["Ano Fim Individualizado"].tolist()[0]),
+                month=int(ree.rees["Mês Fim Individualizado"].tolist()[0]),
+                day=1,
+            )
             uhes_idx = confhd.usinas["Número"]
             uhes_name = confhd.usinas["Nome"]
             df = pd.DataFrame()
@@ -347,12 +617,13 @@ class OperationSynthetizer:
                 if df_uhe is None:
                     continue
                 cols = df_uhe.columns.tolist()
-                df_uhe["Usina"] = n
-                df_uhe = df_uhe[["Usina"] + cols]
+                df_uhe["usina"] = n
+                df_uhe = df_uhe[["usina"] + cols]
                 df = pd.concat(
                     [df, df_uhe],
                     ignore_index=True,
                 )
+            df = df.loc[df["dataInicio"] < fim, :]
             return df
 
     @classmethod
@@ -378,8 +649,8 @@ class OperationSynthetizer:
                 if df_ute is None:
                     continue
                 cols = df_ute.columns.tolist()
-                df_ute["Usina"] = n
-                df_ute = df_ute[["Usina"] + cols]
+                df_ute["usina"] = n
+                df_ute = df_ute[["usina"] + cols]
                 df = pd.concat(
                     [df, df_ute],
                     ignore_index=True,
@@ -416,8 +687,8 @@ class OperationSynthetizer:
                 if df_uee is None:
                     continue
                 cols = df_uee.columns.tolist()
-                df_uee["Usina"] = n
-                df_uee = df_uee[["Usina"] + cols]
+                df_uee["usina"] = n
+                df_uee = df_uee[["usina"] + cols]
                 df = pd.concat(
                     [df, df_uee],
                     ignore_index=True,
@@ -451,9 +722,91 @@ class OperationSynthetizer:
         starting_date = datetime(
             year=dger.ano_inicio_estudo, month=dger.mes_inicio_estudo, day=1
         )
-        starting_df = df.loc[df["Data Inicio"] >= starting_date].copy()
-        starting_df.loc[:, "Estagio"] -= starting_date.month - 1
+        starting_df = df.loc[df["dataInicio"] >= starting_date].copy()
+        starting_df.loc[:, "estagio"] -= starting_date.month - 1
         return starting_df.copy()
+
+    @classmethod
+    def _processa_media(
+        cls, df: pd.DataFrame, probabilities: Optional[pd.DataFrame] = None
+    ) -> pd.DataFrame:
+        cols_cenarios = [
+            col
+            for col in df.columns.tolist()
+            if col not in cls.IDENTIFICATION_COLUMNS
+        ]
+        cols_cenarios = [
+            c for c in cols_cenarios if c not in ["min", "max", "median"]
+        ]
+        cols_cenarios = [c for c in cols_cenarios if "p" not in c]
+        estagios = [int(e) for e in df["estagio"].unique()]
+        if probabilities is not None:
+            df["mean"] = 0.0
+            for e in estagios:
+                df_estagio = probabilities.loc[
+                    probabilities["estagio"] == e, :
+                ]
+                probabilidades = {
+                    str(int(linha["cenario"])): linha["probabilidade"]
+                    for _, linha in df_estagio.iterrows()
+                }
+                probabilidades = {
+                    **probabilidades,
+                    **{
+                        c: 0.0
+                        for c in cols_cenarios
+                        if c not in probabilidades.keys()
+                    },
+                }
+                df_cenarios_estagio = df.loc[
+                    df["estagio"] == e, cols_cenarios
+                ].mul(probabilidades, fill_value=0.0)
+                df.loc[df["estagio"] == e, "mean"] = df_cenarios_estagio[
+                    list(probabilidades.keys())
+                ].sum(axis=1)
+        else:
+            df["mean"] = df[cols_cenarios].mean(axis=1)
+        return df
+
+    @classmethod
+    def _processa_quantis(
+        cls, df: pd.DataFrame, quantiles: List[float]
+    ) -> pd.DataFrame:
+        cols_cenarios = [
+            col
+            for col in df.columns.tolist()
+            if col not in cls.IDENTIFICATION_COLUMNS
+        ]
+        for q in quantiles:
+            if q == 0:
+                label = "min"
+            elif q == 1:
+                label = "max"
+            elif q == 0.5:
+                label = "median"
+            else:
+                label = f"p{int(100 * q)}"
+            df[label] = df[cols_cenarios].quantile(q, axis=1)
+        return df
+
+    @classmethod
+    def _postprocess(cls, df: pd.DataFrame) -> pd.DataFrame:
+        df = cls._processa_quantis(df, [0.05 * i for i in range(21)])
+        df = cls._processa_media(df, None)
+        cols_not_scenarios = [
+            c for c in df.columns if c in cls.IDENTIFICATION_COLUMNS
+        ]
+        cols_scenarios = [
+            c for c in df.columns if c not in cls.IDENTIFICATION_COLUMNS
+        ]
+        df = pd.melt(
+            df,
+            id_vars=cols_not_scenarios,
+            value_vars=cols_scenarios,
+            var_name="cenario",
+            value_name="valor",
+        )
+        return df
 
     @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
@@ -469,7 +822,11 @@ class OperationSynthetizer:
         for s in valid_synthesis:
             filename = str(s)
             Log.log().info(f"Realizando síntese de {filename}")
-            df = cls._resolve_spatial_resolution(s, uow)
+            if s.variable == Variable.ENERGIA_VERTIDA:
+                df = cls.__stub_EVER(s, uow)
+            else:
+                df = cls._resolve_spatial_resolution(s, uow)
             df = cls._resolve_starting_stage(df, uow)
             with uow:
+                df = cls._postprocess(df)
                 uow.export.synthetize_df(df, filename)

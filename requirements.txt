@@ -3,3 +3,4 @@ pandas
 pyarrow
 inewave
 python-dotenv
+asyncio

@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Type, Optional, Tuple, Callable
 import pandas as pd  # type: ignore
+import pathlib
+import asyncio
 
 from inewave.newave.caso import Caso
 from inewave.newave.arquivos import Arquivos
@@ -23,6 +25,8 @@ from inewave.nwlistop.eafb import Eafb
 from inewave.nwlistop.eafbm import Eafbm
 from inewave.nwlistop.eafbsin import EafbSIN
 from inewave.nwlistop.intercambio import Intercambio
+from inewave.nwlistop.deficit import Def
+from inewave.nwlistop.defsin import DefSIN
 
 from inewave.nwlistop.earmfp import Earmfp
 from inewave.nwlistop.earmfpm import Earmfpm
@@ -35,6 +39,12 @@ from inewave.nwlistop.ghtotm import Ghtotm
 from inewave.nwlistop.ghtotsin import GhtotSIN
 from inewave.nwlistop.gttot import Gttot
 from inewave.nwlistop.gttotsin import GttotSIN
+from inewave.nwlistop.evert import Evert
+from inewave.nwlistop.evertm import Evertm
+from inewave.nwlistop.evertsin import EvertSIN
+from inewave.nwlistop.perdf import Perdf
+from inewave.nwlistop.perdfm import Perdfm
+from inewave.nwlistop.perdfsin import PerdfSIN
 from inewave.nwlistop.verturb import Verturb
 from inewave.nwlistop.verturbm import Verturbm
 from inewave.nwlistop.verturbsin import VerturbSIN
@@ -54,6 +64,8 @@ from inewave.nwlistop.varmuh import VarmUH
 from inewave.nwlistop.varmpuh import VarmpUH
 
 from sintetizador.utils.log import Log
+from sintetizador.model.settings import Settings
+from sintetizador.utils.encoding import converte_codificacao
 from sintetizador.model.operation.variable import Variable
 from sintetizador.model.operation.spatialresolution import SpatialResolution
 from sintetizador.model.operation.temporalresolution import TemporalResolution
@@ -316,21 +328,59 @@ class RawFilesRepository(AbstractFilesRepository):
                 GttotSIN.le_arquivo(dir, "gttotsin.out").valores,
             ),
             (
-                Variable.ENERGIA_VERTIDA_TURBINAVEL,
+                Variable.ENERGIA_VERTIDA_RESERV,
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, ree=1: Evert.le_arquivo(
+                dir, f"evert{str(ree).zfill(3)}.out"
+            ).valores,
+            (
+                Variable.ENERGIA_VERTIDA_RESERV,
+                SpatialResolution.SUBMERCADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, submercado=1: Evertm.le_arquivo(
+                dir, f"evertm{str(submercado).zfill(3)}.out"
+            ).valores,
+            (
+                Variable.ENERGIA_VERTIDA_RESERV,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, _: EvertSIN.le_arquivo(dir, "evertsin.out").valores,
+            (
+                Variable.ENERGIA_VERTIDA_FIO,
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, ree=1: Perdf.le_arquivo(
+                dir, f"perdf{str(ree).zfill(3)}.out"
+            ).valores,
+            (
+                Variable.ENERGIA_VERTIDA_FIO,
+                SpatialResolution.SUBMERCADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, submercado=1: Perdfm.le_arquivo(
+                dir, f"perdfm{str(submercado).zfill(3)}.out"
+            ).valores,
+            (
+                Variable.ENERGIA_VERTIDA_FIO,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, _: PerdfSIN.le_arquivo(dir, "perdfsin.out").valores,
+            (
+                Variable.ENERGIA_VERTIDA_FIO_TURBINAVEL,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
                 TemporalResolution.ESTAGIO,
             ): lambda dir, ree=1: Verturb.le_arquivo(
                 dir, f"verturb{str(ree).zfill(3)}.out"
             ).valores,
             (
-                Variable.ENERGIA_VERTIDA_TURBINAVEL,
+                Variable.ENERGIA_VERTIDA_FIO_TURBINAVEL,
                 SpatialResolution.SUBMERCADO,
                 TemporalResolution.ESTAGIO,
             ): lambda dir, submercado=1: Verturbm.le_arquivo(
                 dir, f"verturbm{str(submercado).zfill(3)}.out"
             ).valores,
             (
-                Variable.ENERGIA_VERTIDA_TURBINAVEL,
+                Variable.ENERGIA_VERTIDA_FIO_TURBINAVEL,
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.ESTAGIO,
             ): lambda dir, _: VerturbSIN.le_arquivo(
@@ -353,14 +403,14 @@ class RawFilesRepository(AbstractFilesRepository):
             (
                 Variable.VOLUME_TURBINADO,
                 SpatialResolution.USINA_HIDROELETRICA,
-                TemporalResolution.ESTAGIO,
+                TemporalResolution.PATAMAR,
             ): lambda dir, uhe=1: VturUH.le_arquivo(
                 dir, f"vturuh{str(uhe).zfill(3)}.out"
             ).valores,
             (
                 Variable.VOLUME_VERTIDO,
                 SpatialResolution.USINA_HIDROELETRICA,
-                TemporalResolution.ESTAGIO,
+                TemporalResolution.PATAMAR,
             ): lambda dir, uhe=1: VertUH.le_arquivo(
                 dir, f"vertuh{str(uhe).zfill(3)}.out"
             ).valores,
@@ -443,6 +493,39 @@ class RawFilesRepository(AbstractFilesRepository):
                 GeolSIN.le_arquivo(dir, f"geolsin.out").valores
             ),
             (
+                Variable.DEFICIT,
+                SpatialResolution.SUBMERCADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, submercado=1: self.__extrai_patamares_df(
+                Def.le_arquivo(
+                    dir, f"def{str(submercado).zfill(3)}p001.out"
+                ).valores,
+                ["TOTAL"],
+            ),
+            (
+                Variable.DEFICIT,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, _: self.__extrai_patamares_df(
+                Def.le_arquivo(dir, f"defsinp001.out").valores, ["TOTAL"]
+            ),
+            (
+                Variable.DEFICIT,
+                SpatialResolution.SUBMERCADO,
+                TemporalResolution.PATAMAR,
+            ): lambda dir, submercado=1: self.__extrai_patamares_df(
+                Def.le_arquivo(
+                    dir, f"def{str(submercado).zfill(3)}p001.out"
+                ).valores
+            ),
+            (
+                Variable.DEFICIT,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+                TemporalResolution.PATAMAR,
+            ): lambda dir, _: self.__extrai_patamares_df(
+                Def.le_arquivo(dir, f"defsinp001.out").valores
+            ),
+            (
                 Variable.INTERCAMBIO,
                 SpatialResolution.PAR_SUBMERCADOS,
                 TemporalResolution.ESTAGIO,
@@ -491,6 +574,11 @@ class RawFilesRepository(AbstractFilesRepository):
 
     def get_dger(self) -> DGer:
         if self.__dger is None:
+            caminho = pathlib.Path(self.__tmppath).joinpath(self.arquivos.dger)
+            script = pathlib.Path(Settings().installdir).joinpath(
+                Settings().encoding_script
+            )
+            asyncio.run(converte_codificacao(caminho, script))
             Log.log().info(f"Lendo arquivo {self.arquivos.dger}")
             self.__dger = DGer.le_arquivo(self.__tmppath, self.arquivos.dger)
         return self.__dger
@@ -578,7 +666,7 @@ class RawFilesRepository(AbstractFilesRepository):
             Log.log().warning(
                 "Arquivo não encontrado para "
                 + f"{variable.value}_{spatial_resolution.value}"
-                + f"_{temporal_resolution.value}"
+                + f"_{temporal_resolution.value}: {kwargs}"
             )
             return None
 
