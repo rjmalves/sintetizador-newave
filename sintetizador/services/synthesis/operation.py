@@ -665,14 +665,14 @@ class OperationSynthetizer:
             eolica_cadastro = uow.files.get_eolicacadastro()
             uees_idx = []
             uees_name = []
-            regs = eolica_cadastro.eolica_cadastro()
+            regs = eolica_cadastro.pee_cad()
             df = pd.DataFrame()
             if regs is None:
                 return df
             elif isinstance(regs, list):
                 for r in regs:
-                    uees_idx.append(r.codigo_eolica)
-                    uees_name.append(r.nome_eolica)
+                    uees_idx.append(r.codigo_pee)
+                    uees_name.append(r.nome_pee)
             for s, n in zip(uees_idx, uees_name):
                 Log.log().info(f"Processando arquivo da UEE: {s} - {n}")
                 df_uee = cls._resolve_temporal_resolution(
