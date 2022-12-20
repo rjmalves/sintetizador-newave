@@ -7,7 +7,7 @@ class SpatialResolution(Enum):
     RESERVATORIO_EQUIVALENTE = "REE"
     USINA_HIDROELETRICA = "UHE"
     USINA_TERMELETRICA = "UTE"
-    USINA_EOLICA = "UEE"
+    PARQUE_EOLICO_EQUIVALENTE = "PEE"
     PAR_SUBMERCADOS = "SBP"
 
     @classmethod

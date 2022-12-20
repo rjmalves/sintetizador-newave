@@ -83,15 +83,15 @@ Informações da operação fornecida como saída pelo modelo. Estas informaçõ
 #### Agregação Espacial
 
 
-|   AGERGAÇÃO ESPACIAL     |  MNEMÔNICO |
-| ------------------------ | ---------- |
-| Sistema Interligado      |     SIN    |
-| Submercado               |     SBM    |
-| Reservatório Equivalente |     REE    |
-| Usina Hidroelétrica      |     UHE    |
-| Usina Termelétrica       |     UTE    |
-| Usina Eólica             |     UEE    |
-| Par de Submercados       |     SBP    |
+|   AGERGAÇÃO ESPACIAL       |  MNEMÔNICO |
+| ------------------------   | ---------- |
+| Sistema Interligado        |     SIN    |
+| Submercado                 |     SBM    |
+| Reservatório Equivalente   |     REE    |
+| Usina Hidroelétrica        |     UHE    |
+| Usina Termelétrica         |     UTE    |
+| Parque Eólico Equivalente  |     PEE    |
+| Par de Submercados         |     SBP    |
 
 
 #### Agregação Temporal
@@ -119,14 +119,14 @@ Vale destacar que nem todas as combinações de mnemônicos estão disponíveis 
 | EARPF                      | REE, SBM, SIN      | EST                |
 | GHID                       | UHE, REE, SBM, SIN | EST, PAT           |
 | GTER                       | SBM, SIN           | EST                |
-| GEOL                       | UEE, SBM, SIN      | EST, PAT           |
+| GEOL                       | PEE, SBM, SIN      | EST, PAT           |
 | EVERT                      | REE, SBM, SIN      | EST                |
 | EVERNT                     |                    |                    |
 | QAFL                       | UHE                | EST                |
 | QDEF                       |                    |                    |
 | QINC                       | UHE                | EST                |
 | QTUR                       |                    |                    |
-| VENTO                      | UEE                | EST                |
+| VENTO                      | PEE                | EST                |
 | INT                        | SBP                | EST, PAT           |
 | VARMI                      |                    |                    |
 | VARPI                      |                    |                    |

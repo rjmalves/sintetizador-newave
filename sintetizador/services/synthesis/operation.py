@@ -84,11 +84,11 @@ class OperationSynthetizer:
         "VARPF_UHE_EST",
         "GHID_UHE_PAT",
         "GHID_UHE_EST",
-        "VENTO_UEE_EST",
-        "GEOL_UEE_EST",
+        "VENTO_PEE_EST",
+        "GEOL_PEE_EST",
         "GEOL_SBM_EST",
         "GEOL_SIN_EST",
-        "GEOL_UEE_PAT",
+        "GEOL_PEE_PAT",
         "GEOL_SBM_PAT",
         "GEOL_SIN_PAT",
         "INT_SBP_EST",
@@ -130,7 +130,7 @@ class OperationSynthetizer:
             SpatialResolution.RESERVATORIO_EQUIVALENTE: ["ree"],
             SpatialResolution.USINA_HIDROELETRICA: ["uhe"],
             SpatialResolution.USINA_TERMELETRICA: ["ute"],
-            SpatialResolution.USINA_EOLICA: ["uee"],
+            SpatialResolution.PARQUE_EOLICO_EQUIVALENTE: ["pee"],
         }
 
         mandatory = RESOLUTION_ARGS_MAP[spatial_resolution]
@@ -658,7 +658,7 @@ class OperationSynthetizer:
             return df
 
     @classmethod
-    def __resolve_UEE(
+    def __resolve_PEE(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         with uow:
@@ -687,8 +687,8 @@ class OperationSynthetizer:
                 if df_uee is None:
                     continue
                 cols = df_uee.columns.tolist()
-                df_uee["usina"] = n
-                df_uee = df_uee[["usina"] + cols]
+                df_uee["pee"] = n
+                df_uee = df_uee[["pee"] + cols]
                 df = pd.concat(
                     [df, df_uee],
                     ignore_index=True,
@@ -707,7 +707,7 @@ class OperationSynthetizer:
             SpatialResolution.RESERVATORIO_EQUIVALENTE: cls.__resolve_REE,
             SpatialResolution.USINA_HIDROELETRICA: cls.__resolve_UHE,
             SpatialResolution.USINA_TERMELETRICA: cls.__resolve_UTE,
-            SpatialResolution.USINA_EOLICA: cls.__resolve_UEE,
+            SpatialResolution.PARQUE_EOLICO_EQUIVALENTE: cls.__resolve_PEE,
         }
 
         solver = RESOLUTION_FUNCTION_MAP[synthesis.spatial_resolution]

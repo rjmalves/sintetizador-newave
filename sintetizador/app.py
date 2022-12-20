@@ -16,6 +16,31 @@ def app():
     pass
 
 
+@click.command("sistema")
+@click.argument(
+    "variaveis",
+    nargs=-1,
+)
+@click.option(
+    "--formato", default="PARQUET", help="formato para escrita da síntese"
+)
+def sistema(variaveis, formato):
+    """
+    Realiza a síntese dos dados do sistema do NEWAVE.
+    """
+    os.environ["FORMATO_SINTESE"] = formato
+    Log.log().info("# Realizando síntese do SISTEMA #")
+
+    uow = factory(
+        "FS",
+        Settings().synthesis_dir,
+    )
+    command = commands.SynthetizeSystem(variaveis)
+    handlers.synthetize_system(command, uow)
+
+    Log.log().info("# Fim da síntese #")
+
+
 @click.command("execucao")
 @click.argument(
     "variaveis",
@@ -95,6 +120,8 @@ def completa(execucao, operacao, formato):
         "FS",
         Settings().synthesis_dir,
     )
+    command = commands.SynthetizeSystem(execucao)
+    handlers.synthetize_system(command, uow)
     command = commands.SynthetizeExecution(execucao)
     handlers.synthetize_execution(command, uow)
     command = commands.SynthetizeOperation(operacao)
@@ -104,6 +131,7 @@ def completa(execucao, operacao, formato):
 
 
 app.add_command(completa)
+app.add_command(sistema)
 app.add_command(execucao)
 app.add_command(operacao)
 app.add_command(limpeza)

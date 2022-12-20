@@ -3,8 +3,15 @@ import shutil
 from sintetizador.model.settings import Settings
 import sintetizador.domain.commands as commands
 from sintetizador.services.unitofwork import AbstractUnitOfWork
+from sintetizador.services.synthesis.system import SystemSynthetizer
 from sintetizador.services.synthesis.execution import ExecutionSynthetizer
 from sintetizador.services.synthesis.operation import OperationSynthetizer
+
+
+def synthetize_system(
+    command: commands.SynthetizeSystem, uow: AbstractUnitOfWork
+):
+    SystemSynthetizer.synthetize(command.variables, uow)
 
 
 def synthetize_execution(

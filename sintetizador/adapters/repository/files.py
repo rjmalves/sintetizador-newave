@@ -10,6 +10,7 @@ from inewave.newave.patamar import Patamar
 from inewave.newave.dger import DGer
 from inewave.newave.confhd import Confhd
 from inewave.newave.conft import ConfT
+from inewave.newave.clast import ClasT
 from inewave.newave.eolicacadastro import EolicaCadastro
 from inewave.newave.ree import REE
 from inewave.newave.sistema import Sistema
@@ -95,6 +96,10 @@ class AbstractFilesRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def get_clast(self) -> ClasT:
+        raise NotImplementedError
+
+    @abstractmethod
     def get_ree(self) -> REE:
         raise NotImplementedError
 
@@ -143,6 +148,7 @@ class RawFilesRepository(AbstractFilesRepository):
         self.__ree: Optional[REE] = None
         self.__confhd: Optional[Confhd] = None
         self.__conft: Optional[ConfT] = None
+        self.__clast: Optional[ClasT] = None
         self.__eolicacadastro: Optional[EolicaCadastro] = None
         self.__regras: Dict[
             Tuple[Variable, SpatialResolution, TemporalResolution], Callable
@@ -606,6 +612,14 @@ class RawFilesRepository(AbstractFilesRepository):
                 self.__tmppath, self.arquivos.conft
             )
         return self.__conft
+
+    def get_clast(self) -> ClasT:
+        if self.__clast is None:
+            Log.log().info(f"Lendo arquivo {self.arquivos.clast}")
+            self.__clast = ClasT.le_arquivo(
+                self.__tmppath, self.arquivos.clast
+            )
+        return self.__clast
 
     def get_ree(self) -> REE:
         if self.__ree is None:
