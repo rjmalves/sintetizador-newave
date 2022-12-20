@@ -445,14 +445,14 @@ class RawFilesRepository(AbstractFilesRepository):
             ),
             (
                 Variable.VELOCIDADE_VENTO,
-                SpatialResolution.USINA_EOLICA,
+                SpatialResolution.PARQUE_EOLICO_EQUIVALENTE,
                 TemporalResolution.ESTAGIO,
             ): lambda dir, uee=1: Vento.le_arquivo(
                 dir, f"vento{str(uee).zfill(3)}.out"
             ).valores,
             (
                 Variable.GERACAO_EOLICA,
-                SpatialResolution.USINA_EOLICA,
+                SpatialResolution.PARQUE_EOLICO_EQUIVALENTE,
                 TemporalResolution.ESTAGIO,
             ): lambda dir, uee=1: self.__extrai_patamares_df(
                 Geol.le_arquivo(dir, f"geol{str(uee).zfill(3)}.out").valores,
@@ -477,7 +477,7 @@ class RawFilesRepository(AbstractFilesRepository):
             ),
             (
                 Variable.GERACAO_EOLICA,
-                SpatialResolution.USINA_EOLICA,
+                SpatialResolution.PARQUE_EOLICO_EQUIVALENTE,
                 TemporalResolution.PATAMAR,
             ): lambda dir, uee=1: self.__extrai_patamares_df(
                 Geol.le_arquivo(dir, f"geol{str(uee).zfill(3)}.out").valores
