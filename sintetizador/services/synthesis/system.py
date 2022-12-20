@@ -131,26 +131,15 @@ class SystemSynthetizer:
             ]
         )
         estagios = np.tile(estagios, pat.numero_patamares).flatten()
-        cargas = pat.carga_patamares
-        subsistemas = cargas["Subsistema"].unique()
+        duracao = pat.duracao_mensal_patamares
         patamares = np.array(list(range(1, pat.numero_patamares + 1)))
         pats = np.tile(
             np.repeat(patamares, len(MESES_DF)), dger.num_anos_estudo
         ).flatten()
-        df = pd.DataFrame()
-        for s in subsistemas:
-            horas = HORAS_MES_NW * (
-                cargas.loc[cargas["Subsistema"] == s, MESES_DF]
-                .to_numpy()
-                .flatten()
-            )
-            df_s = pd.DataFrame(
-                data={"idEstagio": estagios, "patamar": pats, "duracao": horas}
-            )
-            cols = df_s.columns.tolist()
-            df_s["idSubsistema"] = s
-            df_s = df_s[["idSubsistema"] + cols]
-            df = pd.concat([df, df_s], ignore_index=True)
+        horas = HORAS_MES_NW * (duracao[MESES_DF].to_numpy().flatten())
+        df = pd.DataFrame(
+            data={"idEstagio": estagios, "patamar": pats, "duracao": horas}
+        )
         # Filtra estágios pré-estudo
         df = df.loc[df["idEstagio"] > meses_pre]
         df = df.reset_index(drop=True)
