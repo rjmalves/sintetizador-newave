@@ -147,7 +147,7 @@ class SystemSynthetizer:
             df_s = pd.DataFrame(
                 data={"idEstagio": estagios, "patamar": pats, "duracao": horas}
             )
-            cols = df_s.columns
+            cols = df_s.columns.tolist()
             df_s["idSubsistema"] = s
             df_s = df_s[["idSubsistema"] + cols]
             df = pd.concat([df, df_s], ignore_index=True)
