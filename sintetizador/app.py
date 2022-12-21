@@ -101,6 +101,9 @@ def limpeza():
 
 @click.command("completa")
 @click.option(
+    "-sistema", multiple=True, help="variável do sistema para síntese"
+)
+@click.option(
     "-execucao", multiple=True, help="variável da execução para síntese"
 )
 @click.option(
@@ -109,7 +112,7 @@ def limpeza():
 @click.option(
     "--formato", default="PARQUET", help="formato para escrita da síntese"
 )
-def completa(execucao, operacao, formato):
+def completa(sistema, execucao, operacao, formato):
     """
     Realiza a síntese completa do NEWAVE.
     """
@@ -120,7 +123,7 @@ def completa(execucao, operacao, formato):
         "FS",
         Settings().synthesis_dir,
     )
-    command = commands.SynthetizeSystem(execucao)
+    command = commands.SynthetizeSystem(sistema)
     handlers.synthetize_system(command, uow)
     command = commands.SynthetizeExecution(execucao)
     handlers.synthetize_execution(command, uow)
