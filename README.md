@@ -10,7 +10,17 @@ No momento são tratadas apenas informações de saída. Desta forma, foram cria
 
 ### Sistema
 
-Informações da representação do sistema existente e alvo da otimização (TODO)
+Informações da representação do sistema existente e alvo da otimização.
+
+|          VARIÁVEL                   |     MNEMÔNICO     |
+| ----------------------------------- | ----------------- |
+| Estágios                            |       EST         |
+| Patamares                           |       PAT         |
+| Submercados                         |       SBM         |
+| Reservatório Equivalente de Energia |       REE         |
+| Parque Eólico Equivalente           |       PEE         |
+| Usina Termoelétrica                 |       UTE         |
+| Usina Hidroelétrica                 |       UHE         |
 
 ### Execução
 
