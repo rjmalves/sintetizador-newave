@@ -149,4 +149,5 @@ class ExecutionSynthetizer:
             df = cls._resolve(s, uow)
             if df is not None:
                 with uow:
+                    Log.log().info(df)
                     uow.export.synthetize_df(df, filename)
