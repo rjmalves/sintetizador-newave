@@ -830,5 +830,4 @@ class OperationSynthetizer:
             df = cls._resolve_starting_stage(df, uow)
             with uow:
                 df = cls._postprocess(df)
-                Log.log().info(df)
                 uow.export.synthetize_df(df, filename)
