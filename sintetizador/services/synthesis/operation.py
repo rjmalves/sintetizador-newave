@@ -26,6 +26,7 @@ class OperationSynthetizer:
         "submercadoDe",
         "submercadoPara",
         "ree",
+        "pee",
         "usina",
         "patamar",
     ]
