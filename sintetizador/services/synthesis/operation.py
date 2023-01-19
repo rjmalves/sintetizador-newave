@@ -196,11 +196,14 @@ class OperationSynthetizer:
     def __resolve_PAT(cls, df: pd.DataFrame) -> pd.DataFrame:
         anos = df["Ano"].unique().tolist()
         patamares = df["Patamar"].unique().tolist()
-        labels = pd.date_range(
-            datetime(year=anos[0], month=1, day=1),
-            datetime(year=anos[-1], month=12, day=1),
-            freq="MS",
-        ).tolist()
+        labels = []
+        for a in anos:
+            for p in patamares:
+                labels += pd.date_range(
+                    datetime(year=a, month=1, day=1),
+                    datetime(year=a, month=12, day=1),
+                    freq="MS",
+                ).tolist()
         df_series = pd.DataFrame()
         for a in anos:
             for p in patamares:
@@ -218,8 +221,14 @@ class OperationSynthetizer:
                     [df_series, df_ano_patamar], ignore_index=True
                 )
         cols = df_series.columns.tolist()
-        df_series["estagio"] = list(range(1, len(labels) + 1)) * len(patamares)
-        df_series["dataInicio"] = labels * len(patamares)
+        labels_estagios = []
+        for i in range(len(anos)):
+            labels_estagios += list(range(12 * i + 1, 12 * (i + 1) + 1)) * len(
+                patamares
+            )
+
+        df_series["estagio"] = labels_estagios
+        df_series["dataInicio"] = labels
         f = lambda x: x["dataInicio"] + relativedelta(months=1)
         df_series["dataFim"] = df_series.apply(f, axis=1)
         return df_series[["estagio", "dataInicio", "dataFim"] + cols]
