@@ -100,6 +100,81 @@ class OperationSynthetizer:
         "DEF_SIN_PAT",
     ]
 
+    SYNTHESIS_TO_CACHE: List[OperationSynthesis] = [
+        OperationSynthesis(
+            Variable.ENERGIA_VERTIDA_RESERV,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.ENERGIA_VERTIDA_RESERV,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.ENERGIA_VERTIDA_RESERV,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.ENERGIA_VERTIDA_FIO,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.ENERGIA_VERTIDA_FIO,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.ENERGIA_VERTIDA_FIO,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.ENERGIA_VERTIDA_RESERV,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.ENERGIA_VERTIDA_RESERV,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.ENERGIA_VERTIDA_RESERV,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.ENERGIA_VERTIDA_FIO,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.ENERGIA_VERTIDA_FIO,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.ENERGIA_VERTIDA_FIO,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_TURBINADA,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_VERTIDA,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.ESTAGIO,
+        ),
+    ]
+
+    CACHED_SYNTHESIS: Dict[OperationSynthesis, pd.DataFrame] = {}
+
     @classmethod
     def _default_args(cls) -> List[OperationSynthesis]:
         return [
@@ -515,21 +590,41 @@ class OperationSynthetizer:
     def __stub_QDEF(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-        df_tur = cls.__stub_QTUR_QVER(
-            OperationSynthesis(
-                Variable.VAZAO_TURBINADA,
-                synthesis.spatial_resolution,
-                synthesis.temporal_resolution,
-            ),
-            uow,
+        sintese_tur = OperationSynthesis(
+            Variable.VAZAO_TURBINADA,
+            synthesis.spatial_resolution,
+            synthesis.temporal_resolution,
         )
-        df_ver = cls.__stub_QTUR_QVER(
-            OperationSynthesis(
-                Variable.VAZAO_VERTIDA,
-                synthesis.spatial_resolution,
-                synthesis.temporal_resolution,
-            ),
-            uow,
+        sintese_ver = OperationSynthesis(
+            Variable.VAZAO_VERTIDA,
+            synthesis.spatial_resolution,
+            synthesis.temporal_resolution,
+        )
+        cache_tur = cls.CACHED_SYNTHESIS.get(sintese_tur)
+        cache_ver = cls.CACHED_SYNTHESIS.get(sintese_ver)
+        df_tur = (
+            cache_tur
+            if cache_tur is not None
+            else cls.__stub_QTUR_QVER(
+                OperationSynthesis(
+                    Variable.VAZAO_TURBINADA,
+                    synthesis.spatial_resolution,
+                    synthesis.temporal_resolution,
+                ),
+                uow,
+            )
+        )
+        df_ver = (
+            cache_ver
+            if cache_ver is not None
+            else cls.__stub_QTUR_QVER(
+                OperationSynthesis(
+                    Variable.VAZAO_VERTIDA,
+                    synthesis.spatial_resolution,
+                    synthesis.temporal_resolution,
+                ),
+                uow,
+            )
         )
         cols_nao_cenarios = [
             "estagio",
@@ -550,21 +645,42 @@ class OperationSynthetizer:
     def __stub_EVER(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-        df_reserv = cls._resolve_spatial_resolution(
-            OperationSynthesis(
-                Variable.ENERGIA_VERTIDA_RESERV,
-                synthesis.spatial_resolution,
-                synthesis.temporal_resolution,
-            ),
-            uow,
+        sintese_reserv = OperationSynthesis(
+            Variable.ENERGIA_VERTIDA_RESERV,
+            synthesis.spatial_resolution,
+            synthesis.temporal_resolution,
         )
-        df_fio = cls._resolve_spatial_resolution(
-            OperationSynthesis(
-                Variable.ENERGIA_VERTIDA_FIO,
-                synthesis.spatial_resolution,
-                synthesis.temporal_resolution,
-            ),
-            uow,
+        sintese_fio = OperationSynthesis(
+            Variable.ENERGIA_VERTIDA_FIO,
+            synthesis.spatial_resolution,
+            synthesis.temporal_resolution,
+        )
+        cache_reserv = cls.CACHED_SYNTHESIS.get(sintese_reserv)
+        cache_fio = cls.CACHED_SYNTHESIS.get(sintese_fio)
+
+        df_reserv = (
+            cache_reserv
+            if cache_reserv is not None
+            else cls._resolve_spatial_resolution(
+                OperationSynthesis(
+                    Variable.ENERGIA_VERTIDA_RESERV,
+                    synthesis.spatial_resolution,
+                    synthesis.temporal_resolution,
+                ),
+                uow,
+            )
+        )
+        df_fio = (
+            cache_fio
+            if cache_fio is not None
+            else cls._resolve_spatial_resolution(
+                OperationSynthesis(
+                    Variable.ENERGIA_VERTIDA_FIO,
+                    synthesis.spatial_resolution,
+                    synthesis.temporal_resolution,
+                ),
+                uow,
+            )
         )
         cols_nao_cenarios = [
             "estagio",
@@ -836,6 +952,8 @@ class OperationSynthetizer:
                 df = cls.__stub_EVER(s, uow)
             else:
                 df = cls._resolve_spatial_resolution(s, uow)
+                if s in cls.SYNTHESIS_TO_CACHE:
+                    cls.CACHED_SYNTHESIS[s] = df.copy()
             df = cls._resolve_starting_stage(df, uow)
             with uow:
                 df = cls._postprocess(df)

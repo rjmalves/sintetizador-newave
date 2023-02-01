@@ -20,6 +20,25 @@ class OperationSynthesis:
             ]
         )
 
+    def __hash__(self) -> int:
+        return hash(
+            f"{self.variable.value}_"
+            + f"{self.spatial_resolution.value}_"
+            + f"{self.temporal_resolution.value}"
+        )
+
+    def __eq__(self, o: object) -> bool:
+        if not isinstance(o, OperationSynthesis):
+            return False
+        else:
+            return all(
+                [
+                    self.variable == o.variable,
+                    self.spatial_resolution == o.spatial_resolution,
+                    self.temporal_resolution == o.temporal_resolution,
+                ]
+            )
+
     @classmethod
     def factory(cls, synthesis: str) -> Optional["OperationSynthesis"]:
         data = synthesis.split("_")
