@@ -82,6 +82,9 @@ class OperationSynthetizer:
         "QVER_UHE_EST",
         "QVER_UHE_PAT",
         "VARMF_UHE_EST",
+        "VARMF_REE_EST",
+        "VARMF_SBM_EST",
+        "VARMF_SIN_EST",
         "VARPF_UHE_EST",
         "GHID_UHE_PAT",
         "GHID_UHE_EST",
@@ -169,6 +172,51 @@ class OperationSynthetizer:
         OperationSynthesis(
             Variable.VAZAO_VERTIDA,
             SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_TURBINADO,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_VERTIDO,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_TURBINADA,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_VERTIDA,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_TURBINADO,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_VERTIDO,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+            SpatialResolution.SUBMERCADO,
             TemporalResolution.ESTAGIO,
         ),
     ]
@@ -511,7 +559,6 @@ class OperationSynthetizer:
                     df.loc[df["patamar"] == p0, cols_cenarios] += c
                 df = df.loc[df["patamar"] == p0, :]
 
-            df.loc[:, cols_cenarios] *= FATOR_HM3_M3S
             df = df.loc[df["dataInicio"] < fim, :]
             return df
 
@@ -699,6 +746,91 @@ class OperationSynthetizer:
             + df_reserv[cols_cenarios].to_numpy()
         )
         return df_reserv
+
+    @classmethod
+    def __stub_VARMF_REE_SBM_SIN(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        with uow:
+            confhd = uow.files.get_confhd()
+            ree = uow.files.get_ree()
+            sistema = uow.files.get_sistema()
+
+            rees_usinas = confhd.usinas["REE"].unique().tolist()
+            nomes_rees = {
+                r: str(ree.rees.loc[ree.rees["Número"] == r, "Nome"])
+                for r in rees_usinas
+            }
+            rees_submercados = {
+                r: str(
+                    sistema.custo_deficit.loc[
+                        sistema.custo_deficit["Núm. Subsistema"]
+                        == int(
+                            ree.rees.loc[ree.rees["Número"] == r, "Submercado"]
+                        ),
+                        "Nome",
+                    ]
+                )
+                for r in rees_usinas
+            }
+            s = OperationSynthesis(
+                variable=synthesis.variable,
+                spatial_resolution=SpatialResolution.USINA_HIDROELETRICA,
+                temporal_resolution=synthesis.temporal_resolution,
+            )
+            cache_uhe = cls.CACHED_SYNTHESIS.get(s)
+            if cache_uhe is None:
+                df_uhe = cls._resolve_spatial_resolution(s, uow).copy()
+                cls.CACHED_SYNTHESIS[s] = df_uhe
+            else:
+                df_uhe = cache_uhe.copy()
+
+            df_uhe["group"] = df_uhe.apply(
+                lambda linha: int(
+                    confhd.usinas.loc[
+                        confhd.usinas["Nome"] == linha["usina"], "REE"
+                    ]
+                ),
+                axis=1,
+            )
+            if (
+                synthesis.spatial_resolution
+                == SpatialResolution.RESERVATORIO_EQUIVALENTE
+            ):
+                df_uhe["group"] = df_uhe.apply(
+                    lambda linha: nomes_rees[linha["group"]], axis=1
+                )
+            elif synthesis.spatial_resolution == SpatialResolution.SUBMERCADO:
+                df_uhe["group"] = df_uhe.apply(
+                    lambda linha: rees_submercados[linha["group"]], axis=1
+                )
+            elif (
+                synthesis.spatial_resolution
+                == SpatialResolution.SISTEMA_INTERLIGADO
+            ):
+                df_uhe["group"] = 1
+
+            cols_group = ["group"] + [
+                c
+                for c in df_uhe.columns()
+                if c in cls.IDENTIFICATION_COLUMNS and c != "usina"
+            ]
+            df_group = df_uhe.groupby(cols_group).sum().reset_index()
+
+            group_name = {
+                SpatialResolution.RESERVATORIO_EQUIVALENTE: "ree",
+                SpatialResolution.SUBMERCADO: "submercado",
+            }
+            if (
+                synthesis.spatial_resolution
+                == SpatialResolution.SISTEMA_INTERLIGADO
+            ):
+                df_group = df_group.drop(columns=["group"])
+            else:
+                df_group = df_group.rename(
+                    {"group": group_name[synthesis.spatial_resolution]}
+                )
+            return df_group
 
     @classmethod
     def __resolve_UHE(
@@ -950,6 +1082,14 @@ class OperationSynthetizer:
             Log.log().info(f"Realizando síntese de {filename}")
             if s.variable == Variable.ENERGIA_VERTIDA:
                 df = cls.__stub_EVER(s, uow)
+            elif all(
+                [
+                    s.variable == Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+                    s.spatial_resolution
+                    != SpatialResolution.USINA_HIDROELETRICA,
+                ]
+            ):
+                df = cls.__stub_VARMF_REE_SBM_SIN(s, uow)
             else:
                 df = cls._resolve_spatial_resolution(s, uow)
                 if s in cls.SYNTHESIS_TO_CACHE:
