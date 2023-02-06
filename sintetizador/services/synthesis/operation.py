@@ -812,8 +812,6 @@ class OperationSynthetizer:
             ):
                 df_uhe["group"] = 1
 
-            print(df_uhe)
-
             cols_group = ["group"] + [
                 c
                 for c in df_uhe.columns
@@ -834,7 +832,6 @@ class OperationSynthetizer:
                 df_group = df_group.rename(
                     columns={"group": group_name[synthesis.spatial_resolution]}
                 )
-            print(df_group)
             return df_group
 
     @classmethod
