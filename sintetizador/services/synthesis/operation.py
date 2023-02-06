@@ -758,17 +758,21 @@ class OperationSynthetizer:
 
             rees_usinas = confhd.usinas["REE"].unique().tolist()
             nomes_rees = {
-                r: ree.rees.loc[ree.rees["Número"] == r, "Nome"].tolist()[0]
+                r: str(
+                    ree.rees.loc[ree.rees["Número"] == r, "Nome"].tolist()[0]
+                )
                 for r in rees_usinas
             }
             rees_submercados = {
-                r: sistema.custo_deficit.loc[
-                    sistema.custo_deficit["Num. Subsistema"]
-                    == int(
-                        ree.rees.loc[ree.rees["Número"] == r, "Submercado"]
-                    ),
-                    "Nome",
-                ].tolist()[0]
+                r: str(
+                    sistema.custo_deficit.loc[
+                        sistema.custo_deficit["Num. Subsistema"]
+                        == int(
+                            ree.rees.loc[ree.rees["Número"] == r, "Submercado"]
+                        ),
+                        "Nome",
+                    ].tolist()[0]
+                )
                 for r in rees_usinas
             }
             s = OperationSynthesis(
@@ -817,8 +821,6 @@ class OperationSynthetizer:
             ]
             df_group = df_uhe.groupby(cols_group).sum().reset_index()
 
-            print(df_group)
-
             group_name = {
                 SpatialResolution.RESERVATORIO_EQUIVALENTE: "ree",
                 SpatialResolution.SUBMERCADO: "submercado",
@@ -832,6 +834,7 @@ class OperationSynthetizer:
                 df_group = df_group.rename(
                     {"group": group_name[synthesis.spatial_resolution]}
                 )
+            print(df_group)
             return df_group
 
     @classmethod
