@@ -764,7 +764,7 @@ class OperationSynthetizer:
             rees_submercados = {
                 r: str(
                     sistema.custo_deficit.loc[
-                        sistema.custo_deficit["Núm. Subsistema"]
+                        sistema.custo_deficit["Num. Subsistema"]
                         == int(
                             ree.rees.loc[ree.rees["Número"] == r, "Submercado"]
                         ),
