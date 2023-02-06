@@ -832,7 +832,7 @@ class OperationSynthetizer:
                 df_group = df_group.drop(columns=["group"])
             else:
                 df_group = df_group.rename(
-                    {"group": group_name[synthesis.spatial_resolution]}
+                    columns={"group": group_name[synthesis.spatial_resolution]}
                 )
             print(df_group)
             return df_group
