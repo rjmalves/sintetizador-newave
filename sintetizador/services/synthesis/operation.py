@@ -817,7 +817,7 @@ class OperationSynthetizer:
             ]
             df_group = df_uhe.groupby(cols_group).sum().reset_index()
 
-            print(df_uhe)
+            print(df_group)
 
             group_name = {
                 SpatialResolution.RESERVATORIO_EQUIVALENTE: "ree",
