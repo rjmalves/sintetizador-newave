@@ -810,12 +810,16 @@ class OperationSynthetizer:
             ):
                 df_uhe["group"] = 1
 
+            print(df_uhe)
+
             cols_group = ["group"] + [
                 c
-                for c in df_uhe.columns()
+                for c in df_uhe.columns
                 if c in cls.IDENTIFICATION_COLUMNS and c != "usina"
             ]
             df_group = df_uhe.groupby(cols_group).sum().reset_index()
+
+            print(df_uhe)
 
             group_name = {
                 SpatialResolution.RESERVATORIO_EQUIVALENTE: "ree",
