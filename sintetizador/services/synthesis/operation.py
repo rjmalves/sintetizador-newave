@@ -1099,6 +1099,8 @@ class OperationSynthetizer:
                 ]
             ):
                 df = cls.__stub_VARMF_REE_SBM_SIN(s, uow)
+                if df is None:
+                    continue
             else:
                 df = cls._resolve_spatial_resolution(s, uow)
                 if df is None:
