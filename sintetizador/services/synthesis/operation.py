@@ -787,6 +787,9 @@ class OperationSynthetizer:
             else:
                 df_uhe = cache_uhe.copy()
 
+            if df_uhe is None:
+                return None
+
             df_uhe["group"] = df_uhe.apply(
                 lambda linha: int(
                     confhd.usinas.loc[
@@ -855,6 +858,8 @@ class OperationSynthetizer:
             confhd = uow.files.get_confhd()
             ree = uow.files.get_ree()
             # Obtem o fim do peroodo individualizado
+            if ree.rees["Ano Fim Individualizado"].isna().sum() > 0:
+                return None
             fim = datetime(
                 year=int(ree.rees["Ano Fim Individualizado"].tolist()[0]),
                 month=int(ree.rees["Mês Fim Individualizado"].tolist()[0]),
@@ -1094,6 +1099,8 @@ class OperationSynthetizer:
                 df = cls.__stub_VARMF_REE_SBM_SIN(s, uow)
             else:
                 df = cls._resolve_spatial_resolution(s, uow)
+                if df is None:
+                    continue
                 if s in cls.SYNTHESIS_TO_CACHE:
                     cls.CACHED_SYNTHESIS[s] = df.copy()
             df = cls._resolve_starting_stage(df, uow)
