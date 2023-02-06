@@ -26,11 +26,13 @@ Informações da representação do sistema existente e alvo da otimização.
 
 Informações da execução do modelo, como ambiente escolhido, recursos computacionais disponíveis, convergência, tempo gasto, etc. 
 
-|          VARIÁVEL          |     MNEMÔNICO     |
-| -------------------------- | ----------------- |
-| Composição de Custos       |       CUSTOS      |
-| Tempo de Execução          |       TEMPO       |
-| Convergência               |   CONVERGENCIA    |
+|               VARIÁVEL                  |     MNEMÔNICO     |
+| --------------------------------------  | ----------------- |
+| Composição de Custos                    |       CUSTOS      |
+| Tempo de Execução                       |       TEMPO       |
+| Convergência                            |   CONVERGENCIA    |
+| Recursos Computacionais do Job          |   RECURSOS_JOB    |
+| Convergência Computacionais do Cluster  | RECURSOS_CLUSTER  |
 
 Para síntese da informações da execução, as chaves de dados a serem sintetizados contém apenas os nomes das variáveis.
 
@@ -127,25 +129,30 @@ Vale destacar que nem todas as combinações de mnemônicos estão disponíveis 
 | EARPI                      |                    |                    |
 | EARMF                      | REE, SBM, SIN      | EST                |
 | EARPF                      | REE, SBM, SIN      | EST                |
+| EVER                       | REE, SBM, SIN      | EST                |
+| EVERF                      | REE, SBM, SIN      | EST                |
+| EVERR                      | REE, SBM, SIN      | EST                |
+| EVERT                      |                    |                    |
+| EVERNT                     |                    |                    |
+| EVERFT                     | REE, SBM, SIN      | EST                |
 | GHID                       | UHE, REE, SBM, SIN | EST, PAT           |
 | GTER                       | SBM, SIN           | EST                |
 | GEOL                       | PEE, SBM, SIN      | EST, PAT           |
-| EVERT                      | REE, SBM, SIN      | EST                |
-| EVERNT                     |                    |                    |
 | QAFL                       | UHE                | EST                |
-| QDEF                       |                    |                    |
+| QDEF                       | UHE                | EST, PAT           |
 | QINC                       | UHE                | EST                |
-| QTUR                       |                    |                    |
+| QTUR                       | UHE                | EST, PAT           |
+| QVER                       | UHE                | EST, PAT           |
 | VENTO                      | PEE                | EST                |
 | INT                        | SBP                | EST, PAT           |
 | VARMI                      |                    |                    |
 | VARPI                      |                    |                    |
-| VARMF                      | UHE                | EST                |
+| VARMF                      | UHE, REE, SBM, SIN | EST                |
 | VARPF                      | UHE                | EST                |
-| VVER                       | UHE                | EST                |
-| VTUR                       | UHE                | EST                |
+| VVER                       | UHE                | EST, PAT           |
+| VTUR                       | UHE                | EST, PAT           |
 | MER                        |                    |                    |
-| DEF                        |                    |                    |
+| DEF                        | SBM, SIN           | EST, PAT           |
 
 
 Exemplos de chaves de dados:
