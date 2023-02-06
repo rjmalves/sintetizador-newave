@@ -758,19 +758,17 @@ class OperationSynthetizer:
 
             rees_usinas = confhd.usinas["REE"].unique().tolist()
             nomes_rees = {
-                r: str(ree.rees.loc[ree.rees["Número"] == r, "Nome"])
+                r: ree.rees.loc[ree.rees["Número"] == r, "Nome"].tolist()[0]
                 for r in rees_usinas
             }
             rees_submercados = {
-                r: str(
-                    sistema.custo_deficit.loc[
-                        sistema.custo_deficit["Num. Subsistema"]
-                        == int(
-                            ree.rees.loc[ree.rees["Número"] == r, "Submercado"]
-                        ),
-                        "Nome",
-                    ]
-                )
+                r: sistema.custo_deficit.loc[
+                    sistema.custo_deficit["Num. Subsistema"]
+                    == int(
+                        ree.rees.loc[ree.rees["Número"] == r, "Submercado"]
+                    ),
+                    "Nome",
+                ].tolist()[0]
                 for r in rees_usinas
             }
             s = OperationSynthesis(
