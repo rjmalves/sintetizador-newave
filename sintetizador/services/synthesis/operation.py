@@ -782,13 +782,15 @@ class OperationSynthetizer:
             )
             cache_uhe = cls.CACHED_SYNTHESIS.get(s)
             if cache_uhe is None:
-                df_uhe = cls._resolve_spatial_resolution(s, uow).copy()
+                df_uhe = cls._resolve_spatial_resolution(s, uow)
                 cls.CACHED_SYNTHESIS[s] = df_uhe
             else:
-                df_uhe = cache_uhe.copy()
+                df_uhe = cache_uhe
 
             if df_uhe is None:
                 return None
+
+            df_uhe = df_uhe.copy()
 
             df_uhe["group"] = df_uhe.apply(
                 lambda linha: int(
