@@ -1,4 +1,4 @@
-Sintetizador de saídas do NEWAVE
+Sintetizador do NEWAVE
 =================================
 
 **Versão:** |release|
