@@ -2,4 +2,12 @@ click
 pandas
 pyarrow
 inewave
+pylama
+mypy
+sphinx
+sphinx-gallery
+sphinx-rtd-theme
 plotly
+nb2plots
+numpydoc
+black

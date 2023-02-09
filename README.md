@@ -163,6 +163,6 @@ Exemplos de chaves de dados:
 - CMO_SBM_PAT
 
 
-## Guia de Uso
+## Documentação
 
-Para usar o `sintetizador-newave`, ...
+Guias, tutoriais e as referências podem ser encontrados no site oficial do pacote: https://rjmalves.github.io/sintetizador-newave
