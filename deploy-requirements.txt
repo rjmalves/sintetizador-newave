@@ -2,3 +2,4 @@ click
 pandas
 pyarrow
 inewave
+plotly
