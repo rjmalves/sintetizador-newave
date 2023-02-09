@@ -6,4 +6,5 @@ Referência
 .. toctree::
    :maxdepth: 3
 
-   reference/commands
+   reference/sintetizador-newave/model.rst
+   reference/sintetizador-newave/commands.rst
