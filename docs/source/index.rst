@@ -22,7 +22,7 @@ desenvolvido pelo `CEPEL <http://www.cepel.br/>`_ e utilizado para a planejament
    :maxdepth: 3
    :hidden:
 
-   reference/sintetizador-newave/index.rst
+   reference/sintetizador-newave/commands.rst
 
 .. toctree::
    :caption: Exemplos 
