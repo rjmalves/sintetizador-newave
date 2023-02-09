@@ -4,11 +4,11 @@ Comandos
 =========
 
 O `sintetizador-newave` está disponível como uma ferramenta CLI. Para visualizar quais comandos este pode realizar,
-que estão associados aos tipos de sínteses, basta fazer:
+que estão associados aos tipos de sínteses, basta fazer::
 
     $ sintetizador-newave --help
 
-A saída observada deve ser:
+A saída observada deve ser::
 
     >>> Usage: sintetizador-newave [OPTIONS] COMMAND [ARGS]...
     >>> 
@@ -25,11 +25,11 @@ A saída observada deve ser:
     >>>   operacao  Realiza a síntese dos dados da operação do NEWAVE (NWLISTOP).
     >>>   sistema   Realiza a síntese dos dados do sistema do NEWAVE.
 
-Além disso, cada um dos comandos possui um menu específico, que pode ser visto com, por exemplo:
+Além disso, cada um dos comandos possui um menu específico, que pode ser visto com, por exemplo::
 
     $ sintetizador-newave operacao --help
 
-Que deve ter como saída:
+Que deve ter como saída::
 
     >>> Usage: sintetizador-newave operacao [OPTIONS] [VARIAVEIS]...
     >>> 

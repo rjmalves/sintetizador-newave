@@ -17,7 +17,7 @@ Para maiores informações, é recomendado visitar a documentação oficial do `
 Instalando a partir do repositório
 -----------------------------------
 
-É possível realizar a instalação desta versão fazendo o uso do `Git <https://git-scm.com/>`_. Para instalar a versão de desenvolvimento, basta fazer:
+É possível realizar a instalação desta versão fazendo o uso do `Git <https://git-scm.com/>`_. Para instalar a versão de desenvolvimento, basta fazer::
 
     $ git clone https://github.com/rjmalves/sintetizador-newave
     $ cd sintetizador-newave
