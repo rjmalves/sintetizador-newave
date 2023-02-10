@@ -68,7 +68,9 @@ earm.head(10)
 # processadas sobre os cenários: `min`, `max`, `mean`, `p5`, `p10`, ..., `p95`.
 
 cenarios = earm["cenario"].unique().tolist()
-cenarios_estatisticas = [c for c in cenarios if c not in list(range(1, 2001))]
+cenarios_estatisticas = [
+    c for c in cenarios if c not in [str(c) for c in list(range(1, 2001))]
+]
 print(cenarios_estatisticas)
 
 #%%
@@ -140,7 +142,7 @@ fig
 #%%
 # Para variáveis da operação que possuam diferentes subconjuntos, como os submercados, podem ser utilizados
 # gráficos de violino para avaliação da dispersão:
-cenarios = list(range(1, 2001))
+cenarios = [str(c) for c in list(range(1, 2001))]
 cmos_cenarios = cmo.loc[
     (cmo["estagio"] == 2) & (cmo["cenario"].isin(cenarios))
 ]
