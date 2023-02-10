@@ -3,6 +3,9 @@
 Comandos
 =========
 
+Categorias de Síntese
+-----------------------
+
 O `sintetizador-newave` está disponível como uma ferramenta CLI. Para visualizar quais comandos este pode realizar,
 que estão associados aos tipos de sínteses, basta fazer::
 
@@ -38,4 +41,23 @@ Que deve ter como saída::
     >>> Options:
     >>>   --formato TEXT  formato para escrita da síntese
     >>>   --help          Show this message and exit.
+
+
+Argumentos Existentes
+-----------------------
+
+Para realizar a síntese completa do caso, está disponível o comando `completa`, que realizará toda a síntese possível::
+
+    $ sintetizador-newave completa 
+
+Se for desejado não realizar a síntese completa, mas apenas de alguns dos elementos, é possível chamar cada elemento a ser sintetizado::
+
+    $ sintetizador-newave operacao CMO_SBM_EST EARMF_SIN_EST GTER_SBM_PAT
+
+O formato de escrita padrão das sínteses é `PARQUET <https://www.databricks.com/glossary/what-is-parquet>`, que é um formato eficiente
+de armazenamento de dados tabulares para aplicações de *big data*.
+
+Caso seja desejado, é possível forçar a saída das sínteses através do argumento opcional `--formato`, para qualquer categoria de síntese::
+
+    $ sintetizador-newave execucao --formato CSV
 

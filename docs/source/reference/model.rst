@@ -332,4 +332,4 @@ que estão disponíveis no modelo.
      - `SIN`, `SBM`
      - `EST`, `PAT`
 
-São exemplos de chaves de dados válidas para as sínteses da operação `EARPF_SBM_EST`, `VARPF_UHE_EST`, `GHID_UHE_PAT`, `CMO_SBM_EST`, dentre outras.
+São exemplos de elementos de dados válidos para as sínteses da operação `EARPF_SBM_EST`, `VARPF_UHE_EST`, `GHID_UHE_PAT`, `CMO_SBM_EST`, dentre outras.
