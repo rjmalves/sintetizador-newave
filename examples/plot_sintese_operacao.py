@@ -149,6 +149,8 @@ cmos_cenarios = cmo.loc[
 fig = px.violin(
     cmos_cenarios,
     y="valor",
-    x="submercado",
+    color="submercado",
+    box=True,
+    points="all",
 )
 fig
