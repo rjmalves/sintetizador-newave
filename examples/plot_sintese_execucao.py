@@ -60,18 +60,22 @@ fig
 
 #%%
 # Quando se analisam os custos de cada fonte, geralmente são feitos gráficos de barras
-# empilhadas ou setores::
+# empilhadas ou setores:
 
 fig = px.pie(custos.loc[custos["mean"] > 0], values="mean", names="parcela")
 fig
 
 #%%
-# Uma abordagem semelhante é utilizada na análise do tempo de execução::
+# Uma abordagem semelhante é utilizada na análise do tempo de execução:
+from datetime import timedelta
 
+tempo["tempo"] = pd.to_timedelta(tempo["tempo"], unit="s") / timedelta(hours=1)
+tempo["label"] = [str(timedelta(hours=d)) for d in tempo["tempo"].tolist()]
 fig = px.bar(
-    tempo.loc[tempo["etapa"] != "Tempo Total"],
+    tempo,
+    x="etapa",
     y="tempo",
-    color="etapa",
+    text="label",
     barmode="group",
 )
 fig
