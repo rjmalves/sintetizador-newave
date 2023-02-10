@@ -75,7 +75,7 @@ print(cenarios_estatisticas)
 # Através das estatísticas é possível fazer um gráfico de quantis, para ilustrar a dispersão
 # da variável da operação com os cenários:
 fig = go.Figure()
-for p in range(10, 91, step=10):
+for p in range(10, 91, 10):
     earm_p = earm.loc[earm["cenario"] == f"p{p}"]
     fig.add_trace(
         go.Scatter(
@@ -136,3 +136,7 @@ fig.add_trace(
     )
 )
 fig
+
+#%%
+# Para variáveis da operação que possuam diferentes subconjuntos, como os submercados, podem ser utilizados
+# gráficos de violino para avaliação da dispersão:
