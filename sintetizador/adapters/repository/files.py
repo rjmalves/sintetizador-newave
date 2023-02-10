@@ -71,6 +71,11 @@ from sintetizador.model.operation.variable import Variable
 from sintetizador.model.operation.spatialresolution import SpatialResolution
 from sintetizador.model.operation.temporalresolution import TemporalResolution
 
+import platform
+
+if platform.system() == "Windows":
+    DGer.ENCODING = "iso-8859-1"
+
 
 class AbstractFilesRepository(ABC):
     @property
