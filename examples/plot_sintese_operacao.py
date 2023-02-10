@@ -150,7 +150,6 @@ fig = px.violin(
     cmos_cenarios,
     y="valor",
     x="submercado",
-    name="submercado",
     box_visible=True,
     meanline_visible=True,
 )
