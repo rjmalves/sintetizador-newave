@@ -140,3 +140,16 @@ fig
 #%%
 # Para variáveis da operação que possuam diferentes subconjuntos, como os submercados, podem ser utilizados
 # gráficos de violino para avaliação da dispersão:
+cenarios = list(range(1, 2001))
+cmos_cenarios = cmo.loc[
+    (cmo["estagio"] == 2) & (cmo["cenario"].isin(cenarios))
+]
+fig = px.violin(
+    cmos_cenarios,
+    y="valor",
+    x="submercado",
+    name="submercado",
+    box_visible=True,
+    meanline_visible=True,
+)
+fig
