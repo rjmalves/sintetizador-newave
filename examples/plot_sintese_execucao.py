@@ -34,9 +34,18 @@ import pandas as pd
 convergencia = pd.read_parquet("sintese/CONVERGENCIA.parquet.gzip")
 custos = pd.read_parquet("sintese/CUSTOS.parquet.gzip")
 tempo = pd.read_parquet("sintese/TEMPO.parquet.gzip")
-print(convergencia)
-print(custos)
-print(tempo)
+
+#%%
+# O formato dos dados de CONVERGÊNCIA:
+convergencia.head(10)
+
+#%%
+# O formato dos dados de CUSTOS:
+custos.head(10)
+
+#%%
+# O formato dos dados de TEMPO:
+tempo.head(5)
 
 #%%
 # Cada arquivo pode ser visualizado de diferentes maneiras, a depender da aplicação.
@@ -51,10 +60,18 @@ fig
 
 #%%
 # Quando se analisam os custos de cada fonte, geralmente são feitos gráficos de barras
-# empilhadas ou setores, bem como quando é avaliado o tempo computacional por etapa da execução:
+# empilhadas ou setores::
 
 fig = px.pie(custos.loc[custos["mean"] > 0], values="mean", names="parcela")
 fig
 
-fig = px.bar(tempo, y="tempo", color="etapa")
+#%%
+# Uma abordagem semelhante é utilizada na análise do tempo de execução::
+
+fig = px.bar(
+    tempo.loc[tempo["etapa"] != "Tempo Total"],
+    y="tempo",
+    color="etapa",
+    barmode="group",
+)
 fig
