@@ -151,6 +151,5 @@ fig = px.violin(
     y="valor",
     color="submercado",
     box=True,
-    points="all",
 )
 fig
