@@ -1,5 +1,5 @@
 from typing import Callable, Dict, List
-import pandas as pd
+import pandas as pd  # type: ignore
 import pathlib
 import socket
 

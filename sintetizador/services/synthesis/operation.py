@@ -1,5 +1,5 @@
 from typing import Callable, Dict, List, Optional
-import pandas as pd
+import pandas as pd  # type: ignore
 import numpy as np
 from inewave.config import MESES_DF
 from datetime import datetime
@@ -311,8 +311,9 @@ class OperationSynthetizer:
         cols = df_series.columns.tolist()
         df_series["estagio"] = list(range(1, len(labels) + 1))
         df_series["dataInicio"] = labels
-        f = lambda x: x["dataInicio"] + relativedelta(months=1)
-        df_series["dataFim"] = df_series.apply(f, axis=1)
+        df_series["dataFim"] = df_series.apply(
+            lambda x: x["dataInicio"] + relativedelta(months=1), axis=1
+        )
         return df_series[["estagio", "dataInicio", "dataFim"] + cols]
 
     @classmethod
@@ -352,8 +353,9 @@ class OperationSynthetizer:
 
         df_series["estagio"] = labels_estagios
         df_series["dataInicio"] = labels
-        f = lambda x: x["dataInicio"] + relativedelta(months=1)
-        df_series["dataFim"] = df_series.apply(f, axis=1)
+        df_series["dataFim"] = df_series.apply(
+            lambda x: x["dataInicio"] + relativedelta(months=1), axis=1
+        )
         return df_series[["estagio", "dataInicio", "dataFim"] + cols]
 
     @classmethod
@@ -377,7 +379,7 @@ class OperationSynthetizer:
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         with uow:
-            Log.log().info(f"Processando arquivo do SIN")
+            Log.log().info("Processando arquivo do SIN")
             df = uow.files.get_nwlistop(
                 synthesis.variable,
                 synthesis.spatial_resolution,

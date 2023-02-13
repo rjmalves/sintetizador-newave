@@ -57,7 +57,7 @@ class FSUnitOfWork(AbstractUnitOfWork):
                 Settings().synthesis_format, str(synthesis_outdir)
             )
 
-    def __enter__(self) -> "FSUnitOfWork":
+    def __enter__(self) -> "AbstractUnitOfWork":
         chdir(self._current_path)
         self.__create_repository()
         return super().__enter__()

@@ -27,7 +27,6 @@ from inewave.nwlistop.eafbm import Eafbm
 from inewave.nwlistop.eafbsin import EafbSIN
 from inewave.nwlistop.intercambio import Intercambio
 from inewave.nwlistop.deficit import Def
-from inewave.nwlistop.defsin import DefSIN
 
 from inewave.nwlistop.earmfp import Earmfp
 from inewave.nwlistop.earmfpm import Earmfpm
@@ -190,14 +189,12 @@ class RawFilesRepository(AbstractFilesRepository):
                 Variable.CUSTO_GERACAO_TERMICA,
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, _: CtermSIN.le_arquivo(
-                dir, f"ctermsin.out"
-            ).valores,
+            ): lambda dir, _: CtermSIN.le_arquivo(dir, "ctermsin.out").valores,
             (
                 Variable.CUSTO_OPERACAO,
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, _: Coper.le_arquivo(dir, f"coper.out").valores,
+            ): lambda dir, _: Coper.le_arquivo(dir, "coper.out").valores,
             (
                 Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
@@ -216,7 +213,7 @@ class RawFilesRepository(AbstractFilesRepository):
                 Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA,
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, _: EafbSIN.le_arquivo(dir, f"eafbsin.out").valores,
+            ): lambda dir, _: EafbSIN.le_arquivo(dir, "eafbsin.out").valores,
             (
                 Variable.ENERGIA_ARMAZENADA_PERCENTUAL_FINAL,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
@@ -478,7 +475,7 @@ class RawFilesRepository(AbstractFilesRepository):
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.ESTAGIO,
             ): lambda dir, _: self.__extrai_patamares_df(
-                GeolSIN.le_arquivo(dir, f"geolsin.out").valores, ["TOTAL"]
+                GeolSIN.le_arquivo(dir, "geolsin.out").valores, ["TOTAL"]
             ),
             (
                 Variable.GERACAO_EOLICA,
@@ -501,7 +498,7 @@ class RawFilesRepository(AbstractFilesRepository):
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.PATAMAR,
             ): lambda dir, _: self.__extrai_patamares_df(
-                GeolSIN.le_arquivo(dir, f"geolsin.out").valores
+                GeolSIN.le_arquivo(dir, "geolsin.out").valores
             ),
             (
                 Variable.DEFICIT,
@@ -518,7 +515,7 @@ class RawFilesRepository(AbstractFilesRepository):
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.ESTAGIO,
             ): lambda dir, _: self.__extrai_patamares_df(
-                Def.le_arquivo(dir, f"defsinp001.out").valores, ["TOTAL"]
+                Def.le_arquivo(dir, "defsinp001.out").valores, ["TOTAL"]
             ),
             (
                 Variable.DEFICIT,
@@ -534,7 +531,7 @@ class RawFilesRepository(AbstractFilesRepository):
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.PATAMAR,
             ): lambda dir, _: self.__extrai_patamares_df(
-                Def.le_arquivo(dir, f"defsinp001.out").valores
+                Def.le_arquivo(dir, "defsinp001.out").valores
             ),
             (
                 Variable.INTERCAMBIO,
@@ -562,13 +559,13 @@ class RawFilesRepository(AbstractFilesRepository):
         }
 
     def __extrai_patamares_df(
-        self, df: pd.DataFrame, patamares: list = None
+        self, df: pd.DataFrame, patamares: Optional[list] = None
     ) -> pd.DataFrame:
         if patamares is None:
-            patamares = [
-                str(i)
-                for i in range(1, self.get_patamar().numero_patamares + 1)
-            ]
+            num_pats = self.get_patamar().numero_patamares
+            if num_pats is None:
+                raise RuntimeError("Numero de patamares não encontrado")
+            patamares = [str(i) for i in range(1, num_pats + 1)]
         return df.loc[df["Patamar"].isin(patamares), :]
 
     @property
@@ -585,13 +582,16 @@ class RawFilesRepository(AbstractFilesRepository):
 
     def get_dger(self) -> DGer:
         if self.__dger is None:
-            caminho = pathlib.Path(self.__tmppath).joinpath(self.arquivos.dger)
+            arq_dger = self.arquivos.dger
+            if arq_dger is None:
+                raise RuntimeError("Nome do dger não encontrado")
+            caminho = pathlib.Path(self.__tmppath).joinpath(arq_dger)
             script = pathlib.Path(Settings().installdir).joinpath(
                 Settings().encoding_script
             )
-            asyncio.run(converte_codificacao(caminho, script))
-            Log.log().info(f"Lendo arquivo {self.arquivos.dger}")
-            self.__dger = DGer.le_arquivo(self.__tmppath, self.arquivos.dger)
+            asyncio.run(converte_codificacao(str(caminho), str(script)))
+            Log.log().info(f"Lendo arquivo {arq_dger}")
+            self.__dger = DGer.le_arquivo(self.__tmppath, arq_dger)
         return self.__dger
 
     def get_patamar(self) -> Patamar:
@@ -648,7 +648,7 @@ class RawFilesRepository(AbstractFilesRepository):
 
     def get_newavetim(self) -> NewaveTim:
         if self.__newavetim is None:
-            Log.log().info(f"Lendo arquivo newave.tim")
+            Log.log().info("Lendo arquivo newave.tim")
             self.__newavetim = NewaveTim.le_arquivo(
                 self.__tmppath, "newave.tim"
             )
@@ -656,7 +656,7 @@ class RawFilesRepository(AbstractFilesRepository):
 
     def get_eolicacadastro(self) -> EolicaCadastro:
         if self.__eolicacadastro is None:
-            Log.log().info(f"Lendo arquivo eolica-cadastro.csv")
+            Log.log().info("Lendo arquivo eolica-cadastro.csv")
             self.__eolicacadastro = EolicaCadastro.le_arquivo(
                 self.__tmppath, "eolica-cadastro.csv"
             )
@@ -677,11 +677,12 @@ class RawFilesRepository(AbstractFilesRepository):
             if regra is None:
                 Log.log().warning(
                     "Não encontrados dados de operação para "
-                    + (variable, spatial_resolution, temporal_resolution)
+                    + f"{variable.value}_{spatial_resolution.value}"
+                    + f"_{temporal_resolution.value}"
                 )
                 return None
             return regra(self.__tmppath, *args, **kwargs)
-        except FileNotFoundError as f:
+        except FileNotFoundError:
             Log.log().warning(
                 "Arquivo não encontrado para "
                 + f"{variable.value}_{spatial_resolution.value}"
@@ -694,4 +695,4 @@ def factory(kind: str, *args, **kwargs) -> AbstractFilesRepository:
     mapping: Dict[str, Type[AbstractFilesRepository]] = {
         "FS": RawFilesRepository
     }
-    return mapping.get(kind)(*args, **kwargs)
+    return mapping.get(kind, RawFilesRepository)(*args, **kwargs)

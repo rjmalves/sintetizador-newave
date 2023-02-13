@@ -4,6 +4,7 @@ pyarrow
 inewave
 pylama
 mypy
+pytest
 sphinx
 sphinx-gallery
 sphinx-rtd-theme

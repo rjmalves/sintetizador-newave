@@ -1,4 +1,4 @@
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List
 import pandas as pd
 import numpy as np
 from inewave.config import MESES_DF

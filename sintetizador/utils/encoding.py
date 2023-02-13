@@ -1,9 +1,4 @@
-from typing import Tuple, Optional, List
-from os.path import isfile
-from os import listdir
 from sintetizador.utils.terminal import run_terminal_retry
-import time
-import subprocess
 import platform
 
 TIMEOUT_DEFAULT = 10.0
