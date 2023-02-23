@@ -11,7 +11,6 @@ from sintetizador.model.execution.executionsynthesis import ExecutionSynthesis
 
 
 class ExecutionSynthetizer:
-
     DEFAULT_EXECUTION_SYNTHESIS_ARGS: List[str] = [
         "PROGRAMA",
         "CONVERGENCIA",
@@ -63,40 +62,56 @@ class ExecutionSynthetizer:
         with uow:
             pmo = uow.files.get_pmo()
             df = pmo.convergencia
-            df_processed = pd.DataFrame(
-                data={
-                    "iter": df["Iteração"][2::3].to_numpy(),
-                    "zinf": df["ZINF"][2::3].to_numpy(),
-                    "dZinf": df["Delta ZINF"][2::3].to_numpy(),
-                    "zsup": df["ZSUP Iteração"][2::3].to_numpy(),
-                    "tempo": df["Tempo"][::3].dt.total_seconds().to_numpy(),
-                }
-            )
-            df_processed = df_processed.astype({"tempo": int})
-        return df_processed
+            if isinstance(df, pd.DataFrame):
+                df_processed = pd.DataFrame(
+                    data={
+                        "iter": df["Iteração"][2::3].to_numpy(),
+                        "zinf": df["ZINF"][2::3].to_numpy(),
+                        "dZinf": df["Delta ZINF"][2::3].to_numpy(),
+                        "zsup": df["ZSUP Iteração"][2::3].to_numpy(),
+                        "tempo": df["Tempo"][::3]
+                        .dt.total_seconds()
+                        .to_numpy(),
+                    }
+                )
+                df_processed = df_processed.astype({"tempo": int})
+                return df_processed
+            else:
+                return None
 
     @classmethod
     def _resolve_cost(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         with uow:
             pmo = uow.files.get_pmo()
             df = pmo.custo_operacao_series_simuladas
-            df_processed = df.rename(
-                columns={
-                    "Parcela": "parcela",
-                    "Valor Esperado": "mean",
-                    "Desvio Padrão do VE": "std",
-                }
-            )
-        return df_processed[["parcela", "mean", "std"]]
+            if isinstance(df, pd.DataFrame):
+                df_processed = df.rename(
+                    columns={
+                        "Parcela": "parcela",
+                        "Valor Esperado": "mean",
+                        "Desvio Padrão do VE": "std",
+                    }
+                )
+                return df_processed[["parcela", "mean", "std"]]
+            else:
+                return None
 
     @classmethod
     def _resolve_runtime(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         with uow:
             tim = uow.files.get_newavetim()
-            df = tim.tempos_etapas
-        df = df.rename(columns={"Etapa": "etapa", "Tempo": "tempo"})
-        df["tempo"] = df["tempo"].dt.total_seconds()
-        return df
+            if tim is None:
+                return None
+            else:
+                df = tim.tempos_etapas
+                if isinstance(df, pd.DataFrame):
+                    df = df.rename(
+                        columns={"Etapa": "etapa", "Tempo": "tempo"}
+                    )
+                    df["tempo"] = df["tempo"].dt.total_seconds()
+                    return df
+                else:
+                    return None
 
     @classmethod
     def _resolve_job_resources(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:

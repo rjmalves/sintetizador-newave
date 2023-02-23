@@ -648,10 +648,13 @@ class RawFilesRepository(AbstractFilesRepository):
 
     def get_newavetim(self) -> NewaveTim:
         if self.__newavetim is None:
-            Log.log().info("Lendo arquivo newave.tim")
-            self.__newavetim = NewaveTim.le_arquivo(
-                self.__tmppath, "newave.tim"
-            )
+            try:
+                Log.log().info("Lendo arquivo newave.tim")
+                self.__newavetim = NewaveTim.le_arquivo(
+                    self.__tmppath, "newave.tim"
+                )
+            except FileNotFoundError:
+                Log.log().info("Arquivo newave.tim não encontrado")
         return self.__newavetim
 
     def get_eolicacadastro(self) -> EolicaCadastro:
