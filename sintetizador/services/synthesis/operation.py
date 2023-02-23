@@ -582,12 +582,20 @@ class OperationSynthetizer:
         with uow:
             confhd = uow.files.get_confhd()
             ree = uow.files.get_ree()
-            # Obtem o fim do peroodo individualizado
-            fim = datetime(
-                year=int(ree.rees["Ano Fim Individualizado"].tolist()[0]),
-                month=int(ree.rees["Mês Fim Individualizado"].tolist()[0]),
-                day=1,
-            )
+            dger = uow.files.get_dger()
+            # Obtem o fim do periodo individualizado
+            if ree.rees["Ano Fim Individualizado"].isna().sum() > 0:
+                fim = datetime(
+                    year=dger.ano_inicio_estudo + dger.num_anos_estudo - 1,
+                    month=12,
+                    day=1,
+                )
+            else:
+                fim = datetime(
+                    year=int(ree.rees["Ano Fim Individualizado"].tolist()[0]),
+                    month=int(ree.rees["Mês Fim Individualizado"].tolist()[0]),
+                    day=1,
+                )
             uhes_idx = confhd.usinas["Número"]
             uhes_name = confhd.usinas["Nome"]
             df = pd.DataFrame()
