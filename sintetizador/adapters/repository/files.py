@@ -653,7 +653,7 @@ class RawFilesRepository(AbstractFilesRepository):
                 self.__newavetim = NewaveTim.le_arquivo(
                     self.__tmppath, "newave.tim"
                 )
-            except FileNotFoundError:
+            except Exception:
                 Log.log().info("Arquivo newave.tim não encontrado")
         return self.__newavetim
 
@@ -685,7 +685,7 @@ class RawFilesRepository(AbstractFilesRepository):
                 )
                 return None
             return regra(self.__tmppath, *args, **kwargs)
-        except FileNotFoundError:
+        except Exception:
             Log.log().warning(
                 "Arquivo não encontrado para "
                 + f"{variable.value}_{spatial_resolution.value}"
