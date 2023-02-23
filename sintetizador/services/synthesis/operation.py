@@ -17,7 +17,6 @@ FATOR_HM3_M3S = 1.0 / 2.63
 
 
 class OperationSynthetizer:
-
     IDENTIFICATION_COLUMNS = [
         "dataInicio",
         "dataFim",
@@ -246,7 +245,6 @@ class OperationSynthetizer:
     def _validate_spatial_resolution_request(
         cls, spatial_resolution: SpatialResolution, *args, **kwargs
     ) -> bool:
-
         RESOLUTION_ARGS_MAP: Dict[SpatialResolution, List[str]] = {
             SpatialResolution.SISTEMA_INTERLIGADO: [],
             SpatialResolution.SUBMERCADO: ["submercado"],
@@ -273,7 +271,9 @@ class OperationSynthetizer:
             dger = uow.files.get_dger()
             ree = uow.files.get_ree()
         valid_variables: List[OperationSynthesis] = []
-        indiv = ree.rees["Mês Fim Individualizado"].isna().sum() == 0
+        sf_indiv = dger.agregacao_simulacao_final == 1
+        politica_indiv = ree.rees["Mês Fim Individualizado"].isna().sum() == 0
+        indiv = sf_indiv or politica_indiv
         eolica = dger.considera_geracao_eolica != 0
         Log.log().info(f"Caso com geração de cenários de eólica: {eolica}")
         Log.log().info(f"Caso com modelagem híbrida: {indiv}")
@@ -362,7 +362,6 @@ class OperationSynthetizer:
     def _resolve_temporal_resolution(
         cls, synthesis: OperationSynthesis, df: pd.DataFrame
     ) -> pd.DataFrame:
-
         if df is None:
             return None
 
@@ -505,12 +504,20 @@ class OperationSynthetizer:
         with uow:
             confhd = uow.files.get_confhd()
             ree = uow.files.get_ree()
-            # Obtem o fim do peroodo individualizado
-            fim = datetime(
-                year=int(ree.rees["Ano Fim Individualizado"].tolist()[0]),
-                month=int(ree.rees["Mês Fim Individualizado"].tolist()[0]),
-                day=1,
-            )
+            dger = uow.files.get_dger()
+            # Obtem o fim do periodo individualizado
+            if ree.rees["Ano Fim Individualizado"].isna().sum() > 0:
+                fim = datetime(
+                    year=dger.ano_inicio_estudo + dger.num_anos_estudo - 1,
+                    month=12,
+                    day=1,
+                )
+            else:
+                fim = datetime(
+                    year=int(ree.rees["Ano Fim Individualizado"].tolist()[0]),
+                    month=int(ree.rees["Mês Fim Individualizado"].tolist()[0]),
+                    day=1,
+                )
             uhes_idx = confhd.usinas["Número"]
             uhes_name = confhd.usinas["Nome"]
             df = pd.DataFrame()
@@ -861,14 +868,20 @@ class OperationSynthetizer:
         with uow:
             confhd = uow.files.get_confhd()
             ree = uow.files.get_ree()
-            # Obtem o fim do peroodo individualizado
+            dger = uow.files.get_dger()
+            # Obtem o fim do periodo individualizado
             if ree.rees["Ano Fim Individualizado"].isna().sum() > 0:
-                return None
-            fim = datetime(
-                year=int(ree.rees["Ano Fim Individualizado"].tolist()[0]),
-                month=int(ree.rees["Mês Fim Individualizado"].tolist()[0]),
-                day=1,
-            )
+                fim = datetime(
+                    year=dger.ano_inicio_estudo + dger.num_anos_estudo - 1,
+                    month=12,
+                    day=1,
+                )
+            else:
+                fim = datetime(
+                    year=int(ree.rees["Ano Fim Individualizado"].tolist()[0]),
+                    month=int(ree.rees["Mês Fim Individualizado"].tolist()[0]),
+                    day=1,
+                )
             uhes_idx = confhd.usinas["Número"]
             uhes_name = confhd.usinas["Nome"]
             df = pd.DataFrame()
@@ -968,7 +981,6 @@ class OperationSynthetizer:
     def _resolve_spatial_resolution(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-
         RESOLUTION_FUNCTION_MAP: Dict[SpatialResolution, Callable] = {
             SpatialResolution.SISTEMA_INTERLIGADO: cls.__resolve_SIN,
             SpatialResolution.SUBMERCADO: cls.__resolve_SBM,
