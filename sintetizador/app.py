@@ -135,9 +135,12 @@ def limpeza():
     "-operacao", multiple=True, help="variável da operação para síntese"
 )
 @click.option(
+    "-politica", multiple=True, help="variável da política para síntese"
+)
+@click.option(
     "--formato", default="PARQUET", help="formato para escrita da síntese"
 )
-def completa(sistema, execucao, operacao, formato):
+def completa(sistema, execucao, operacao, politica, formato):
     """
     Realiza a síntese completa do NEWAVE.
     """
@@ -154,6 +157,8 @@ def completa(sistema, execucao, operacao, formato):
     handlers.synthetize_execution(command, uow)
     command = commands.SynthetizeOperation(operacao)
     handlers.synthetize_operation(command, uow)
+    command = commands.SynthetizePolicy(politica)
+    handlers.synthetize_policy(command, uow)
 
     Log.log().info("# Fim da síntese #")
 
@@ -162,4 +167,5 @@ app.add_command(completa)
 app.add_command(sistema)
 app.add_command(execucao)
 app.add_command(operacao)
+app.add_command(politica)
 app.add_command(limpeza)
