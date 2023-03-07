@@ -15,3 +15,8 @@ class SynthetizeExecution:
 @dataclass
 class SynthetizeOperation:
     variables: List[str]
+
+
+@dataclass
+class SynthetizePolicy:
+    variables: List[str]

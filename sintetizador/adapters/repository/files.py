@@ -63,6 +63,9 @@ from inewave.nwlistop.vertuh import VertUH
 from inewave.nwlistop.varmuh import VarmUH
 from inewave.nwlistop.varmpuh import VarmpUH
 
+from inewave.nwlistcf import Nwlistcf
+from inewave.nwlistcf import Estados
+
 from sintetizador.utils.log import Log
 from sintetizador.model.settings import Settings
 from sintetizador.utils.encoding import converte_codificacao
@@ -138,6 +141,14 @@ class AbstractFilesRepository(ABC):
     ) -> Optional[pd.DataFrame]:
         pass
 
+    @abstractmethod
+    def get_nwlistcf_cortes(self) -> Nwlistcf:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_nwlistcf_estados(self) -> Estados:
+        raise NotImplementedError
+
 
 class RawFilesRepository(AbstractFilesRepository):
     def __init__(self, tmppath: str):
@@ -154,6 +165,8 @@ class RawFilesRepository(AbstractFilesRepository):
         self.__conft: Optional[ConfT] = None
         self.__clast: Optional[ClasT] = None
         self.__eolicacadastro: Optional[EolicaCadastro] = None
+        self.__nwlistcf: Optional[Nwlistcf] = None
+        self.__estados: Optional[Estados] = None
         self.__regras: Dict[
             Tuple[Variable, SpatialResolution, TemporalResolution], Callable
         ] = {
@@ -692,6 +705,24 @@ class RawFilesRepository(AbstractFilesRepository):
                 + f"_{temporal_resolution.value}: {kwargs}"
             )
             return None
+
+    def get_nwlistcf_cortes(self) -> Nwlistcf:
+        if self.__nwlistcf is None:
+            Log.log().info(f"Lendo arquivo nwlistcf.rel")
+            try:
+                self.__nwlistcf = Nwlistcf.le_arquivo(self.__tmppath)
+            except Exception:
+                Log.log().warning("Arquivo nwlistcf.rel não encontrado")
+        return self.__nwlistcf
+
+    def get_nwlistcf_estados(self) -> Estados:
+        if self.__estados is None:
+            Log.log().info(f"Lendo arquivo estados.rel")
+            try:
+                self.__estados = Estados.le_arquivo(self.__tmppath)
+            except Exception:
+                Log.log().warning("Arquivo estados.rel não encontrado")
+        return self.__estados
 
 
 def factory(kind: str, *args, **kwargs) -> AbstractFilesRepository:

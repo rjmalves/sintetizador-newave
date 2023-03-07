@@ -91,6 +91,31 @@ def operacao(variaveis, formato):
     Log.log().info("# Fim da síntese #")
 
 
+@click.command("politica")
+@click.argument(
+    "variaveis",
+    nargs=-1,
+)
+@click.option(
+    "--formato", default="PARQUET", help="formato para escrita da síntese"
+)
+def politica(variaveis, formato):
+    """
+    Realiza a síntese dos dados da política do NEWAVE (NWLISTCF).
+    """
+    os.environ["FORMATO_SINTESE"] = formato
+    Log.log().info("# Realizando síntese da POLITICA #")
+
+    uow = factory(
+        "FS",
+        Settings().synthesis_dir,
+    )
+    command = commands.SynthetizePolicy(variaveis)
+    handlers.synthetize_policy(command, uow)
+
+    Log.log().info("# Fim da síntese #")
+
+
 @click.command("limpeza")
 def limpeza():
     """
