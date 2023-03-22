@@ -90,6 +90,11 @@ class AbstractFilesRepository(ABC):
     def arquivos(self) -> Arquivos:
         raise NotImplementedError
 
+    @property
+    @abstractmethod
+    def indices(self) -> pd.DataFrame:
+        raise NotImplementedError
+
     @abstractmethod
     def get_dger(self) -> DGer:
         raise NotImplementedError
@@ -155,6 +160,7 @@ class RawFilesRepository(AbstractFilesRepository):
         self.__tmppath = tmppath
         self.__caso = Caso.le_arquivo(str(self.__tmppath))
         self.__arquivos: Optional[Arquivos] = None
+        self.__indices: Optional[pd.DataFrame] = None
         self.__dger: Optional[DGer] = None
         self.__patamar: Optional[Patamar] = None
         self.__sistema: Optional[Sistema] = None
@@ -593,6 +599,15 @@ class RawFilesRepository(AbstractFilesRepository):
             )
         return self.__arquivos
 
+    @property
+    def indices(self) -> pd.DataFrame:
+        if self.__indices is None:
+            self.__indices = pd.read_csv(
+                "indices.csv", sep=";", header=None, index_col=0
+            )
+            self.__indices.columns = ["vazio", "arquivo"]
+        return self.__indices
+
     def get_dger(self) -> DGer:
         if self.__dger is None:
             arq_dger = self.arquivos.dger
@@ -672,9 +687,12 @@ class RawFilesRepository(AbstractFilesRepository):
 
     def get_eolicacadastro(self) -> EolicaCadastro:
         if self.__eolicacadastro is None:
-            Log.log().info("Lendo arquivo eolica-cadastro.csv")
+            arq = self.__indices.at[
+                "PARQUE-EOLICO-EQUIVALENTE-CADASTRO", "arquivo"
+            ]
+            Log.log().info(f"Lendo arquivo {arq}")
             self.__eolicacadastro = EolicaCadastro.le_arquivo(
-                self.__tmppath, "eolica-cadastro.csv"
+                self.__tmppath, arq
             )
         return self.__eolicacadastro
 
