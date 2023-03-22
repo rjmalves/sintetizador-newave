@@ -609,6 +609,9 @@ class RawFilesRepository(AbstractFilesRepository):
             self.__indices.index = [
                 i.strip() for i in list(self.__indices.index)
             ]
+        self.__indices["arquivo"] = self.__indices.apply(
+            lambda linha: linha["arquivo"].strip(), axis=1
+        )
         return self.__indices
 
     def get_dger(self) -> DGer:
