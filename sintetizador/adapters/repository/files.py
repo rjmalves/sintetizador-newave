@@ -690,7 +690,7 @@ class RawFilesRepository(AbstractFilesRepository):
 
     def get_eolicacadastro(self) -> EolicaCadastro:
         if self.__eolicacadastro is None:
-            arq = self.__indices.at[
+            arq = self.indices.at[
                 "PARQUE-EOLICO-EQUIVALENTE-CADASTRO", "arquivo"
             ]
             Log.log().info(f"Lendo arquivo {arq}")
