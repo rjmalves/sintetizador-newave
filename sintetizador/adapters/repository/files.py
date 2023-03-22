@@ -606,6 +606,9 @@ class RawFilesRepository(AbstractFilesRepository):
                 "indices.csv", sep=";", header=None, index_col=0
             )
             self.__indices.columns = ["vazio", "arquivo"]
+            self.__indices.index = [
+                i.strip() for i in list(self.__indices.index)
+            ]
         return self.__indices
 
     def get_dger(self) -> DGer:
