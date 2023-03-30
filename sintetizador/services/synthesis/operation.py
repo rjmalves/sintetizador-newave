@@ -100,6 +100,54 @@ class OperationSynthetizer:
         "DEF_SBM_PAT",
         "DEF_SIN_EST",
         "DEF_SIN_PAT",
+        "CDEF_SBM_EST",
+        "CDEF_SIN_EST",
+        "VEOL_SBM_PAT",
+        "VEOL_SBM_EST",
+        "VDEFMIN_UHE_PAT",
+        "VDEFMAX_UHE_PAT",
+        "VTURMIN_UHE_PAT",
+        "VTURMAX_UHE_PAT",
+        "VFPHA_UHE_PAT",
+        "VDEFMIN_UHE_EST",
+        "VDEFMAX_UHE_EST",
+        "VTURMIN_UHE_EST",
+        "VTURMAX_UHE_EST",
+        "VEVMIN_UHE_EST",
+        "VFPHA_UHE_EST",
+        "VDEFMIN_REE_PAT",
+        "VDEFMAX_REE_PAT",
+        "VTURMIN_REE_PAT",
+        "VTURMAX_REE_PAT",
+        "VFPHA_REE_PAT",
+        "VDEFMIN_REE_EST",
+        "VDEFMAX_REE_EST",
+        "VTURMIN_REE_EST",
+        "VTURMAX_REE_EST",
+        "VEVMIN_REE_EST",
+        "VFPHA_REE_EST",
+        "VDEFMIN_SBM_PAT",
+        "VDEFMAX_SBM_PAT",
+        "VTURMIN_SBM_PAT",
+        "VTURMAX_SBM_PAT",
+        "VFPHA_SBM_PAT",
+        "VDEFMIN_SBM_EST",
+        "VDEFMAX_SBM_EST",
+        "VTURMIN_SBM_EST",
+        "VTURMAX_SBM_EST",
+        "VEVMIN_SBM_EST",
+        "VFPHA_SBM_EST",
+        "VDEFMIN_SIN_PAT",
+        "VDEFMAX_SIN_PAT",
+        "VTURMIN_SIN_PAT",
+        "VTURMAX_SIN_PAT",
+        "VFPHA_SIN_PAT",
+        "VDEFMIN_SIN_EST",
+        "VDEFMAX_SIN_EST",
+        "VTURMIN_SIN_EST",
+        "VTURMAX_SIN_EST",
+        "VEVMIN_SIN_EST",
+        "VFPHA_SIN_EST",
     ]
 
     SYNTHESIS_TO_CACHE: List[OperationSynthesis] = [
@@ -217,6 +265,156 @@ class OperationSynthetizer:
             Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
             SpatialResolution.SUBMERCADO,
             TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_DEFLUENCIA_MINIMA,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_TURBINAMENTO_MINIMO,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_FPHA,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_DEFLUENCIA_MINIMA,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_TURBINAMENTO_MINIMO,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_FPHA,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_DEFLUENCIA_MINIMA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_TURBINAMENTO_MINIMO,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_FPHA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_DEFLUENCIA_MINIMA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_TURBINAMENTO_MINIMO,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_FPHA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_DEFLUENCIA_MINIMA,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_TURBINAMENTO_MINIMO,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_FPHA,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_DEFLUENCIA_MINIMA,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_TURBINAMENTO_MINIMO,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_FPHA,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.PATAMAR,
         ),
     ]
 
@@ -498,7 +696,7 @@ class OperationSynthetizer:
             return df
 
     @classmethod
-    def __stub_GHID_VTUR_VVER(
+    def __stub_agrega_estagio_variaveis_por_patamar(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         with uow:
@@ -765,7 +963,7 @@ class OperationSynthetizer:
         return df_reserv
 
     @classmethod
-    def __stub_VARMF_REE_SBM_SIN(
+    def __stub_agrega_variaveis_indiv_REE_SBM_SIN(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         with uow:
@@ -857,6 +1055,81 @@ class OperationSynthetizer:
             return df_group
 
     @classmethod
+    def __stub_violacoes_UHE(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ):
+        with uow:
+            confhd = uow.files.get_confhd()
+            ree = uow.files.get_ree()
+            dger = uow.files.get_dger()
+            # Obtem o fim do periodo individualizado
+            if ree.rees["Ano Fim Individualizado"].isna().sum() > 0:
+                fim = datetime(
+                    year=dger.ano_inicio_estudo + dger.num_anos_estudo - 1,
+                    month=12,
+                    day=1,
+                )
+            else:
+                fim = datetime(
+                    year=int(ree.rees["Ano Fim Individualizado"].tolist()[0]),
+                    month=int(ree.rees["Mês Fim Individualizado"].tolist()[0]),
+                    day=1,
+                )
+            uhes_idx = confhd.usinas["Número"]
+            uhes_name = confhd.usinas["Nome"]
+            df = pd.DataFrame()
+            for s, n in zip(uhes_idx, uhes_name):
+                Log.log().info(f"Processando arquivo da UHE: {s} - {n}")
+                df_uhe = cls._resolve_temporal_resolution(
+                    OperationSynthesis(
+                        variable=synthesis.variable,
+                        spatial_resolution=synthesis.spatial_resolution,
+                        temporal_resolution=TemporalResolution.PATAMAR,
+                    ),
+                    uow.files.get_nwlistop(
+                        synthesis.variable,
+                        synthesis.spatial_resolution,
+                        TemporalResolution.PATAMAR,
+                        uhe=s,
+                    ),
+                )
+                if df_uhe is None:
+                    continue
+                cols = df_uhe.columns.tolist()
+                df_uhe["usina"] = n
+                df_uhe = df_uhe[["usina"] + cols]
+                df = pd.concat(
+                    [df, df_uhe],
+                    ignore_index=True,
+                )
+            cols_nao_cenarios = [
+                "estagio",
+                "dataInicio",
+                "dataFim",
+                "patamar",
+                "usina",
+            ]
+            cols_cenarios = [
+                c for c in df.columns.tolist() if c not in cols_nao_cenarios
+            ]
+            if synthesis.temporal_resolution == TemporalResolution.ESTAGIO:
+                patamares = df["patamar"].unique().tolist()
+                cenarios_patamares: List[np.ndarray] = []
+                p0 = patamares[0]
+                for p in patamares:
+                    cenarios_patamares.append(
+                        df.loc[df["patamar"] == p, cols_cenarios].to_numpy()
+                    )
+                df.loc[df["patamar"] == p0, cols_cenarios] = 0.0
+                for c in cenarios_patamares:
+                    df.loc[df["patamar"] == p0, cols_cenarios] += c
+                df = df.loc[df["patamar"] == p0, :]
+
+            df.loc[:, cols_cenarios] *= FATOR_HM3_M3S
+            df = df.loc[df["dataInicio"] < fim, :]
+            return df
+
+    @classmethod
     def __resolve_UHE(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
@@ -872,7 +1145,17 @@ class OperationSynthetizer:
             Variable.VOLUME_TURBINADO,
             Variable.VOLUME_VERTIDO,
         ]:
-            return cls.__stub_GHID_VTUR_VVER(synthesis, uow)
+            return cls.__stub_agrega_estagio_variaveis_por_patamar(
+                synthesis, uow
+            )
+        elif synthesis.variable in [
+            Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
+            Variable.VIOLACAO_DEFLUENCIA_MINIMA,
+            Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
+            Variable.VIOLACAO_TURBINAMENTO_MINIMO,
+            Variable.VIOLACAO_FPHA,
+        ]:
+            return cls.__stub_violacoes_UHE(synthesis, uow)
         with uow:
             confhd = uow.files.get_confhd()
             ree = uow.files.get_ree()
@@ -1115,18 +1398,30 @@ class OperationSynthetizer:
                 df = cls.__stub_EVER(s, uow)
             elif all(
                 [
-                    s.variable == Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+                    s.variable
+                    in [
+                        Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+                        Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
+                        Variable.VIOLACAO_DEFLUENCIA_MINIMA,
+                        Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
+                        Variable.VIOLACAO_TURBINAMENTO_MINIMO,
+                        Variable.VIOLACAO_FPHA,
+                    ],
                     s.spatial_resolution
                     != SpatialResolution.USINA_HIDROELETRICA,
                 ]
             ):
-                df = cls.__stub_VARMF_REE_SBM_SIN(s, uow)
+                df = cls.__stub_agrega_variaveis_indiv_REE_SBM_SIN(s, uow)
                 if df is None:
                     continue
             else:
                 df = cls._resolve_spatial_resolution(s, uow)
                 if df is None:
                     continue
+                elif isinstance(df, pd.DataFrame):
+                    if df.empty:
+                        Log.log().info("Erro ao realizar a síntese")
+                        continue
                 if s in cls.SYNTHESIS_TO_CACHE:
                     cls.CACHED_SYNTHESIS[s] = df.copy()
             df = cls._resolve_starting_stage(df, uow)

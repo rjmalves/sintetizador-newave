@@ -27,6 +27,8 @@ from inewave.nwlistop.eafbm import Eafbm
 from inewave.nwlistop.eafbsin import EafbSIN
 from inewave.nwlistop.intercambio import Intercambio
 from inewave.nwlistop.deficit import Def
+from inewave.nwlistop.cdef import Cdef
+from inewave.nwlistop.cdefsin import CdefSIN
 
 from inewave.nwlistop.earmfp import Earmfp
 from inewave.nwlistop.earmfpm import Earmfpm
@@ -49,11 +51,15 @@ from inewave.nwlistop.verturb import Verturb
 from inewave.nwlistop.verturbm import Verturbm
 from inewave.nwlistop.verturbsin import VerturbSIN
 from inewave.nwlistop.vagua import Vagua
+from inewave.nwlistop.vevmin import Vevmin
+from inewave.nwlistop.vevminm import Vevminm
+from inewave.nwlistop.vevminsin import VevminSIN
 
 from inewave.nwlistop.vento import Vento
 from inewave.nwlistop.geol import Geol
 from inewave.nwlistop.geolm import Geolm
 from inewave.nwlistop.geolsin import GeolSIN
+from inewave.nwlistop.corteolm import Corteolm
 
 from inewave.nwlistop.qafluh import QaflUH
 from inewave.nwlistop.qincruh import QincrUH
@@ -62,6 +68,11 @@ from inewave.nwlistop.vturuh import VturUH
 from inewave.nwlistop.vertuh import VertUH
 from inewave.nwlistop.varmuh import VarmUH
 from inewave.nwlistop.varmpuh import VarmpUH
+from inewave.nwlistop.dtbmax import Dtbmax
+from inewave.nwlistop.dtbmin import Dtbmin
+from inewave.nwlistop.dvazmax import Dvazmax
+from inewave.nwlistop.depminuh import Depminuh
+from inewave.nwlistop.dfphauh import Dfphauh
 
 from inewave.nwlistcf import Nwlistcf
 from inewave.nwlistcf import Estados
@@ -575,6 +586,103 @@ class RawFilesRepository(AbstractFilesRepository):
                     + f"{str(submercados[1]).zfill(3)}.out",
                 ).valores
             ),
+            (
+                Variable.CUSTO_DEFICIT,
+                SpatialResolution.SUBMERCADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, submercado=1: Cdef.le_arquivo(
+                dir, f"cdef{str(submercado).zfill(3)}.out"
+            ).valores,
+            (
+                Variable.CUSTO_DEFICIT,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, _: CdefSIN.le_arquivo(dir, "cdefsin.out").valores,
+            (
+                Variable.CORTE_GERACAO_EOLICA,
+                SpatialResolution.SUBMERCADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, submercado=1: self.__extrai_patamares_df(
+                Corteolm.le_arquivo(
+                    dir, f"corteolm{str(submercado).zfill(3)}.out"
+                ).valores,
+                ["TOTAL"],
+            ),
+            (
+                Variable.CORTE_GERACAO_EOLICA,
+                SpatialResolution.SUBMERCADO,
+                TemporalResolution.PATAMAR,
+            ): lambda dir, submercado=1: self.__extrai_patamares_df(
+                Corteolm.le_arquivo(
+                    dir, f"corteolm{str(submercado).zfill(3)}.out"
+                ).valores
+            ),
+            (
+                Variable.VIOLACAO_DEFLUENCIA_MINIMA,
+                SpatialResolution.USINA_HIDROELETRICA,
+                TemporalResolution.PATAMAR,
+            ): lambda dir, uhe=1: self.__extrai_patamares_df(
+                Depminuh.le_arquivo(
+                    dir, f"depminuh{str(uhe).zfill(3)}.out"
+                ).valores
+            ),
+            (
+                Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
+                SpatialResolution.USINA_HIDROELETRICA,
+                TemporalResolution.PATAMAR,
+            ): lambda dir, uhe=1: self.__extrai_patamares_df(
+                Dvazmax.le_arquivo(
+                    dir, f"dvazmax{str(uhe).zfill(3)}.out"
+                ).valores
+            ),
+            (
+                Variable.VIOLACAO_TURBINAMENTO_MINIMO,
+                SpatialResolution.USINA_HIDROELETRICA,
+                TemporalResolution.PATAMAR,
+            ): lambda dir, uhe=1: self.__extrai_patamares_df(
+                Dtbmin.le_arquivo(
+                    dir, f"dtbmin{str(uhe).zfill(3)}.out"
+                ).valores
+            ),
+            (
+                Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
+                SpatialResolution.USINA_HIDROELETRICA,
+                TemporalResolution.PATAMAR,
+            ): lambda dir, uhe=1: self.__extrai_patamares_df(
+                Dtbmax.le_arquivo(
+                    dir, f"dtbmax{str(uhe).zfill(3)}.out"
+                ).valores
+            ),
+            (
+                Variable.VIOLACAO_FPHA,
+                SpatialResolution.USINA_HIDROELETRICA,
+                TemporalResolution.PATAMAR,
+            ): lambda dir, uhe=1: self.__extrai_patamares_df(
+                Dfphauh.le_arquivo(
+                    dir, f"dfphauh{str(uhe).zfill(3)}.out"
+                ).valores
+            ),
+            (
+                Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, ree=1: Vevmin.le_arquivo(
+                dir, f"vevmin{str(ree).zfill(3)}.out"
+            ).valores,
+            (
+                Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
+                SpatialResolution.SUBMERCADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, submercado=1: Vevminm.le_arquivo(
+                dir, f"vevminm{str(submercado).zfill(3)}.out"
+            ).valores,
+            (
+                Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, _: VevminSIN.le_arquivo(
+                dir, "vevminsin.out"
+            ).valores,
         }
 
     def __extrai_patamares_df(
