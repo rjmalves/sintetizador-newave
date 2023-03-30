@@ -113,7 +113,6 @@ class OperationSynthetizer:
         "VDEFMAX_UHE_EST",
         "VTURMIN_UHE_EST",
         "VTURMAX_UHE_EST",
-        "VEVMIN_UHE_EST",
         "VFPHA_UHE_EST",
         "VDEFMIN_REE_PAT",
         "VDEFMAX_REE_PAT",
