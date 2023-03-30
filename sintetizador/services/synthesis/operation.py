@@ -478,7 +478,11 @@ class OperationSynthetizer:
         for v in variables:
             if (
                 v.variable
-                in [Variable.VELOCIDADE_VENTO, Variable.GERACAO_EOLICA]
+                in [
+                    Variable.VELOCIDADE_VENTO,
+                    Variable.GERACAO_EOLICA,
+                    Variable.CORTE_GERACAO_EOLICA,
+                ]
                 and not eolica
             ):
                 continue
