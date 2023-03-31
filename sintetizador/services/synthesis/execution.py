@@ -120,7 +120,11 @@ class ExecutionSynthetizer:
         with uow:
             file = "monitor-job.csv"
             if pathlib.Path(file).exists():
-                df = pd.read_csv("monitor-job.csv")
+                try:
+                    df = pd.read_csv(file)
+                except Exception as e:
+                    Log.log().info(f"Erro ao acessar arquivo {file}: {str(e)}")
+                    return None
                 return df
             return None
 
@@ -133,7 +137,11 @@ class ExecutionSynthetizer:
         with uow:
             file = "monitor-job.csv"
             if pathlib.Path(file).exists():
-                df_job = pd.read_csv("monitor-job.csv")
+                try:
+                    df_job = pd.read_csv(file)
+                except Exception as e:
+                    Log.log().info(f"Erro ao acessar arquivo {file}: {str(e)}")
+                    return None
         if df_job is None:
             return None
         jobTimeInstants = pd.to_datetime(df_job["timeInstant"]).tolist()
@@ -142,7 +150,11 @@ class ExecutionSynthetizer:
         with set_directory(str(pathlib.Path.home())):
             file = f"monitor-{socket.gethostname()}.csv"
             if pathlib.Path(file).exists():
-                df = pd.read_csv(file)
+                try:
+                    df = pd.read_csv(file)
+                except Exception as e:
+                    Log.log().info(f"Erro ao acessar arquivo {file}: {str(e)}")
+                    return None
                 df["timeInstant"] = pd.to_datetime(df["timeInstant"])
                 return df.loc[
                     (df["timeInstant"] >= jobTimeInstants[0])
