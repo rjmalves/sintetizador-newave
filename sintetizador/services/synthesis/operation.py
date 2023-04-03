@@ -1201,7 +1201,9 @@ class OperationSynthetizer:
                     [df, df_uhe],
                     ignore_index=True,
                 )
-            df = df.loc[df["dataInicio"] < fim, :]
+            if df is not None:
+                if not df.empty:
+                    df = df.loc[df["dataInicio"] < fim, :]
             return df
 
     @classmethod
