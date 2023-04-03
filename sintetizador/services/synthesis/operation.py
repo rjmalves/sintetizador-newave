@@ -1007,6 +1007,8 @@ class OperationSynthetizer:
 
             if df_uhe is None:
                 return None
+            if df_uhe.empty:
+                return None
 
             df_uhe = df_uhe.copy()
 
