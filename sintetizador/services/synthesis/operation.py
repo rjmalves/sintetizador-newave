@@ -1131,7 +1131,9 @@ class OperationSynthetizer:
                 df = df.loc[df["patamar"] == p0, :]
 
             df.loc[:, cols_cenarios] *= FATOR_HM3_M3S
-            df = df.loc[df["dataInicio"] < fim, :]
+            if df is not None:
+                if not df.empty:
+                    df = df.loc[df["dataInicio"] < fim, :]
             return df
 
     @classmethod
