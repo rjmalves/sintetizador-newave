@@ -144,7 +144,9 @@ class ExecutionSynthetizer:
                     return None
         if df_job is None:
             return None
-        jobTimeInstants = pd.to_datetime(df_job["timeInstant"]).tolist()
+        jobTimeInstants = pd.to_datetime(
+            df_job["timeInstant"], format="ISO8601"
+        ).tolist()
         # REGRA DE NEGOCIO: arquivos do hpc-job-monitor
         # monitor-(hostname).csv
         with set_directory(str(pathlib.Path.home())):
@@ -155,7 +157,9 @@ class ExecutionSynthetizer:
                 except Exception as e:
                     Log.log().info(f"Erro ao acessar arquivo {file}: {str(e)}")
                     return None
-                df["timeInstant"] = pd.to_datetime(df["timeInstant"])
+                df["timeInstant"] = pd.to_datetime(
+                    df["timeInstant"], format="ISO8601"
+                )
                 return df.loc[
                     (df["timeInstant"] >= jobTimeInstants[0])
                     & (df["timeInstant"] <= jobTimeInstants[-1])
