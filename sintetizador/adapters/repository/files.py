@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Type, Optional, Tuple, Callable
 import pandas as pd  # type: ignore
+from datetime import datetime, timedelta
 import pathlib
 import asyncio
 
@@ -16,6 +17,15 @@ from inewave.newave.ree import REE
 from inewave.newave.sistema import Sistema
 from inewave.newave.pmo import PMO
 from inewave.newave.newavetim import NewaveTim
+
+from inewave.newave.energiaf import Energiaf
+from inewave.newave.energiab import Energiab
+from inewave.newave.energias import Energias
+from inewave.newave.vazaof import Vazaof
+from inewave.newave.vazaob import Vazaob
+from inewave.newave.vazaos import Vazaos
+from inewave.newave.enavazf import Enavazf
+from inewave.newave.enavazb import Enavazb
 
 from inewave.nwlistop.cmarg import Cmarg
 from inewave.nwlistop.cmargmed import CmargMed
@@ -165,6 +175,46 @@ class AbstractFilesRepository(ABC):
     def get_nwlistcf_estados(self) -> Estados:
         raise NotImplementedError
 
+    @abstractmethod
+    def get_energiaf(self, iteracao: int) -> Energiaf:
+        pass
+
+    @abstractmethod
+    def get_energiab(self) -> Energiab:
+        pass
+
+    @abstractmethod
+    def get_vazaof(self, iteracao: int) -> Vazaof:
+        pass
+
+    @abstractmethod
+    def get_vazaob(self) -> Vazaob:
+        pass
+
+    @abstractmethod
+    def get_enavazf(self, iteracao: int) -> Enavazf:
+        pass
+
+    @abstractmethod
+    def get_enavazb(self) -> Enavazb:
+        pass
+
+    @abstractmethod
+    def get_energias(self) -> Energias:
+        pass
+
+    @abstractmethod
+    def get_enavazs(self) -> Enavazf:
+        pass
+
+    @abstractmethod
+    def get_vazaos(self) -> Vazaos:
+        pass
+
+    @abstractmethod
+    def _numero_estagios_individualizados(self) -> int:
+        pass
+
 
 class RawFilesRepository(AbstractFilesRepository):
     def __init__(self, tmppath: str):
@@ -184,6 +234,14 @@ class RawFilesRepository(AbstractFilesRepository):
         self.__eolicacadastro: Optional[EolicaCadastro] = None
         self.__nwlistcf: Optional[Nwlistcf] = None
         self.__estados: Optional[Estados] = None
+        self.__energiaf: Dict[int, Energiaf] = {}
+        self.__energiab: Optional[Energiab] = None
+        self.__vazaof: Dict[int, Vazaof] = {}
+        self.__vazaob: Optional[Vazaob] = None
+        self.__enavazf: Dict[int, Enavazf] = {}
+        self.__enavazb: Optional[Enavazb] = None
+        self.__energias: Optional[Energias] = None
+        self.__vazaos: Optional[Vazaos] = None
         self.__regras: Dict[
             Tuple[Variable, SpatialResolution, TemporalResolution], Callable
         ] = {
@@ -855,6 +913,274 @@ class RawFilesRepository(AbstractFilesRepository):
             except Exception:
                 Log.log().warning("Arquivo estados.rel não encontrado")
         return self.__estados
+
+    def _numero_estagios_individualizados(self) -> int:
+        dger = self.get_dger()
+        if dger.agregacao_simulacao_final == 1:
+            return dger.num_anos_estudo * 12
+        rees = self.get_ree().rees
+        mes_fim_hib = rees["Mês Fim Individualizado"].iloc[0]
+        ano_fim_hib = rees["Ano Fim Individualizado"].iloc[0]
+        if isinstance(mes_fim_hib, int) and isinstance(ano_fim_hib, int):
+            data_inicio_estudo = datetime(
+                year=dger.ano_inicio_estudo,
+                month=dger.mes_inicio_estudo,
+                day=1,
+            )
+            data_fim_individualizado = datetime(
+                year=ano_fim_hib,
+                month=mes_fim_hib,
+                day=1,
+            )
+            tempo_individualizado = (
+                data_fim_individualizado - data_inicio_estudo
+            )
+            return int(tempo_individualizado / timedelta(days=30))
+        else:
+            return 0
+
+    def get_energiaf(self, iteracao: int) -> Energiaf:
+        nome_arq = (
+            f"energiaf{str(iteracao).zfill(3)}.dat"
+            if iteracao != 1
+            else "energiaf.dat"
+        )
+        if self.__energiaf.get(iteracao) is None:
+            Log.log().info(f"Lendo arquivo {nome_arq}")
+            try:
+                dger = self.get_dger()
+                n_rees = self.get_ree().rees.shape[0]
+                n_estagios = dger.num_anos_estudo * 12
+                n_estagios_th = (
+                    12
+                    if dger.consideracao_media_anual_afluencias == 3
+                    else dger.ordem_maxima_parp
+                )
+                self.__energiaf[iteracao] = Energiaf.le_arquivo(
+                    self.__tmppath,
+                    nome_arq,
+                    dger.num_forwards,
+                    n_rees,
+                    n_estagios,
+                    n_estagios_th,
+                )
+            except Exception:
+                Log.log().warning(f"Arquivo {nome_arq} não encontrado")
+        return self.__energiaf.get(iteracao)
+
+    def get_vazaof(self, iteracao: int) -> Vazaof:
+        nome_arq = (
+            f"vazaof{str(iteracao).zfill(3)}.dat"
+            if iteracao != 1
+            else "vazaof.dat"
+        )
+        if self.__vazaof.get(iteracao) is None:
+            Log.log().info(f"Lendo arquivo {nome_arq}")
+            try:
+                dger = self.get_dger()
+                n_uhes = self.get_confhd().usinas.shape[0]
+                n_estagios = self._numero_estagios_individualizados()
+                n_estagios_th = (
+                    12
+                    if dger.consideracao_media_anual_afluencias == 3
+                    else dger.ordem_maxima_parp
+                )
+                self.__vazaof[iteracao] = Vazaof.le_arquivo(
+                    self.__tmppath,
+                    nome_arq,
+                    dger.num_forwards,
+                    n_uhes,
+                    n_estagios,
+                    n_estagios_th,
+                )
+            except Exception:
+                Log.log().warning(f"Arquivo {nome_arq} não encontrado")
+        return self.__vazaof.get(iteracao)
+
+    def get_energiab(self) -> Energiab:
+        if self.__energiab is None:
+            Log.log().info("Lendo arquivo energiab.dat")
+            try:
+                dger = self.get_dger()
+                n_rees = self.get_ree().rees.shape[0]
+                n_estagios = (
+                    dger.num_anos_estudo * 12
+                    - self._numero_estagios_individualizados()
+                )
+                self.__energiab = Energiab.le_arquivo(
+                    self.__tmppath,
+                    "energiab.dat",
+                    dger.num_forwards,
+                    dger.num_aberturas,
+                    n_rees,
+                    n_estagios,
+                )
+            except Exception:
+                Log.log().warning("Arquivo energiab.dat não encontrado")
+        return self.__energiab
+
+    def get_vazaob(self) -> Vazaob:
+        if self.__vazaob is None:
+            Log.log().info("Lendo arquivo vazaob.dat")
+            try:
+                dger = self.get_dger()
+                n_uhes = self.get_confhd().usinas.shape[0]
+                n_estagios_hib = self._numero_estagios_individualizados()
+                self.__vazaob = Vazaob.le_arquivo(
+                    self.__tmppath,
+                    "vazaob.dat",
+                    dger.num_forwards,
+                    dger.num_aberturas,
+                    n_uhes,
+                    n_estagios_hib,
+                )
+            except Exception:
+                Log.log().warning("Arquivo vazaob.dat não encontrado")
+        return self.__vazaob
+
+    def get_enavazf(self, iteracao: int) -> Enavazf:
+        nome_arq = (
+            f"enavazf{str(iteracao).zfill(3)}.dat"
+            if iteracao != 1
+            else "enavazf.dat"
+        )
+        if self.__enavazf.get(iteracao) is None:
+            Log.log().info(f"Lendo arquivo {nome_arq}")
+            try:
+                dger = self.get_dger()
+                n_rees = self.get_ree().rees.shape[0]
+                n_estagios = self._numero_estagios_individualizados()
+                n_estagios_th = (
+                    12
+                    if dger.consideracao_media_anual_afluencias == 3
+                    else dger.ordem_maxima_parp
+                )
+                self.__enavazf[iteracao] = Enavazf.le_arquivo(
+                    self.__tmppath,
+                    nome_arq,
+                    dger.num_forwards,
+                    n_rees,
+                    n_estagios,
+                    n_estagios_th,
+                )
+            except Exception:
+                Log.log().warning(f"Arquivo {nome_arq} não encontrado")
+        return self.__enavazf.get(iteracao)
+
+    def get_enavazb(self) -> Enavazb:
+        if self.__enavazb is None:
+            Log.log().info("Lendo arquivo enavazb.dat")
+            try:
+                dger = self.get_dger()
+                n_rees = self.get_ree().rees.shape[0]
+                n_estagios = (
+                    dger.num_anos_estudo * 12
+                    - self._numero_estagios_individualizados()
+                )
+                self.__enavazb = Enavazb.le_arquivo(
+                    self.__tmppath,
+                    "enavazb.dat",
+                    dger.num_forwards,
+                    dger.num_aberturas,
+                    n_rees,
+                    n_estagios,
+                )
+            except Exception:
+                Log.log().warning("Arquivo enavazb.dat não encontrado")
+        return self.__enavazb
+
+    def get_energias(self) -> Energias:
+        if self.__energias is None:
+            Log.log().info(f"Lendo arquivo energias.dat")
+            try:
+                dger = self.get_dger()
+                n_rees = self.get_ree().rees.shape[0]
+                n_estagios = (
+                    dger.num_anos_estudo * 12
+                    - self._numero_estagios_individualizados()
+                )
+                n_estagios_th = (
+                    12
+                    if dger.consideracao_media_anual_afluencias == 3
+                    else dger.ordem_maxima_parp
+                )
+                if dger.tipo_simulacao_final == 1:
+                    num_series = dger.num_series_sinteticas
+                else:
+                    num_series = (
+                        dger.ano_inicio_estudo - dger.ano_inicial_historico - 1
+                    )
+                self.__energias = Energias.le_arquivo(
+                    self.__tmppath,
+                    "energias.dat",
+                    num_series,
+                    n_rees,
+                    n_estagios,
+                    n_estagios_th,
+                )
+            except Exception:
+                Log.log().warning(f"Arquivo energias.dat não encontrado")
+        return self.__energias
+
+    def get_enavazs(self) -> Enavazf:
+        if self.__enavazs is None:
+            Log.log().info(f"Lendo arquivo enavazs.dat")
+            try:
+                dger = self.get_dger()
+                n_rees = self.get_ree().rees.shape[0]
+                n_estagios = self._numero_estagios_individualizados()
+                n_estagios_th = (
+                    12
+                    if dger.consideracao_media_anual_afluencias == 3
+                    else dger.ordem_maxima_parp
+                )
+                if dger.tipo_simulacao_final == 1:
+                    num_series = dger.num_series_sinteticas
+                else:
+                    num_series = (
+                        dger.ano_inicio_estudo - dger.ano_inicial_historico - 1
+                    )
+                self.__enavazs = Enavazf.le_arquivo(
+                    self.__tmppath,
+                    "enavazs.dat",
+                    num_series,
+                    n_rees,
+                    n_estagios,
+                    n_estagios_th,
+                )
+            except Exception:
+                Log.log().warning("Arquivo enavazs.dat não encontrado")
+        return self.__enavazs
+
+    def get_vazaos(self) -> Vazaos:
+        if self.__vazaos is None:
+            Log.log().info(f"Lendo arquivo vazaos.dat")
+            try:
+                dger = self.get_dger()
+                n_uhes = self.get_confhd().usinas.shape[0]
+                n_estagios = self._numero_estagios_individualizados()
+                n_estagios_th = (
+                    12
+                    if dger.consideracao_media_anual_afluencias == 3
+                    else dger.ordem_maxima_parp
+                )
+                if dger.tipo_simulacao_final == 1:
+                    num_series = dger.num_series_sinteticas
+                else:
+                    num_series = (
+                        dger.ano_inicio_estudo - dger.ano_inicial_historico - 1
+                    )
+                self.__vazaos = Vazaos.le_arquivo(
+                    self.__tmppath,
+                    "vazaos.dat",
+                    num_series,
+                    n_uhes,
+                    n_estagios,
+                    n_estagios_th,
+                )
+            except Exception:
+                Log.log().warning(f"Arquivo vazaos.dat não encontrado")
+        return self.__vazaos
 
 
 def factory(kind: str, *args, **kwargs) -> AbstractFilesRepository:
