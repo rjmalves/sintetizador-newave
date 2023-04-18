@@ -356,9 +356,9 @@ class ScenarioSynthetizer:
         engolimentos: Dict[int, float] = {}
         for idx, linha in hidr.iterrows():
             engol_max = 0.0
-            n_conj = linha["Num Conjunto Máquinas"]
+            n_conj = linha["Num. Conjuntos Máquinas"]
             for i in range(1, n_conj + 1):
-                n_maq = linha[f"Num Máquinas Conjunto {i}"]
+                n_maq = linha[f"Num. Máquinas Conjunto {i}"]
                 qef_maq = linha[f"QEf Conjunto {i}"]
                 engol_max += n_maq * qef_maq
             engolimentos[idx] = engol_max
