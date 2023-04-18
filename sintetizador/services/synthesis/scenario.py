@@ -1332,6 +1332,7 @@ class ScenarioSynthetizer:
         df: pd.DataFrame,
         df_mlt: pd.DataFrame,
         filter_col: Optional[str],
+        uow: AbstractUnitOfWork,
     ) -> pd.DataFrame:
         series = df["serie"].unique()
         num_series = len(series)
@@ -1340,7 +1341,9 @@ class ScenarioSynthetizer:
         elements = df[filter_col].unique() if filter_col is not None else []
 
         df_mlts_elements = pd.DataFrame()
-        for mes in range(1, 13):
+        shift_meses = uow.files.get_dger().mes_inicio_estudo - 1
+        meses_ordenados = np.roll(np.arange(1, 13), -shift_meses)
+        for mes in meses_ordenados:
             if len(elements) > 0:
                 for element in elements:
                     df_mlts_elements = pd.concat(
@@ -1372,7 +1375,8 @@ class ScenarioSynthetizer:
             num_anos,
         )
         df["mlt"] = mlts_ordenadas
-        df["valor_mlt"] = df["valor"] / df["mlt"]
+        df["valor"] = df["valor"] / df["mlt"]
+        df.drop(columns=["mlt"], inplace=True)
         df.replace([np.inf, -np.inf], 0, inplace=True)
         return df
 
@@ -1382,6 +1386,7 @@ class ScenarioSynthetizer:
         df: pd.DataFrame,
         df_mlt: pd.DataFrame,
         filter_col: Optional[str],
+        uow: AbstractUnitOfWork,
     ) -> pd.DataFrame:
         series = df["serie"].unique()
         num_series = len(series)
@@ -1392,7 +1397,9 @@ class ScenarioSynthetizer:
         elements = df[filter_col].unique() if filter_col is not None else []
 
         df_mlts_elements = pd.DataFrame()
-        for mes in range(1, 13):
+        shift_meses = uow.files.get_dger().mes_inicio_estudo - 1
+        meses_ordenados = np.roll(np.arange(1, 13), -shift_meses)
+        for mes in meses_ordenados:
             if len(elements) > 0:
                 for element in elements:
                     df_mlts_elements = pd.concat(
@@ -1424,7 +1431,8 @@ class ScenarioSynthetizer:
             num_anos,
         )
         df["mlt"] = mlts_ordenadas
-        df["valor_mlt"] = df["valor"] / df["mlt"]
+        df["valor"] = df["valor"] / df["mlt"]
+        df.drop(columns=["mlt"], inplace=True)
         df.replace([np.inf, -np.inf], 0, inplace=True)
         return df
 
