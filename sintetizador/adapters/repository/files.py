@@ -931,8 +931,8 @@ class RawFilesRepository(AbstractFilesRepository):
                 day=1,
             )
             data_fim_individualizado = datetime(
-                year=ano_fim_hib,
-                month=mes_fim_hib,
+                year=int(ano_fim_hib),
+                month=int(mes_fim_hib),
                 day=1,
             )
             tempo_individualizado = (
@@ -1001,8 +1001,7 @@ class RawFilesRepository(AbstractFilesRepository):
                     n_estagios,
                     n_estagios_th,
                 )
-            except Exception as e:
-                print(e)
+            except Exception:
                 Log.log().warning(f"Arquivo {nome_arq} não encontrado")
         return self.__vazaof.get(iteracao)
 
