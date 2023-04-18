@@ -298,7 +298,7 @@ class ScenarioSynthetizer:
                 month=1,
                 day=1,
             )
-            + relativedelta(months=num_estagios),
+            + relativedelta(months=num_estagios - 1),
             freq="MS",
         )
         datas_ordenadas = np.repeat(datas, num_series * num_uhes)
@@ -533,7 +533,7 @@ class ScenarioSynthetizer:
                 month=1,
                 day=1,
             )
-            + relativedelta(months=num_estagios),
+            + relativedelta(months=num_estagios - 1),
             freq="MS",
         )
         datas_ordenadas = np.repeat(
@@ -748,7 +748,7 @@ class ScenarioSynthetizer:
                 month=1,
                 day=1,
             )
-            + relativedelta(months=num_estagios),
+            + relativedelta(months=num_estagios - 1),
             freq="MS",
         )
         datas_ordenadas = np.repeat(datas, num_series * num_uhes)
