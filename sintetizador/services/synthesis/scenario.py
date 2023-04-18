@@ -236,6 +236,8 @@ class ScenarioSynthetizer:
         num_uhes = len(uhes)
         estagios = vazaof_dados["estagio"].unique()
         num_estagios = len(estagios)
+        print(" ------ ")
+        print(num_series, num_uhes, num_estagios)
         # Obtem os dados de cada usina
         dger = uow.files.get_dger()
         confhd = uow.files.get_confhd().usinas
