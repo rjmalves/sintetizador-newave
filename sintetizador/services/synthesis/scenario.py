@@ -184,7 +184,9 @@ class ScenarioSynthetizer:
         energiaf_dados["codigo_submercado"] = submercados_ordenados
         energiaf_dados["nome_submercado"] = nomes_submercados_ordenados
         energiaf_dados["data"] = datas_ordenadas
-        energiaf_dados["data_fim"] = datas_ordenadas + relativedelta(months=1)
+        energiaf_dados["data_fim"] = [
+            d + relativedelta(months=1) for d in datas_ordenadas
+        ]
         energiaf_dados["estagio"] -= dger.mes_inicio_estudo - 1
         return energiaf_dados[
             [
