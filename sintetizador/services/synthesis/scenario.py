@@ -1376,7 +1376,7 @@ class ScenarioSynthetizer:
             num_anos_sup,
         )
         if num_anos_sup != num_anos_inf:
-            num_meses_adicionais = num_estagios - num_anos_inf * 12
+            num_meses_adicionais = 12 - (num_estagios - num_anos_inf * 12)
             mlts_ordenadas = mlts_ordenadas[:-num_meses_adicionais*num_series*len(elements)]
         print(df)
         df["mlt"] = mlts_ordenadas
