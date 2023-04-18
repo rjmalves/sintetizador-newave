@@ -967,8 +967,7 @@ class RawFilesRepository(AbstractFilesRepository):
                     n_estagios,
                     n_estagios_th,
                 )
-            except Exception as e:
-                print(e)
+            except Exception:
                 Log.log().warning(f"Arquivo {nome_arq} não encontrado")
         return self.__energiaf.get(iteracao)
 
@@ -1002,7 +1001,8 @@ class RawFilesRepository(AbstractFilesRepository):
                     n_estagios,
                     n_estagios_th,
                 )
-            except Exception:
+            except Exception as e:
+                print(e)
                 Log.log().warning(f"Arquivo {nome_arq} não encontrado")
         return self.__vazaof.get(iteracao)
 
