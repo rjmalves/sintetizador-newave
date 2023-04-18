@@ -225,6 +225,7 @@ class ScenarioSynthetizer:
         :return: A tabela como um DataFrame
         :rtype: pd.DataFrame | None
         """
+        Log.log().info("Calculando séries de MLT para QINC - UHE")
         uhes = uow.files.get_confhd().usinas
         hidr = uow.files.get_hidr().cadastro
         df_completo_mlt = pd.DataFrame(
@@ -298,6 +299,7 @@ class ScenarioSynthetizer:
         :return: A tabela como um DataFrame
         :rtype: pd.DataFrame | None
         """
+        Log.log().info("Calculando séries de MLT para ENAA - UHE")
         mlt_uhe = cls._get_cached_mlt(
             Variable.VAZAO_INCREMENTAL_ABSOLUTA,
             SpatialResolution.USINA_HIDROELETRICA,
@@ -377,22 +379,26 @@ class ScenarioSynthetizer:
 
     @classmethod
     def _resolve_enaa_mlt_ree(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        Log.log().info("Calculando séries de MLT para ENAA - REE")
         return cls._agrega_serie_mlt(Variable.ENA_ABSOLUTA, "nome_ree", uow)
 
     @classmethod
     def _resolve_enaa_mlt_submercado(
         cls, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
+        Log.log().info("Calculando séries de MLT para ENAA - SBM")
         return cls._agrega_serie_mlt(
             Variable.ENA_ABSOLUTA, "nome_submercado", uow
         )
 
     @classmethod
     def _resolve_enaa_mlt_sin(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        Log.log().info("Calculando séries de MLT para ENAA - SIN")
         return cls._agrega_serie_mlt(Variable.ENA_ABSOLUTA, None, uow)
 
     @classmethod
     def _resolve_qinc_mlt_ree(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        Log.log().info("Calculando séries de MLT para QINC - REE")
         return cls._agrega_serie_mlt(
             Variable.VAZAO_INCREMENTAL_ABSOLUTA, "nome_ree", uow
         )
@@ -401,12 +407,14 @@ class ScenarioSynthetizer:
     def _resolve_qinc_mlt_submercado(
         cls, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
+        Log.log().info("Calculando séries de MLT para QINC - SBM")
         return cls._agrega_serie_mlt(
             Variable.VAZAO_INCREMENTAL_ABSOLUTA, "nome_submercado", uow
         )
 
     @classmethod
     def _resolve_qinc_mlt_sin(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        Log.log().info("Calculando séries de MLT para QINC - SIN")
         return cls._agrega_serie_mlt(
             Variable.VAZAO_INCREMENTAL_ABSOLUTA, None, uow
         )
@@ -1427,7 +1435,9 @@ class ScenarioSynthetizer:
             # Descobre o valor em MLT
             df = df.copy()
             df_mlt = cls._get_cached_mlt(
-                synthesis.variable, synthesis.spatial_resolution, uow
+                cls._mlt_absolute_variable_map(synthesis.variable),
+                synthesis.spatial_resolution,
+                uow,
             )
             filter_cols = [
                 c for c in df_mlt.columns if c not in ["mes", "vazao"]
