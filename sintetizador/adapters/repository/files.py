@@ -241,6 +241,7 @@ class RawFilesRepository(AbstractFilesRepository):
         self.__enavazf: Dict[int, Enavazf] = {}
         self.__enavazb: Optional[Enavazb] = None
         self.__energias: Optional[Energias] = None
+        self.__enavazs: Optional[Enavazf] = None
         self.__vazaos: Optional[Vazaos] = None
         self.__regras: Dict[
             Tuple[Variable, SpatialResolution, TemporalResolution], Callable
