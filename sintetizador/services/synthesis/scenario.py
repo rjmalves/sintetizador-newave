@@ -992,6 +992,6 @@ class ScenarioSynthetizer:
             # Decidir lógica para considerar ou não a tendência
             # hidrológica.
 
-            df = cls._postprocess(df, uow)
+            df = cls._postprocess(df)
             with uow:
                 uow.export.synthetize_df(df, filename)
