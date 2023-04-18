@@ -147,7 +147,7 @@ class ScenarioSynthetizer:
         dados_rees = uow.files.get_ree().rees
         dados_rees["Nome Submercado"] = dados_rees.apply(
             lambda linha: sistema.loc[
-                sistema["Núm. Subsistema"] == linha["Submercado"], "Nome"
+                sistema["Num. Subsistema"] == linha["Submercado"], "Nome"
             ].tolist()[0],
             axis=1,
         )
@@ -361,7 +361,7 @@ class ScenarioSynthetizer:
         dados_rees = uow.files.get_ree().rees
         dados_rees["Nome Submercado"] = dados_rees.apply(
             lambda linha: sistema.loc[
-                sistema["Núm. Subsistema"] == linha["Submercado"], "Nome"
+                sistema["Num. Subsistema"] == linha["Submercado"], "Nome"
             ].tolist()[0],
             axis=1,
         )
@@ -577,7 +577,7 @@ class ScenarioSynthetizer:
         dados_rees = uow.files.get_ree().rees
         dados_rees["Nome Submercado"] = dados_rees.apply(
             lambda linha: sistema.loc[
-                sistema["Núm. Subsistema"] == linha["Submercado"], "Nome"
+                sistema["Num. Subsistema"] == linha["Submercado"], "Nome"
             ].tolist()[0],
             axis=1,
         )
