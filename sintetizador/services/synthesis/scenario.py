@@ -1,4 +1,4 @@
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, Dict, List, Tuple, Optional
 import pandas as pd  # type: ignore
 import numpy as np  # type: ignore
 
@@ -35,6 +35,27 @@ class ScenarioSynthetizer:
         "QINC_SIN_FOR",
         "QINC_SIN_BKW",
         "QINC_SIN_SF",
+        "ENAM_REE_FOR",
+        "ENAM_REE_BKW",
+        "ENAM_REE_SF",
+        "ENAM_SBM_FOR",
+        "ENAM_SBM_BKW",
+        "ENAM_SBM_SF",
+        "ENAM_SIN_FOR",
+        "ENAM_SIN_BKW",
+        "ENAM_SIN_SF",
+        "QINCM_UHE_FOR",
+        "QINCM_UHE_BKW",
+        "QINCM_UHE_SF",
+        "QINCM_REE_FOR",
+        "QINCM_REE_BKW",
+        "QINCM_REE_SF",
+        "QINCM_SBM_FOR",
+        "QINCM_SBM_BKW",
+        "QINCM_SBM_SF",
+        "QINCM_SIN_FOR",
+        "QINCM_SIN_BKW",
+        "QINCM_SIN_SF",
     ]
 
     COMMON_COLUMNS: List[str] = [
@@ -47,6 +68,10 @@ class ScenarioSynthetizer:
     ]
 
     CACHED_SYNTHESIS: Dict[Tuple[Variable, Step], pd.DataFrame] = {}
+
+    CACHED_MLT_VALUES: Dict[
+        Tuple[Variable, SpatialResolution], pd.DataFrame
+    ] = {}
 
     @classmethod
     def _default_args(cls) -> List[ScenarioSynthesis]:
@@ -107,6 +132,335 @@ class ScenarioSynthetizer:
             valid_variables.append(v)
         Log.log().info(f"Variáveis: {valid_variables}")
         return valid_variables
+
+    @classmethod
+    def _gera_serie_incremental_uhe(
+        cls, uhe: int, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        """
+        Obtém a série histórica de vazões incrementais para uma UHE.
+
+        - data (`datetime`)
+        - vazao (`float`)
+
+        :return: A tabela como um DataFrame
+        :rtype: pd.DataFrame | None
+        """
+        uhes = uow.files.get_confhd().usinas
+        hidr = uow.files.get_hidr().cadastro
+        vazoes = uow.files.get_vazoes().vazoes
+        posto = uhes.loc[uhes["Número"] == uhe, "Posto"].tolist()[0]
+        vazao_natural = vazoes[posto].to_numpy()
+        posto_nulo = posto == 300
+        if not posto_nulo:
+            uhes_montante = uhes.loc[uhes["Jusante"] == uhe, "Número"].tolist()
+            uhes_montante = [u for u in uhes_montante if u != 0]
+            postos_montante = list(
+                set(
+                    [
+                        hidr.at[int(uhe_montante), "Posto"]
+                        for uhe_montante in uhes_montante
+                    ]
+                )
+            )
+            for posto_montante in postos_montante:
+                vazao_natural = (
+                    vazao_natural - vazoes[posto_montante].to_numpy()
+                )
+        ano_inicio_historico = int(
+            uhes.loc[uhes["Número"] == uhe, "Início do Histórico"].iloc[0]
+        )
+        ano_fim_historico = int(
+            uhes.loc[uhes["Número"] == uhe, "Fim do Histórico"].iloc[0]
+        )
+        datas = pd.date_range(
+            datetime(year=ano_inicio_historico, month=1, day=1),
+            datetime(year=ano_fim_historico, month=12, day=1),
+            freq="MS",
+        )
+        return pd.DataFrame(
+            data={
+                "data": datas,
+                "vazao": vazao_natural[: len(datas)],
+            }
+        )
+
+    @classmethod
+    def _mlt(cls, serie_historica: pd.DataFrame) -> pd.DataFrame:
+        """
+        Extrai a MLT de uma série histórica de vazões de
+        uma UHE, agrupando por mês.
+
+        - mes (`int`)
+        - vazao (`float`)
+
+        :return: A tabela como um DataFrame
+        :rtype: pd.DataFrame | None
+        """
+        serie_historica["mes"] = serie_historica.apply(
+            lambda linha: linha["data"].month, axis=1
+        )
+        return (
+            serie_historica.groupby(["mes"])
+            .mean(numeric_only=True)
+            .reset_index()
+        )
+
+    @classmethod
+    def _gera_series_vazao_mlt_uhes(
+        cls, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        """
+        Extrai a MLT para todas as UHEs.
+
+        - codigo_usina (`int`)
+        - nome_usina (`str`)
+        - codigo_ree (`int`)
+        - nome_ree (`str`)
+        - codigo_submercado (`int`)
+        - nome_submercado (`str`)
+        - mes (`int`)
+        - vazao (`float`)
+
+        :return: A tabela como um DataFrame
+        :rtype: pd.DataFrame | None
+        """
+        uhes = uow.files.get_confhd().usinas
+        hidr = uow.files.get_hidr().cadastro
+        df_completo_mlt = pd.DataFrame(
+            columns=["codigo_usina", "nome_usina", "mes", "vazao"]
+        )
+        for uhe in uhes["Número"]:
+            vazao = cls._gera_serie_incremental_uhe(uhe, uow)
+            vazao_mlt = cls._mlt(vazao)
+            df_mlt = pd.DataFrame(
+                data={
+                    "codigo_usina": [uhe] * len(vazao_mlt),
+                    "nome_usina": [hidr.at[uhe, "Nome"]] * len(vazao_mlt),
+                    "mes": vazao_mlt["mes"],
+                    "vazao": vazao_mlt["vazao"],
+                }
+            )
+            df_completo_mlt = pd.concat(
+                [df_completo_mlt, df_mlt], ignore_index=True
+            )
+        # Adiciona dados de ree e submercado à série
+        confhd = uow.files.get_confhd().usinas
+        rees = uow.files.get_ree().rees
+        sistema = uow.files.get_sistema().custo_deficit
+        df_completo_mlt["codigo_ree"] = df_completo_mlt.apply(
+            lambda linha: confhd.loc[
+                confhd["Número"] == linha["codigo_usina"], "REE"
+            ].tolist()[0],
+            axis=1,
+        )
+        df_completo_mlt["nome_ree"] = df_completo_mlt.apply(
+            lambda linha: rees.loc[
+                rees["Número"] == linha["codigo_ree"], "Nome"
+            ].tolist()[0],
+            axis=1,
+        )
+        df_completo_mlt["codigo_submercado"] = df_completo_mlt.apply(
+            lambda linha: rees.loc[
+                rees["Número"] == linha["codigo_ree"], "Submercado"
+            ].tolist()[0],
+            axis=1,
+        )
+        df_completo_mlt["nome_submercado"] = df_completo_mlt.apply(
+            lambda linha: sistema.loc[
+                sistema["Num. Subsistema"] == linha["codigo_submercado"],
+                "Nome",
+            ].tolist()[0],
+            axis=1,
+        )
+        return df_completo_mlt
+
+    @classmethod
+    def _gera_series_energia_mlt_uhes(
+        cls, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        """
+        Extrai a MLT para todas as UHEs.
+
+        Premissa: a conversão para a energia é
+        feita com base na primeira configuração por
+        enquanto.
+
+        - codigo_usina (`int`)
+        - nome_usina (`str`)
+        - codigo_ree (`int`)
+        - nome_ree (`str`)
+        - codigo_submercado (`int`)
+        - nome_submercado (`str`)
+        - mes (`int`)
+        - vazao (`float`)
+
+        :return: A tabela como um DataFrame
+        :rtype: pd.DataFrame | None
+        """
+        mlt_uhe = cls._get_cached_mlt(
+            Variable.VAZAO_INCREMENTAL_ABSOLUTA,
+            SpatialResolution.USINA_HIDROELETRICA,
+            uow,
+        ).copy()
+        pmo = uow.files.get_pmo()
+        prodts = pmo.produtibilidades_equivalentes
+        prodts = prodts.loc[prodts["configuracao"] == 1]
+        col_reserv = "produtibilidade_acumulada_calculo_altura_65"
+        col_fio = "produtibilidade_equivalente_volmin_volmax"
+        reservatorios = (
+            prodts[["nome_usina", col_reserv]].dropna()["nome_usina"].tolist()
+        )
+        mlt_uhe.loc[
+            mlt_uhe["nome_usina"].isin(reservatorios), "prodt"
+        ] = mlt_uhe.loc[mlt_uhe["nome_usina"].isin(reservatorios)].apply(
+            lambda linha: prodts.loc[
+                prodts["nome_usina"] == linha["nome_usina"], col_reserv
+            ].tolist()[0],
+            axis=1,
+        )
+        mlt_uhe.loc[
+            ~mlt_uhe["nome_usina"].isin(reservatorios), "prodt"
+        ] = mlt_uhe.loc[~mlt_uhe["nome_usina"].isin(reservatorios)].apply(
+            lambda linha: prodts.loc[
+                prodts["nome_usina"] == linha["nome_usina"], col_fio
+            ].tolist()[0],
+            axis=1,
+        )
+        # Limita as afluências das fio d'água ao engolimento
+        engolimentos = cls._engolimento_maximo_uhes(uow)
+        mlt_uhe.loc[
+            ~mlt_uhe["nome_usina"].isin(reservatorios), "vazao_max"
+        ] = mlt_uhe.loc[~mlt_uhe["nome_usina"].isin(reservatorios)].apply(
+            lambda linha: engolimentos[linha["codigo_usina"]],
+            axis=1,
+        )
+        mlt_uhe.loc[
+            ~mlt_uhe["nome_usina"].isin(reservatorios), "vazao"
+        ] = mlt_uhe.loc[
+            ~mlt_uhe["nome_usina"].isin(reservatorios), ["vazao", "vazao_max"]
+        ].min(
+            axis=1
+        )
+        # Multiplica todas pelas produtibilidades
+        mlt_uhe["vazao"] = mlt_uhe["vazao"] * mlt_uhe["prodt"]
+        return mlt_uhe.drop(columns=["prodt", "vazao_max"])
+
+    @classmethod
+    def _engolimento_maximo_uhes(
+        cls, uow: AbstractUnitOfWork
+    ) -> Dict[int, float]:
+        hidr = uow.files.get_hidr().cadastro
+        engolimentos: Dict[int, float] = {}
+        for idx, linha in hidr.iterrows():
+            engol_max = 0.0
+            n_conj = linha["Num Conjunto Máquinas"]
+            for i in range(1, n_conj + 1):
+                n_maq = linha[f"Num Máquinas Conjunto {i}"]
+                qef_maq = linha[f"QEf Conjunto {i}"]
+                engol_max += n_maq * qef_maq
+            engolimentos[idx] = engol_max
+        return engolimentos
+
+    @classmethod
+    def _agrega_serie_mlt(
+        cls, variavel: Variable, col: str, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        mlt_uhe = cls._get_cached_mlt(
+            variavel,
+            SpatialResolution.USINA_HIDROELETRICA,
+            uow,
+        )
+        col_list = [col] if col is not None else []
+        df = mlt_uhe.groupby(col_list + ["mes"]).sum().reset_index()
+        return df[col_list + ["mes", "vazao"]]
+
+    @classmethod
+    def _resolve_enaa_mlt_ree(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        return cls._agrega_serie_mlt(Variable.ENA_ABSOLUTA, "nome_ree", uow)
+
+    @classmethod
+    def _resolve_enaa_mlt_submercado(
+        cls, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        return cls._agrega_serie_mlt(
+            Variable.ENA_ABSOLUTA, "nome_submercado", uow
+        )
+
+    @classmethod
+    def _resolve_enaa_mlt_sin(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        return cls._agrega_serie_mlt(Variable.ENA_ABSOLUTA, None, uow)
+
+    @classmethod
+    def _resolve_qinc_mlt_ree(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        return cls._agrega_serie_mlt(
+            Variable.VAZAO_INCREMENTAL_ABSOLUTA, "nome_ree", uow
+        )
+
+    @classmethod
+    def _resolve_qinc_mlt_submercado(
+        cls, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        return cls._agrega_serie_mlt(
+            Variable.VAZAO_INCREMENTAL_ABSOLUTA, "nome_submercado", uow
+        )
+
+    @classmethod
+    def _resolve_qinc_mlt_sin(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        return cls._agrega_serie_mlt(
+            Variable.VAZAO_INCREMENTAL_ABSOLUTA, None, uow
+        )
+
+    @classmethod
+    def _get_cached_mlt(
+        cls,
+        variable: Variable,
+        spatial_resolution: SpatialResolution,
+        uow: AbstractUnitOfWork,
+    ) -> pd.DataFrame:
+        CACHING_FUNCTION_MAP: Dict[
+            Tuple[Variable, SpatialResolution], Callable
+        ] = {
+            (
+                Variable.ENA_ABSOLUTA,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ): cls._gera_series_energia_mlt_uhes,
+            (
+                Variable.ENA_ABSOLUTA,
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            ): cls._resolve_enaa_mlt_ree,
+            (
+                Variable.ENA_ABSOLUTA,
+                SpatialResolution.SUBMERCADO,
+            ): cls._resolve_enaa_mlt_submercado,
+            (
+                Variable.ENA_ABSOLUTA,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+            ): cls._resolve_enaa_mlt_sin,
+            (
+                Variable.VAZAO_INCREMENTAL_ABSOLUTA,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ): cls._gera_series_vazao_mlt_uhes,
+            (
+                Variable.VAZAO_INCREMENTAL_ABSOLUTA,
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            ): cls._resolve_qinc_mlt_ree,
+            (
+                Variable.VAZAO_INCREMENTAL_ABSOLUTA,
+                SpatialResolution.SUBMERCADO,
+            ): cls._resolve_qinc_mlt_submercado,
+            (
+                Variable.VAZAO_INCREMENTAL_ABSOLUTA,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+            ): cls._resolve_qinc_mlt_sin,
+        }
+        if cls.CACHED_MLT_VALUES.get((variable, spatial_resolution)) is None:
+            cls.CACHED_MLT_VALUES[
+                (variable, spatial_resolution)
+            ] = CACHING_FUNCTION_MAP[(variable, spatial_resolution)](uow)
+        return cls.CACHED_MLT_VALUES.get(
+            (variable, spatial_resolution), pd.DataFrame()
+        )
 
     @classmethod
     def _formata_dados_series(
@@ -236,8 +590,6 @@ class ScenarioSynthetizer:
         num_uhes = len(uhes)
         estagios = vazaof_dados["estagio"].unique()
         num_estagios = len(estagios)
-        print(" ------ ")
-        print(num_series, num_uhes, num_estagios)
         # Obtem os dados de cada usina
         dger = uow.files.get_dger()
         confhd = uow.files.get_confhd().usinas
@@ -959,6 +1311,137 @@ class ScenarioSynthetizer:
             return df
 
     @classmethod
+    def _mlt_absolute_variable_map(cls, variable: Variable) -> Variable:
+        MAP = {
+            Variable.ENA_MLT: Variable.ENA_ABSOLUTA,
+            Variable.VAZAO_INCREMENTAL_MLT: Variable.VAZAO_INCREMENTAL_ABSOLUTA,
+        }
+        return MAP[variable]
+
+    @classmethod
+    def _apply_mlt_forward_sf(
+        cls,
+        df: pd.DataFrame,
+        df_mlt: pd.DataFrame,
+        filter_col: Optional[str],
+        uow: AbstractUnitOfWork,
+    ) -> pd.DataFrame:
+        series = df["serie"].unique()
+        num_series = len(series)
+        elements = df[filter_col].unique() if filter_col is not None else []
+
+        df_mlts_elements = pd.DataFrame()
+        for mes in range(1, 13):
+            if len(elements) > 0:
+                for element in elements:
+                    df_mlts_elements = pd.concat(
+                        [
+                            df_mlts_elements,
+                            df_mlt.loc[
+                                (df_mlt[filter_col] == element)
+                                & (df_mlt["mes"] == mes),
+                                "vazao",
+                            ],
+                        ],
+                        ignore_index=True,
+                    )
+            else:
+                df_mlts_elements = pd.concat(
+                    [
+                        df_mlts_elements,
+                        df_mlt.loc[
+                            (df_mlt["mes"] == mes),
+                            "vazao",
+                        ],
+                    ],
+                    ignore_index=True,
+                )
+
+        mlts_ordenadas = np.tile(
+            np.repeat(df_mlts_elements.to_numpy(), num_series),
+            uow.files.get_dger().num_anos_estudo + 1,
+        )
+        df["mlt"] = mlts_ordenadas
+        df["valor_mlt"] = df["valor"] / df["mlt"]
+        df.replace([np.inf, -np.inf], 0, inplace=True)
+        return df
+
+    @classmethod
+    def _apply_mlt_backward(
+        cls,
+        df: pd.DataFrame,
+        df_mlt: pd.DataFrame,
+        filter_col: Optional[str],
+        uow: AbstractUnitOfWork,
+    ) -> pd.DataFrame:
+        series = df["serie"].unique()
+        num_series = len(series)
+        aberturas = df["abertura"].unique()
+        num_aberturas = len(aberturas)
+        elements = df[filter_col].unique() if filter_col is not None else []
+
+        df_mlts_elements = pd.DataFrame()
+        for mes in range(1, 13):
+            if len(elements) > 0:
+                for element in elements:
+                    df_mlts_elements = pd.concat(
+                        [
+                            df_mlts_elements,
+                            df_mlt.loc[
+                                (df_mlt[filter_col] == element)
+                                & (df_mlt["mes"] == mes),
+                                "vazao",
+                            ],
+                        ],
+                        ignore_index=True,
+                    )
+            else:
+                df_mlts_elements = pd.concat(
+                    [
+                        df_mlts_elements,
+                        df_mlt.loc[
+                            (df_mlt["mes"] == mes),
+                            "vazao",
+                        ],
+                    ],
+                    ignore_index=True,
+                )
+
+        mlts_ordenadas = np.tile(
+            np.repeat(df_mlts_elements.to_numpy(), num_series * num_aberturas),
+            uow.files.get_dger().num_anos_estudo,
+        )
+        df["mlt"] = mlts_ordenadas
+        df["valor_mlt"] = df["valor"] / df["mlt"]
+        df.replace([np.inf, -np.inf], 0, inplace=True)
+        return df
+
+    @classmethod
+    def _apply_mlt(
+        cls,
+        synthesis: ScenarioSynthesis,
+        df: pd.DataFrame,
+        uow: AbstractUnitOfWork,
+    ) -> pd.DataFrame:
+        with uow:
+            # Descobre o valor em MLT
+            df = df.copy()
+            df_mlt = cls._get_cached_mlt(
+                synthesis.variable, synthesis.spatial_resolution, uow
+            )
+            filter_cols = [
+                c for c in df_mlt.columns if c not in ["mes", "vazao"]
+            ]
+            filter_col = None if len(filter_cols) == 0 else filter_cols[0]
+            # Aplica a conversão
+            APPLY_MAP: Dict[Step, Callable] = {
+                Step.FORWARD: cls._apply_mlt_forward_sf,
+                Step.FINAL_SIMULATION: cls._apply_mlt_forward_sf,
+                Step.BACKWARD: cls._apply_mlt_backward,
+            }
+            return APPLY_MAP[synthesis.step](df, df_mlt, filter_col, uow)
+
+    @classmethod
     def _resolve_spatial_resolution(
         cls, synthesis: ScenarioSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
@@ -968,10 +1451,35 @@ class ScenarioSynthetizer:
             SpatialResolution.RESERVATORIO_EQUIVALENTE: ["nome_ree"],
             SpatialResolution.USINA_HIDROELETRICA: ["nome_usina"],
         }
-        df = cls._get_cached_variable(synthesis.variable, synthesis.step, uow)
-        return cls._resolve_group(
-            RESOLUTION_MAP[synthesis.spatial_resolution], df
-        )
+        if synthesis.variable in [
+            Variable.ENA_ABSOLUTA,
+            Variable.VAZAO_INCREMENTAL_ABSOLUTA,
+        ]:
+            # Variáveis absolutas - agregação mais simples
+            df = cls._get_cached_variable(
+                synthesis.variable, synthesis.step, uow
+            )
+            return cls._resolve_group(
+                RESOLUTION_MAP[synthesis.spatial_resolution], df
+            )
+        elif synthesis.variable in [
+            Variable.ENA_MLT,
+            Variable.VAZAO_INCREMENTAL_MLT,
+        ]:
+            # Variáveis normalizadas pela MLT - agregação deve ser feita na
+            # variável equivalente absoluta
+            df = cls._get_cached_variable(
+                cls._mlt_absolute_variable_map(synthesis.variable),
+                synthesis.step,
+                uow,
+            )
+            df = cls._resolve_group(
+                RESOLUTION_MAP[synthesis.spatial_resolution], df
+            )
+            df = cls._apply_mlt(synthesis, df, uow)
+            pass
+        else:
+            return pd.DataFrame()
 
     @classmethod
     def _postprocess(cls, df: pd.DataFrame):
@@ -1000,7 +1508,6 @@ class ScenarioSynthetizer:
         for s in valid_synthesis:
             filename = str(s)
             Log.log().info(f"Realizando síntese de {filename}")
-
             df = cls._resolve_spatial_resolution(s, uow)
             if df is None:
                 continue
@@ -1008,10 +1515,7 @@ class ScenarioSynthetizer:
                 if df.empty:
                     Log.log().info("Erro ao realizar a síntese")
                     continue
-            # TODO - conferir o postprocess
-            # Decidir lógica para considerar ou não a tendência
-            # hidrológica.
-
+            # TODO - adicionar estatísticas ao postprocess
             df = cls._postprocess(df)
             with uow:
                 uow.export.synthetize_df(df, filename)

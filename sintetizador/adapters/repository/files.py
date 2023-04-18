@@ -18,6 +18,8 @@ from inewave.newave.ree import REE
 from inewave.newave.sistema import Sistema
 from inewave.newave.pmo import PMO
 from inewave.newave.newavetim import NewaveTim
+from inewave.newave.vazoes import Vazoes
+from inewave.newave.hidr import Hidr
 
 from inewave.newave.energiaf import Energiaf
 from inewave.newave.energiab import Energiab
@@ -213,6 +215,14 @@ class AbstractFilesRepository(ABC):
         pass
 
     @abstractmethod
+    def get_vazoes(self) -> Vazoes:
+        pass
+
+    @abstractmethod
+    def get_hidr(self) -> Hidr:
+        pass
+
+    @abstractmethod
     def _numero_estagios_individualizados(self) -> int:
         pass
 
@@ -244,6 +254,8 @@ class RawFilesRepository(AbstractFilesRepository):
         self.__energias: Optional[Energias] = None
         self.__enavazs: Optional[Enavazf] = None
         self.__vazaos: Optional[Vazaos] = None
+        self.__vazoes: Optional[Vazoes] = None
+        self.__hidr: Optional[Hidr] = None
         self.__regras: Dict[
             Tuple[Variable, SpatialResolution, TemporalResolution], Callable
         ] = {
@@ -992,7 +1004,6 @@ class RawFilesRepository(AbstractFilesRepository):
                     if dger.consideracao_media_anual_afluencias == 3
                     else dger.ordem_maxima_parp
                 )
-                print(n_estagios, n_estagios_th, n_uhes)
                 self.__vazaof[iteracao] = Vazaof.le_arquivo(
                     self.__tmppath,
                     nome_arq,
@@ -1200,6 +1211,30 @@ class RawFilesRepository(AbstractFilesRepository):
             except Exception:
                 Log.log().warning(f"Arquivo vazaos.dat não encontrado")
         return self.__vazaos
+
+    def get_vazoes(self) -> Vazoes:
+        if self.__vazoes is None:
+            Log.log().info("Lendo arquivo vazoes.dat")
+            try:
+                self.__vazoes = Vazoes.le_arquivo(
+                    self.__tmppath,
+                    "vazoes.dat",
+                )
+            except Exception:
+                Log.log().warning("Arquivo vazoes.dat não encontrado")
+        return self.__vazoes
+
+    def get_hidr(self) -> Hidr:
+        if self.__hidr is None:
+            Log.log().info("Lendo arquivo hidr.dat")
+            try:
+                self.__hidr = Hidr.le_arquivo(
+                    self.__tmppath,
+                    "hidr.dat",
+                )
+            except Exception:
+                Log.log().warning("Arquivo hidr.dat não encontrado")
+        return self.__hidr
 
 
 def factory(kind: str, *args, **kwargs) -> AbstractFilesRepository:
