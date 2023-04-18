@@ -990,6 +990,7 @@ class RawFilesRepository(AbstractFilesRepository):
                     if dger.consideracao_media_anual_afluencias == 3
                     else dger.ordem_maxima_parp
                 )
+                print(n_estagios, n_estagios_th, n_uhes)
                 self.__vazaof[iteracao] = Vazaof.le_arquivo(
                     self.__tmppath,
                     nome_arq,
