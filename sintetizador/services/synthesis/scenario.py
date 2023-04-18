@@ -305,7 +305,9 @@ class ScenarioSynthetizer:
         vazaof_dados["codigo_submercado"] = codigos_submercados_ordenados
         vazaof_dados["nome_submercado"] = nomes_submercados_ordenados
         vazaof_dados["data"] = datas_ordenadas
-        vazaof_dados["data_fim"] = datas_ordenadas + relativedelta(months=1)
+        vazaof_dados["data_fim"] = [
+            d + relativedelta(months=1) for d in datas_ordenadas
+        ]
         vazaof_dados["estagio"] -= dger.mes_inicio_estudo - 1
         vazaof_dados.drop(columns=["uhe"], inplace=True)
         return vazaof_dados[
@@ -402,7 +404,9 @@ class ScenarioSynthetizer:
         energiab_dados["codigo_submercado"] = codigos_submercados_ordenados
         energiab_dados["nome_submercado"] = nomes_submercados_ordenados
         energiab_dados["data"] = datas_ordenadas
-        energiab_dados["data_fim"] = datas_ordenadas + relativedelta(months=1)
+        energiab_dados["data_fim"] = [
+            d + relativedelta(months=1) for d in datas_ordenadas
+        ]
         energiab_dados["estagio"] -= dger.mes_inicio_estudo - 1
         return energiab_dados[
             [
@@ -527,7 +531,9 @@ class ScenarioSynthetizer:
         vazaob_dados["codigo_submercado"] = codigos_submercados_ordenados
         vazaob_dados["nome_submercado"] = nomes_submercados_ordenados
         vazaob_dados["data"] = datas_ordenadas
-        vazaob_dados["data_fim"] = datas_ordenadas + relativedelta(months=1)
+        vazaob_dados["data_fim"] = [
+            d + relativedelta(months=1) for d in datas_ordenadas
+        ]
         vazaob_dados["estagio"] -= dger.mes_inicio_estudo - 1
         vazaob_dados.drop(columns=["uhe"], inplace=True)
         return vazaob_dados[
@@ -616,7 +622,9 @@ class ScenarioSynthetizer:
         energias_dados["codigo_submercado"] = submercados_ordenados
         energias_dados["nome_submercado"] = nomes_submercados_ordenados
         energias_dados["data"] = datas_ordenadas
-        energias_dados["data_fim"] = datas_ordenadas + relativedelta(months=1)
+        energias_dados["data_fim"] = [
+            d + relativedelta(months=1) for d in datas_ordenadas
+        ]
         energias_dados["estagio"] -= dger.mes_inicio_estudo - 1
         return energias_dados[
             [
@@ -733,7 +741,9 @@ class ScenarioSynthetizer:
         vazaos_dados["codigo_submercado"] = codigos_submercados_ordenados
         vazaos_dados["nome_submercado"] = nomes_submercados_ordenados
         vazaos_dados["data"] = datas_ordenadas
-        vazaos_dados["data_fim"] = datas_ordenadas + relativedelta(months=1)
+        vazaos_dados["data_fim"] = [
+            d + relativedelta(months=1) for d in datas_ordenadas
+        ]
         vazaos_dados["estagio"] -= dger.mes_inicio_estudo - 1
         vazaos_dados.drop(columns=["uhe"], inplace=True)
         return vazaos_dados[
@@ -767,7 +777,7 @@ class ScenarioSynthetizer:
                 df_energia = (
                     energiaf.series if energiaf is not None else pd.DataFrame()
                 )
-                if not df_enavaz.empty:
+                if not df_enavaz.empty and not df_energia.empty:
                     n_indiv = uow.files._numero_estagios_individualizados()
                     df_ena = pd.concat(
                         [
@@ -817,7 +827,7 @@ class ScenarioSynthetizer:
             df_energia = (
                 energiab.series if energiab is not None else pd.DataFrame()
             )
-            if not df_enavaz.empty:
+            if not df_enavaz.empty and not df_energia.empty:
                 n_indiv = uow.files._numero_estagios_individualizados()
                 df_ena = pd.concat(
                     [
@@ -855,7 +865,7 @@ class ScenarioSynthetizer:
             df_energia = (
                 energias.series if energias is not None else pd.DataFrame()
             )
-            if not df_enavaz.empty:
+            if not df_enavaz.empty and not df_energia.empty:
                 n_indiv = uow.files._numero_estagios_individualizados()
                 df_ena = pd.concat(
                     [
@@ -923,7 +933,7 @@ class ScenarioSynthetizer:
             cols = group_col + [
                 c for c in cls.COMMON_COLUMNS if c in df.columns
             ]
-            df_agrupado = df.groupby([cols]).sum().reset_index()
+            df_agrupado = df.groupby(cols).sum().reset_index()
             return df_agrupado[cols + ["valor"]]
         else:
             return df
