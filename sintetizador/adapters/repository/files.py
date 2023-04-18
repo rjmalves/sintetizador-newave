@@ -980,7 +980,11 @@ class RawFilesRepository(AbstractFilesRepository):
             try:
                 dger = self.get_dger()
                 n_uhes = self.get_confhd().usinas.shape[0]
-                n_estagios = self._numero_estagios_individualizados()
+                n_estagios = (
+                    self._numero_estagios_individualizados()
+                    + dger.mes_inicio_estudo
+                    - 1
+                )
                 n_estagios_th = (
                     12
                     if dger.consideracao_media_anual_afluencias == 3
@@ -1004,10 +1008,7 @@ class RawFilesRepository(AbstractFilesRepository):
             try:
                 dger = self.get_dger()
                 n_rees = self.get_ree().rees.shape[0]
-                n_estagios = (
-                    dger.num_anos_estudo * 12
-                    - self._numero_estagios_individualizados()
-                )
+                n_estagios = dger.num_anos_estudo * 12
                 self.__energiab = Energiab.le_arquivo(
                     self.__tmppath,
                     "energiab.dat",
@@ -1026,7 +1027,11 @@ class RawFilesRepository(AbstractFilesRepository):
             try:
                 dger = self.get_dger()
                 n_uhes = self.get_confhd().usinas.shape[0]
-                n_estagios_hib = self._numero_estagios_individualizados()
+                n_estagios_hib = (
+                    self._numero_estagios_individualizados()
+                    + dger.mes_inicio_estudo
+                    - 1
+                )
                 self.__vazaob = Vazaob.le_arquivo(
                     self.__tmppath,
                     "vazaob.dat",
@@ -1050,7 +1055,11 @@ class RawFilesRepository(AbstractFilesRepository):
             try:
                 dger = self.get_dger()
                 n_rees = self.get_ree().rees.shape[0]
-                n_estagios = self._numero_estagios_individualizados()
+                n_estagios = (
+                    self._numero_estagios_individualizados()
+                    + dger.mes_inicio_estudo
+                    - 1
+                )
                 n_estagios_th = (
                     12
                     if dger.consideracao_media_anual_afluencias == 3
@@ -1075,8 +1084,9 @@ class RawFilesRepository(AbstractFilesRepository):
                 dger = self.get_dger()
                 n_rees = self.get_ree().rees.shape[0]
                 n_estagios = (
-                    dger.num_anos_estudo * 12
-                    - self._numero_estagios_individualizados()
+                    self._numero_estagios_individualizados()
+                    + dger.mes_inicio_estudo
+                    - 1
                 )
                 self.__enavazb = Enavazb.le_arquivo(
                     self.__tmppath,
@@ -1096,10 +1106,7 @@ class RawFilesRepository(AbstractFilesRepository):
             try:
                 dger = self.get_dger()
                 n_rees = self.get_ree().rees.shape[0]
-                n_estagios = (
-                    dger.num_anos_estudo * 12
-                    - self._numero_estagios_individualizados()
-                )
+                n_estagios = dger.num_anos_estudo * 12
                 n_estagios_th = (
                     12
                     if dger.consideracao_media_anual_afluencias == 3
@@ -1129,7 +1136,11 @@ class RawFilesRepository(AbstractFilesRepository):
             try:
                 dger = self.get_dger()
                 n_rees = self.get_ree().rees.shape[0]
-                n_estagios = self._numero_estagios_individualizados()
+                n_estagios = (
+                    self._numero_estagios_individualizados()
+                    + dger.mes_inicio_estudo
+                    - 1
+                )
                 n_estagios_th = (
                     12
                     if dger.consideracao_media_anual_afluencias == 3
@@ -1159,7 +1170,11 @@ class RawFilesRepository(AbstractFilesRepository):
             try:
                 dger = self.get_dger()
                 n_uhes = self.get_confhd().usinas.shape[0]
-                n_estagios = self._numero_estagios_individualizados()
+                n_estagios = (
+                    self._numero_estagios_individualizados()
+                    + dger.mes_inicio_estudo
+                    - 1
+                )
                 n_estagios_th = (
                     12
                     if dger.consideracao_media_anual_afluencias == 3
