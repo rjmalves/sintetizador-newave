@@ -1377,11 +1377,12 @@ class ScenarioSynthetizer:
         )
         if num_anos_sup != num_anos_inf:
             num_meses_adicionais = 12 - (num_estagios - num_anos_inf * 12)
-            mlts_ordenadas = mlts_ordenadas[:-num_meses_adicionais*num_series*len(elements)]
-        print(df)
+            mlts_ordenadas = mlts_ordenadas[
+                : -num_meses_adicionais * num_series * len(elements)
+            ]
         df["mlt"] = mlts_ordenadas
-        df["valor"] = df["valor"] / df["mlt"]
-        df.drop(columns=["mlt"], inplace=True)
+        df["valor_mlt"] = df["valor"] / df["mlt"]
+        # df.drop(columns=["mlt"], inplace=True)
         df.replace([np.inf, -np.inf], 0, inplace=True)
         return df
 
@@ -1436,8 +1437,8 @@ class ScenarioSynthetizer:
             num_anos,
         )
         df["mlt"] = mlts_ordenadas
-        df["valor"] = df["valor"] / df["mlt"]
-        df.drop(columns=["mlt"], inplace=True)
+        df["valor_mlt"] = df["valor"] / df["mlt"]
+        # df.drop(columns=["mlt"], inplace=True)
         df.replace([np.inf, -np.inf], 0, inplace=True)
         return df
 
