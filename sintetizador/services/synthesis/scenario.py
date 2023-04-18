@@ -1369,11 +1369,15 @@ class ScenarioSynthetizer:
                     ignore_index=True,
                 )
 
-        num_anos = int(num_estagios / 12.0)
+        num_anos_sup = int(np.ceil(num_estagios / 12.0))
+        num_anos_inf = int(np.floor(num_estagios / 12.0))
         mlts_ordenadas = np.tile(
             np.repeat(df_mlts_elements.to_numpy(), num_series),
-            num_anos,
+            num_anos_sup,
         )
+        if num_anos_sup != num_anos_inf:
+            num_meses_adicionais = num_estagios - num_anos_inf * 12
+            mlts_ordenadas = mlts_ordenadas[:-num_meses_adicionais*num_series*len(elements)]
         print(df)
         df["mlt"] = mlts_ordenadas
         df["valor"] = df["valor"] / df["mlt"]
