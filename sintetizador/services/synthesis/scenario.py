@@ -1382,6 +1382,7 @@ class ScenarioSynthetizer:
             ]
         df["mlt"] = mlts_ordenadas
         df["valor_mlt"] = df["valor"] / df["mlt"]
+        df_mlt.to_csv("df_mlt.csv")
         # df.drop(columns=["mlt"], inplace=True)
         df.replace([np.inf, -np.inf], 0, inplace=True)
         return df
