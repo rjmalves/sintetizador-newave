@@ -1374,6 +1374,7 @@ class ScenarioSynthetizer:
             np.repeat(df_mlts_elements.to_numpy(), num_series),
             num_anos,
         )
+        print(df)
         df["mlt"] = mlts_ordenadas
         df["valor"] = df["valor"] / df["mlt"]
         df.drop(columns=["mlt"], inplace=True)
