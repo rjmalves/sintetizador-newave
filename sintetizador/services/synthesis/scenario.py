@@ -1332,10 +1332,11 @@ class ScenarioSynthetizer:
         df: pd.DataFrame,
         df_mlt: pd.DataFrame,
         filter_col: Optional[str],
-        uow: AbstractUnitOfWork,
     ) -> pd.DataFrame:
         series = df["serie"].unique()
         num_series = len(series)
+        estagios = df["estagio"].unique()
+        num_estagios = len(estagios)
         elements = df[filter_col].unique() if filter_col is not None else []
 
         df_mlts_elements = pd.DataFrame()
@@ -1365,9 +1366,10 @@ class ScenarioSynthetizer:
                     ignore_index=True,
                 )
 
+        num_anos = int(num_estagios / 12.0)
         mlts_ordenadas = np.tile(
             np.repeat(df_mlts_elements.to_numpy(), num_series),
-            uow.files.get_dger().num_anos_estudo + 1,
+            num_anos,
         )
         df["mlt"] = mlts_ordenadas
         df["valor_mlt"] = df["valor"] / df["mlt"]
@@ -1380,10 +1382,11 @@ class ScenarioSynthetizer:
         df: pd.DataFrame,
         df_mlt: pd.DataFrame,
         filter_col: Optional[str],
-        uow: AbstractUnitOfWork,
     ) -> pd.DataFrame:
         series = df["serie"].unique()
         num_series = len(series)
+        estagios = df["estagio"].unique()
+        num_estagios = len(estagios)
         aberturas = df["abertura"].unique()
         num_aberturas = len(aberturas)
         elements = df[filter_col].unique() if filter_col is not None else []
@@ -1415,9 +1418,10 @@ class ScenarioSynthetizer:
                     ignore_index=True,
                 )
 
+        num_anos = int(num_estagios / 12.0)
         mlts_ordenadas = np.tile(
             np.repeat(df_mlts_elements.to_numpy(), num_series * num_aberturas),
-            uow.files.get_dger().num_anos_estudo,
+            num_anos,
         )
         df["mlt"] = mlts_ordenadas
         df["valor_mlt"] = df["valor"] / df["mlt"]
@@ -1455,7 +1459,7 @@ class ScenarioSynthetizer:
             }
             print(df)
             print(df_mlt)
-            return APPLY_MAP[synthesis.step](df, df_mlt, filter_col, uow)
+            return APPLY_MAP[synthesis.step](df, df_mlt, filter_col)
 
     @classmethod
     def _resolve_spatial_resolution(
