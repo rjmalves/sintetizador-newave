@@ -38,12 +38,12 @@ class ScenarioSynthetizer:
     ]
 
     COMMON_COLUMNS: List[str] = [
+        "iteracao",
         "estagio",
         "data",
         "data_fim",
         "serie",
         "abertura",
-        "iteracao",
     ]
 
     CACHED_SYNTHESIS: Dict[Tuple[Variable, Step], pd.DataFrame] = {}
@@ -353,8 +353,8 @@ class ScenarioSynthetizer:
         energiab_dados = energiab.copy()
         series = energiab_dados["serie"].unique()
         num_series = len(series)
-        uhes = energiab_dados["uhe"].unique()
-        num_uhes = len(uhes)
+        rees = energiab_dados["ree"].unique()
+        num_rees = len(rees)
         estagios = energiab_dados["estagio"].unique()
         num_estagios = len(estagios)
         aberturas = energiab_dados["abertura"].unique()
@@ -397,7 +397,7 @@ class ScenarioSynthetizer:
             freq="MS",
         )
         datas_ordenadas = np.repeat(
-            datas, num_series * num_aberturas * num_uhes
+            datas, num_series * num_aberturas * num_rees
         )
         # Edita o DF e retorna
         energiab_dados["codigo_ree"] = codigos_ordenados
