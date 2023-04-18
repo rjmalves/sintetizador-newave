@@ -924,7 +924,7 @@ class RawFilesRepository(AbstractFilesRepository):
         mes_fim_hib = rees["Mês Fim Individualizado"].iloc[0]
         ano_fim_hib = rees["Ano Fim Individualizado"].iloc[0]
 
-        if not any(np.isnan([mes_fim_hib, ano_fim_hib])):
+        if mes_fim_hib is not None and ano_fim_hib is not None:
             data_inicio_estudo = datetime(
                 year=dger.ano_inicio_estudo,
                 month=dger.mes_inicio_estudo,
