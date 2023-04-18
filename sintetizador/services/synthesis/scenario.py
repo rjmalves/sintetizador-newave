@@ -1457,8 +1457,6 @@ class ScenarioSynthetizer:
                 Step.FINAL_SIMULATION: cls._apply_mlt_forward_sf,
                 Step.BACKWARD: cls._apply_mlt_backward,
             }
-            print(df)
-            print(df_mlt)
             return APPLY_MAP[synthesis.step](df, df_mlt, filter_col)
 
     @classmethod
@@ -1496,8 +1494,7 @@ class ScenarioSynthetizer:
             df = cls._resolve_group(
                 RESOLUTION_MAP[synthesis.spatial_resolution], df
             )
-            df = cls._apply_mlt(synthesis, df, uow)
-            pass
+            return cls._apply_mlt(synthesis, df, uow)
         else:
             return pd.DataFrame()
 
