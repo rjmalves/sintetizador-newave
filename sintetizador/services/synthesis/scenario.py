@@ -294,10 +294,11 @@ class ScenarioSynthetizer:
                 day=1,
             ),
             datetime(
-                year=dger.ano_inicio_estudo + dger.num_anos_estudo - 1,
-                month=12,
+                year=dger.ano_inicio_estudo - 1,
+                month=1,
                 day=1,
-            ),
+            )
+            + relativedelta(months=num_estagios),
             freq="MS",
         )
         datas_ordenadas = np.repeat(datas, num_series * num_uhes)
@@ -523,15 +524,16 @@ class ScenarioSynthetizer:
         )
         datas = pd.date_range(
             datetime(
-                year=dger.ano_inicio_estudo,
+                year=dger.ano_inicio_estudo - 1,
                 month=1,
                 day=1,
             ),
             datetime(
-                year=dger.ano_inicio_estudo + dger.num_anos_estudo - 1,
-                month=12,
+                year=dger.ano_inicio_estudo - 1,
+                month=1,
                 day=1,
-            ),
+            )
+            + relativedelta(months=num_estagios),
             freq="MS",
         )
         datas_ordenadas = np.repeat(
@@ -742,10 +744,11 @@ class ScenarioSynthetizer:
                 day=1,
             ),
             datetime(
-                year=dger.ano_inicio_estudo + dger.num_anos_estudo - 1,
-                month=12,
+                year=dger.ano_inicio_estudo - 1,
+                month=1,
                 day=1,
-            ),
+            )
+            + relativedelta(months=num_estagios),
             freq="MS",
         )
         datas_ordenadas = np.repeat(datas, num_series * num_uhes)
