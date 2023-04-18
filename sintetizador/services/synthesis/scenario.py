@@ -372,16 +372,24 @@ class ScenarioSynthetizer:
         )
         # Gera os vetores da dimensão do DF extraído do arquivo vazaob
         codigos_ordenados = cls._formata_dados_series(
-            dados_rees["Número"].to_numpy(), num_series, num_estagios
+            dados_rees["Número"].to_numpy(),
+            num_series * num_aberturas,
+            num_estagios,
         )
         nomes_ordenados = cls._formata_dados_series(
-            dados_rees["Nome"].to_numpy(), num_series, num_estagios
+            dados_rees["Nome"].to_numpy(),
+            num_series * num_aberturas,
+            num_estagios,
         )
         codigos_submercados_ordenados = cls._formata_dados_series(
-            dados_rees["Submercado"].to_numpy(), num_series, num_estagios
+            dados_rees["Submercado"].to_numpy(),
+            num_series * num_aberturas,
+            num_estagios,
         )
         nomes_submercados_ordenados = cls._formata_dados_series(
-            dados_rees["Nome Submercado"].to_numpy(), num_series, num_estagios
+            dados_rees["Nome Submercado"].to_numpy(),
+            num_series * num_aberturas,
+            num_estagios,
         )
         datas = pd.date_range(
             datetime(
