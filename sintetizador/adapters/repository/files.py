@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Type, Optional, Tuple, Callable
 import pandas as pd  # type: ignore
+import numpy as np  # type: ignore
 from datetime import datetime, timedelta
 import pathlib
 import asyncio
@@ -922,8 +923,8 @@ class RawFilesRepository(AbstractFilesRepository):
         rees = self.get_ree().rees
         mes_fim_hib = rees["Mês Fim Individualizado"].iloc[0]
         ano_fim_hib = rees["Ano Fim Individualizado"].iloc[0]
-        print(mes_fim_hib, ano_fim_hib)
-        if isinstance(mes_fim_hib, int) and isinstance(ano_fim_hib, int):
+
+        if not np.isnan(mes_fim_hib) and np.isnan(ano_fim_hib):
             data_inicio_estudo = datetime(
                 year=dger.ano_inicio_estudo,
                 month=dger.mes_inicio_estudo,
