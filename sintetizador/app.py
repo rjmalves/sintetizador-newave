@@ -66,6 +66,31 @@ def execucao(variaveis, formato):
     Log.log().info("# Fim da síntese #")
 
 
+@click.command("cenarios")
+@click.argument(
+    "variaveis",
+    nargs=-1,
+)
+@click.option(
+    "--formato", default="PARQUET", help="formato para escrita da síntese"
+)
+def cenarios(variaveis, formato):
+    """
+    Realiza a síntese dos dados de cenários do NEWAVE.
+    """
+    os.environ["FORMATO_SINTESE"] = formato
+    Log.log().info("# Realizando síntese de CENÁRIOS #")
+
+    uow = factory(
+        "FS",
+        Settings().synthesis_dir,
+    )
+    command = commands.SynthetizeScenarios(variaveis)
+    handlers.synthetize_scenarios(command, uow)
+
+    Log.log().info("# Fim da síntese #")
+
+
 @click.command("operacao")
 @click.argument(
     "variaveis",
@@ -166,6 +191,7 @@ def completa(sistema, execucao, operacao, politica, formato):
 app.add_command(completa)
 app.add_command(sistema)
 app.add_command(execucao)
+app.add_command(cenarios)
 app.add_command(operacao)
 app.add_command(politica)
 app.add_command(limpeza)

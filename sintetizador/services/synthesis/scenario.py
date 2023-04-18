@@ -3,6 +3,7 @@ import pandas as pd  # type: ignore
 import numpy as np  # type: ignore
 
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
 from sintetizador.services.unitofwork import AbstractUnitOfWork
 from sintetizador.utils.log import Log
 from sintetizador.model.scenario.variable import Variable
@@ -34,6 +35,14 @@ class ScenarioSynthetizer:
         "QINC_SIN_FOR",
         "QINC_SIN_BKW",
         "QINC_SIN_SF",
+    ]
+
+    COMMON_COLUMNS: List[str] = [
+        "estagio",
+        "data",
+        "data_fim",
+        "serie",
+        "abertura",
     ]
 
     CACHED_SYNTHESIS: Dict[Tuple[Variable, Step], pd.DataFrame] = {}
@@ -112,11 +121,14 @@ class ScenarioSynthetizer:
         Adiciona dados do REE aos dados de energia lidos do arquivo
         binário `energiaf.dat`.
 
-        - codigo_ree (`int`)
-        - ree (`str`)
         - estagio (`int`)
         - data (`datetime`)
+        - data_fim (`datetime`)
         - serie (`int`)
+        - codigo_ree (`int`)
+        - nome_ree (`str`)
+        - codigo_submercado (`int`)
+        - nome_submercado (`str`)
         - valor (`float`)
 
         :return: Os dados como um DataFrame.
@@ -133,7 +145,7 @@ class ScenarioSynthetizer:
         dger = uow.files.get_dger()
         sistema = uow.files.get_sistema().custo_deficit
         dados_rees = uow.files.get_ree().rees
-        dados_rees["Submercado"] = dados_rees.apply(
+        dados_rees["Nome Submercado"] = dados_rees.apply(
             lambda linha: sistema.loc[
                 sistema["Núm. Subsistema"] == linha["Submercado"], "Nome"
             ].tolist()[0],
@@ -148,6 +160,9 @@ class ScenarioSynthetizer:
         )
         submercados_ordenados = cls._formata_dados_series(
             dados_rees["Submercado"].to_numpy(), num_series, num_estagios
+        )
+        nomes_submercados_ordenados = cls._formata_dados_series(
+            dados_rees["Nome Submercado"].to_numpy(), num_series, num_estagios
         )
         datas = pd.date_range(
             datetime(
@@ -165,18 +180,22 @@ class ScenarioSynthetizer:
         datas_ordenadas = np.repeat(datas, num_series * num_rees)
         # Edita o DF e retorna
         energiaf_dados["codigo_ree"] = codigos_ordenados
-        energiaf_dados["ree"] = nomes_ordenados
-        energiaf_dados["submercado"] = submercados_ordenados
+        energiaf_dados["nome_ree"] = nomes_ordenados
+        energiaf_dados["codigo_submercado"] = submercados_ordenados
+        energiaf_dados["nome_submercado"] = nomes_submercados_ordenados
         energiaf_dados["data"] = datas_ordenadas
+        energiaf_dados["data_fim"] = datas_ordenadas + relativedelta(months=1)
         energiaf_dados["estagio"] -= dger.mes_inicio_estudo - 1
         return energiaf_dados[
             [
                 "estagio",
                 "data",
+                "data_fim",
                 "serie",
                 "codigo_ree",
-                "ree",
-                "submercado",
+                "nome_ree",
+                "codigo_submercado",
+                "nome_submercado",
                 "valor",
             ]
         ]
@@ -192,11 +211,14 @@ class ScenarioSynthetizer:
 
         - estagio (`int`)
         - data (`datetime`)
+        - data_fim (`datetime`)
         - serie (`int`)
-        - codigo_uhe (`float`)
-        - nome_uhe (`float`)
-        - ree (`float`)
-        - submercado (`float`)
+        - codigo_usina (`int`)
+        - nome_usina (`str`)
+        - codigo_ree (`int`)
+        - nome_ree (`str`)
+        - codigo_submercado (`int`)
+        - nome_submercado (`str`)
         - valor (`float`)
 
         :return: Os dados como um DataFrame.
@@ -214,6 +236,7 @@ class ScenarioSynthetizer:
         dger = uow.files.get_dger()
         confhd = uow.files.get_confhd().usinas
         rees = uow.files.get_ree().rees
+        sistema = uow.files.get_sistema().custo_deficit
         dados_uhes = pd.DataFrame(uhes).apply(
             lambda linha: confhd.loc[
                 linha[0] - 1, ["Número", "Nome", "REE"]
@@ -223,7 +246,19 @@ class ScenarioSynthetizer:
         )
         dados_uhes[3] = dados_uhes.apply(
             lambda linha: rees.loc[
+                rees["Número"] == linha[2], "Nome"
+            ].tolist()[0],
+            axis=1,
+        )
+        dados_uhes[4] = dados_uhes.apply(
+            lambda linha: rees.loc[
                 rees["Número"] == linha[2], "Submercado"
+            ].tolist()[0],
+            axis=1,
+        )
+        dados_uhes[5] = dados_uhes.apply(
+            lambda linha: sistema.loc[
+                sistema["Num. Subsistema"] == linha[4], "Nome"
             ].tolist()[0],
             axis=1,
         )
@@ -234,11 +269,17 @@ class ScenarioSynthetizer:
         nomes_ordenados = cls._formata_dados_series(
             dados_uhes[1].to_numpy(), num_series, num_estagios
         )
-        rees_ordenados = cls._formata_dados_series(
+        codigos_rees_ordenados = cls._formata_dados_series(
             dados_uhes[2].to_numpy(), num_series, num_estagios
         )
-        submercados_ordenados = cls._formata_dados_series(
+        nomes_rees_ordenados = cls._formata_dados_series(
             dados_uhes[3].to_numpy(), num_series, num_estagios
+        )
+        codigos_submercados_ordenados = cls._formata_dados_series(
+            dados_uhes[4].to_numpy(), num_series, num_estagios
+        )
+        nomes_submercados_ordenados = cls._formata_dados_series(
+            dados_uhes[5].to_numpy(), num_series, num_estagios
         )
         datas = pd.date_range(
             datetime(
@@ -257,20 +298,26 @@ class ScenarioSynthetizer:
         # Edita o DF e retorna
         vazaof_dados["codigo_usina"] = codigos_ordenados
         vazaof_dados["nome_usina"] = nomes_ordenados
-        vazaof_dados["ree"] = rees_ordenados
-        vazaof_dados["submercado"] = submercados_ordenados
+        vazaof_dados["codigo_ree"] = codigos_rees_ordenados
+        vazaof_dados["nome_ree"] = nomes_rees_ordenados
+        vazaof_dados["codigo_submercado"] = codigos_submercados_ordenados
+        vazaof_dados["nome_submercado"] = nomes_submercados_ordenados
         vazaof_dados["data"] = datas_ordenadas
+        vazaof_dados["data_fim"] = datas_ordenadas + relativedelta(months=1)
         vazaof_dados["estagio"] -= dger.mes_inicio_estudo - 1
         vazaof_dados.drop(columns=["uhe"], inplace=True)
         return vazaof_dados[
             [
                 "estagio",
                 "data",
+                "data_fim",
                 "serie",
                 "codigo_usina",
                 "nome_usina",
-                "ree",
-                "submercado",
+                "codigo_ree",
+                "nome_ree",
+                "codigo_submercado",
+                "nome_submercado",
                 "valor",
             ]
         ]
@@ -285,12 +332,13 @@ class ScenarioSynthetizer:
 
         - estagio (`int`)
         - data (`datetime`)
+        - data_fim (`datetime`)
         - serie (`int`)
         - abertura (`int`)
-        - codigo_uhe (`float`)
-        - nome_uhe (`float`)
-        - ree (`float`)
-        - submercado (`float`)
+        - codigo_usina (`int`)
+        - nome_usina (`str`)
+        - ree (`int`)
+        - submercado (`int`)
         - valor (`float`)
 
         :return: Os dados como um DataFrame.
@@ -308,11 +356,10 @@ class ScenarioSynthetizer:
         num_aberturas = len(aberturas)
         # Obtem os dados de cada usina
         dger = uow.files.get_dger()
-        confhd = uow.files.get_confhd().usinas
         rees = uow.files.get_ree().rees
         sistema = uow.files.get_sistema().custo_deficit
         dados_rees = uow.files.get_ree().rees
-        dados_rees["Submercado"] = dados_rees.apply(
+        dados_rees["Nome Submercado"] = dados_rees.apply(
             lambda linha: sistema.loc[
                 sistema["Núm. Subsistema"] == linha["Submercado"], "Nome"
             ].tolist()[0],
@@ -325,8 +372,11 @@ class ScenarioSynthetizer:
         nomes_ordenados = cls._formata_dados_series(
             dados_rees["Nome"].to_numpy(), num_series, num_estagios
         )
-        submercados_ordenados = cls._formata_dados_series(
+        codigos_submercados_ordenados = cls._formata_dados_series(
             dados_rees["Submercado"].to_numpy(), num_series, num_estagios
+        )
+        nomes_submercados_ordenados = cls._formata_dados_series(
+            dados_rees["Nome Submercado"].to_numpy(), num_series, num_estagios
         )
         datas = pd.date_range(
             datetime(
@@ -346,19 +396,23 @@ class ScenarioSynthetizer:
         )
         # Edita o DF e retorna
         energiab_dados["codigo_ree"] = codigos_ordenados
-        energiab_dados["ree"] = nomes_ordenados
-        energiab_dados["submercado"] = submercados_ordenados
+        energiab_dados["nome_ree"] = nomes_ordenados
+        energiab_dados["codigo_submercado"] = codigos_submercados_ordenados
+        energiab_dados["nome_submercado"] = nomes_submercados_ordenados
         energiab_dados["data"] = datas_ordenadas
+        energiab_dados["data_fim"] = datas_ordenadas + relativedelta(months=1)
         energiab_dados["estagio"] -= dger.mes_inicio_estudo - 1
         return energiab_dados[
             [
                 "estagio",
                 "data",
+                "data_fim",
                 "serie",
                 "abertura",
                 "codigo_ree",
-                "ree",
-                "submercado",
+                "nome_ree",
+                "codigo_submercado",
+                "nome_submercado",
                 "valor",
             ]
         ]
@@ -374,12 +428,15 @@ class ScenarioSynthetizer:
 
         - estagio (`int`)
         - data (`datetime`)
+        - data_fim (`datetime`)
         - serie (`int`)
         - abertura (`int`)
-        - codigo_uhe (`float`)
-        - nome_uhe (`float`)
-        - ree (`float`)
-        - submercado (`float`)
+        - codigo_usina (`int`)
+        - nome_usina (`str`)
+        - codigo_ree (`int`)
+        - nome_ree (`str`)
+        - codigo_submercado (`int`)
+        - nome_submercado (`str`)
         - valor (`float`)
 
         :return: Os dados como um DataFrame.
@@ -399,6 +456,7 @@ class ScenarioSynthetizer:
         dger = uow.files.get_dger()
         confhd = uow.files.get_confhd().usinas
         rees = uow.files.get_ree().rees
+        sistema = uow.files.get_sistema().custo_deficit
         dados_uhes = pd.DataFrame(uhes).apply(
             lambda linha: confhd.loc[
                 linha[0] - 1, ["Número", "Nome", "REE"]
@@ -408,7 +466,19 @@ class ScenarioSynthetizer:
         )
         dados_uhes[3] = dados_uhes.apply(
             lambda linha: rees.loc[
+                rees["Número"] == linha[2], "Nome"
+            ].tolist()[0],
+            axis=1,
+        )
+        dados_uhes[4] = dados_uhes.apply(
+            lambda linha: rees.loc[
                 rees["Número"] == linha[2], "Submercado"
+            ].tolist()[0],
+            axis=1,
+        )
+        dados_uhes[5] = dados_uhes.apply(
+            lambda linha: sistema.loc[
+                sistema["Num. Subsistema"] == linha[4], "Nome"
             ].tolist()[0],
             axis=1,
         )
@@ -419,11 +489,17 @@ class ScenarioSynthetizer:
         nomes_ordenados = cls._formata_dados_series(
             dados_uhes[1].to_numpy(), num_series * num_aberturas, num_estagios
         )
-        rees_ordenados = cls._formata_dados_series(
+        codigos_rees_ordenados = cls._formata_dados_series(
             dados_uhes[2].to_numpy(), num_series * num_aberturas, num_estagios
         )
-        submercados_ordenados = cls._formata_dados_series(
+        nomes_rees_ordenados = cls._formata_dados_series(
             dados_uhes[3].to_numpy(), num_series * num_aberturas, num_estagios
+        )
+        codigos_submercados_ordenados = cls._formata_dados_series(
+            dados_uhes[4].to_numpy(), num_series * num_aberturas, num_estagios
+        )
+        nomes_submercados_ordenados = cls._formata_dados_series(
+            dados_uhes[5].to_numpy(), num_series * num_aberturas, num_estagios
         )
         datas = pd.date_range(
             datetime(
@@ -444,21 +520,27 @@ class ScenarioSynthetizer:
         # Edita o DF e retorna
         vazaob_dados["codigo_usina"] = codigos_ordenados
         vazaob_dados["nome_usina"] = nomes_ordenados
-        vazaob_dados["ree"] = rees_ordenados
-        vazaob_dados["submercado"] = submercados_ordenados
+        vazaob_dados["codigo_ree"] = codigos_rees_ordenados
+        vazaob_dados["nome_ree"] = nomes_rees_ordenados
+        vazaob_dados["codigo_submercado"] = codigos_submercados_ordenados
+        vazaob_dados["nome_submercado"] = nomes_submercados_ordenados
         vazaob_dados["data"] = datas_ordenadas
+        vazaob_dados["data_fim"] = datas_ordenadas + relativedelta(months=1)
         vazaob_dados["estagio"] -= dger.mes_inicio_estudo - 1
         vazaob_dados.drop(columns=["uhe"], inplace=True)
         return vazaob_dados[
             [
                 "estagio",
                 "data",
+                "data_fim",
                 "serie",
                 "abertura",
                 "codigo_usina",
                 "nome_usina",
-                "ree",
-                "submercado",
+                "codigo_ree",
+                "nome_ree",
+                "codigo_submercado",
+                "nome_submercado",
                 "valor",
             ]
         ]
@@ -475,6 +557,7 @@ class ScenarioSynthetizer:
         - ree (`str`)
         - estagio (`int`)
         - data (`datetime`)
+        - data_fim (`datetime`)
         - serie (`int`)
         - valor (`float`)
 
@@ -492,7 +575,7 @@ class ScenarioSynthetizer:
         dger = uow.files.get_dger()
         sistema = uow.files.get_sistema().custo_deficit
         dados_rees = uow.files.get_ree().rees
-        dados_rees["Submercado"] = dados_rees.apply(
+        dados_rees["Nome Submercado"] = dados_rees.apply(
             lambda linha: sistema.loc[
                 sistema["Núm. Subsistema"] == linha["Submercado"], "Nome"
             ].tolist()[0],
@@ -507,6 +590,9 @@ class ScenarioSynthetizer:
         )
         submercados_ordenados = cls._formata_dados_series(
             dados_rees["Submercado"].to_numpy(), num_series, num_estagios
+        )
+        nomes_submercados_ordenados = cls._formata_dados_series(
+            dados_rees["Nome Submercado"].to_numpy(), num_series, num_estagios
         )
         datas = pd.date_range(
             datetime(
@@ -524,18 +610,22 @@ class ScenarioSynthetizer:
         datas_ordenadas = np.repeat(datas, num_series * num_rees)
         # Edita o DF e retorna
         energias_dados["codigo_ree"] = codigos_ordenados
-        energias_dados["ree"] = nomes_ordenados
-        energias_dados["submercado"] = submercados_ordenados
+        energias_dados["nome_ree"] = nomes_ordenados
+        energias_dados["codigo_submercado"] = submercados_ordenados
+        energias_dados["nome_submercado"] = nomes_submercados_ordenados
         energias_dados["data"] = datas_ordenadas
+        energias_dados["data_fim"] = datas_ordenadas + relativedelta(months=1)
         energias_dados["estagio"] -= dger.mes_inicio_estudo - 1
         return energias_dados[
             [
                 "estagio",
                 "data",
+                "data_fim",
                 "serie",
                 "codigo_ree",
-                "ree",
-                "submercado",
+                "nome_ree",
+                "codigo_submercado",
+                "nome_submercado",
                 "valor",
             ]
         ]
@@ -551,6 +641,7 @@ class ScenarioSynthetizer:
 
         - estagio (`int`)
         - data (`datetime`)
+        - data_fim (`datetime`)
         - serie (`int`)
         - codigo_uhe (`float`)
         - nome_uhe (`float`)
@@ -573,6 +664,7 @@ class ScenarioSynthetizer:
         dger = uow.files.get_dger()
         confhd = uow.files.get_confhd().usinas
         rees = uow.files.get_ree().rees
+        sistema = uow.files.get_sistema().custo_deficit
         dados_uhes = pd.DataFrame(uhes).apply(
             lambda linha: confhd.loc[
                 linha[0] - 1, ["Número", "Nome", "REE"]
@@ -582,22 +674,40 @@ class ScenarioSynthetizer:
         )
         dados_uhes[3] = dados_uhes.apply(
             lambda linha: rees.loc[
+                rees["Número"] == linha[2], "Nome"
+            ].tolist()[0],
+            axis=1,
+        )
+        dados_uhes[4] = dados_uhes.apply(
+            lambda linha: rees.loc[
                 rees["Número"] == linha[2], "Submercado"
             ].tolist()[0],
             axis=1,
         )
-        # Gera os vetores da dimensão do DF extraído do arquivo vazaos
+        dados_uhes[5] = dados_uhes.apply(
+            lambda linha: sistema.loc[
+                sistema["Num. Subsistema"] == linha[4], "Nome"
+            ].tolist()[0],
+            axis=1,
+        )
+        # Gera os vetores da dimensão do DF extraído do arquivo vazaof
         codigos_ordenados = cls._formata_dados_series(
             dados_uhes[0].to_numpy(), num_series, num_estagios
         )
         nomes_ordenados = cls._formata_dados_series(
             dados_uhes[1].to_numpy(), num_series, num_estagios
         )
-        rees_ordenados = cls._formata_dados_series(
+        codigos_rees_ordenados = cls._formata_dados_series(
             dados_uhes[2].to_numpy(), num_series, num_estagios
         )
-        submercados_ordenados = cls._formata_dados_series(
+        nomes_rees_ordenados = cls._formata_dados_series(
             dados_uhes[3].to_numpy(), num_series, num_estagios
+        )
+        codigos_submercados_ordenados = cls._formata_dados_series(
+            dados_uhes[4].to_numpy(), num_series, num_estagios
+        )
+        nomes_submercados_ordenados = cls._formata_dados_series(
+            dados_uhes[5].to_numpy(), num_series, num_estagios
         )
         datas = pd.date_range(
             datetime(
@@ -616,20 +726,26 @@ class ScenarioSynthetizer:
         # Edita o DF e retorna
         vazaos_dados["codigo_usina"] = codigos_ordenados
         vazaos_dados["nome_usina"] = nomes_ordenados
-        vazaos_dados["ree"] = rees_ordenados
-        vazaos_dados["submercado"] = submercados_ordenados
+        vazaos_dados["codigo_ree"] = codigos_rees_ordenados
+        vazaos_dados["nome_ree"] = nomes_rees_ordenados
+        vazaos_dados["codigo_submercado"] = codigos_submercados_ordenados
+        vazaos_dados["nome_submercado"] = nomes_submercados_ordenados
         vazaos_dados["data"] = datas_ordenadas
+        vazaos_dados["data_fim"] = datas_ordenadas + relativedelta(months=1)
         vazaos_dados["estagio"] -= dger.mes_inicio_estudo - 1
         vazaos_dados.drop(columns=["uhe"], inplace=True)
         return vazaos_dados[
             [
                 "estagio",
                 "data",
+                "data_fim",
                 "serie",
                 "codigo_usina",
                 "nome_usina",
-                "ree",
-                "submercado",
+                "codigo_ree",
+                "nome_ree",
+                "codigo_submercado",
+                "nome_submercado",
                 "valor",
             ]
         ]
@@ -641,8 +757,14 @@ class ScenarioSynthetizer:
             n_iters = pmo.convergencia["Iteração"].max()
             df_completo = pd.DataFrame()
             for it in range(1, n_iters + 1):
-                df_enavaz = uow.files.get_enavazf(it).series
-                df_energia = uow.files.get_energiaf(it).series
+                enavaz = uow.files.get_enavazf(it)
+                energiaf = uow.files.get_energiaf(it)
+                df_enavaz = (
+                    enavaz.series if enavaz is not None else pd.DataFrame()
+                )
+                df_energia = (
+                    energiaf.series if energiaf is not None else pd.DataFrame()
+                )
                 if not df_enavaz.empty:
                     n_indiv = uow.files._numero_estagios_individualizados()
                     df_ena = pd.concat(
@@ -654,11 +776,12 @@ class ScenarioSynthetizer:
                     )
                 else:
                     df_ena = df_energia
-                ena_it = cls._adiciona_dados_rees_forward(uow, df_ena)
-                ena_it["iteracao"] = it
-                df_completo = pd.concat(
-                    [df_completo, ena_it], ignore_index=True
-                )
+                if not df_ena.empty:
+                    ena_it = cls._adiciona_dados_rees_forward(uow, df_ena)
+                    ena_it["iteracao"] = it
+                    df_completo = pd.concat(
+                        [df_completo, ena_it], ignore_index=True
+                    )
         return df_completo
 
     @classmethod
@@ -669,18 +792,29 @@ class ScenarioSynthetizer:
             df_completo = pd.DataFrame()
             for it in range(1, n_iters + 1):
                 arq = uow.files.get_vazaof(it)
-                vaz_it = cls._adiciona_dados_uhes_forward(uow, arq.series)
-                vaz_it["iteracao"] = it
-                df_completo = pd.concat(
-                    [df_completo, vaz_it], ignore_index=True
+                vaz_it = (
+                    cls._adiciona_dados_uhes_forward(uow, arq.series)
+                    if arq is not None
+                    else pd.DataFrame()
                 )
+                if not vaz_it.empty:
+                    vaz_it["iteracao"] = it
+                    df_completo = pd.concat(
+                        [df_completo, vaz_it], ignore_index=True
+                    )
         return df_completo
 
     @classmethod
     def _resolve_enaa_backward(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         with uow:
-            df_enavaz = uow.files.get_enavazb().series
-            df_energia = uow.files.get_energiab().series
+            enavazb = uow.files.get_enavazb()
+            energiab = uow.files.get_energiab()
+            df_enavaz = (
+                enavazb.series if enavazb is not None else pd.DataFrame()
+            )
+            df_energia = (
+                energiab.series if energiab is not None else pd.DataFrame()
+            )
             if not df_enavaz.empty:
                 n_indiv = uow.files._numero_estagios_individualizados()
                 df_ena = pd.concat(
@@ -692,21 +826,33 @@ class ScenarioSynthetizer:
                 )
             else:
                 df_ena = df_energia
-            enas = cls._adiciona_dados_rees_backward(uow, df_ena)
+            enas = (
+                cls._adiciona_dados_rees_backward(uow, df_ena)
+                if not df_ena.empty
+                else pd.DataFrame()
+            )
         return enas
 
     @classmethod
     def _resolve_qinc_backward(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         with uow:
             arq = uow.files.get_vazaob()
-            df = cls._adiciona_dados_uhes_backward(uow, arq.series)
+            df = (
+                cls._adiciona_dados_uhes_backward(uow, arq.series)
+                if arq is not None
+                else pd.DataFrame()
+            )
         return df
 
     @classmethod
     def _resolve_enaa_sf(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         with uow:
-            df_enavaz = uow.files.get_enavazs().series
-            df_energia = uow.files.get_energias().series
+            enavaz = uow.files.get_enavazs()
+            energias = uow.files.get_energias()
+            df_enavaz = enavaz.series if enavaz is not None else pd.DataFrame()
+            df_energia = (
+                energias.series if energias is not None else pd.DataFrame()
+            )
             if not df_enavaz.empty:
                 n_indiv = uow.files._numero_estagios_individualizados()
                 df_ena = pd.concat(
@@ -718,47 +864,95 @@ class ScenarioSynthetizer:
                 )
             else:
                 df_ena = df_energia
-            enas = cls._adiciona_dados_rees_sf(uow, df_ena)
+            enas = (
+                cls._adiciona_dados_rees_sf(uow, df_ena)
+                if df_ena is not None
+                else pd.DataFrame()
+            )
         return enas
 
     @classmethod
     def _resolve_qinc_sf(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         with uow:
             arq = uow.files.get_vazaos()
-            df = cls._adiciona_dados_uhes_sf(uow, arq.series)
+            df = (
+                cls._adiciona_dados_uhes_sf(uow, arq.series)
+                if arq is not None
+                else pd.DataFrame()
+            )
         return df
+
+    @classmethod
+    def _get_cached_variable(
+        cls, variable: Variable, step: Step, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        CACHING_FUNCTION_MAP: Dict[Tuple[Variable, Step], Callable] = {
+            (Variable.ENA_ABSOLUTA, Step.FORWARD): cls._resolve_enaa_forward,
+            (Variable.ENA_ABSOLUTA, Step.BACKWARD): cls._resolve_enaa_backward,
+            (
+                Variable.ENA_ABSOLUTA,
+                Step.FINAL_SIMULATION,
+            ): cls._resolve_enaa_sf,
+            (
+                Variable.VAZAO_INCREMENTAL_ABSOLUTA,
+                Step.FORWARD,
+            ): cls._resolve_qinc_forward,
+            (
+                Variable.VAZAO_INCREMENTAL_ABSOLUTA,
+                Step.BACKWARD,
+            ): cls._resolve_qinc_backward,
+            (
+                Variable.VAZAO_INCREMENTAL_ABSOLUTA,
+                Step.FINAL_SIMULATION,
+            ): cls._resolve_qinc_sf,
+        }
+
+        if cls.CACHED_SYNTHESIS.get((variable, step)) is None:
+            cls.CACHED_SYNTHESIS[(variable, step)] = CACHING_FUNCTION_MAP[
+                (variable, step)
+            ](uow)
+        return cls.CACHED_SYNTHESIS.get((variable, step), pd.DataFrame())
+
+    @classmethod
+    def _resolve_group(
+        cls, group_col: List[str], df: pd.DataFrame
+    ) -> pd.DataFrame:
+        if not df.empty:
+            cols = group_col + [
+                c for c in cls.COMMON_COLUMNS if c in df.columns
+            ]
+            df_agrupado = df.groupby([cols]).sum().reset_index()
+            return df_agrupado[cols + ["valor"]]
+        else:
+            return df
 
     @classmethod
     def _resolve_spatial_resolution(
         cls, synthesis: ScenarioSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-        # TODO - refatorar para melhorar a resolução existente
-        # Agora o que tem que ser feito na resolução espacial
-        # Depende da variável: QINC não faz nada se for UHE e
-        # ENA não faz nada se for REE..
-        RESOLUTION_FUNCTION_MAP: Dict[SpatialResolution, Callable] = {
-            SpatialResolution.SISTEMA_INTERLIGADO: cls.__resolve_SIN,
-            SpatialResolution.SUBMERCADO: cls.__resolve_SBM,
-            SpatialResolution.RESERVATORIO_EQUIVALENTE: cls.__resolve_REE,
-            SpatialResolution.USINA_HIDROELETRICA: cls.__resolve_UHE,
-            SpatialResolution.PARQUE_EOLICO_EQUIVALENTE: cls.__resolve_PEE,
+        RESOLUTION_MAP: Dict[SpatialResolution, List[str]] = {
+            SpatialResolution.SISTEMA_INTERLIGADO: [],
+            SpatialResolution.SUBMERCADO: ["nome_submercado"],
+            SpatialResolution.RESERVATORIO_EQUIVALENTE: ["nome_ree"],
+            SpatialResolution.USINA_HIDROELETRICA: ["nome_usina"],
         }
-
-        solver = RESOLUTION_FUNCTION_MAP[synthesis.spatial_resolution]
-        return solver(synthesis, uow)
+        df = cls._get_cached_variable(synthesis.variable, synthesis.step, uow)
+        return cls._resolve_group(
+            RESOLUTION_MAP[synthesis.spatial_resolution], df
+        )
 
     @classmethod
-    def _resolve_starting_stage(
-        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
-    ):
-        with uow:
-            dger = uow.files.get_dger()
-        starting_date = datetime(
-            year=dger.ano_inicio_estudo, month=dger.mes_inicio_estudo, day=1
+    def _postprocess(cls, df: pd.DataFrame):
+        column_names = {
+            "data": "dataInicio",
+            "data_fim": "dataFim",
+            "nome_usina": "usina",
+            "nome_ree": "ree",
+            "nome_submercado": "submercado",
+        }
+        return df.rename(
+            columns={k: v for k, v in column_names.items() if k in df.columns}
         )
-        starting_df = df.loc[df["dataInicio"] >= starting_date].copy()
-        starting_df.loc[:, "estagio"] -= starting_date.month - 1
-        return starting_df.copy()
 
     @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
@@ -782,7 +976,10 @@ class ScenarioSynthetizer:
                 if df.empty:
                     Log.log().info("Erro ao realizar a síntese")
                     continue
+            # TODO - conferir o postprocess
+            # Decidir lógica para considerar ou não a tendência
+            # hidrológica.
 
-            df = cls._resolve_starting_stage(df, uow)
+            df = cls._postprocess(df, uow)
             with uow:
                 uow.export.synthetize_df(df, filename)
