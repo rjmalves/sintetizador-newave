@@ -922,6 +922,7 @@ class RawFilesRepository(AbstractFilesRepository):
         rees = self.get_ree().rees
         mes_fim_hib = rees["Mês Fim Individualizado"].iloc[0]
         ano_fim_hib = rees["Ano Fim Individualizado"].iloc[0]
+        print(mes_fim_hib, ano_fim_hib)
         if isinstance(mes_fim_hib, int) and isinstance(ano_fim_hib, int):
             data_inicio_estudo = datetime(
                 year=dger.ano_inicio_estudo,
@@ -990,7 +991,6 @@ class RawFilesRepository(AbstractFilesRepository):
                     if dger.consideracao_media_anual_afluencias == 3
                     else dger.ordem_maxima_parp
                 )
-                print(n_estagios, n_estagios_th, n_uhes)
                 self.__vazaof[iteracao] = Vazaof.le_arquivo(
                     self.__tmppath,
                     nome_arq,
