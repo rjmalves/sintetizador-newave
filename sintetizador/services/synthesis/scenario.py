@@ -43,6 +43,7 @@ class ScenarioSynthetizer:
         "data_fim",
         "serie",
         "abertura",
+        "iteracao",
     ]
 
     CACHED_SYNTHESIS: Dict[Tuple[Variable, Step], pd.DataFrame] = {}
