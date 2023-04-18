@@ -189,6 +189,7 @@ class ScenarioSynthetizer:
             d + relativedelta(months=1) for d in datas_ordenadas
         ]
         energiaf_dados["estagio"] -= dger.mes_inicio_estudo - 1
+        energiaf_dados = energiaf_dados.loc[energiaf_dados["estagio"] > 0]
         return energiaf_dados[
             [
                 "estagio",
@@ -310,6 +311,7 @@ class ScenarioSynthetizer:
             d + relativedelta(months=1) for d in datas_ordenadas
         ]
         vazaof_dados["estagio"] -= dger.mes_inicio_estudo - 1
+        vazaof_dados = vazaof_dados.loc[vazaof_dados["estagio"] > 0]
         vazaof_dados.drop(columns=["uhe"], inplace=True)
         return vazaof_dados[
             [
@@ -417,6 +419,7 @@ class ScenarioSynthetizer:
             d + relativedelta(months=1) for d in datas_ordenadas
         ]
         energiab_dados["estagio"] -= dger.mes_inicio_estudo - 1
+        energiab_dados = energiab_dados.loc[energiab_dados["estagio"] > 0]
         return energiab_dados[
             [
                 "estagio",
@@ -544,6 +547,7 @@ class ScenarioSynthetizer:
             d + relativedelta(months=1) for d in datas_ordenadas
         ]
         vazaob_dados["estagio"] -= dger.mes_inicio_estudo - 1
+        vazaob_dados = vazaob_dados.loc[vazaob_dados["estagio"] > 0]
         vazaob_dados.drop(columns=["uhe"], inplace=True)
         return vazaob_dados[
             [
@@ -635,6 +639,7 @@ class ScenarioSynthetizer:
             d + relativedelta(months=1) for d in datas_ordenadas
         ]
         energias_dados["estagio"] -= dger.mes_inicio_estudo - 1
+        energias_dados = energias_dados.loc[energias_dados["estagio"] > 0]
         return energias_dados[
             [
                 "estagio",
@@ -754,6 +759,7 @@ class ScenarioSynthetizer:
             d + relativedelta(months=1) for d in datas_ordenadas
         ]
         vazaos_dados["estagio"] -= dger.mes_inicio_estudo - 1
+        vazaos_dados = vazaos_dados.loc[vazaos_dados["estagio"] > 0]
         vazaos_dados.drop(columns=["uhe"], inplace=True)
         return vazaos_dados[
             [
