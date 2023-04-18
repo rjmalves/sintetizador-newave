@@ -924,7 +924,7 @@ class RawFilesRepository(AbstractFilesRepository):
         mes_fim_hib = rees["Mês Fim Individualizado"].iloc[0]
         ano_fim_hib = rees["Ano Fim Individualizado"].iloc[0]
 
-        if not np.isnan(mes_fim_hib) and not np.isnan(ano_fim_hib):
+        if any(np.isnan([mes_fim_hib, ano_fim_hib])):
             data_inicio_estudo = datetime(
                 year=dger.ano_inicio_estudo,
                 month=dger.mes_inicio_estudo,
@@ -967,7 +967,8 @@ class RawFilesRepository(AbstractFilesRepository):
                     n_estagios,
                     n_estagios_th,
                 )
-            except Exception:
+            except Exception as e:
+                print(e)
                 Log.log().warning(f"Arquivo {nome_arq} não encontrado")
         return self.__energiaf.get(iteracao)
 
