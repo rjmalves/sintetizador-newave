@@ -1439,16 +1439,22 @@ class ScenarioSynthetizer:
                 synthesis.spatial_resolution,
                 uow,
             )
-            filter_cols = [
-                c for c in df_mlt.columns if c not in ["mes", "vazao"]
-            ]
-            filter_col = None if len(filter_cols) == 0 else filter_cols[0]
+            FILTER_MAP = {
+                SpatialResolution.USINA_HIDROELETRICA: "nome_usina",
+                SpatialResolution.RESERVATORIO_EQUIVALENTE: "nome_ree",
+                SpatialResolution.SUBMERCADO: "nome_submercado",
+                SpatialResolution.SISTEMA_INTERLIGADO: None,
+            }
+
+            filter_col = FILTER_MAP[synthesis.spatial_resolution]
             # Aplica a conversão
             APPLY_MAP: Dict[Step, Callable] = {
                 Step.FORWARD: cls._apply_mlt_forward_sf,
                 Step.FINAL_SIMULATION: cls._apply_mlt_forward_sf,
                 Step.BACKWARD: cls._apply_mlt_backward,
             }
+            print(df)
+            print(df_mlt)
             return APPLY_MAP[synthesis.step](df, df_mlt, filter_col, uow)
 
     @classmethod
