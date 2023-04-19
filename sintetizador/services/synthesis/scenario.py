@@ -1470,9 +1470,9 @@ class ScenarioSynthetizer:
         uow: AbstractUnitOfWork,
     ) -> pd.DataFrame:
         if filter_col is not None:
-            df = df.sort_values(["iteracao", "estagio", filter_col, "serie"])
+            df = df.sort_values(["estagio", filter_col, "serie"])
         else:
-            df = df.sort_values(["iteracao", "estagio", "serie"])
+            df = df.sort_values(["estagio", "serie"])
 
         series = df["serie"].unique()
         num_series = len(series)
