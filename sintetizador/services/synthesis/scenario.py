@@ -1466,6 +1466,10 @@ class ScenarioSynthetizer:
             }
 
             filter_col = FILTER_MAP[synthesis.spatial_resolution]
+            if filter_col is not None:
+                df = df.sort_values(["estagio", filter_col])
+            else:
+                df = df.sort_values(["estagio"])
             # Aplica a conversão
             APPLY_MAP: Dict[Step, Callable] = {
                 Step.FORWARD: cls._apply_mlt_forward_sf,
