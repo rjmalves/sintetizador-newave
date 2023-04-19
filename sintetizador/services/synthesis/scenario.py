@@ -1389,7 +1389,6 @@ class ScenarioSynthetizer:
             ]
         df["mlt"] = np.tile(mlts_ordenadas, num_iteracoes)
         df["valor_mlt"] = df["valor"] / df["mlt"]
-        df_mlt.to_csv("df_mlt.csv")
         df.replace([np.inf, -np.inf], 0, inplace=True)
         return df
 
@@ -1523,7 +1522,6 @@ class ScenarioSynthetizer:
             ]
         df["mlt"] = mlts_ordenadas
         df["valor_mlt"] = df["valor"] / df["mlt"]
-        df_mlt.to_csv("df_mlt.csv")
         df.replace([np.inf, -np.inf], 0, inplace=True)
         return df
 
