@@ -1327,13 +1327,154 @@ class ScenarioSynthetizer:
         return MAP[variable]
 
     @classmethod
-    def _apply_mlt_forward_sf(
+    def _apply_mlt_forward(
         cls,
         df: pd.DataFrame,
         df_mlt: pd.DataFrame,
         filter_col: Optional[str],
         uow: AbstractUnitOfWork,
     ) -> pd.DataFrame:
+        if filter_col is not None:
+            df = df.sort_values(["estagio", filter_col, "serie"])
+        else:
+            df = df.sort_values(["estagio", "serie"])
+
+        series = df["serie"].unique()
+        num_series = len(series)
+        estagios = df["estagio"].unique()
+        num_estagios = len(estagios)
+        iteracoes = df["iteracao"].unique()
+        num_iteracoes = len(iteracoes)
+        elements = df[filter_col].unique() if filter_col is not None else []
+
+        df_mlts_elements = pd.DataFrame()
+        shift_meses = uow.files.get_dger().mes_inicio_estudo - 1
+        meses_ordenados = np.roll(np.arange(1, 13), -shift_meses)
+        for mes in meses_ordenados:
+            if len(elements) > 0:
+                for element in elements:
+                    df_mlts_elements = pd.concat(
+                        [
+                            df_mlts_elements,
+                            df_mlt.loc[
+                                (df_mlt[filter_col] == element)
+                                & (df_mlt["mes"] == mes),
+                                "vazao",
+                            ],
+                        ],
+                        ignore_index=True,
+                    )
+            else:
+                df_mlts_elements = pd.concat(
+                    [
+                        df_mlts_elements,
+                        df_mlt.loc[
+                            (df_mlt["mes"] == mes),
+                            "vazao",
+                        ],
+                    ],
+                    ignore_index=True,
+                )
+
+        num_anos_sup = int(np.ceil(num_estagios / 12.0))
+        num_anos_inf = int(np.floor(num_estagios / 12.0))
+        mlts_ordenadas = np.tile(
+            np.repeat(df_mlts_elements.to_numpy(), num_series),
+            num_anos_sup,
+        )
+        if num_anos_sup != num_anos_inf:
+            num_meses_adicionais = 12 - (num_estagios - num_anos_inf * 12)
+            mlts_ordenadas = mlts_ordenadas[
+                : -num_meses_adicionais * num_series * len(elements)
+            ]
+        df["mlt"] = np.tile(mlts_ordenadas, num_iteracoes)
+        df["valor_mlt"] = df["valor"] / df["mlt"]
+        df_mlt.to_csv("df_mlt.csv")
+        df.replace([np.inf, -np.inf], 0, inplace=True)
+        return df
+
+    @classmethod
+    def _apply_mlt_backward(
+        cls,
+        df: pd.DataFrame,
+        df_mlt: pd.DataFrame,
+        filter_col: Optional[str],
+        uow: AbstractUnitOfWork,
+    ) -> pd.DataFrame:
+        if filter_col is not None:
+            df = df.sort_values(["estagio", filter_col, "serie", "abertura"])
+        else:
+            df = df.sort_values(["estagio", "serie", "abertura"])
+
+        series = df["serie"].unique()
+        num_series = len(series)
+        estagios = df["estagio"].unique()
+        num_estagios = len(estagios)
+        aberturas = df["abertura"].unique()
+        num_aberturas = len(aberturas)
+        elements = df[filter_col].unique() if filter_col is not None else []
+
+        df_mlts_elements = pd.DataFrame()
+        shift_meses = uow.files.get_dger().mes_inicio_estudo - 1
+        meses_ordenados = np.roll(np.arange(1, 13), -shift_meses)
+        for mes in meses_ordenados:
+            if len(elements) > 0:
+                for element in elements:
+                    df_mlts_elements = pd.concat(
+                        [
+                            df_mlts_elements,
+                            df_mlt.loc[
+                                (df_mlt[filter_col] == element)
+                                & (df_mlt["mes"] == mes),
+                                "vazao",
+                            ],
+                        ],
+                        ignore_index=True,
+                    )
+            else:
+                df_mlts_elements = pd.concat(
+                    [
+                        df_mlts_elements,
+                        df_mlt.loc[
+                            (df_mlt["mes"] == mes),
+                            "vazao",
+                        ],
+                    ],
+                    ignore_index=True,
+                )
+
+        num_anos_sup = int(np.ceil(num_estagios / 12.0))
+        num_anos_inf = int(np.floor(num_estagios / 12.0))
+        mlts_ordenadas = np.tile(
+            np.repeat(df_mlts_elements.to_numpy(), num_series * num_aberturas),
+            num_anos_sup,
+        )
+        if num_anos_sup != num_anos_inf:
+            num_meses_adicionais = 12 - (num_estagios - num_anos_inf * 12)
+            mlts_ordenadas = mlts_ordenadas[
+                : -num_meses_adicionais
+                * num_series
+                * num_aberturas
+                * len(elements)
+            ]
+        df["mlt"] = mlts_ordenadas
+        df["valor_mlt"] = df["valor"] / df["mlt"]
+        df.replace([np.inf, -np.inf], 0, inplace=True)
+        return df
+
+    @classmethod
+    def _apply_mlt_sf(
+        cls,
+        df: pd.DataFrame,
+        df_mlt: pd.DataFrame,
+        filter_col: Optional[str],
+        uow: AbstractUnitOfWork,
+    ) -> pd.DataFrame:
+        if filter_col is not None:
+            df = df.sort_values(["iteracao", "estagio", filter_col, "serie"])
+        else:
+            df = df.sort_values(["iteracao", "estagio", "serie"])
+
         series = df["serie"].unique()
         num_series = len(series)
         estagios = df["estagio"].unique()
@@ -1383,63 +1524,6 @@ class ScenarioSynthetizer:
         df["mlt"] = mlts_ordenadas
         df["valor_mlt"] = df["valor"] / df["mlt"]
         df_mlt.to_csv("df_mlt.csv")
-        # df.drop(columns=["mlt"], inplace=True)
-        df.replace([np.inf, -np.inf], 0, inplace=True)
-        return df
-
-    @classmethod
-    def _apply_mlt_backward(
-        cls,
-        df: pd.DataFrame,
-        df_mlt: pd.DataFrame,
-        filter_col: Optional[str],
-        uow: AbstractUnitOfWork,
-    ) -> pd.DataFrame:
-        series = df["serie"].unique()
-        num_series = len(series)
-        estagios = df["estagio"].unique()
-        num_estagios = len(estagios)
-        aberturas = df["abertura"].unique()
-        num_aberturas = len(aberturas)
-        elements = df[filter_col].unique() if filter_col is not None else []
-
-        df_mlts_elements = pd.DataFrame()
-        shift_meses = uow.files.get_dger().mes_inicio_estudo - 1
-        meses_ordenados = np.roll(np.arange(1, 13), -shift_meses)
-        for mes in meses_ordenados:
-            if len(elements) > 0:
-                for element in elements:
-                    df_mlts_elements = pd.concat(
-                        [
-                            df_mlts_elements,
-                            df_mlt.loc[
-                                (df_mlt[filter_col] == element)
-                                & (df_mlt["mes"] == mes),
-                                "vazao",
-                            ],
-                        ],
-                        ignore_index=True,
-                    )
-            else:
-                df_mlts_elements = pd.concat(
-                    [
-                        df_mlts_elements,
-                        df_mlt.loc[
-                            (df_mlt["mes"] == mes),
-                            "vazao",
-                        ],
-                    ],
-                    ignore_index=True,
-                )
-
-        num_anos = int(num_estagios / 12.0)
-        mlts_ordenadas = np.tile(
-            np.repeat(df_mlts_elements.to_numpy(), num_series * num_aberturas),
-            num_anos,
-        )
-        df["mlt"] = mlts_ordenadas
-        df["valor_mlt"] = df["valor"] / df["mlt"]
-        # df.drop(columns=["mlt"], inplace=True)
         df.replace([np.inf, -np.inf], 0, inplace=True)
         return df
 
@@ -1466,14 +1550,10 @@ class ScenarioSynthetizer:
             }
 
             filter_col = FILTER_MAP[synthesis.spatial_resolution]
-            if filter_col is not None:
-                df = df.sort_values(["estagio", filter_col])
-            else:
-                df = df.sort_values(["estagio"])
             # Aplica a conversão
             APPLY_MAP: Dict[Step, Callable] = {
-                Step.FORWARD: cls._apply_mlt_forward_sf,
-                Step.FINAL_SIMULATION: cls._apply_mlt_forward_sf,
+                Step.FORWARD: cls._apply_mlt_forward,
+                Step.FINAL_SIMULATION: cls._apply_mlt_sf,
                 Step.BACKWARD: cls._apply_mlt_backward,
             }
             return APPLY_MAP[synthesis.step](df, df_mlt, filter_col, uow)
