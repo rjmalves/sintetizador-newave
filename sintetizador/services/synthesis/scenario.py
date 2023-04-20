@@ -35,27 +35,6 @@ class ScenarioSynthetizer:
         "QINC_SIN_FOR",
         "QINC_SIN_BKW",
         "QINC_SIN_SF",
-        "ENAM_REE_FOR",
-        "ENAM_REE_BKW",
-        "ENAM_REE_SF",
-        "ENAM_SBM_FOR",
-        "ENAM_SBM_BKW",
-        "ENAM_SBM_SF",
-        "ENAM_SIN_FOR",
-        "ENAM_SIN_BKW",
-        "ENAM_SIN_SF",
-        "QINCM_UHE_FOR",
-        "QINCM_UHE_BKW",
-        "QINCM_UHE_SF",
-        "QINCM_REE_FOR",
-        "QINCM_REE_BKW",
-        "QINCM_REE_SF",
-        "QINCM_SBM_FOR",
-        "QINCM_SBM_BKW",
-        "QINCM_SBM_SF",
-        "QINCM_SIN_FOR",
-        "QINCM_SIN_BKW",
-        "QINCM_SIN_SF",
     ]
 
     COMMON_COLUMNS: List[str] = [
@@ -127,7 +106,7 @@ class ScenarioSynthetizer:
         Log.log().info(f"Caso com geração de cenários de eólica: {eolica}")
         Log.log().info(f"Caso com modelagem híbrida: {indiv}")
         for v in variables:
-            if v.variable == Variable.VAZAO_INCREMENTAL_ABSOLUTA and not indiv:
+            if v.variable == Variable.VAZAO_INCREMENTAL and not indiv:
                 continue
             valid_variables.append(v)
         Log.log().info(f"Variáveis: {valid_variables}")
@@ -301,7 +280,7 @@ class ScenarioSynthetizer:
         """
         Log.log().info("Calculando séries de MLT para ENAA - UHE")
         mlt_uhe = cls._get_cached_mlt(
-            Variable.VAZAO_INCREMENTAL_ABSOLUTA,
+            Variable.VAZAO_INCREMENTAL,
             SpatialResolution.USINA_HIDROELETRICA,
             uow,
         ).copy()
@@ -400,7 +379,7 @@ class ScenarioSynthetizer:
     def _resolve_qinc_mlt_ree(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         Log.log().info("Calculando séries de MLT para QINC - REE")
         return cls._agrega_serie_mlt(
-            Variable.VAZAO_INCREMENTAL_ABSOLUTA, "nome_ree", uow
+            Variable.VAZAO_INCREMENTAL, "nome_ree", uow
         )
 
     @classmethod
@@ -409,15 +388,13 @@ class ScenarioSynthetizer:
     ) -> pd.DataFrame:
         Log.log().info("Calculando séries de MLT para QINC - SBM")
         return cls._agrega_serie_mlt(
-            Variable.VAZAO_INCREMENTAL_ABSOLUTA, "nome_submercado", uow
+            Variable.VAZAO_INCREMENTAL, "nome_submercado", uow
         )
 
     @classmethod
     def _resolve_qinc_mlt_sin(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         Log.log().info("Calculando séries de MLT para QINC - SIN")
-        return cls._agrega_serie_mlt(
-            Variable.VAZAO_INCREMENTAL_ABSOLUTA, None, uow
-        )
+        return cls._agrega_serie_mlt(Variable.VAZAO_INCREMENTAL, None, uow)
 
     @classmethod
     def _get_cached_mlt(
@@ -446,19 +423,19 @@ class ScenarioSynthetizer:
                 SpatialResolution.SISTEMA_INTERLIGADO,
             ): cls._resolve_enaa_mlt_sin,
             (
-                Variable.VAZAO_INCREMENTAL_ABSOLUTA,
+                Variable.VAZAO_INCREMENTAL,
                 SpatialResolution.USINA_HIDROELETRICA,
             ): cls._gera_series_vazao_mlt_uhes,
             (
-                Variable.VAZAO_INCREMENTAL_ABSOLUTA,
+                Variable.VAZAO_INCREMENTAL,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
             ): cls._resolve_qinc_mlt_ree,
             (
-                Variable.VAZAO_INCREMENTAL_ABSOLUTA,
+                Variable.VAZAO_INCREMENTAL,
                 SpatialResolution.SUBMERCADO,
             ): cls._resolve_qinc_mlt_submercado,
             (
-                Variable.VAZAO_INCREMENTAL_ABSOLUTA,
+                Variable.VAZAO_INCREMENTAL,
                 SpatialResolution.SISTEMA_INTERLIGADO,
             ): cls._resolve_qinc_mlt_sin,
         }
@@ -1286,15 +1263,15 @@ class ScenarioSynthetizer:
                 Step.FINAL_SIMULATION,
             ): cls._resolve_enaa_sf,
             (
-                Variable.VAZAO_INCREMENTAL_ABSOLUTA,
+                Variable.VAZAO_INCREMENTAL,
                 Step.FORWARD,
             ): cls._resolve_qinc_forward,
             (
-                Variable.VAZAO_INCREMENTAL_ABSOLUTA,
+                Variable.VAZAO_INCREMENTAL,
                 Step.BACKWARD,
             ): cls._resolve_qinc_backward,
             (
-                Variable.VAZAO_INCREMENTAL_ABSOLUTA,
+                Variable.VAZAO_INCREMENTAL,
                 Step.FINAL_SIMULATION,
             ): cls._resolve_qinc_sf,
         }
@@ -1317,14 +1294,6 @@ class ScenarioSynthetizer:
             return df_agrupado[cols + ["valor"]]
         else:
             return df
-
-    @classmethod
-    def _mlt_absolute_variable_map(cls, variable: Variable) -> Variable:
-        MAP = {
-            Variable.ENA_MLT: Variable.ENA_ABSOLUTA,
-            Variable.VAZAO_INCREMENTAL_MLT: Variable.VAZAO_INCREMENTAL_ABSOLUTA,
-        }
-        return MAP[variable]
 
     @classmethod
     def _apply_mlt_forward(
@@ -1536,7 +1505,7 @@ class ScenarioSynthetizer:
             # Descobre o valor em MLT
             df = df.copy()
             df_mlt = cls._get_cached_mlt(
-                cls._mlt_absolute_variable_map(synthesis.variable),
+                synthesis.variable,
                 synthesis.spatial_resolution,
                 uow,
             )
@@ -1566,34 +1535,15 @@ class ScenarioSynthetizer:
             SpatialResolution.RESERVATORIO_EQUIVALENTE: ["nome_ree"],
             SpatialResolution.USINA_HIDROELETRICA: ["nome_usina"],
         }
-        if synthesis.variable in [
-            Variable.ENA_ABSOLUTA,
-            Variable.VAZAO_INCREMENTAL_ABSOLUTA,
-        ]:
-            # Variáveis absolutas - agregação mais simples
-            df = cls._get_cached_variable(
-                synthesis.variable, synthesis.step, uow
-            )
-            return cls._resolve_group(
-                RESOLUTION_MAP[synthesis.spatial_resolution], df
-            )
-        elif synthesis.variable in [
-            Variable.ENA_MLT,
-            Variable.VAZAO_INCREMENTAL_MLT,
-        ]:
-            # Variáveis normalizadas pela MLT - agregação deve ser feita na
-            # variável equivalente absoluta
-            df = cls._get_cached_variable(
-                cls._mlt_absolute_variable_map(synthesis.variable),
-                synthesis.step,
-                uow,
-            )
-            df = cls._resolve_group(
-                RESOLUTION_MAP[synthesis.spatial_resolution], df
-            )
-            return cls._apply_mlt(synthesis, df, uow)
-        else:
-            return pd.DataFrame()
+        df = cls._get_cached_variable(
+            synthesis.variable,
+            synthesis.step,
+            uow,
+        )
+        df = cls._resolve_group(
+            RESOLUTION_MAP[synthesis.spatial_resolution], df
+        )
+        return cls._apply_mlt(synthesis, df, uow)
 
     @classmethod
     def _postprocess(cls, df: pd.DataFrame):

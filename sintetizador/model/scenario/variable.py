@@ -3,9 +3,7 @@ from enum import Enum
 
 class Variable(Enum):
     ENA_ABSOLUTA = "ENAA"
-    ENA_MLT = "ENAM"
-    VAZAO_INCREMENTAL_ABSOLUTA = "QINC"
-    VAZAO_INCREMENTAL_MLT = "QINCM"
+    VAZAO_INCREMENTAL = "QINC"
 
     @classmethod
     def factory(cls, val: str) -> "Variable":
