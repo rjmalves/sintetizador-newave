@@ -1511,16 +1511,18 @@ class ScenarioSynthetizer:
 
         num_anos_sup = int(np.ceil(num_estagios / 12.0))
         num_anos_inf = int(np.floor(num_estagios / 12.0))
-        print(df_mlts_elements)
+        print(num_anos_sup, num_anos_inf)
         mlts_ordenadas = np.tile(
             np.repeat(df_mlts_elements.to_numpy(), num_series),
             num_anos_sup,
         )
+        print(mlts_ordenadas.shape)
         if num_anos_sup != num_anos_inf:
             num_meses_adicionais = 12 - (num_estagios - num_anos_inf * 12)
             mlts_ordenadas = mlts_ordenadas[
                 : -num_meses_adicionais * num_series * len(elements)
             ]
+        print(mlts_ordenadas.shape)
         df["mlt"] = mlts_ordenadas
         df["valor_mlt"] = df["valor"] / df["mlt"]
         df.replace([np.inf, -np.inf], 0, inplace=True)
