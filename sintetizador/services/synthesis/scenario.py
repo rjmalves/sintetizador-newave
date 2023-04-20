@@ -1520,7 +1520,6 @@ class ScenarioSynthetizer:
             mlts_ordenadas = mlts_ordenadas[
                 : -num_meses_adicionais * num_series * max([1, len(elements)])
             ]
-        print(mlts_ordenadas.shape)
         df["mlt"] = mlts_ordenadas
         df["valor_mlt"] = df["valor"] / df["mlt"]
         df.replace([np.inf, -np.inf], 0, inplace=True)
