@@ -1511,6 +1511,7 @@ class ScenarioSynthetizer:
 
         num_anos_sup = int(np.ceil(num_estagios / 12.0))
         num_anos_inf = int(np.floor(num_estagios / 12.0))
+        print(df_mlts_elements)
         mlts_ordenadas = np.tile(
             np.repeat(df_mlts_elements.to_numpy(), num_series),
             num_anos_sup,
