@@ -309,23 +309,24 @@ class ScenarioSynthetizer:
             axis=1,
         )
         # Limita as afluências das fio d'água ao engolimento
-        engolimentos = cls._engolimento_maximo_uhes(uow)
-        mlt_uhe.loc[
-            ~mlt_uhe["nome_usina"].isin(reservatorios), "vazao_max"
-        ] = mlt_uhe.loc[~mlt_uhe["nome_usina"].isin(reservatorios)].apply(
-            lambda linha: engolimentos[linha["codigo_usina"]],
-            axis=1,
-        )
-        mlt_uhe.loc[
-            ~mlt_uhe["nome_usina"].isin(reservatorios), "vazao"
-        ] = mlt_uhe.loc[
-            ~mlt_uhe["nome_usina"].isin(reservatorios), ["vazao", "vazao_max"]
-        ].min(
-            axis=1
-        )
+        # TODO - testar removendo
+        # engolimentos = cls._engolimento_maximo_uhes(uow)
+        # mlt_uhe.loc[
+        #     ~mlt_uhe["nome_usina"].isin(reservatorios), "vazao_max"
+        # ] = mlt_uhe.loc[~mlt_uhe["nome_usina"].isin(reservatorios)].apply(
+        #     lambda linha: engolimentos[linha["codigo_usina"]],
+        #     axis=1,
+        # )
+        # mlt_uhe.loc[
+        #     ~mlt_uhe["nome_usina"].isin(reservatorios), "vazao"
+        # ] = mlt_uhe.loc[
+        #     ~mlt_uhe["nome_usina"].isin(reservatorios), ["vazao", "vazao_max"]
+        # ].min(
+        #     axis=1
+        # )
         # Multiplica todas pelas produtibilidades
         mlt_uhe["vazao"] = mlt_uhe["vazao"] * mlt_uhe["prodt"]
-        return mlt_uhe.drop(columns=["prodt", "vazao_max"])
+        return mlt_uhe.drop(columns=["prodt"])
 
     @classmethod
     def _engolimento_maximo_uhes(
