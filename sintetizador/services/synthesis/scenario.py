@@ -2,10 +2,15 @@ from typing import Callable, Dict, List, Tuple, Optional
 import pandas as pd  # type: ignore
 import numpy as np  # type: ignore
 
+from queue import Queue
+import logging
+from multiprocessing import Pool, Manager, Process
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+
 from sintetizador.services.unitofwork import AbstractUnitOfWork
 from sintetizador.utils.log import Log
+from sintetizador.model.settings import Settings
 from sintetizador.model.scenario.variable import Variable
 from sintetizador.model.scenario.spatialresolution import SpatialResolution
 from sintetizador.model.scenario.step import Step
@@ -67,7 +72,7 @@ class ScenarioSynthetizer:
         args_data = [ScenarioSynthesis.factory(c) for c in args]
         for i, a in enumerate(args_data):
             if a is None:
-                Log.log(f"Erro no argumento fornecido: {args[i]}")
+                cls.logger.error(f"Erro no argumento fornecido: {args[i]}")
                 return []
         return args_data
 
@@ -86,7 +91,7 @@ class ScenarioSynthetizer:
         mandatory = RESOLUTION_ARGS_MAP[spatial_resolution]
         valid = all([a in kwargs.keys() for a in mandatory])
         if not valid:
-            Log.log().error(
+            cls.logger.error(
                 f"Erro no processamento da informação por {spatial_resolution}"
             )
         return valid
@@ -103,13 +108,13 @@ class ScenarioSynthetizer:
         politica_indiv = ree.rees["Mês Fim Individualizado"].isna().sum() == 0
         indiv = sf_indiv or politica_indiv
         eolica = dger.considera_geracao_eolica != 0
-        Log.log().info(f"Caso com geração de cenários de eólica: {eolica}")
-        Log.log().info(f"Caso com modelagem híbrida: {indiv}")
+        cls.logger.info(f"Caso com geração de cenários de eólica: {eolica}")
+        cls.logger.info(f"Caso com modelagem híbrida: {indiv}")
         for v in variables:
             if v.variable == Variable.VAZAO_INCREMENTAL and not indiv:
                 continue
             valid_variables.append(v)
-        Log.log().info(f"Variáveis: {valid_variables}")
+        cls.logger.info(f"Variáveis: {valid_variables}")
         return valid_variables
 
     @classmethod
@@ -204,7 +209,7 @@ class ScenarioSynthetizer:
         :return: A tabela como um DataFrame
         :rtype: pd.DataFrame | None
         """
-        Log.log().info("Calculando séries de MLT para QINC - UHE")
+        cls.logger.info("Calculando séries de MLT para QINC - UHE")
         uhes = uow.files.get_confhd().usinas
         hidr = uow.files.get_hidr().cadastro
         df_completo_mlt = pd.DataFrame(
@@ -278,7 +283,7 @@ class ScenarioSynthetizer:
         :return: A tabela como um DataFrame
         :rtype: pd.DataFrame | None
         """
-        Log.log().info("Calculando séries de MLT para ENAA - UHE")
+        cls.logger.info("Calculando séries de MLT para ENAA - UHE")
         mlt_uhe = cls._get_cached_mlt(
             Variable.VAZAO_INCREMENTAL,
             SpatialResolution.USINA_HIDROELETRICA,
@@ -359,26 +364,26 @@ class ScenarioSynthetizer:
 
     @classmethod
     def _resolve_enaa_mlt_ree(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        Log.log().info("Calculando séries de MLT para ENAA - REE")
+        cls.logger.info("Calculando séries de MLT para ENAA - REE")
         return cls._agrega_serie_mlt(Variable.ENA_ABSOLUTA, "nome_ree", uow)
 
     @classmethod
     def _resolve_enaa_mlt_submercado(
         cls, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-        Log.log().info("Calculando séries de MLT para ENAA - SBM")
+        cls.logger.info("Calculando séries de MLT para ENAA - SBM")
         return cls._agrega_serie_mlt(
             Variable.ENA_ABSOLUTA, "nome_submercado", uow
         )
 
     @classmethod
     def _resolve_enaa_mlt_sin(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        Log.log().info("Calculando séries de MLT para ENAA - SIN")
+        cls.logger.info("Calculando séries de MLT para ENAA - SIN")
         return cls._agrega_serie_mlt(Variable.ENA_ABSOLUTA, None, uow)
 
     @classmethod
     def _resolve_qinc_mlt_ree(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        Log.log().info("Calculando séries de MLT para QINC - REE")
+        cls.logger.info("Calculando séries de MLT para QINC - REE")
         return cls._agrega_serie_mlt(
             Variable.VAZAO_INCREMENTAL, "nome_ree", uow
         )
@@ -387,14 +392,14 @@ class ScenarioSynthetizer:
     def _resolve_qinc_mlt_submercado(
         cls, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-        Log.log().info("Calculando séries de MLT para QINC - SBM")
+        cls.logger.info("Calculando séries de MLT para QINC - SBM")
         return cls._agrega_serie_mlt(
             Variable.VAZAO_INCREMENTAL, "nome_submercado", uow
         )
 
     @classmethod
     def _resolve_qinc_mlt_sin(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        Log.log().info("Calculando séries de MLT para QINC - SIN")
+        cls.logger.info("Calculando séries de MLT para QINC - SIN")
         return cls._agrega_serie_mlt(Variable.VAZAO_INCREMENTAL, None, uow)
 
     @classmethod
@@ -1121,37 +1126,53 @@ class ScenarioSynthetizer:
         ]
 
     @classmethod
+    def _resolve_enaa_forward_iteracao(
+        cls, uow: AbstractUnitOfWork, it: int
+    ) -> pd.DataFrame:
+        logger = Log.configure_process_logger(
+            uow.queue, Variable.ENA_ABSOLUTA.value, it
+        )
+
+        with uow:
+            logger.info(f"Obtendo energias forward da it. {it}")
+            enavaz = uow.files.get_enavazf(it)
+            energiaf = uow.files.get_energiaf(it)
+            df_enavaz = enavaz.series if enavaz is not None else pd.DataFrame()
+            df_energia = (
+                energiaf.series if energiaf is not None else pd.DataFrame()
+            )
+            if not df_enavaz.empty and not df_energia.empty:
+                n_indiv = uow.files._numero_estagios_individualizados()
+                df_ena = pd.concat(
+                    [
+                        df_enavaz.loc[df_enavaz["estagio"] <= n_indiv],
+                        df_energia.loc[df_energia["estagio"] > n_indiv],
+                    ],
+                    ignore_index=True,
+                )
+            else:
+                df_ena = df_energia
+            if not df_ena.empty:
+                ena_it = cls._adiciona_dados_rees_forward(uow, df_ena)
+                ena_it["iteracao"] = it
+        return ena_it
+
+    @classmethod
     def _resolve_enaa_forward(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         with uow:
             pmo = uow.files.get_pmo()
             n_iters = pmo.convergencia["Iteração"].max()
-            df_completo = pd.DataFrame()
-            for it in range(1, n_iters + 1):
-                enavaz = uow.files.get_enavazf(it)
-                energiaf = uow.files.get_energiaf(it)
-                df_enavaz = (
-                    enavaz.series if enavaz is not None else pd.DataFrame()
+        df_completo = pd.DataFrame()
+        with Pool(processes=Settings().processors) as pool:
+            async_res = {
+                it: pool.apply_async(
+                    cls._resolve_enaa_forward_iteracao, (uow, it)
                 )
-                df_energia = (
-                    energiaf.series if energiaf is not None else pd.DataFrame()
-                )
-                if not df_enavaz.empty and not df_energia.empty:
-                    n_indiv = uow.files._numero_estagios_individualizados()
-                    df_ena = pd.concat(
-                        [
-                            df_enavaz.loc[df_enavaz["estagio"] <= n_indiv],
-                            df_energia.loc[df_energia["estagio"] > n_indiv],
-                        ],
-                        ignore_index=True,
-                    )
-                else:
-                    df_ena = df_energia
-                if not df_ena.empty:
-                    ena_it = cls._adiciona_dados_rees_forward(uow, df_ena)
-                    ena_it["iteracao"] = it
-                    df_completo = pd.concat(
-                        [df_completo, ena_it], ignore_index=True
-                    )
+                for it in range(1, n_iters + 1)
+            }
+            dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
+        for _, df in dfs.items():
+            df_completo = pd.concat([df_completo, df], ignore_index=True)
         return df_completo
 
     @classmethod
@@ -1561,6 +1582,7 @@ class ScenarioSynthetizer:
 
     @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
+        cls.logger = logging.getLogger("main")
         if len(variables) == 0:
             variables = ScenarioSynthetizer._default_args()
         else:
@@ -1572,13 +1594,13 @@ class ScenarioSynthetizer:
         )
         for s in valid_synthesis:
             filename = str(s)
-            Log.log().info(f"Realizando síntese de {filename}")
+            cls.logger.info(f"Realizando síntese de {filename}")
             df = cls._resolve_spatial_resolution(s, uow)
             if df is None:
                 continue
             elif isinstance(df, pd.DataFrame):
                 if df.empty:
-                    Log.log().info("Erro ao realizar a síntese")
+                    cls.logger.info("Erro ao realizar a síntese")
                     continue
             # TODO - adicionar estatísticas ao postprocess
             df = cls._postprocess(df)

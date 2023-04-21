@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from os import chdir, curdir
 from typing import Dict
 from pathlib import Path
+from multiprocessing import Queue
 
 from sintetizador.model.settings import Settings
 from sintetizador.adapters.repository.files import (
@@ -17,6 +18,9 @@ from sintetizador.adapters.repository.export import (
 
 
 class AbstractUnitOfWork(ABC):
+    def __init__(self, q: Queue) -> None:
+        self._queue = None
+
     def __enter__(self) -> "AbstractUnitOfWork":
         return self
 
@@ -37,9 +41,14 @@ class AbstractUnitOfWork(ABC):
     def export(self) -> AbstractExportRepository:
         raise NotImplementedError
 
+    @property
+    def queue(self) -> Queue:
+        return self._queue
+
 
 class FSUnitOfWork(AbstractUnitOfWork):
-    def __init__(self, directory: str):
+    def __init__(self, directory: str, q: Queue):
+        super().__init__(q)
         self._current_path = Path(curdir).resolve()
         self._synthesis_directory = directory
         self._files = None
