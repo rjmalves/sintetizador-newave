@@ -1,5 +1,6 @@
 import click
 import os
+import time
 from sintetizador.model.settings import Settings
 import sintetizador.domain.commands as commands
 import sintetizador.services.handlers as handlers
@@ -43,6 +44,8 @@ def sistema(variaveis, formato):
     handlers.synthetize_system(command, uow)
 
     logger.info("# Fim da síntese #")
+    time.sleep(1.0)
+    Log.terminate_logging_process()
 
 
 @click.command("execucao")
@@ -72,6 +75,8 @@ def execucao(variaveis, formato):
     handlers.synthetize_execution(command, uow)
 
     logger.info("# Fim da síntese #")
+    time.sleep(1.0)
+    Log.terminate_logging_process()
 
 
 @click.command("cenarios")
@@ -99,7 +104,7 @@ def cenarios(variaveis, formato, processadores):
     logger = Log.configure_main_logger(q)
 
     os.environ["FORMATO_SINTESE"] = formato
-    os.environ["PROCESSADORES"] = processadores
+    os.environ["PROCESSADORES"] = str(processadores)
     logger.info("# Realizando síntese de CENÁRIOS #")
 
     uow = factory("FS", Settings().synthesis_dir, q)
@@ -107,6 +112,8 @@ def cenarios(variaveis, formato, processadores):
     handlers.synthetize_scenarios(command, uow)
 
     logger.info("# Fim da síntese #")
+    time.sleep(1.0)
+    Log.terminate_logging_process()
 
 
 @click.command("operacao")
@@ -134,7 +141,7 @@ def operacao(variaveis, formato, processadores):
     logger = Log.configure_main_logger(q)
 
     os.environ["FORMATO_SINTESE"] = formato
-    os.environ["PROCESSADORES"] = processadores
+    os.environ["PROCESSADORES"] = str(processadores)
     logger.info("# Realizando síntese da OPERACAO #")
 
     uow = factory("FS", Settings().synthesis_dir, q)
@@ -142,6 +149,8 @@ def operacao(variaveis, formato, processadores):
     handlers.synthetize_operation(command, uow)
 
     logger.info("# Fim da síntese #")
+    time.sleep(1.0)
+    Log.terminate_logging_process()
 
 
 @click.command("politica")
@@ -170,6 +179,8 @@ def politica(variaveis, formato):
     handlers.synthetize_policy(command, uow)
 
     logger.info("# Fim da síntese #")
+    time.sleep(1.0)
+    Log.terminate_logging_process()
 
 
 @click.command("limpeza")
@@ -226,6 +237,8 @@ def completa(sistema, execucao, operacao, politica, formato, processadores):
     handlers.synthetize_policy(command, uow)
 
     logger.info("# Fim da síntese #")
+    time.sleep(1.0)
+    Log.terminate_logging_process()
 
 
 app.add_command(completa)

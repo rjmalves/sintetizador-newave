@@ -1,6 +1,7 @@
 from typing import Callable, Dict, List, Optional
 import pandas as pd  # type: ignore
 import numpy as np
+import logging
 from inewave.config import MESES_DF
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -434,7 +435,7 @@ class OperationSynthetizer:
         args_data = [OperationSynthesis.factory(c) for c in args]
         for i, a in enumerate(args_data):
             if a is None:
-                Log.log(f"Erro no argumento fornecido: {args[i]}")
+                cls.logger.error(f"Erro no argumento fornecido: {args[i]}")
                 return []
         return args_data
 
@@ -455,7 +456,7 @@ class OperationSynthetizer:
         mandatory = RESOLUTION_ARGS_MAP[spatial_resolution]
         valid = all([a in kwargs.keys() for a in mandatory])
         if not valid:
-            Log.log().error(
+            cls.logger.error(
                 f"Erro no processamento da informação por {spatial_resolution}"
             )
         return valid
@@ -472,8 +473,8 @@ class OperationSynthetizer:
         politica_indiv = ree.rees["Mês Fim Individualizado"].isna().sum() == 0
         indiv = sf_indiv or politica_indiv
         eolica = dger.considera_geracao_eolica != 0
-        Log.log().info(f"Caso com geração de cenários de eólica: {eolica}")
-        Log.log().info(f"Caso com modelagem híbrida: {indiv}")
+        cls.logger.info(f"Caso com geração de cenários de eólica: {eolica}")
+        cls.logger.info(f"Caso com modelagem híbrida: {indiv}")
         for v in variables:
             if (
                 v.variable
@@ -491,7 +492,7 @@ class OperationSynthetizer:
             ):
                 continue
             valid_variables.append(v)
-        Log.log().info(f"Variáveis: {valid_variables}")
+        cls.logger.info(f"Variáveis: {valid_variables}")
         return valid_variables
 
     @classmethod
@@ -579,7 +580,7 @@ class OperationSynthetizer:
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         with uow:
-            Log.log().info("Processando arquivo do SIN")
+            cls.logger.info("Processando arquivo do SIN")
             df = uow.files.get_nwlistop(
                 synthesis.variable,
                 synthesis.spatial_resolution,
@@ -604,7 +605,9 @@ class OperationSynthetizer:
             sbms_name = sistemas_reais["Nome"]
             df = pd.DataFrame()
             for s, n in zip(sbms_idx, sbms_name):
-                Log.log().info(f"Processando arquivo do submercado: {s} - {n}")
+                cls.logger.info(
+                    f"Processando arquivo do submercado: {s} - {n}"
+                )
                 df_sbm = cls._resolve_temporal_resolution(
                     synthesis,
                     uow.files.get_nwlistop(
@@ -642,7 +645,7 @@ class OperationSynthetizer:
                     # Ignora o mesmo SBM
                     if s1 >= s2:
                         continue
-                    Log.log().info(
+                    cls.logger.info(
                         "Processando arquivo do par de "
                         + f"submercados: {s1} - {n1} | {s2} - {n2}"
                     )
@@ -677,7 +680,7 @@ class OperationSynthetizer:
             rees_name = ree.rees["Nome"]
             df = pd.DataFrame()
             for s, n in zip(rees_idx, rees_name):
-                Log.log().info(f"Processando arquivo do REE: {s} - {n}")
+                cls.logger.info(f"Processando arquivo do REE: {s} - {n}")
                 df_ree = cls._resolve_temporal_resolution(
                     synthesis,
                     uow.files.get_nwlistop(
@@ -723,7 +726,7 @@ class OperationSynthetizer:
             uhes_name = confhd.usinas["Nome"]
             df = pd.DataFrame()
             for s, n in zip(uhes_idx, uhes_name):
-                Log.log().info(f"Processando arquivo da UHE: {s} - {n}")
+                cls.logger.info(f"Processando arquivo da UHE: {s} - {n}")
                 df_uhe = cls._resolve_temporal_resolution(
                     OperationSynthesis(
                         variable=synthesis.variable,
@@ -801,7 +804,7 @@ class OperationSynthetizer:
             uhes_name = confhd.usinas["Nome"]
             df = pd.DataFrame()
             for s, n in zip(uhes_idx, uhes_name):
-                Log.log().info(f"Processando arquivo da UHE: {s} - {n}")
+                cls.logger.info(f"Processando arquivo da UHE: {s} - {n}")
                 df_uhe = cls._resolve_temporal_resolution(
                     OperationSynthesis(
                         variable=synthesis.variable,
@@ -1084,7 +1087,7 @@ class OperationSynthetizer:
             uhes_name = confhd.usinas["Nome"]
             df = pd.DataFrame()
             for s, n in zip(uhes_idx, uhes_name):
-                Log.log().info(f"Processando arquivo da UHE: {s} - {n}")
+                cls.logger.info(f"Processando arquivo da UHE: {s} - {n}")
                 df_uhe = cls._resolve_temporal_resolution(
                     OperationSynthesis(
                         variable=synthesis.variable,
@@ -1184,7 +1187,7 @@ class OperationSynthetizer:
             uhes_name = confhd.usinas["Nome"]
             df = pd.DataFrame()
             for s, n in zip(uhes_idx, uhes_name):
-                Log.log().info(f"Processando arquivo da UHE: {s} - {n}")
+                cls.logger.info(f"Processando arquivo da UHE: {s} - {n}")
                 df_uhe = cls._resolve_temporal_resolution(
                     synthesis,
                     uow.files.get_nwlistop(
@@ -1218,7 +1221,7 @@ class OperationSynthetizer:
             utes_name = conft.usinas["Nome"]
             df = pd.DataFrame()
             for s, n in zip(utes_idx, utes_name):
-                Log.log().info(f"Processando arquivo da UTE: {s} - {n}")
+                cls.logger.info(f"Processando arquivo da UTE: {s} - {n}")
                 df_ute = cls._resolve_temporal_resolution(
                     synthesis,
                     uow.files.get_nwlistop(
@@ -1256,7 +1259,7 @@ class OperationSynthetizer:
                     uees_idx.append(r.codigo_pee)
                     uees_name.append(r.nome_pee)
             for s, n in zip(uees_idx, uees_name):
-                Log.log().info(f"Processando arquivo da UEE: {s} - {n}")
+                cls.logger.info(f"Processando arquivo da UEE: {s} - {n}")
                 df_uee = cls._resolve_temporal_resolution(
                     synthesis,
                     uow.files.get_nwlistop(
@@ -1391,18 +1394,23 @@ class OperationSynthetizer:
 
     @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
-        if len(variables) == 0:
-            variables = OperationSynthetizer._default_args()
-        else:
-            variables = OperationSynthetizer._process_variable_arguments(
-                variables
+        cls.logger = logging.getLogger()
+        try:
+            if len(variables) == 0:
+                variables = OperationSynthetizer._default_args()
+            else:
+                variables = OperationSynthetizer._process_variable_arguments(
+                    variables
+                )
+            valid_synthesis = OperationSynthetizer.filter_valid_variables(
+                variables, uow
             )
-        valid_synthesis = OperationSynthetizer.filter_valid_variables(
-            variables, uow
-        )
+        except Exception as e:
+            cls.logger.error(str(e))
+            valid_synthesis = []
         for s in valid_synthesis:
             filename = str(s)
-            Log.log().info(f"Realizando síntese de {filename}")
+            cls.logger.info(f"Realizando síntese de {filename}")
             if s.variable == Variable.ENERGIA_VERTIDA:
                 df = cls.__stub_EVER(s, uow)
             elif all(
@@ -1429,7 +1437,7 @@ class OperationSynthetizer:
                     continue
                 elif isinstance(df, pd.DataFrame):
                     if df.empty:
-                        Log.log().info("Erro ao realizar a síntese")
+                        cls.logger.info("Erro ao realizar a síntese")
                         continue
                 if s in cls.SYNTHESIS_TO_CACHE:
                     cls.CACHED_SYNTHESIS[s] = df.copy()

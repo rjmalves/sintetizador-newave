@@ -1,6 +1,7 @@
 from typing import Callable, Dict, List
 import pandas as pd
 import numpy as np
+import logging
 from inewave.config import MESES_DF
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -16,7 +17,6 @@ HORAS_MES_NW = 730.0
 
 
 class SystemSynthetizer:
-
     IDENTIFICATION_COLUMNS = [
         "dataInicio",
         "dataFim",
@@ -67,13 +67,13 @@ class SystemSynthetizer:
         valid_variables: List[SystemSynthesis] = []
         indiv = ree.rees["Mês Fim Individualizado"].isna().sum() == 0
         eolica = dger.considera_geracao_eolica != 0
-        Log.log().info(f"Caso com geração de cenários de eólica: {eolica}")
-        Log.log().info(f"Caso com modelagem híbrida: {indiv}")
+        cls.logger.info(f"Caso com geração de cenários de eólica: {eolica}")
+        cls.logger.info(f"Caso com modelagem híbrida: {indiv}")
         for v in variables:
             if v.variable in [Variable.PEE] and not eolica:
                 continue
             valid_variables.append(v)
-        Log.log().info(f"Variáveis: {valid_variables}")
+        cls.logger.info(f"Variáveis: {valid_variables}")
         return valid_variables
 
     @classmethod
@@ -215,18 +215,23 @@ class SystemSynthetizer:
 
     @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
-        if len(variables) == 0:
-            variables = SystemSynthetizer._default_args()
-        else:
-            variables = SystemSynthetizer._process_variable_arguments(
-                variables
-            )
+        cls.logger = logging.getLogger()
+        try:
+            if len(variables) == 0:
+                variables = SystemSynthetizer._default_args()
+            else:
+                variables = SystemSynthetizer._process_variable_arguments(
+                    variables
+                )
+        except Exception as e:
+            cls.logger.error(str(e))
+            valid_synthesis = []
         valid_synthesis = SystemSynthetizer.filter_valid_variables(
             variables, uow
         )
         for s in valid_synthesis:
             filename = str(s)
-            Log.log().info(f"Realizando síntese de {filename}")
+            cls.logger.info(f"Realizando síntese de {filename}")
             df = cls._resolve(s, uow)
             with uow:
                 uow.export.synthetize_df(df, filename)

@@ -22,7 +22,7 @@ class Log(metaclass=Singleton):
             except IOError as e:
                 if e.errno == errno.EPIPE:
                     print("EPIPE")
-            time.sleep(1)
+            time.sleep(0.1)
 
     @classmethod
     def configure_queue_logger(cls):
@@ -57,5 +57,9 @@ class Log(metaclass=Singleton):
 
     @classmethod
     def start_logging_process(cls, q: Queue):
-        listener = Process(target=cls.logging_process, args=(q,))
-        listener.start()
+        cls.listener = Process(target=cls.logging_process, args=(q,))
+        cls.listener.start()
+
+    @classmethod
+    def terminate_logging_process(cls):
+        cls.listener.terminate()

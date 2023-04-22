@@ -1163,7 +1163,7 @@ class ScenarioSynthetizer:
             pmo = uow.files.get_pmo()
             n_iters = pmo.convergencia["Iteração"].max()
         df_completo = pd.DataFrame()
-        with Pool(processes=Settings().processors) as pool:
+        with Pool(processes=int(Settings().processors)) as pool:
             async_res = {
                 it: pool.apply_async(
                     cls._resolve_enaa_forward_iteracao, (uow, it)
@@ -1583,15 +1583,19 @@ class ScenarioSynthetizer:
     @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
         cls.logger = logging.getLogger("main")
-        if len(variables) == 0:
-            variables = ScenarioSynthetizer._default_args()
-        else:
-            variables = ScenarioSynthetizer._process_variable_arguments(
-                variables
+        try:
+            if len(variables) == 0:
+                variables = ScenarioSynthetizer._default_args()
+            else:
+                variables = ScenarioSynthetizer._process_variable_arguments(
+                    variables
+                )
+            valid_synthesis = ScenarioSynthetizer.filter_valid_variables(
+                variables, uow
             )
-        valid_synthesis = ScenarioSynthetizer.filter_valid_variables(
-            variables, uow
-        )
+        except Exception as e:
+            cls.logger.error(str(e))
+            valid_synthesis = []
         for s in valid_synthesis:
             filename = str(s)
             cls.logger.info(f"Realizando síntese de {filename}")
