@@ -1593,20 +1593,19 @@ class ScenarioSynthetizer:
             valid_synthesis = ScenarioSynthetizer.filter_valid_variables(
                 variables, uow
             )
+            for s in valid_synthesis:
+                filename = str(s)
+                cls.logger.info(f"Realizando síntese de {filename}")
+                df = cls._resolve_spatial_resolution(s, uow)
+                if df is None:
+                    continue
+                elif isinstance(df, pd.DataFrame):
+                    if df.empty:
+                        cls.logger.info("Erro ao realizar a síntese")
+                        continue
+                # TODO - adicionar estatísticas ao postprocess
+                df = cls._postprocess(df)
+                with uow:
+                    uow.export.synthetize_df(df, filename)
         except Exception as e:
             cls.logger.error(str(e))
-            valid_synthesis = []
-        for s in valid_synthesis:
-            filename = str(s)
-            cls.logger.info(f"Realizando síntese de {filename}")
-            df = cls._resolve_spatial_resolution(s, uow)
-            if df is None:
-                continue
-            elif isinstance(df, pd.DataFrame):
-                if df.empty:
-                    cls.logger.info("Erro ao realizar a síntese")
-                    continue
-            # TODO - adicionar estatísticas ao postprocess
-            df = cls._postprocess(df)
-            with uow:
-                uow.export.synthetize_df(df, filename)

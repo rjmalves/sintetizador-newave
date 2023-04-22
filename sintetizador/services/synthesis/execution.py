@@ -183,13 +183,13 @@ class ExecutionSynthetizer:
                 variables = ExecutionSynthetizer._process_variable_arguments(
                     variables
                 )
+
+            for s in variables:
+                filename = str(s)
+                cls.logger.info(f"Realizando síntese de {filename}")
+                df = cls._resolve(s, uow)
+                if df is not None:
+                    with uow:
+                        uow.export.synthetize_df(df, filename)
         except Exception as e:
             cls.logger.error(str(e))
-            variables = []
-        for s in variables:
-            filename = str(s)
-            cls.logger.info(f"Realizando síntese de {filename}")
-            df = cls._resolve(s, uow)
-            if df is not None:
-                with uow:
-                    uow.export.synthetize_df(df, filename)

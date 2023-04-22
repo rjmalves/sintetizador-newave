@@ -223,15 +223,14 @@ class SystemSynthetizer:
                 variables = SystemSynthetizer._process_variable_arguments(
                     variables
                 )
+            valid_synthesis = SystemSynthetizer.filter_valid_variables(
+                variables, uow
+            )
+            for s in valid_synthesis:
+                filename = str(s)
+                cls.logger.info(f"Realizando síntese de {filename}")
+                df = cls._resolve(s, uow)
+                with uow:
+                    uow.export.synthetize_df(df, filename)
         except Exception as e:
             cls.logger.error(str(e))
-            valid_synthesis = []
-        valid_synthesis = SystemSynthetizer.filter_valid_variables(
-            variables, uow
-        )
-        for s in valid_synthesis:
-            filename = str(s)
-            cls.logger.info(f"Realizando síntese de {filename}")
-            df = cls._resolve(s, uow)
-            with uow:
-                uow.export.synthetize_df(df, filename)

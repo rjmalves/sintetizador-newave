@@ -223,7 +223,7 @@ def completa(sistema, execucao, operacao, politica, formato, processadores):
 
     logger = Log.configure_main_logger(q)
     os.environ["FORMATO_SINTESE"] = formato
-    os.environ["PROCESSADORES"] = processadores
+    os.environ["PROCESSADORES"] = str(processadores)
     logger.info("# Realizando síntese COMPLETA #")
 
     uow = factory("FS", Settings().synthesis_dir, q)

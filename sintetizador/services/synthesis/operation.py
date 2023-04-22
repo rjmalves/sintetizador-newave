@@ -1405,43 +1405,43 @@ class OperationSynthetizer:
             valid_synthesis = OperationSynthetizer.filter_valid_variables(
                 variables, uow
             )
+
+            for s in valid_synthesis:
+                filename = str(s)
+                cls.logger.info(f"Realizando síntese de {filename}")
+                if s.variable == Variable.ENERGIA_VERTIDA:
+                    df = cls.__stub_EVER(s, uow)
+                elif all(
+                    [
+                        s.variable
+                        in [
+                            Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+                            Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
+                            Variable.VIOLACAO_DEFLUENCIA_MINIMA,
+                            Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
+                            Variable.VIOLACAO_TURBINAMENTO_MINIMO,
+                            Variable.VIOLACAO_FPHA,
+                        ],
+                        s.spatial_resolution
+                        != SpatialResolution.USINA_HIDROELETRICA,
+                    ]
+                ):
+                    df = cls.__stub_agrega_variaveis_indiv_REE_SBM_SIN(s, uow)
+                    if df is None:
+                        continue
+                else:
+                    df = cls._resolve_spatial_resolution(s, uow)
+                    if df is None:
+                        continue
+                    elif isinstance(df, pd.DataFrame):
+                        if df.empty:
+                            cls.logger.info("Erro ao realizar a síntese")
+                            continue
+                    if s in cls.SYNTHESIS_TO_CACHE:
+                        cls.CACHED_SYNTHESIS[s] = df.copy()
+                df = cls._resolve_starting_stage(df, uow)
+                with uow:
+                    df = cls._postprocess(df)
+                    uow.export.synthetize_df(df, filename)
         except Exception as e:
             cls.logger.error(str(e))
-            valid_synthesis = []
-        for s in valid_synthesis:
-            filename = str(s)
-            cls.logger.info(f"Realizando síntese de {filename}")
-            if s.variable == Variable.ENERGIA_VERTIDA:
-                df = cls.__stub_EVER(s, uow)
-            elif all(
-                [
-                    s.variable
-                    in [
-                        Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
-                        Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
-                        Variable.VIOLACAO_DEFLUENCIA_MINIMA,
-                        Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
-                        Variable.VIOLACAO_TURBINAMENTO_MINIMO,
-                        Variable.VIOLACAO_FPHA,
-                    ],
-                    s.spatial_resolution
-                    != SpatialResolution.USINA_HIDROELETRICA,
-                ]
-            ):
-                df = cls.__stub_agrega_variaveis_indiv_REE_SBM_SIN(s, uow)
-                if df is None:
-                    continue
-            else:
-                df = cls._resolve_spatial_resolution(s, uow)
-                if df is None:
-                    continue
-                elif isinstance(df, pd.DataFrame):
-                    if df.empty:
-                        cls.logger.info("Erro ao realizar a síntese")
-                        continue
-                if s in cls.SYNTHESIS_TO_CACHE:
-                    cls.CACHED_SYNTHESIS[s] = df.copy()
-            df = cls._resolve_starting_stage(df, uow)
-            with uow:
-                df = cls._postprocess(df)
-                uow.export.synthetize_df(df, filename)
