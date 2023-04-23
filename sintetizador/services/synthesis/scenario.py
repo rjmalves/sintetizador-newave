@@ -1155,7 +1155,8 @@ class ScenarioSynthetizer:
             if not df_ena.empty:
                 ena_it = cls._adiciona_dados_rees_forward(uow, df_ena)
                 ena_it["iteracao"] = it
-        return ena_it
+                return ena_it
+        return None
 
     @classmethod
     def _resolve_enaa_forward(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
@@ -1176,23 +1177,41 @@ class ScenarioSynthetizer:
         return df_completo
 
     @classmethod
+    def _resolve_qinc_forward_iteracao(
+        cls, uow: AbstractUnitOfWork, it: int
+    ) -> pd.DataFrame:
+        logger = Log.configure_process_logger(
+            uow.queue, Variable.VAZAO_INCREMENTAL.value, it
+        )
+        with uow:
+            logger.info(f"Obtendo vazões forward da it. {it}")
+            arq = uow.files.get_vazaof(it)
+            vaz_it = (
+                cls._adiciona_dados_uhes_forward(uow, arq.series)
+                if arq is not None
+                else pd.DataFrame()
+            )
+            if not vaz_it.empty:
+                vaz_it["iteracao"] = it
+                return vaz_it
+            return None
+
+    @classmethod
     def _resolve_qinc_forward(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         with uow:
             pmo = uow.files.get_pmo()
             n_iters = pmo.convergencia["Iteração"].max()
-            df_completo = pd.DataFrame()
-            for it in range(1, n_iters + 1):
-                arq = uow.files.get_vazaof(it)
-                vaz_it = (
-                    cls._adiciona_dados_uhes_forward(uow, arq.series)
-                    if arq is not None
-                    else pd.DataFrame()
+        df_completo = pd.DataFrame()
+        with Pool(processes=int(Settings().processors)) as pool:
+            async_res = {
+                it: pool.apply_async(
+                    cls._resolve_qinc_forward_iteracao, (uow, it)
                 )
-                if not vaz_it.empty:
-                    vaz_it["iteracao"] = it
-                    df_completo = pd.concat(
-                        [df_completo, vaz_it], ignore_index=True
-                    )
+                for it in range(1, n_iters + 1)
+            }
+            dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
+        for _, df in dfs.items():
+            df_completo = pd.concat([df_completo, df], ignore_index=True)
         return df_completo
 
     @classmethod
