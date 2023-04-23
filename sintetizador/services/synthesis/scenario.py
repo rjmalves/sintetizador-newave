@@ -1160,13 +1160,14 @@ class ScenarioSynthetizer:
     def _resolve_enaa_forward(
         cls, uow: AbstractUnitOfWork, q: Queue
     ) -> pd.DataFrame:
-        cls.logger.info("Paralelizando...")
         with uow:
             pmo = uow.files.get_pmo()
             n_iters = pmo.convergencia["Iteração"].max()
         df_completo = pd.DataFrame()
-        cls.logger.info("Criando processos...")
-        with Pool(processes=int(Settings().processors)) as pool:
+        n_procs = int(Settings().processors)
+        with Pool(processes=n_procs) as pool:
+            if n_procs > 1:
+                cls.logger.info("Paralelizando...")
             async_res = {
                 it: pool.apply_async(
                     cls._resolve_enaa_forward_iteracao, (uow, it, q)
