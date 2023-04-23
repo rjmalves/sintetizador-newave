@@ -1,10 +1,12 @@
 import click
 import os
+import time
 from sintetizador.model.settings import Settings
 import sintetizador.domain.commands as commands
 import sintetizador.services.handlers as handlers
 from sintetizador.services.unitofwork import factory
 from sintetizador.utils.log import Log
+from multiprocessing import Manager
 
 
 @click.group()
@@ -29,16 +31,21 @@ def sistema(variaveis, formato):
     Realiza a síntese dos dados do sistema do NEWAVE.
     """
     os.environ["FORMATO_SINTESE"] = formato
-    Log.log().info("# Realizando síntese do SISTEMA #")
 
-    uow = factory(
-        "FS",
-        Settings().synthesis_dir,
-    )
+    m = Manager()
+    q = m.Queue(-1)
+    Log.start_logging_process(q)
+
+    logger = Log.configure_main_logger(q)
+    logger.info("# Realizando síntese do SISTEMA #")
+
+    uow = factory("FS", Settings().synthesis_dir, q)
     command = commands.SynthetizeSystem(variaveis)
     handlers.synthetize_system(command, uow)
 
-    Log.log().info("# Fim da síntese #")
+    logger.info("# Fim da síntese #")
+    time.sleep(1.0)
+    Log.terminate_logging_process()
 
 
 @click.command("execucao")
@@ -53,17 +60,23 @@ def execucao(variaveis, formato):
     """
     Realiza a síntese dos dados da execução do NEWAVE.
     """
-    os.environ["FORMATO_SINTESE"] = formato
-    Log.log().info("# Realizando síntese da EXECUÇÃO #")
 
-    uow = factory(
-        "FS",
-        Settings().synthesis_dir,
-    )
+    m = Manager()
+    q = m.Queue(-1)
+    Log.start_logging_process(q)
+
+    logger = Log.configure_main_logger(q)
+
+    os.environ["FORMATO_SINTESE"] = formato
+    logger.info("# Realizando síntese da EXECUÇÃO #")
+
+    uow = factory("FS", Settings().synthesis_dir, q)
     command = commands.SynthetizeExecution(variaveis)
     handlers.synthetize_execution(command, uow)
 
-    Log.log().info("# Fim da síntese #")
+    logger.info("# Fim da síntese #")
+    time.sleep(1.0)
+    Log.terminate_logging_process()
 
 
 @click.command("cenarios")
@@ -74,21 +87,33 @@ def execucao(variaveis, formato):
 @click.option(
     "--formato", default="PARQUET", help="formato para escrita da síntese"
 )
-def cenarios(variaveis, formato):
+@click.option(
+    "--processadores",
+    default=1,
+    help="numero de processadores para paralelizar",
+)
+def cenarios(variaveis, formato, processadores):
     """
     Realiza a síntese dos dados de cenários do NEWAVE.
     """
-    os.environ["FORMATO_SINTESE"] = formato
-    Log.log().info("# Realizando síntese de CENÁRIOS #")
 
-    uow = factory(
-        "FS",
-        Settings().synthesis_dir,
-    )
+    m = Manager()
+    q = m.Queue(-1)
+    Log.start_logging_process(q)
+
+    logger = Log.configure_main_logger(q)
+
+    os.environ["FORMATO_SINTESE"] = formato
+    os.environ["PROCESSADORES"] = str(processadores)
+    logger.info("# Realizando síntese de CENÁRIOS #")
+
+    uow = factory("FS", Settings().synthesis_dir, q)
     command = commands.SynthetizeScenarios(variaveis)
     handlers.synthetize_scenarios(command, uow)
 
-    Log.log().info("# Fim da síntese #")
+    logger.info("# Fim da síntese #")
+    time.sleep(1.0)
+    Log.terminate_logging_process()
 
 
 @click.command("operacao")
@@ -99,21 +124,33 @@ def cenarios(variaveis, formato):
 @click.option(
     "--formato", default="PARQUET", help="formato para escrita da síntese"
 )
-def operacao(variaveis, formato):
+@click.option(
+    "--processadores",
+    default=1,
+    help="numero de processadores para paralelizar",
+)
+def operacao(variaveis, formato, processadores):
     """
     Realiza a síntese dos dados da operação do NEWAVE (NWLISTOP).
     """
-    os.environ["FORMATO_SINTESE"] = formato
-    Log.log().info("# Realizando síntese da OPERACAO #")
 
-    uow = factory(
-        "FS",
-        Settings().synthesis_dir,
-    )
+    m = Manager()
+    q = m.Queue(-1)
+    Log.start_logging_process(q)
+
+    logger = Log.configure_main_logger(q)
+
+    os.environ["FORMATO_SINTESE"] = formato
+    os.environ["PROCESSADORES"] = str(processadores)
+    logger.info("# Realizando síntese da OPERACAO #")
+
+    uow = factory("FS", Settings().synthesis_dir, q)
     command = commands.SynthetizeOperation(variaveis)
     handlers.synthetize_operation(command, uow)
 
-    Log.log().info("# Fim da síntese #")
+    logger.info("# Fim da síntese #")
+    time.sleep(1.0)
+    Log.terminate_logging_process()
 
 
 @click.command("politica")
@@ -128,17 +165,22 @@ def politica(variaveis, formato):
     """
     Realiza a síntese dos dados da política do NEWAVE (NWLISTCF).
     """
-    os.environ["FORMATO_SINTESE"] = formato
-    Log.log().info("# Realizando síntese da POLITICA #")
 
-    uow = factory(
-        "FS",
-        Settings().synthesis_dir,
-    )
+    m = Manager()
+    q = m.Queue(-1)
+    Log.start_logging_process(q)
+
+    logger = Log.configure_main_logger(q)
+    os.environ["FORMATO_SINTESE"] = formato
+    logger.info("# Realizando síntese da POLITICA #")
+
+    uow = factory("FS", Settings().synthesis_dir, q)
     command = commands.SynthetizePolicy(variaveis)
     handlers.synthetize_policy(command, uow)
 
-    Log.log().info("# Fim da síntese #")
+    logger.info("# Fim da síntese #")
+    time.sleep(1.0)
+    Log.terminate_logging_process()
 
 
 @click.command("limpeza")
@@ -165,17 +207,26 @@ def limpeza():
 @click.option(
     "--formato", default="PARQUET", help="formato para escrita da síntese"
 )
-def completa(sistema, execucao, operacao, politica, formato):
+@click.option(
+    "--processadores",
+    default=1,
+    help="numero de processadores para paralelizar",
+)
+def completa(sistema, execucao, operacao, politica, formato, processadores):
     """
     Realiza a síntese completa do NEWAVE.
     """
-    os.environ["FORMATO_SINTESE"] = formato
-    Log.log().info("# Realizando síntese COMPLETA #")
 
-    uow = factory(
-        "FS",
-        Settings().synthesis_dir,
-    )
+    m = Manager()
+    q = m.Queue(-1)
+    Log.start_logging_process(q)
+
+    logger = Log.configure_main_logger(q)
+    os.environ["FORMATO_SINTESE"] = formato
+    os.environ["PROCESSADORES"] = str(processadores)
+    logger.info("# Realizando síntese COMPLETA #")
+
+    uow = factory("FS", Settings().synthesis_dir, q)
     command = commands.SynthetizeSystem(sistema)
     handlers.synthetize_system(command, uow)
     command = commands.SynthetizeExecution(execucao)
@@ -185,7 +236,9 @@ def completa(sistema, execucao, operacao, politica, formato):
     command = commands.SynthetizePolicy(politica)
     handlers.synthetize_policy(command, uow)
 
-    Log.log().info("# Fim da síntese #")
+    logger.info("# Fim da síntese #")
+    time.sleep(1.0)
+    Log.terminate_logging_process()
 
 
 app.add_command(completa)

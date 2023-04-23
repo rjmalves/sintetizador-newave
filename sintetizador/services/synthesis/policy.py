@@ -1,5 +1,6 @@
 from typing import Callable, Dict, List
 import pandas as pd  # type: ignore
+import logging
 
 from sintetizador.services.unitofwork import AbstractUnitOfWork
 from sintetizador.utils.log import Log
@@ -68,16 +69,21 @@ class PolicySynthetizer:
 
     @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
-        if len(variables) == 0:
-            variables = PolicySynthetizer._default_args()
-        else:
-            variables = PolicySynthetizer._process_variable_arguments(
-                variables
-            )
-        for s in variables:
-            filename = str(s)
-            Log.log().info(f"Realizando síntese de {filename}")
-            df = cls._resolve(s, uow)
-            if df is not None:
-                with uow:
-                    uow.export.synthetize_df(df, filename)
+        cls.logger = logging.getLogger("main")
+        try:
+            if len(variables) == 0:
+                variables = PolicySynthetizer._default_args()
+            else:
+                variables = PolicySynthetizer._process_variable_arguments(
+                    variables
+                )
+
+            for s in variables:
+                filename = str(s)
+                cls.logger.info(f"Realizando síntese de {filename}")
+                df = cls._resolve(s, uow)
+                if df is not None:
+                    with uow:
+                        uow.export.synthetize_df(df, filename)
+        except Exception as e:
+            cls.logger.error(str(e))

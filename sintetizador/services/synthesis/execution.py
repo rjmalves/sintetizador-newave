@@ -2,6 +2,7 @@ from typing import Callable, Dict, List
 import pandas as pd  # type: ignore
 import pathlib
 import socket
+import logging
 
 from sintetizador.services.unitofwork import AbstractUnitOfWork
 from sintetizador.utils.log import Log
@@ -123,7 +124,9 @@ class ExecutionSynthetizer:
                 try:
                     df = pd.read_csv(file)
                 except Exception as e:
-                    Log.log().info(f"Erro ao acessar arquivo {file}: {str(e)}")
+                    cls.logger.info(
+                        f"Erro ao acessar arquivo {file}: {str(e)}"
+                    )
                     return None
                 return df
             return None
@@ -140,7 +143,9 @@ class ExecutionSynthetizer:
                 try:
                     df_job = pd.read_csv(file)
                 except Exception as e:
-                    Log.log().info(f"Erro ao acessar arquivo {file}: {str(e)}")
+                    cls.logger.info(
+                        f"Erro ao acessar arquivo {file}: {str(e)}"
+                    )
                     return None
         if df_job is None:
             return None
@@ -155,7 +160,9 @@ class ExecutionSynthetizer:
                 try:
                     df = pd.read_csv(file)
                 except Exception as e:
-                    Log.log().info(f"Erro ao acessar arquivo {file}: {str(e)}")
+                    cls.logger.info(
+                        f"Erro ao acessar arquivo {file}: {str(e)}"
+                    )
                     return None
                 df["timeInstant"] = pd.to_datetime(
                     df["timeInstant"], format="ISO8601"
@@ -168,16 +175,21 @@ class ExecutionSynthetizer:
 
     @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
-        if len(variables) == 0:
-            variables = ExecutionSynthetizer._default_args()
-        else:
-            variables = ExecutionSynthetizer._process_variable_arguments(
-                variables
-            )
-        for s in variables:
-            filename = str(s)
-            Log.log().info(f"Realizando síntese de {filename}")
-            df = cls._resolve(s, uow)
-            if df is not None:
-                with uow:
-                    uow.export.synthetize_df(df, filename)
+        cls.logger = logging.getLogger("main")
+        try:
+            if len(variables) == 0:
+                variables = ExecutionSynthetizer._default_args()
+            else:
+                variables = ExecutionSynthetizer._process_variable_arguments(
+                    variables
+                )
+
+            for s in variables:
+                filename = str(s)
+                cls.logger.info(f"Realizando síntese de {filename}")
+                df = cls._resolve(s, uow)
+                if df is not None:
+                    with uow:
+                        uow.export.synthetize_df(df, filename)
+        except Exception as e:
+            cls.logger.error(str(e))

@@ -10,3 +10,4 @@ class Settings(metaclass=Singleton):
         self.encoding_script = "sintetizador/static/converte_utf8.sh"
         self.synthesis_format = getenv("FORMATO_SINTESE", "PARQUET")
         self.synthesis_dir = getenv("DIRETORIO_SINTESE", "sintese")
+        self.processors = getenv("PROCESSADORES", "sintese")

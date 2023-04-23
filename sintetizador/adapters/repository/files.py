@@ -90,7 +90,6 @@ from inewave.nwlistop.dfphauh import Dfphauh
 from inewave.nwlistcf import Nwlistcf
 from inewave.nwlistcf import Estados
 
-from sintetizador.utils.log import Log
 from sintetizador.model.settings import Settings
 from sintetizador.utils.encoding import converte_codificacao
 from sintetizador.model.operation.variable import Variable
@@ -804,13 +803,11 @@ class RawFilesRepository(AbstractFilesRepository):
                 Settings().encoding_script
             )
             asyncio.run(converte_codificacao(str(caminho), str(script)))
-            Log.log().info(f"Lendo arquivo {arq_dger}")
             self.__dger = DGer.le_arquivo(self.__tmppath, arq_dger)
         return self.__dger
 
     def get_patamar(self) -> Patamar:
         if self.__patamar is None:
-            Log.log().info(f"Lendo arquivo {self.arquivos.patamar}")
             self.__patamar = Patamar.le_arquivo(
                 self.__tmppath, self.arquivos.patamar
             )
@@ -818,7 +815,6 @@ class RawFilesRepository(AbstractFilesRepository):
 
     def get_confhd(self) -> Confhd:
         if self.__confhd is None:
-            Log.log().info(f"Lendo arquivo {self.arquivos.confhd}")
             self.__confhd = Confhd.le_arquivo(
                 self.__tmppath, self.arquivos.confhd
             )
@@ -826,7 +822,6 @@ class RawFilesRepository(AbstractFilesRepository):
 
     def get_conft(self) -> ConfT:
         if self.__conft is None:
-            Log.log().info(f"Lendo arquivo {self.arquivos.conft}")
             self.__conft = ConfT.le_arquivo(
                 self.__tmppath, self.arquivos.conft
             )
@@ -834,7 +829,6 @@ class RawFilesRepository(AbstractFilesRepository):
 
     def get_clast(self) -> ClasT:
         if self.__clast is None:
-            Log.log().info(f"Lendo arquivo {self.arquivos.clast}")
             self.__clast = ClasT.le_arquivo(
                 self.__tmppath, self.arquivos.clast
             )
@@ -842,13 +836,11 @@ class RawFilesRepository(AbstractFilesRepository):
 
     def get_ree(self) -> REE:
         if self.__ree is None:
-            Log.log().info(f"Lendo arquivo {self.arquivos.ree}")
             self.__ree = REE.le_arquivo(self.__tmppath, self.arquivos.ree)
         return self.__ree
 
     def get_sistema(self) -> Sistema:
         if self.__sistema is None:
-            Log.log().info(f"Lendo arquivo {self.arquivos.sistema}")
             self.__sistema = Sistema.le_arquivo(
                 self.__tmppath, self.arquivos.sistema
             )
@@ -856,19 +848,17 @@ class RawFilesRepository(AbstractFilesRepository):
 
     def get_pmo(self) -> PMO:
         if self.__pmo is None:
-            Log.log().info(f"Lendo arquivo {self.arquivos.pmo}")
             self.__pmo = PMO.le_arquivo(self.__tmppath, self.arquivos.pmo)
         return self.__pmo
 
     def get_newavetim(self) -> NewaveTim:
         if self.__newavetim is None:
             try:
-                Log.log().info("Lendo arquivo newave.tim")
                 self.__newavetim = NewaveTim.le_arquivo(
                     self.__tmppath, "newave.tim"
                 )
             except Exception:
-                Log.log().info("Arquivo newave.tim não encontrado")
+                pass
         return self.__newavetim
 
     def get_eolicacadastro(self) -> EolicaCadastro:
@@ -876,7 +866,6 @@ class RawFilesRepository(AbstractFilesRepository):
             arq = self.indices.at[
                 "PARQUE-EOLICO-EQUIVALENTE-CADASTRO", "arquivo"
             ]
-            Log.log().info(f"Lendo arquivo {arq}")
             self.__eolicacadastro = EolicaCadastro.le_arquivo(
                 self.__tmppath, arq
             )
@@ -895,37 +884,26 @@ class RawFilesRepository(AbstractFilesRepository):
                 (variable, spatial_resolution, temporal_resolution)
             )
             if regra is None:
-                Log.log().warning(
-                    "Não encontrados dados de operação para "
-                    + f"{variable.value}_{spatial_resolution.value}"
-                    + f"_{temporal_resolution.value}"
-                )
                 return None
             return regra(self.__tmppath, *args, **kwargs)
         except Exception:
-            Log.log().warning(
-                "Arquivo não encontrado para "
-                + f"{variable.value}_{spatial_resolution.value}"
-                + f"_{temporal_resolution.value}: {kwargs}"
-            )
+            pass
             return None
 
     def get_nwlistcf_cortes(self) -> Nwlistcf:
         if self.__nwlistcf is None:
-            Log.log().info(f"Lendo arquivo nwlistcf.rel")
             try:
                 self.__nwlistcf = Nwlistcf.le_arquivo(self.__tmppath)
             except Exception:
-                Log.log().warning("Arquivo nwlistcf.rel não encontrado")
+                pass
         return self.__nwlistcf
 
     def get_nwlistcf_estados(self) -> Estados:
         if self.__estados is None:
-            Log.log().info(f"Lendo arquivo estados.rel")
             try:
                 self.__estados = Estados.le_arquivo(self.__tmppath)
             except Exception:
-                Log.log().warning("Arquivo estados.rel não encontrado")
+                pass
         return self.__estados
 
     def _numero_estagios_individualizados(self) -> int:
@@ -961,7 +939,6 @@ class RawFilesRepository(AbstractFilesRepository):
             else "energiaf.dat"
         )
         if self.__energiaf.get(iteracao) is None:
-            Log.log().info(f"Lendo arquivo {nome_arq}")
             try:
                 dger = self.get_dger()
                 n_rees = self.get_ree().rees.shape[0]
@@ -980,7 +957,7 @@ class RawFilesRepository(AbstractFilesRepository):
                     n_estagios_th,
                 )
             except Exception:
-                Log.log().warning(f"Arquivo {nome_arq} não encontrado")
+                pass
         return self.__energiaf.get(iteracao)
 
     def get_vazaof(self, iteracao: int) -> Vazaof:
@@ -990,7 +967,6 @@ class RawFilesRepository(AbstractFilesRepository):
             else "vazaof.dat"
         )
         if self.__vazaof.get(iteracao) is None:
-            Log.log().info(f"Lendo arquivo {nome_arq}")
             try:
                 dger = self.get_dger()
                 n_uhes = self.get_confhd().usinas.shape[0]
@@ -1013,12 +989,11 @@ class RawFilesRepository(AbstractFilesRepository):
                     n_estagios_th,
                 )
             except Exception:
-                Log.log().warning(f"Arquivo {nome_arq} não encontrado")
+                pass
         return self.__vazaof.get(iteracao)
 
     def get_energiab(self) -> Energiab:
         if self.__energiab is None:
-            Log.log().info("Lendo arquivo energiab.dat")
             try:
                 dger = self.get_dger()
                 n_rees = self.get_ree().rees.shape[0]
@@ -1032,12 +1007,11 @@ class RawFilesRepository(AbstractFilesRepository):
                     n_estagios,
                 )
             except Exception:
-                Log.log().warning("Arquivo energiab.dat não encontrado")
+                pass
         return self.__energiab
 
     def get_vazaob(self) -> Vazaob:
         if self.__vazaob is None:
-            Log.log().info("Lendo arquivo vazaob.dat")
             try:
                 dger = self.get_dger()
                 n_uhes = self.get_confhd().usinas.shape[0]
@@ -1055,7 +1029,7 @@ class RawFilesRepository(AbstractFilesRepository):
                     n_estagios_hib,
                 )
             except Exception:
-                Log.log().warning("Arquivo vazaob.dat não encontrado")
+                pass
         return self.__vazaob
 
     def get_enavazf(self, iteracao: int) -> Enavazf:
@@ -1065,7 +1039,6 @@ class RawFilesRepository(AbstractFilesRepository):
             else "enavazf.dat"
         )
         if self.__enavazf.get(iteracao) is None:
-            Log.log().info(f"Lendo arquivo {nome_arq}")
             try:
                 dger = self.get_dger()
                 n_rees = self.get_ree().rees.shape[0]
@@ -1088,12 +1061,11 @@ class RawFilesRepository(AbstractFilesRepository):
                     n_estagios_th,
                 )
             except Exception:
-                Log.log().warning(f"Arquivo {nome_arq} não encontrado")
+                pass
         return self.__enavazf.get(iteracao)
 
     def get_enavazb(self) -> Enavazb:
         if self.__enavazb is None:
-            Log.log().info("Lendo arquivo enavazb.dat")
             try:
                 dger = self.get_dger()
                 n_rees = self.get_ree().rees.shape[0]
@@ -1111,12 +1083,11 @@ class RawFilesRepository(AbstractFilesRepository):
                     n_estagios,
                 )
             except Exception:
-                Log.log().warning("Arquivo enavazb.dat não encontrado")
+                pass
         return self.__enavazb
 
     def get_energias(self) -> Energias:
         if self.__energias is None:
-            Log.log().info(f"Lendo arquivo energias.dat")
             try:
                 dger = self.get_dger()
                 n_rees = self.get_ree().rees.shape[0]
@@ -1141,12 +1112,11 @@ class RawFilesRepository(AbstractFilesRepository):
                     n_estagios_th,
                 )
             except Exception:
-                Log.log().warning(f"Arquivo energias.dat não encontrado")
+                pass
         return self.__energias
 
     def get_enavazs(self) -> Enavazf:
         if self.__enavazs is None:
-            Log.log().info(f"Lendo arquivo enavazs.dat")
             try:
                 dger = self.get_dger()
                 n_rees = self.get_ree().rees.shape[0]
@@ -1175,12 +1145,11 @@ class RawFilesRepository(AbstractFilesRepository):
                     n_estagios_th,
                 )
             except Exception:
-                Log.log().warning("Arquivo enavazs.dat não encontrado")
+                pass
         return self.__enavazs
 
     def get_vazaos(self) -> Vazaos:
         if self.__vazaos is None:
-            Log.log().info(f"Lendo arquivo vazaos.dat")
             try:
                 dger = self.get_dger()
                 n_uhes = self.get_confhd().usinas.shape[0]
@@ -1209,31 +1178,29 @@ class RawFilesRepository(AbstractFilesRepository):
                     n_estagios_th,
                 )
             except Exception:
-                Log.log().warning(f"Arquivo vazaos.dat não encontrado")
+                pass
         return self.__vazaos
 
     def get_vazoes(self) -> Vazoes:
         if self.__vazoes is None:
-            Log.log().info("Lendo arquivo vazoes.dat")
             try:
                 self.__vazoes = Vazoes.le_arquivo(
                     self.__tmppath,
                     "vazoes.dat",
                 )
             except Exception:
-                Log.log().warning("Arquivo vazoes.dat não encontrado")
+                pass
         return self.__vazoes
 
     def get_hidr(self) -> Hidr:
         if self.__hidr is None:
-            Log.log().info("Lendo arquivo hidr.dat")
             try:
                 self.__hidr = Hidr.le_arquivo(
                     self.__tmppath,
                     "hidr.dat",
                 )
             except Exception:
-                Log.log().warning("Arquivo hidr.dat não encontrado")
+                pass
         return self.__hidr
 
 
