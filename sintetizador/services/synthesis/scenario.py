@@ -1626,5 +1626,5 @@ class ScenarioSynthetizer:
                 with uow:
                     uow.export.synthetize_df(df, filename)
         except Exception as e:
-            print_exc(e)
+            print_exc()
             cls.logger.error(str(e))
