@@ -2,12 +2,13 @@ from typing import Callable, Dict, List, Optional
 import pandas as pd  # type: ignore
 import numpy as np
 import logging
+from multiprocessing import Pool
 from inewave.config import MESES_DF
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-
-from sintetizador.services.unitofwork import AbstractUnitOfWork
 from sintetizador.utils.log import Log
+from sintetizador.model.settings import Settings
+from sintetizador.services.unitofwork import AbstractUnitOfWork
 from sintetizador.model.operation.variable import Variable
 from sintetizador.model.operation.spatialresolution import SpatialResolution
 from sintetizador.model.operation.temporalresolution import TemporalResolution
@@ -802,57 +803,65 @@ class OperationSynthetizer:
                 )
             uhes_idx = confhd.usinas["Número"]
             uhes_name = confhd.usinas["Nome"]
-            df = pd.DataFrame()
-            for s, n in zip(uhes_idx, uhes_name):
-                cls.logger.info(f"Processando arquivo da UHE: {s} - {n}")
-                df_uhe = cls._resolve_temporal_resolution(
-                    OperationSynthesis(
-                        variable=synthesis.variable,
-                        spatial_resolution=synthesis.spatial_resolution,
-                        temporal_resolution=TemporalResolution.PATAMAR,
-                    ),
-                    uow.files.get_nwlistop(
-                        variable_map[synthesis.variable],
-                        synthesis.spatial_resolution,
-                        TemporalResolution.PATAMAR,
-                        uhe=s,
-                    ),
-                )
-                if df_uhe is None:
-                    continue
-                cols = df_uhe.columns.tolist()
-                df_uhe["usina"] = n
-                df_uhe = df_uhe[["usina"] + cols]
-                df = pd.concat(
-                    [df, df_uhe],
-                    ignore_index=True,
-                )
-            cols_nao_cenarios = [
-                "estagio",
-                "dataInicio",
-                "dataFim",
-                "patamar",
-                "usina",
-            ]
-            cols_cenarios = [
-                c for c in df.columns.tolist() if c not in cols_nao_cenarios
-            ]
-            if synthesis.temporal_resolution == TemporalResolution.ESTAGIO:
-                patamares = df["patamar"].unique().tolist()
-                cenarios_patamares: List[np.ndarray] = []
-                p0 = patamares[0]
-                for p in patamares:
-                    cenarios_patamares.append(
-                        df.loc[df["patamar"] == p, cols_cenarios].to_numpy()
-                    )
-                df.loc[df["patamar"] == p0, cols_cenarios] = 0.0
-                for c in cenarios_patamares:
-                    df.loc[df["patamar"] == p0, cols_cenarios] += c
-                df = df.loc[df["patamar"] == p0, :]
 
-            df.loc[:, cols_cenarios] *= FATOR_HM3_M3S
-            df = df.loc[df["dataInicio"] < fim, :]
-            return df
+        df_completo = pd.DataFrame()
+        n_procs = int(Settings().processors)
+        with Pool(processes=n_procs) as pool:
+            if n_procs > 1:
+                cls.logger.info("Paralelizando...")
+            async_res = {
+                idx: pool.apply_async(
+                    cls.__resolve_UHE_usina,
+                    (
+                        uow,
+                        OperationSynthesis(
+                            variable=variable_map[synthesis.variable],
+                            spatial_resolution=synthesis.spatial_resolution,
+                            temporal_resolution=TemporalResolution.PATAMAR,
+                        ),
+                        idx,
+                        name,
+                    ),
+                )
+                for idx, name in zip(uhes_idx, uhes_name)
+            }
+            dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
+        cls.logger.info("Compactando dados...")
+        for _, df in dfs.items():
+            df_completo = pd.concat([df_completo, df], ignore_index=True)
+
+        cols_nao_cenarios = [
+            "estagio",
+            "dataInicio",
+            "dataFim",
+            "patamar",
+            "usina",
+        ]
+        cols_cenarios = [
+            c
+            for c in df_completo.columns.tolist()
+            if c not in cols_nao_cenarios
+        ]
+        if synthesis.temporal_resolution == TemporalResolution.ESTAGIO:
+            patamares = df_completo["patamar"].unique().tolist()
+            cenarios_patamares: List[np.ndarray] = []
+            p0 = patamares[0]
+            for p in patamares:
+                cenarios_patamares.append(
+                    df_completo.loc[
+                        df_completo["patamar"] == p, cols_cenarios
+                    ].to_numpy()
+                )
+            df_completo.loc[df_completo["patamar"] == p0, cols_cenarios] = 0.0
+            for c in cenarios_patamares:
+                df_completo.loc[
+                    df_completo["patamar"] == p0, cols_cenarios
+                ] += c
+            df_completo = df_completo.loc[df_completo["patamar"] == p0, :]
+
+        df_completo.loc[:, cols_cenarios] *= FATOR_HM3_M3S
+        df_completo = df_completo.loc[df_completo["dataInicio"] < fim, :]
+        return df_completo
 
     @classmethod
     def __stub_QDEF(
@@ -1085,59 +1094,69 @@ class OperationSynthetizer:
                 )
             uhes_idx = confhd.usinas["Número"]
             uhes_name = confhd.usinas["Nome"]
-            df = pd.DataFrame()
-            for s, n in zip(uhes_idx, uhes_name):
-                cls.logger.info(f"Processando arquivo da UHE: {s} - {n}")
-                df_uhe = cls._resolve_temporal_resolution(
-                    OperationSynthesis(
-                        variable=synthesis.variable,
-                        spatial_resolution=synthesis.spatial_resolution,
-                        temporal_resolution=TemporalResolution.PATAMAR,
-                    ),
-                    uow.files.get_nwlistop(
-                        synthesis.variable,
-                        synthesis.spatial_resolution,
-                        TemporalResolution.PATAMAR,
-                        uhe=s,
-                    ),
-                )
-                if df_uhe is None:
-                    continue
-                cols = df_uhe.columns.tolist()
-                df_uhe["usina"] = n
-                df_uhe = df_uhe[["usina"] + cols]
-                df = pd.concat(
-                    [df, df_uhe],
-                    ignore_index=True,
-                )
-            cols_nao_cenarios = [
-                "estagio",
-                "dataInicio",
-                "dataFim",
-                "patamar",
-                "usina",
-            ]
-            cols_cenarios = [
-                c for c in df.columns.tolist() if c not in cols_nao_cenarios
-            ]
-            if synthesis.temporal_resolution == TemporalResolution.ESTAGIO:
-                patamares = df["patamar"].unique().tolist()
-                cenarios_patamares: List[np.ndarray] = []
-                p0 = patamares[0]
-                for p in patamares:
-                    cenarios_patamares.append(
-                        df.loc[df["patamar"] == p, cols_cenarios].to_numpy()
-                    )
-                df.loc[df["patamar"] == p0, cols_cenarios] = 0.0
-                for c in cenarios_patamares:
-                    df.loc[df["patamar"] == p0, cols_cenarios] += c
-                df = df.loc[df["patamar"] == p0, :]
 
-            df.loc[:, cols_cenarios] *= FATOR_HM3_M3S
-            if df is not None:
-                if not df.empty:
-                    df = df.loc[df["dataInicio"] < fim, :]
-            return df
+        df_completo = pd.DataFrame()
+        n_procs = int(Settings().processors)
+        with Pool(processes=n_procs) as pool:
+            if n_procs > 1:
+                cls.logger.info("Paralelizando...")
+            async_res = {
+                idx: pool.apply_async(
+                    cls.__resolve_UHE_usina,
+                    (
+                        uow,
+                        OperationSynthesis(
+                            variable=synthesis.variable,
+                            spatial_resolution=synthesis.spatial_resolution,
+                            temporal_resolution=TemporalResolution.PATAMAR,
+                        ),
+                        idx,
+                        name,
+                    ),
+                )
+                for idx, name in zip(uhes_idx, uhes_name)
+            }
+            dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
+        cls.logger.info("Compactando dados...")
+        for _, df in dfs.items():
+            df_completo = pd.concat([df_completo, df], ignore_index=True)
+
+        cols_nao_cenarios = [
+            "estagio",
+            "dataInicio",
+            "dataFim",
+            "patamar",
+            "usina",
+        ]
+        cols_cenarios = [
+            c
+            for c in df_completo.columns.tolist()
+            if c not in cols_nao_cenarios
+        ]
+        if synthesis.temporal_resolution == TemporalResolution.ESTAGIO:
+            patamares = df_completo["patamar"].unique().tolist()
+            cenarios_patamares: List[np.ndarray] = []
+            p0 = patamares[0]
+            for p in patamares:
+                cenarios_patamares.append(
+                    df_completo.loc[
+                        df_completo["patamar"] == p, cols_cenarios
+                    ].to_numpy()
+                )
+            df_completo.loc[df_completo["patamar"] == p0, cols_cenarios] = 0.0
+            for c in cenarios_patamares:
+                df_completo.loc[
+                    df_completo["patamar"] == p0, cols_cenarios
+                ] += c
+            df_completo = df_completo.loc[df_completo["patamar"] == p0, :]
+
+        df_completo.loc[:, cols_cenarios] *= FATOR_HM3_M3S
+        if df_completo is not None:
+            if not df_completo.empty:
+                df_completo = df_completo.loc[
+                    df_completo["dataInicio"] < fim, :
+                ]
+        return df_completo
 
     @classmethod
     def __resolve_UHE(
@@ -1185,31 +1204,58 @@ class OperationSynthetizer:
                 )
             uhes_idx = confhd.usinas["Número"]
             uhes_name = confhd.usinas["Nome"]
-            df = pd.DataFrame()
-            for s, n in zip(uhes_idx, uhes_name):
-                cls.logger.info(f"Processando arquivo da UHE: {s} - {n}")
-                df_uhe = cls._resolve_temporal_resolution(
-                    synthesis,
-                    uow.files.get_nwlistop(
-                        synthesis.variable,
-                        synthesis.spatial_resolution,
-                        synthesis.temporal_resolution,
-                        uhe=s,
-                    ),
+
+        df_completo = pd.DataFrame()
+        n_procs = int(Settings().processors)
+        with Pool(processes=n_procs) as pool:
+            if n_procs > 1:
+                cls.logger.info("Paralelizando...")
+            async_res = {
+                idx: pool.apply_async(
+                    cls.__resolve_UHE_usina, (uow, synthesis, idx, name)
                 )
-                if df_uhe is None:
-                    continue
-                cols = df_uhe.columns.tolist()
-                df_uhe["usina"] = n
-                df_uhe = df_uhe[["usina"] + cols]
-                df = pd.concat(
-                    [df, df_uhe],
-                    ignore_index=True,
-                )
-            if df is not None:
-                if not df.empty:
-                    df = df.loc[df["dataInicio"] < fim, :]
-            return df
+                for idx, name in zip(uhes_idx, uhes_name)
+            }
+            dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
+        cls.logger.info("Compactando dados...")
+        for _, df in dfs.items():
+            df_completo = pd.concat([df_completo, df], ignore_index=True)
+
+        if not df_completo.empty:
+            df_completo = df_completo.loc[df_completo["dataInicio"] < fim, :]
+        return df_completo
+
+    @classmethod
+    def __resolve_UHE_usina(
+        cls,
+        uow: AbstractUnitOfWork,
+        synthesis: OperationSynthesis,
+        uhe_index: int,
+        uhe_name: str,
+    ) -> pd.DataFrame:
+        logger_name = f"{synthesis.variable.value}_{uhe_name}"
+        logger = Log.configure_process_logger(
+            uow.queue, logger_name, uhe_index
+        )
+        with uow:
+            logger.info(
+                f"Processando arquivo da UHE: {uhe_index} - {uhe_name}"
+            )
+            df_uhe = cls._resolve_temporal_resolution(
+                synthesis,
+                uow.files.get_nwlistop(
+                    synthesis.variable,
+                    synthesis.spatial_resolution,
+                    synthesis.temporal_resolution,
+                    uhe=uhe_index,
+                ),
+            )
+            if df_uhe is None:
+                return None
+            cols = df_uhe.columns.tolist()
+            df_uhe["usina"] = uhe_name
+            df_uhe = df_uhe[["usina"] + cols]
+            return df_uhe
 
     @classmethod
     def __resolve_UTE(
