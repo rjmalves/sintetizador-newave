@@ -69,7 +69,7 @@ class PolicySynthetizer:
 
     @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
-        cls.logger = logging.getLogger()
+        cls.logger = logging.getLogger("main")
         try:
             if len(variables) == 0:
                 variables = PolicySynthetizer._default_args()
