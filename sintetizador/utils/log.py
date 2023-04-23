@@ -37,7 +37,7 @@ class Log(metaclass=Singleton):
     @classmethod
     def configure_main_logger(cls, q: Queue) -> logging.Logger:
         h = logging.handlers.QueueHandler(q)
-        logger = logging.getLogger()
+        logger = logging.getLogger("main")
         logger.addHandler(h)
         logger.setLevel(logging.INFO)
         return logger

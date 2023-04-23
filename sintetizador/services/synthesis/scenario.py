@@ -1,7 +1,6 @@
 from typing import Callable, Dict, List, Tuple, Optional
 import pandas as pd  # type: ignore
 import numpy as np  # type: ignore
-from traceback import print_exc
 import logging
 from multiprocessing import Pool, Queue
 from datetime import datetime
@@ -1584,10 +1583,7 @@ class ScenarioSynthetizer:
             SpatialResolution.USINA_HIDROELETRICA: ["nome_usina"],
         }
         df = cls._get_cached_variable(
-            synthesis.variable,
-            synthesis.step,
-            uow,
-            q
+            synthesis.variable, synthesis.step, uow, q
         )
         df = cls._resolve_group(
             RESOLUTION_MAP[synthesis.spatial_resolution], df
@@ -1637,5 +1633,4 @@ class ScenarioSynthetizer:
                 with uow:
                     uow.export.synthetize_df(df, filename)
         except Exception as e:
-            print_exc()
             cls.logger.error(str(e))
