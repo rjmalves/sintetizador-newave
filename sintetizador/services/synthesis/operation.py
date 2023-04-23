@@ -777,7 +777,7 @@ class OperationSynthetizer:
             return df
 
     @classmethod
-    def __resolve_UHE_usina(
+    def _resolve_UHE_usina(
         cls,
         uow: AbstractUnitOfWork,
         synthesis: OperationSynthesis,
@@ -843,7 +843,7 @@ class OperationSynthetizer:
                 cls.logger.info("Paralelizando...")
             async_res = {
                 idx: pool.apply_async(
-                    cls.__resolve_UHE_usina,
+                    cls._resolve_UHE_usina,
                     (
                         uow,
                         OperationSynthesis(
@@ -1134,7 +1134,7 @@ class OperationSynthetizer:
                 cls.logger.info("Paralelizando...")
             async_res = {
                 idx: pool.apply_async(
-                    cls.__resolve_UHE_usina,
+                    cls._resolve_UHE_usina,
                     (
                         uow,
                         OperationSynthesis(
@@ -1244,7 +1244,7 @@ class OperationSynthetizer:
                 cls.logger.info("Paralelizando...")
             async_res = {
                 idx: pool.apply_async(
-                    cls.__resolve_UHE_usina, (uow, synthesis, idx, name)
+                    cls._resolve_UHE_usina, (uow, synthesis, idx, name)
                 )
                 for idx, name in zip(uhes_idx, uhes_name)
             }
