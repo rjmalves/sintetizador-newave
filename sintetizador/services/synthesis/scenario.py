@@ -1158,7 +1158,9 @@ class ScenarioSynthetizer:
         return None
 
     @classmethod
-    def _resolve_enaa_forward(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def _resolve_enaa_forward(
+        cls, uow: AbstractUnitOfWork, q: Queue
+    ) -> pd.DataFrame:
         cls.logger.info("Paralelizando...")
         with uow:
             pmo = uow.files.get_pmo()
@@ -1168,7 +1170,7 @@ class ScenarioSynthetizer:
         with Pool(processes=int(Settings().processors)) as pool:
             async_res = {
                 it: pool.apply_async(
-                    cls._resolve_enaa_forward_iteracao, (uow, it, uow.queue)
+                    cls._resolve_enaa_forward_iteracao, (uow, it, q)
                 )
                 for it in range(1, n_iters + 1)
             }
@@ -1295,7 +1297,11 @@ class ScenarioSynthetizer:
 
     @classmethod
     def _get_cached_variable(
-        cls, variable: Variable, step: Step, uow: AbstractUnitOfWork
+        cls,
+        variable: Variable,
+        step: Step,
+        uow: AbstractUnitOfWork,
+        q: Queue,
     ) -> pd.DataFrame:
         CACHING_FUNCTION_MAP: Dict[Tuple[Variable, Step], Callable] = {
             (Variable.ENA_ABSOLUTA, Step.FORWARD): cls._resolve_enaa_forward,
@@ -1321,7 +1327,7 @@ class ScenarioSynthetizer:
         if cls.CACHED_SYNTHESIS.get((variable, step)) is None:
             cls.CACHED_SYNTHESIS[(variable, step)] = CACHING_FUNCTION_MAP[
                 (variable, step)
-            ](uow)
+            ](uow, q)
         return cls.CACHED_SYNTHESIS.get((variable, step), pd.DataFrame())
 
     @classmethod
@@ -1569,7 +1575,7 @@ class ScenarioSynthetizer:
 
     @classmethod
     def _resolve_spatial_resolution(
-        cls, synthesis: ScenarioSynthesis, uow: AbstractUnitOfWork
+        cls, synthesis: ScenarioSynthesis, uow: AbstractUnitOfWork, q: Queue
     ) -> pd.DataFrame:
         RESOLUTION_MAP: Dict[SpatialResolution, List[str]] = {
             SpatialResolution.SISTEMA_INTERLIGADO: [],
@@ -1601,7 +1607,9 @@ class ScenarioSynthetizer:
         )
 
     @classmethod
-    def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
+    def synthetize(
+        cls, variables: List[str], uow: AbstractUnitOfWork, q: Queue
+    ):
         cls.logger = logging.getLogger("main")
         try:
             if len(variables) == 0:
@@ -1616,7 +1624,7 @@ class ScenarioSynthetizer:
             for s in valid_synthesis:
                 filename = str(s)
                 cls.logger.info(f"Realizando síntese de {filename}")
-                df = cls._resolve_spatial_resolution(s, uow)
+                df = cls._resolve_spatial_resolution(s, uow, q)
                 if df is None:
                     continue
                 elif isinstance(df, pd.DataFrame):

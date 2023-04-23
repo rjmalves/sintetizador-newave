@@ -1,6 +1,7 @@
 import pathlib
 import shutil
 from sintetizador.model.settings import Settings
+from multiprocessing import Queue
 import sintetizador.domain.commands as commands
 from sintetizador.services.unitofwork import AbstractUnitOfWork
 from sintetizador.services.synthesis.system import SystemSynthetizer
@@ -23,9 +24,9 @@ def synthetize_execution(
 
 
 def synthetize_scenarios(
-    command: commands.SynthetizeScenarios, uow: AbstractUnitOfWork
+    command: commands.SynthetizeScenarios, uow: AbstractUnitOfWork, q: Queue
 ):
-    ScenarioSynthetizer.synthetize(command.variables, uow)
+    ScenarioSynthetizer.synthetize(command.variables, uow, q)
 
 
 def synthetize_operation(
