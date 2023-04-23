@@ -1204,7 +1204,10 @@ class ScenarioSynthetizer:
             pmo = uow.files.get_pmo()
             n_iters = pmo.convergencia["Iteração"].max()
         df_completo = pd.DataFrame()
-        with Pool(processes=int(Settings().processors)) as pool:
+        n_procs = int(Settings().processors)
+        with Pool(processes=n_procs) as pool:
+            if n_procs > 1:
+                cls.logger.info("Paralelizando...")
             async_res = {
                 it: pool.apply_async(
                     cls._resolve_qinc_forward_iteracao, (uow, it)
@@ -1212,6 +1215,7 @@ class ScenarioSynthetizer:
                 for it in range(1, n_iters + 1)
             }
             dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
+        cls.logger.info("Compactando dados...")
         for _, df in dfs.items():
             df_completo = pd.concat([df_completo, df], ignore_index=True)
         return df_completo
