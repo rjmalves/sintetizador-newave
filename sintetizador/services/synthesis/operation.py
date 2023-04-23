@@ -777,6 +777,38 @@ class OperationSynthetizer:
             return df
 
     @classmethod
+    def __resolve_UHE_usina(
+        cls,
+        uow: AbstractUnitOfWork,
+        synthesis: OperationSynthesis,
+        uhe_index: int,
+        uhe_name: str,
+    ) -> pd.DataFrame:
+        logger_name = f"{synthesis.variable.value}_{uhe_name}"
+        logger = Log.configure_process_logger(
+            uow.queue, logger_name, uhe_index
+        )
+        with uow:
+            logger.info(
+                f"Processando arquivo da UHE: {uhe_index} - {uhe_name}"
+            )
+            df_uhe = cls._resolve_temporal_resolution(
+                synthesis,
+                uow.files.get_nwlistop(
+                    synthesis.variable,
+                    synthesis.spatial_resolution,
+                    synthesis.temporal_resolution,
+                    uhe=uhe_index,
+                ),
+            )
+            if df_uhe is None:
+                return None
+            cols = df_uhe.columns.tolist()
+            df_uhe["usina"] = uhe_name
+            df_uhe = df_uhe[["usina"] + cols]
+            return df_uhe
+
+    @classmethod
     def __stub_QTUR_QVER(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
@@ -1224,38 +1256,6 @@ class OperationSynthetizer:
         if not df_completo.empty:
             df_completo = df_completo.loc[df_completo["dataInicio"] < fim, :]
         return df_completo
-
-    @classmethod
-    def __resolve_UHE_usina(
-        cls,
-        uow: AbstractUnitOfWork,
-        synthesis: OperationSynthesis,
-        uhe_index: int,
-        uhe_name: str,
-    ) -> pd.DataFrame:
-        logger_name = f"{synthesis.variable.value}_{uhe_name}"
-        logger = Log.configure_process_logger(
-            uow.queue, logger_name, uhe_index
-        )
-        with uow:
-            logger.info(
-                f"Processando arquivo da UHE: {uhe_index} - {uhe_name}"
-            )
-            df_uhe = cls._resolve_temporal_resolution(
-                synthesis,
-                uow.files.get_nwlistop(
-                    synthesis.variable,
-                    synthesis.spatial_resolution,
-                    synthesis.temporal_resolution,
-                    uhe=uhe_index,
-                ),
-            )
-            if df_uhe is None:
-                return None
-            cols = df_uhe.columns.tolist()
-            df_uhe["usina"] = uhe_name
-            df_uhe = df_uhe[["usina"] + cols]
-            return df_uhe
 
     @classmethod
     def __resolve_UTE(
