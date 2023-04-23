@@ -3,7 +3,7 @@ import pandas as pd  # type: ignore
 import numpy as np  # type: ignore
 from traceback import print_exc
 import logging
-from multiprocessing import Pool, Manager
+from multiprocessing import Pool, Queue
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
@@ -1126,10 +1126,10 @@ class ScenarioSynthetizer:
 
     @classmethod
     def _resolve_enaa_forward_iteracao(
-        cls, uow: AbstractUnitOfWork, it: int
+        cls, uow: AbstractUnitOfWork, it: int, q: Queue
     ) -> pd.DataFrame:
         logger = Log.configure_process_logger(
-            uow.queue, Variable.ENA_ABSOLUTA.value, it
+            q, Variable.ENA_ABSOLUTA.value, it
         )
 
         with uow:
@@ -1164,10 +1164,11 @@ class ScenarioSynthetizer:
             pmo = uow.files.get_pmo()
             n_iters = pmo.convergencia["Iteração"].max()
         df_completo = pd.DataFrame()
+        cls.logger.info("Criando processos...")
         with Pool(processes=int(Settings().processors)) as pool:
             async_res = {
                 it: pool.apply_async(
-                    cls._resolve_enaa_forward_iteracao, (uow, it)
+                    cls._resolve_enaa_forward_iteracao, (uow, it, uow.queue)
                 )
                 for it in range(1, n_iters + 1)
             }
