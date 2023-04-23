@@ -1587,6 +1587,7 @@ class ScenarioSynthetizer:
             synthesis.variable,
             synthesis.step,
             uow,
+            q
         )
         df = cls._resolve_group(
             RESOLUTION_MAP[synthesis.spatial_resolution], df
