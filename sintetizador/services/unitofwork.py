@@ -40,7 +40,7 @@ class AbstractUnitOfWork(ABC):
 
 class FSUnitOfWork(AbstractUnitOfWork):
     def __init__(self, directory: str):
-        self._current_path = Path(curdir).resolve()
+        self._current_path = str(Path(curdir).resolve())
         self._synthesis_directory = directory
         self._files = None
         self._exporter = None
@@ -49,7 +49,7 @@ class FSUnitOfWork(AbstractUnitOfWork):
         if self._files is None:
             self._files = RawFilesRepository(str(self._current_path))
         if self._exporter is None:
-            synthesis_outdir = self._current_path.joinpath(
+            synthesis_outdir = Path(self._current_path).joinpath(
                 self._synthesis_directory
             )
             synthesis_outdir.mkdir(parents=True, exist_ok=True)
@@ -64,7 +64,12 @@ class FSUnitOfWork(AbstractUnitOfWork):
 
     def __exit__(self, *args):
         chdir(self._current_path)
+        self._files = None
+        self._exporter = None
         super().__exit__(*args)
+
+    def __getnewargs__(self):
+        return (self._synthesis_directory,)
 
     @property
     def files(self) -> RawFilesRepository:
