@@ -1,10 +1,9 @@
 from typing import Callable, Dict, List, Tuple, Optional
 import pandas as pd  # type: ignore
 import numpy as np  # type: ignore
-
-from queue import Queue
+from traceback import print_exc
 import logging
-from multiprocessing import Pool, Manager, Process
+from multiprocessing import Pool, Manager
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
@@ -1627,4 +1626,5 @@ class ScenarioSynthetizer:
                 with uow:
                     uow.export.synthetize_df(df, filename)
         except Exception as e:
+            print_exc(e)
             cls.logger.error(str(e))
