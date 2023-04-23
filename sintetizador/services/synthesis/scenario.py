@@ -2,7 +2,7 @@ from typing import Callable, Dict, List, Tuple, Optional
 import pandas as pd  # type: ignore
 import numpy as np  # type: ignore
 import logging
-from multiprocessing import Pool, Queue
+from multiprocessing import Pool
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 

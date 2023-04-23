@@ -703,80 +703,6 @@ class OperationSynthetizer:
             return df
 
     @classmethod
-    def __stub_agrega_estagio_variaveis_por_patamar(
-        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
-        with uow:
-            confhd = uow.files.get_confhd()
-            ree = uow.files.get_ree()
-            dger = uow.files.get_dger()
-            # Obtem o fim do periodo individualizado
-            if ree.rees["Ano Fim Individualizado"].isna().sum() > 0:
-                fim = datetime(
-                    year=dger.ano_inicio_estudo + dger.num_anos_estudo - 1,
-                    month=12,
-                    day=1,
-                )
-            else:
-                fim = datetime(
-                    year=int(ree.rees["Ano Fim Individualizado"].tolist()[0]),
-                    month=int(ree.rees["Mês Fim Individualizado"].tolist()[0]),
-                    day=1,
-                )
-            uhes_idx = confhd.usinas["Número"]
-            uhes_name = confhd.usinas["Nome"]
-            df = pd.DataFrame()
-            for s, n in zip(uhes_idx, uhes_name):
-                cls.logger.info(f"Processando arquivo da UHE: {s} - {n}")
-                df_uhe = cls._resolve_temporal_resolution(
-                    OperationSynthesis(
-                        variable=synthesis.variable,
-                        spatial_resolution=synthesis.spatial_resolution,
-                        temporal_resolution=TemporalResolution.PATAMAR,
-                    ),
-                    uow.files.get_nwlistop(
-                        synthesis.variable,
-                        synthesis.spatial_resolution,
-                        TemporalResolution.PATAMAR,
-                        uhe=s,
-                    ),
-                )
-                if df_uhe is None:
-                    continue
-                cols = df_uhe.columns.tolist()
-                df_uhe["usina"] = n
-                df_uhe = df_uhe[["usina"] + cols]
-                df = pd.concat(
-                    [df, df_uhe],
-                    ignore_index=True,
-                )
-            cols_nao_cenarios = [
-                "estagio",
-                "dataInicio",
-                "dataFim",
-                "patamar",
-                "usina",
-            ]
-            cols_cenarios = [
-                c for c in df.columns.tolist() if c not in cols_nao_cenarios
-            ]
-            if synthesis.temporal_resolution == TemporalResolution.ESTAGIO:
-                patamares = df["patamar"].unique().tolist()
-                cenarios_patamares: List[np.ndarray] = []
-                p0 = patamares[0]
-                for p in patamares:
-                    cenarios_patamares.append(
-                        df.loc[df["patamar"] == p, cols_cenarios].to_numpy()
-                    )
-                df.loc[df["patamar"] == p0, cols_cenarios] = 0.0
-                for c in cenarios_patamares:
-                    df.loc[df["patamar"] == p0, cols_cenarios] += c
-                df = df.loc[df["patamar"] == p0, :]
-
-            df = df.loc[df["dataInicio"] < fim, :]
-            return df
-
-    @classmethod
     def _resolve_UHE_usina(
         cls,
         uow: AbstractUnitOfWork,
@@ -807,6 +733,88 @@ class OperationSynthetizer:
             df_uhe["usina"] = uhe_name
             df_uhe = df_uhe[["usina"] + cols]
             return df_uhe
+
+    @classmethod
+    def __stub_agrega_estagio_variaveis_por_patamar(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        with uow:
+            confhd = uow.files.get_confhd()
+            ree = uow.files.get_ree()
+            dger = uow.files.get_dger()
+            # Obtem o fim do periodo individualizado
+            if ree.rees["Ano Fim Individualizado"].isna().sum() > 0:
+                fim = datetime(
+                    year=dger.ano_inicio_estudo + dger.num_anos_estudo - 1,
+                    month=12,
+                    day=1,
+                )
+            else:
+                fim = datetime(
+                    year=int(ree.rees["Ano Fim Individualizado"].tolist()[0]),
+                    month=int(ree.rees["Mês Fim Individualizado"].tolist()[0]),
+                    day=1,
+                )
+            uhes_idx = confhd.usinas["Número"]
+            uhes_name = confhd.usinas["Nome"]
+
+        df_completo = pd.DataFrame()
+        n_procs = int(Settings().processors)
+        with Pool(processes=n_procs) as pool:
+            if n_procs > 1:
+                cls.logger.info("Paralelizando...")
+            async_res = {
+                idx: pool.apply_async(
+                    cls._resolve_UHE_usina,
+                    (
+                        uow,
+                        OperationSynthesis(
+                            variable=synthesis.variable,
+                            spatial_resolution=synthesis.spatial_resolution,
+                            temporal_resolution=TemporalResolution.PATAMAR,
+                        ),
+                        idx,
+                        name,
+                    ),
+                )
+                for idx, name in zip(uhes_idx, uhes_name)
+            }
+            dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
+        cls.logger.info("Compactando dados...")
+        for _, df in dfs.items():
+            df_completo = pd.concat([df_completo, df], ignore_index=True)
+
+        cols_nao_cenarios = [
+            "estagio",
+            "dataInicio",
+            "dataFim",
+            "patamar",
+            "usina",
+        ]
+        cols_cenarios = [
+            c
+            for c in df_completo.columns.tolist()
+            if c not in cols_nao_cenarios
+        ]
+        if synthesis.temporal_resolution == TemporalResolution.ESTAGIO:
+            patamares = df_completo["patamar"].unique().tolist()
+            cenarios_patamares: List[np.ndarray] = []
+            p0 = patamares[0]
+            for p in patamares:
+                cenarios_patamares.append(
+                    df_completo.loc[
+                        df_completo["patamar"] == p, cols_cenarios
+                    ].to_numpy()
+                )
+            df_completo.loc[df_completo["patamar"] == p0, cols_cenarios] = 0.0
+            for c in cenarios_patamares:
+                df_completo.loc[
+                    df_completo["patamar"] == p0, cols_cenarios
+                ] += c
+            df_completo = df_completo.loc[df_completo["patamar"] == p0, :]
+
+        df_completo = df_completo.loc[df_completo["dataInicio"] < fim, :]
+        return df_completo
 
     @classmethod
     def __stub_QTUR_QVER(
