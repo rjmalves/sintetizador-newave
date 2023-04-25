@@ -201,8 +201,9 @@ class ScenarioSynthetizer:
         - nome_ree (`str`)
         - codigo_submercado (`int`)
         - nome_submercado (`str`)
+        - estagio (`int`)
         - mes (`int`)
-        - vazao (`float`)
+        - valor (`float`)
 
         :return: A tabela como um DataFrame
         :rtype: pd.DataFrame | None
@@ -210,22 +211,38 @@ class ScenarioSynthetizer:
         cls.logger.info("Calculando séries de MLT para QINC - UHE")
         uhes = uow.files.get_confhd().usinas
         hidr = uow.files.get_hidr().cadastro
-        df_completo_mlt = pd.DataFrame(
-            columns=["codigo_usina", "nome_usina", "mes", "vazao"]
+        dger = uow.files.get_dger()
+        mes_inicio = dger.mes_inicio_estudo
+        ano_inicio = dger.ano_inicio_estudo
+        anos_estudo = dger.num_anos_estudo
+        datas = pd.date_range(
+            datetime(year=ano_inicio - 1, month=1, day=1),
+            datetime(year=ano_inicio + anos_estudo - 1, month=12, day=1),
+            freq="MS",
         )
+        df_mlt = pd.DataFrame(
+            data={
+                "estagio": list(range(-(12 + mes_inicio - 2), len(datas) + 1)),
+                "mes": [d.month for d in datas],
+            }
+        )
+        df_completo_mlt = pd.DataFrame()
         for uhe in uhes["Número"]:
             vazao = cls._gera_serie_incremental_uhe(uhe, uow)
             vazao_mlt = cls._mlt(vazao)
-            df_mlt = pd.DataFrame(
-                data={
-                    "codigo_usina": [uhe] * len(vazao_mlt),
-                    "nome_usina": [hidr.at[uhe, "Nome"]] * len(vazao_mlt),
-                    "mes": vazao_mlt["mes"],
-                    "vazao": vazao_mlt["vazao"],
-                }
+            df_mlt_uhe = df_mlt.merge(
+                pd.DataFrame(
+                    data={
+                        "codigo_usina": [uhe] * len(vazao_mlt),
+                        "nome_usina": [hidr.at[uhe, "Nome"]] * len(vazao_mlt),
+                        "mes": vazao_mlt["mes"],
+                        "valor": vazao_mlt["vazao"].to_numpy(),
+                    }
+                ),
+                on="mes",
             )
             df_completo_mlt = pd.concat(
-                [df_completo_mlt, df_mlt], ignore_index=True
+                [df_completo_mlt, df_mlt_uhe], ignore_index=True
             )
         # Adiciona dados de ree e submercado à série
         confhd = uow.files.get_confhd().usinas
@@ -256,7 +273,8 @@ class ScenarioSynthetizer:
             ].tolist()[0],
             axis=1,
         )
-        return df_completo_mlt
+        print(df_completo_mlt)
+        return df_completo_mlt.sort_values(["estagio", "codigo_usina"])
 
     @classmethod
     def _gera_series_energia_mlt_rees(
