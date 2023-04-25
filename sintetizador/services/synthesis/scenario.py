@@ -5,7 +5,7 @@ import logging
 from multiprocessing import Pool
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-
+from inewave.config import MESES_DF
 from sintetizador.services.unitofwork import AbstractUnitOfWork
 from sintetizador.utils.log import Log
 from sintetizador.model.settings import Settings
@@ -259,58 +259,102 @@ class ScenarioSynthetizer:
         return df_completo_mlt
 
     @classmethod
-    def _gera_series_energia_mlt_uhes(
+    def _gera_series_energia_mlt_rees(
         cls, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         """
-        Extrai a MLT para todas as UHEs.
+        Extrai a MLT para todos os REEs.
 
-        Premissa: a conversão para a energia é
-        feita com base na primeira configuração por
-        enquanto.
-
-        - codigo_usina (`int`)
-        - nome_usina (`str`)
         - codigo_ree (`int`)
         - nome_ree (`str`)
         - codigo_submercado (`int`)
         - nome_submercado (`str`)
+        - estagio (`int`)
+        - configuracao (`int`)
         - mes (`int`)
-        - vazao (`float`)
+        - mlt (`float`)
 
         :return: A tabela como um DataFrame
         :rtype: pd.DataFrame | None
         """
-        cls.logger.info("Calculando séries de MLT para ENAA - UHE")
-        mlt_uhe = cls._get_cached_mlt(
-            Variable.VAZAO_INCREMENTAL,
-            SpatialResolution.USINA_HIDROELETRICA,
-            uow,
-        ).copy()
+        cls.logger.info("Calculando séries de MLT para ENAA - REE")
+        # Monta um df com estagio | configuracao | mes
         pmo = uow.files.get_pmo()
-        prodts = pmo.produtibilidades_equivalentes
-        prodts = prodts.loc[prodts["configuracao"] == 1]
-        col_reserv = "produtibilidade_acumulada_calculo_altura_65"
-        col_fio = "produtibilidade_equivalente_volmin_volmax"
-        reservatorios = (
-            prodts[["nome_usina", col_reserv]].dropna()["nome_usina"].tolist()
+        dger = uow.files.get_dger()
+        mes_inicio = dger.mes_inicio_estudo
+        ano_inicio = dger.ano_inicio_estudo
+        anos_estudo = dger.num_anos_estudo
+        sistema = uow.files.get_sistema().custo_deficit
+        cfgs = (
+            pmo.configuracoes_qualquer_modificacao[MESES_DF]
+            .to_numpy()
+            .flatten()[mes_inicio - 1 :]
         )
-        mlt_uhe.loc[
-            mlt_uhe["nome_usina"].isin(reservatorios), "prodt"
-        ] = mlt_uhe.loc[mlt_uhe["nome_usina"].isin(reservatorios)].apply(
-            lambda linha: prodts.loc[
-                prodts["nome_usina"] == linha["nome_usina"], col_reserv
-            ].tolist()[0],
-            axis=1,
+        datas = pd.date_range(
+            datetime(year=ano_inicio - 1, month=1, day=1),
+            datetime(year=ano_inicio + anos_estudo - 1, month=12, day=1),
+            freq="MS",
         )
-        mlt_uhe.loc[
-            ~mlt_uhe["nome_usina"].isin(reservatorios), "prodt"
-        ] = mlt_uhe.loc[~mlt_uhe["nome_usina"].isin(reservatorios)].apply(
-            lambda linha: prodts.loc[
-                prodts["nome_usina"] == linha["nome_usina"], col_fio
-            ].tolist()[0],
-            axis=1,
+        df_mlt = pd.DataFrame(
+            data={
+                "estagio": list(range(-(12 + mes_inicio - 2), len(cfgs) + 1)),
+                "configuracao": [1] * (12 + mes_inicio - 1) + cfgs,
+                "mes": [d.month for d in datas],
+            }
         )
+        dfs_mlt_rees = pd.DataFrame()
+        # Para cada REE, obtem a série de MLT para os estágios do modelo
+        engnat = uow.files.get_engnat().series
+        ano_limite_historico = ano_inicio - 1
+        engnat = engnat.loc[engnat["data"].dt.year <= ano_limite_historico]
+        rees = uow.files.get_ree().rees
+        for idx, linha in rees.iterrows():
+            ree_engnat = idx + 1
+            mlt_ree = np.zeros((df_mlt.shape[0],))
+            for idx_ree, linha_mlt in df_mlt.iterrows():
+                mlt = engnat.loc[
+                    (engnat["configuracao"] == linha_mlt["configuracao"])
+                    & (engnat["ree"] == ree_engnat)
+                    & (engnat["data"].dt.month == linha_mlt["mes"]),
+                    "valor",
+                ].mean()
+                mlt_ree[idx_ree] = mlt
+            df_mlt_ree = df_mlt.copy()
+            df_mlt_ree["mlt"] = mlt_ree
+            df_mlt_ree["codigo_ree"] = linha["Número"]
+            df_mlt_ree["nome_ree"] = linha["Nome"]
+            df_mlt_ree["codigo_submercado"] = linha["Submercado"]
+            df_mlt_ree["nome_submercado"] = sistema.loc[
+                sistema["Num. Subsistema"] == linha["Submercado"], "Nome"
+            ].iloc[0]
+            dfs_mlt_rees = pd.concat(
+                [dfs_mlt_rees, df_mlt_ree], ignore_index=True
+            )
+        return dfs_mlt_rees
+
+        # prodts = pmo.produtibilidades_equivalentes
+        # prodts = prodts.loc[prodts["configuracao"] == 1]
+        # col_reserv = "produtibilidade_acumulada_calculo_altura_65"
+        # col_fio = "produtibilidade_equivalente_volmin_volmax"
+        # reservatorios = (
+        #     prodts[["nome_usina", col_reserv]].dropna()["nome_usina"].tolist()
+        # )
+        # mlt_uhe.loc[
+        #     mlt_uhe["nome_usina"].isin(reservatorios), "prodt"
+        # ] = mlt_uhe.loc[mlt_uhe["nome_usina"].isin(reservatorios)].apply(
+        #     lambda linha: prodts.loc[
+        #         prodts["nome_usina"] == linha["nome_usina"], col_reserv
+        #     ].tolist()[0],
+        #     axis=1,
+        # )
+        # mlt_uhe.loc[
+        #     ~mlt_uhe["nome_usina"].isin(reservatorios), "prodt"
+        # ] = mlt_uhe.loc[~mlt_uhe["nome_usina"].isin(reservatorios)].apply(
+        #     lambda linha: prodts.loc[
+        #         prodts["nome_usina"] == linha["nome_usina"], col_fio
+        #     ].tolist()[0],
+        #     axis=1,
+        # )
         # Limita as afluências das fio d'água ao engolimento
         # TODO - testar removendo
         # engolimentos = cls._engolimento_maximo_uhes(uow)
@@ -328,8 +372,8 @@ class ScenarioSynthetizer:
         #     axis=1
         # )
         # Multiplica todas pelas produtibilidades
-        mlt_uhe["vazao"] = mlt_uhe["vazao"] * mlt_uhe["prodt"]
-        return mlt_uhe.drop(columns=["prodt"])
+        # mlt_uhe["vazao"] = mlt_uhe["vazao"] * mlt_uhe["prodt"]
+        # return mlt_uhe.drop(columns=["prodt"])
 
     @classmethod
     def _engolimento_maximo_uhes(
@@ -348,7 +392,7 @@ class ScenarioSynthetizer:
         return engolimentos
 
     @classmethod
-    def _agrega_serie_mlt(
+    def _agrega_serie_mlt_uhe(
         cls, variavel: Variable, col: str, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         mlt_uhe = cls._get_cached_mlt(
@@ -361,28 +405,39 @@ class ScenarioSynthetizer:
         return df[col_list + ["mes", "vazao"]]
 
     @classmethod
+    def _agrega_serie_mlt_enaa(
+        cls, col: str, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        mlt_ree = cls._get_cached_mlt(
+            Variable.ENA_ABSOLUTA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            uow,
+        )
+        col_list = [col] if col is not None else []
+        df = mlt_ree.groupby(col_list + ["estagio"]).sum().reset_index()
+        return df[col_list + ["estagio", "mlt"]]
+
+    @classmethod
     def _resolve_enaa_mlt_ree(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         cls.logger.info("Calculando séries de MLT para ENAA - REE")
-        return cls._agrega_serie_mlt(Variable.ENA_ABSOLUTA, "nome_ree", uow)
+        return cls._agrega_serie_mlt_enaa("nome_ree", uow)
 
     @classmethod
     def _resolve_enaa_mlt_submercado(
         cls, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         cls.logger.info("Calculando séries de MLT para ENAA - SBM")
-        return cls._agrega_serie_mlt(
-            Variable.ENA_ABSOLUTA, "nome_submercado", uow
-        )
+        return cls._agrega_serie_mlt_enaa("nome_submercado", uow)
 
     @classmethod
     def _resolve_enaa_mlt_sin(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         cls.logger.info("Calculando séries de MLT para ENAA - SIN")
-        return cls._agrega_serie_mlt(Variable.ENA_ABSOLUTA, None, uow)
+        return cls._agrega_serie_mlt_enaa(None, uow)
 
     @classmethod
     def _resolve_qinc_mlt_ree(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         cls.logger.info("Calculando séries de MLT para QINC - REE")
-        return cls._agrega_serie_mlt(
+        return cls._agrega_serie_mlt_uhe(
             Variable.VAZAO_INCREMENTAL, "nome_ree", uow
         )
 
@@ -391,14 +446,14 @@ class ScenarioSynthetizer:
         cls, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         cls.logger.info("Calculando séries de MLT para QINC - SBM")
-        return cls._agrega_serie_mlt(
+        return cls._agrega_serie_mlt_uhe(
             Variable.VAZAO_INCREMENTAL, "nome_submercado", uow
         )
 
     @classmethod
     def _resolve_qinc_mlt_sin(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         cls.logger.info("Calculando séries de MLT para QINC - SIN")
-        return cls._agrega_serie_mlt(Variable.VAZAO_INCREMENTAL, None, uow)
+        return cls._agrega_serie_mlt_uhe(Variable.VAZAO_INCREMENTAL, None, uow)
 
     @classmethod
     def _get_cached_mlt(
@@ -410,10 +465,6 @@ class ScenarioSynthetizer:
         CACHING_FUNCTION_MAP: Dict[
             Tuple[Variable, SpatialResolution], Callable
         ] = {
-            (
-                Variable.ENA_ABSOLUTA,
-                SpatialResolution.USINA_HIDROELETRICA,
-            ): cls._gera_series_energia_mlt_uhes,
             (
                 Variable.ENA_ABSOLUTA,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,

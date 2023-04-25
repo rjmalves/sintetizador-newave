@@ -29,6 +29,7 @@ from inewave.newave.vazaob import Vazaob
 from inewave.newave.vazaos import Vazaos
 from inewave.newave.enavazf import Enavazf
 from inewave.newave.enavazb import Enavazb
+from inewave.newave.engnat import Engnat
 
 from inewave.nwlistop.cmarg import Cmarg
 from inewave.nwlistop.cmargmed import CmargMed
@@ -218,6 +219,10 @@ class AbstractFilesRepository(ABC):
         pass
 
     @abstractmethod
+    def get_engnat(self) -> Engnat:
+        pass
+
+    @abstractmethod
     def get_hidr(self) -> Hidr:
         pass
 
@@ -254,6 +259,7 @@ class RawFilesRepository(AbstractFilesRepository):
         self.__enavazs: Optional[Enavazf] = None
         self.__vazaos: Optional[Vazaos] = None
         self.__vazoes: Optional[Vazoes] = None
+        self.__engnat: Optional[Engnat] = None
         self.__hidr: Optional[Hidr] = None
         self.__regras: Dict[
             Tuple[Variable, SpatialResolution, TemporalResolution], Callable
@@ -1203,6 +1209,17 @@ class RawFilesRepository(AbstractFilesRepository):
             except Exception:
                 pass
         return self.__hidr
+
+    def get_engnat(self) -> Engnat:
+        if self.__engnat is None:
+            try:
+                self.__engnat = Engnat.le_arquivo(
+                    self.__tmppath,
+                    "engnat.dat",
+                )
+            except Exception:
+                pass
+        return self.__engnat
 
 
 def factory(kind: str, *args, **kwargs) -> AbstractFilesRepository:
