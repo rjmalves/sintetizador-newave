@@ -3,8 +3,6 @@ from typing import Dict, Type
 import pandas as pd  # type: ignore
 import pathlib
 
-from sintetizador.utils.log import Log
-
 
 class AbstractExportRepository(ABC):
     def __init__(self) -> None:
@@ -51,6 +49,5 @@ def factory(kind: str, *args, **kwargs) -> AbstractExportRepository:
     kind = kind.upper()
     if kind not in mapping.keys():
         msg = f"Formato de síntese: {kind} não suportado"
-        Log.log().error(msg)
         raise ValueError(msg)
     return mapping.get(kind, ParquetExportRepository)(*args, **kwargs)

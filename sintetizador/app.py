@@ -39,7 +39,7 @@ def sistema(variaveis, formato):
     logger = Log.configure_main_logger(q)
     logger.info("# Realizando síntese do SISTEMA #")
 
-    uow = factory("FS", Settings().synthesis_dir, q)
+    uow = factory("FS", os.curdir, q)
     command = commands.SynthetizeSystem(variaveis)
     handlers.synthetize_system(command, uow)
 
@@ -70,7 +70,7 @@ def execucao(variaveis, formato):
     os.environ["FORMATO_SINTESE"] = formato
     logger.info("# Realizando síntese da EXECUÇÃO #")
 
-    uow = factory("FS", Settings().synthesis_dir, q)
+    uow = factory("FS", os.curdir, q)
     command = commands.SynthetizeExecution(variaveis)
     handlers.synthetize_execution(command, uow)
 
@@ -107,7 +107,7 @@ def cenarios(variaveis, formato, processadores):
     os.environ["PROCESSADORES"] = str(processadores)
     logger.info("# Realizando síntese de CENÁRIOS #")
 
-    uow = factory("FS", Settings().synthesis_dir, q)
+    uow = factory("FS", os.curdir, q)
     command = commands.SynthetizeScenarios(variaveis)
     handlers.synthetize_scenarios(command, uow)
 
@@ -144,7 +144,7 @@ def operacao(variaveis, formato, processadores):
     os.environ["PROCESSADORES"] = str(processadores)
     logger.info("# Realizando síntese da OPERACAO #")
 
-    uow = factory("FS", Settings().synthesis_dir, q)
+    uow = factory("FS", os.curdir, q)
     command = commands.SynthetizeOperation(variaveis)
     handlers.synthetize_operation(command, uow)
 
@@ -174,7 +174,7 @@ def politica(variaveis, formato):
     os.environ["FORMATO_SINTESE"] = formato
     logger.info("# Realizando síntese da POLITICA #")
 
-    uow = factory("FS", Settings().synthesis_dir, q)
+    uow = factory("FS", os.curdir, q)
     command = commands.SynthetizePolicy(variaveis)
     handlers.synthetize_policy(command, uow)
 
@@ -226,7 +226,7 @@ def completa(sistema, execucao, operacao, politica, formato, processadores):
     os.environ["PROCESSADORES"] = str(processadores)
     logger.info("# Realizando síntese COMPLETA #")
 
-    uow = factory("FS", Settings().synthesis_dir, q)
+    uow = factory("FS", os.curdir, q)
     command = commands.SynthetizeSystem(sistema)
     handlers.synthetize_system(command, uow)
     command = commands.SynthetizeExecution(execucao)

@@ -1,9 +1,6 @@
 from sintetizador.app import app
 import os
 import pathlib
-import sys
-
-sys.setrecursionlimit(5000)
 
 
 def main():

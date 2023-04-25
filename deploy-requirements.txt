@@ -4,6 +4,7 @@ pyarrow
 inewave
 pylama
 mypy
+pytest-cov
 pytest
 sphinx
 sphinx-gallery

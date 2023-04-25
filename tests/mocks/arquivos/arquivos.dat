@@ -1,0 +1,44 @@
+DADOS GERAIS                : dger.dat                                
+DADOS DOS SUBSISTEMAS       : sistema.dat                             
+CONFIGURACAO HIDRAULICA     : confhd.dat                              
+ALTERACAO DADOS USINAS HIDRO: modif.dat                               
+CONFIGURACAO TERMICA        : conft.dat                               
+DADOS DAS USINAS TERMICAS   : term.dat                                
+DADOS DAS CLASSES TERMICAS  : clast.dat                               
+DADOS DE EXPANSAO HIDRAULICA: exph.dat                                
+ARQUIVO DE EXPANSAO TERMICA : expt.dat                                
+ARQUIVO DE PATAMARES MERCADO: patamar.dat                             
+ARQUIVO DE CORTES DE BENDERS: cortes.dat                              
+ARQUIVO DE CABECALHO CORTES : cortesh.dat                             
+RELATORIO DE CONVERGENCIA   : pmo.dat                                 
+RELATORIO DE E. SINTETICAS  : parp.dat                                
+RELATORIO DETALHADO FORWARD : forward.dat                             
+ARQUIVO DE CABECALHO FORWARD: forwarh.dat                             
+ARQUIVO DE S.HISTORICAS S.F.: shist.dat                               
+ARQUIVO DE MANUT.PROG. UTE'S: manutt.dat                              
+ARQUIVO P/DESPACHO HIDROTERM: newdesp.dat                             
+ARQUIVO C/TEND. HIDROLOGICA : vazpast.dat                             
+ARQUIVO C/DADOS DE ITAIPU   : itaipu.dat                              
+ARQUIVO C/DEMAND S. BIDDING : bid.dat                                 
+ARQUIVO C/CARGAS ADICIONAIS : c_adic.dat                              
+ARQUIVO C/FATORES DE PERDAS : loss.dat                                
+ARQUIVO C/PATAMARES GTMIN   : gtminpat.dat                            
+ARQUIVO ENSO 1              : elnino.dat                              
+ARQUIVO ENSO 2              : ensoaux.dat                             
+ARQUIVO DSVAGUA             : dsvagua.dat                             
+ARQUIVO P/PENALID. POR DESV.: penalid.dat                             
+ARQUIVO C.GUIA / PENAL.VMINT: curva.dat                               
+ARQUIVO AGRUPAMENTO LIVRE   : agrint.dat                              
+ARQUIVO DESP. ANTEC. GNL    : adterm.dat                              
+ARQUIVO GER. HIDR. MIN      : ghmin.dat                               
+ARQUIVO AVERSAO RISCO - SAR : sar.dat                                 
+ARQUIVO AVERSAO RISCO - CVAR: cvar.dat                                
+DADOS DOS RESER.EQ.ENERGIA  : ree.dat                                 
+ARQUIVO RESTRICOES ELETRICAS: re.dat                                  
+ARQUIVO DE TECNOLOGIAS      : tecno.dat                               
+ARQUIVO DE ABERTURAS        : abertura.dat                            
+ARQUIVO DE EMISSOES GEE     : gee.dat                                 
+ARQUIVO DE RESTRICAO DE GAS : clasgas.dat                             
+                              simfinal.dat                            
+                              cortes-pos.dat                          
+                              cortesh-pos.dat                         

@@ -781,8 +781,9 @@ class RawFilesRepository(AbstractFilesRepository):
     @property
     def indices(self) -> pd.DataFrame:
         if self.__indices is None:
+            caminho = pathlib.Path(self.__tmppath).joinpath("indices.csv")
             self.__indices = pd.read_csv(
-                "indices.csv", sep=";", header=None, index_col=0
+                caminho, sep=";", header=None, index_col=0
             )
             self.__indices.columns = ["vazio", "arquivo"]
             self.__indices.index = [
@@ -886,8 +887,8 @@ class RawFilesRepository(AbstractFilesRepository):
             if regra is None:
                 return None
             return regra(self.__tmppath, *args, **kwargs)
-        except Exception:
-            pass
+        except Exception as e:
+            print(e)
             return None
 
     def get_nwlistcf_cortes(self) -> Nwlistcf:
