@@ -222,7 +222,12 @@ class ScenarioSynthetizer:
         )
         df_mlt = pd.DataFrame(
             data={
-                "estagio": list(range(-(12 + mes_inicio - 2), len(datas) + 1)),
+                "estagio": list(
+                    range(
+                        -(12 + mes_inicio - 2),
+                        12 * anos_estudo - mes_inicio + 1,
+                    )
+                ),
                 "mes": [d.month for d in datas],
             }
         )
