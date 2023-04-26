@@ -322,7 +322,7 @@ class ScenarioSynthetizer:
             data={
                 "estagio": list(range(-(12 + mes_inicio - 2), len(cfgs) + 1)),
                 "configuracao": np.concatenate(
-                    np.array([1] * (12 + mes_inicio - 1)), cfgs
+                    (np.array([1] * (12 + mes_inicio - 1)), cfgs)
                 ),
                 "mes": [d.month for d in datas],
             }
