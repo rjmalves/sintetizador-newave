@@ -2,7 +2,6 @@ from typing import Callable, Dict, List, Tuple, Optional
 import pandas as pd  # type: ignore
 import numpy as np  # type: ignore
 import logging
-from traceback import print_exc
 from multiprocessing import Pool
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -355,7 +354,6 @@ class ScenarioSynthetizer:
             dfs_mlt_rees = pd.concat(
                 [dfs_mlt_rees, df_mlt_ree], ignore_index=True
             )
-        cls.logger.info(dfs_mlt_rees)
         return dfs_mlt_rees
 
         # prodts = pmo.produtibilidades_equivalentes
@@ -1626,7 +1624,6 @@ class ScenarioSynthetizer:
         df = cls._resolve_group(
             RESOLUTION_MAP[synthesis.spatial_resolution], df
         )
-        cls.logger.info(df)
         return cls._apply_mlt(synthesis, df, uow)
 
     @classmethod
@@ -1670,5 +1667,4 @@ class ScenarioSynthetizer:
                 with uow:
                     uow.export.synthetize_df(df, filename)
         except Exception as e:
-            print_exc()
             cls.logger.error(str(e))
