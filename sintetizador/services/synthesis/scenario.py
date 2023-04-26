@@ -2,6 +2,7 @@ from typing import Callable, Dict, List, Tuple, Optional
 import pandas as pd  # type: ignore
 import numpy as np  # type: ignore
 import logging
+from traceback import print_exc
 from multiprocessing import Pool
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -278,7 +279,6 @@ class ScenarioSynthetizer:
             ].tolist()[0],
             axis=1,
         )
-        print(df_completo_mlt)
         return df_completo_mlt.sort_values(["estagio", "codigo_usina"])
 
     @classmethod
@@ -1706,4 +1706,5 @@ class ScenarioSynthetizer:
                 with uow:
                     uow.export.synthetize_df(df, filename)
         except Exception as e:
+            print_exc()
             cls.logger.error(str(e))
