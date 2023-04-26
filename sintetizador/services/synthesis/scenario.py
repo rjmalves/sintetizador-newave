@@ -1429,7 +1429,7 @@ class ScenarioSynthetizer:
             df_mlt = df_mlt.sort_values(["estagio", filter_col])
         else:
             df = df.sort_values(["iteracao", "estagio", "serie"])
-            df_mlt = df_mlt.sort_values(["estagio"])
+            df_mlt = df_mlt.loc[df_mlt["estagio"] > 0].sort_values(["estagio"])
 
         series = df["serie"].unique()
         num_series = len(series)
@@ -1460,7 +1460,7 @@ class ScenarioSynthetizer:
                         df_mlts_elements,
                         df_mlt.loc[
                             (df_mlt["estagio"] == estagio),
-                            "vazao",
+                            "mlt",
                         ],
                     ],
                     ignore_index=True,
