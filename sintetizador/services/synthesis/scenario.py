@@ -442,11 +442,6 @@ class ScenarioSynthetizer:
         return df[col_list + ["estagio", "mlt"]]
 
     @classmethod
-    def _resolve_enaa_mlt_ree(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        cls.logger.info("Calculando séries de MLT para ENAA - REE")
-        return cls._agrega_serie_mlt_enaa("nome_ree", uow)
-
-    @classmethod
     def _resolve_enaa_mlt_submercado(
         cls, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
@@ -492,7 +487,7 @@ class ScenarioSynthetizer:
             (
                 Variable.ENA_ABSOLUTA,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
-            ): cls._resolve_enaa_mlt_ree,
+            ): cls._gera_series_energia_mlt_rees,
             (
                 Variable.ENA_ABSOLUTA,
                 SpatialResolution.SUBMERCADO,
@@ -1564,8 +1559,10 @@ class ScenarioSynthetizer:
     ) -> pd.DataFrame:
         if filter_col is not None:
             df = df.sort_values(["estagio", filter_col, "serie"])
+            df_mlt = df_mlt.sort_values(["estagio", filter_col])
         else:
             df = df.sort_values(["estagio", "serie"])
+            df_mlt = df_mlt.sort_values(["estagio"])
 
         series = df["serie"].unique()
         num_series = len(series)
@@ -1598,7 +1595,6 @@ class ScenarioSynthetizer:
                     ],
                     ignore_index=True,
                 )
-
 
         mlts_ordenadas = np.repeat(df_mlts_elements.to_numpy(), num_series)
         df["mlt"] = mlts_ordenadas
