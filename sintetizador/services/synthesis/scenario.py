@@ -353,6 +353,7 @@ class ScenarioSynthetizer:
             dfs_mlt_rees = pd.concat(
                 [dfs_mlt_rees, df_mlt_ree], ignore_index=True
             )
+        cls.logger.info(dfs_mlt_rees)
         return dfs_mlt_rees
 
         # prodts = pmo.produtibilidades_equivalentes
