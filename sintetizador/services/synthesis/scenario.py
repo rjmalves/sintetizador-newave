@@ -204,7 +204,7 @@ class ScenarioSynthetizer:
         - nome_submercado (`str`)
         - estagio (`int`)
         - mes (`int`)
-        - valor (`float`)
+        - mlt (`float`)
 
         :return: A tabela como um DataFrame
         :rtype: pd.DataFrame | None
@@ -242,7 +242,7 @@ class ScenarioSynthetizer:
                         "codigo_usina": [uhe] * len(vazao_mlt),
                         "nome_usina": [hidr.at[uhe, "Nome"]] * len(vazao_mlt),
                         "mes": vazao_mlt["mes"],
-                        "valor": vazao_mlt["vazao"].to_numpy(),
+                        "mlt": vazao_mlt["vazao"].to_numpy(),
                     }
                 ),
                 on="mes",
@@ -427,8 +427,8 @@ class ScenarioSynthetizer:
             uow,
         )
         col_list = [col] if col is not None else []
-        df = mlt_uhe.groupby(col_list + ["mes"]).sum().reset_index()
-        return df[col_list + ["mes", "vazao"]]
+        df = mlt_uhe.groupby(col_list + ["estagio"]).sum().reset_index()
+        return df[col_list + ["estagio", "mlt"]]
 
     @classmethod
     def _agrega_serie_mlt_enaa(
