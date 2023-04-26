@@ -1478,7 +1478,6 @@ class ScenarioSynthetizer:
         df: pd.DataFrame,
         df_mlt: pd.DataFrame,
         filter_col: Optional[str],
-        uow: AbstractUnitOfWork,
     ) -> pd.DataFrame:
         if filter_col is not None:
             df = df.sort_values(["estagio", filter_col, "serie", "abertura"])
