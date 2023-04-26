@@ -1633,7 +1633,7 @@ class ScenarioSynthetizer:
                 Step.FINAL_SIMULATION: cls._apply_mlt_sf,
                 Step.BACKWARD: cls._apply_mlt_backward,
             }
-            return APPLY_MAP[synthesis.step](df, df_mlt, filter_col, uow)
+            return APPLY_MAP[synthesis.step](df, df_mlt, filter_col)
 
     @classmethod
     def _resolve_spatial_resolution(
