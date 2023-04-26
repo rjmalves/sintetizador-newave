@@ -1429,7 +1429,7 @@ class ScenarioSynthetizer:
             df_mlt = df_mlt.sort_values(["estagio", filter_col])
         else:
             df = df.sort_values(["iteracao", "estagio", "serie"])
-            df_mlt = df_mlt.loc[df_mlt["estagio"] > 0].sort_values(["estagio"])
+            df_mlt = df_mlt.sort_values(["estagio"])
 
         series = df["serie"].unique()
         num_series = len(series)
@@ -1466,10 +1466,7 @@ class ScenarioSynthetizer:
                     ignore_index=True,
                 )
 
-        mlts_ordenadas = np.tile(
-            np.repeat(df_mlts_elements.to_numpy(), num_series), num_iteracoes
-        )
-
+        mlts_ordenadas = np.repeat(df_mlts_elements.to_numpy(), num_series)
         df["mlt"] = np.tile(mlts_ordenadas, num_iteracoes)
         df["valor_mlt"] = df["valor"] / df["mlt"]
         df.replace([np.inf, -np.inf], 0, inplace=True)
