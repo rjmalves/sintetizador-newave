@@ -1426,7 +1426,7 @@ class ScenarioSynthetizer:
     ) -> pd.DataFrame:
         if filter_col is not None:
             df = df.sort_values(["iteracao", "estagio", filter_col, "serie"])
-            df_mlt = df_mlt.sort_values(["iteracao", "estagio", filter_col])
+            df_mlt = df_mlt.sort_values(["estagio", filter_col])
         else:
             df = df.sort_values(["iteracao", "estagio", "serie"])
             df_mlt = df_mlt.sort_values(["estagio"])
