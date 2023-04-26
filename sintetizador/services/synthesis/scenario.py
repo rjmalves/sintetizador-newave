@@ -226,7 +226,7 @@ class ScenarioSynthetizer:
                 "estagio": list(
                     range(
                         -(12 + mes_inicio - 2),
-                        12 * anos_estudo - mes_inicio + 1,
+                        12 * anos_estudo - mes_inicio + 2,
                     )
                 ),
                 "mes": [d.month for d in datas],
