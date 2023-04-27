@@ -11,4 +11,4 @@ class Settings(metaclass=Singleton):
         self.file_repository = getenv("REPOSITORIO_ARQUIVOS", "FS")
         self.synthesis_format = getenv("FORMATO_SINTESE", "PARQUET")
         self.synthesis_dir = getenv("DIRETORIO_SINTESE", "sintese")
-        self.processors = getenv("PROCESSADORES", "sintese")
+        self.processors = getenv("PROCESSADORES", 1)
