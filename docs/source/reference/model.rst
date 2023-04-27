@@ -62,17 +62,94 @@ e sim por outras ferramentas adicionais. Portanto, não devem ser utilizados em 
 Cenários
 *********
 
-Informações sobre os cenários visitados (gerados, fornecidos, processados, etc.) durante o processo de otimização. (TODO)
+Informações sobre os cenários visitados (gerados, fornecidos, processados, etc.) durante o processo de otimização. Estas informações são formadas a partir de três especificações:
+
+
+Variável
+=========
+
+A variável informa a grandeza do cenário que foi gerado, fornecido ou processado pelo modelo.
+
+.. list-table:: Variáveis dos Cenários
+   :widths: 50 10
+   :header-rows: 1
+
+   * - VARIÁVEL
+     - MNEMÔNICO
+   * - Energia Natural Afluente
+     - `ENAA`
+   * - Vazão Incremental
+     - `QINC`
+   * - Velocidade do Vento
+     - `VENTO`
+
+
+Agregação Espacial
+===================
+
+A agregação espacial informa o nível de agregação da variável em questão
+em relação ao conjunto de elementos do sistema.
+
+.. list-table:: Possíveis Agregações Espaciais
+   :widths: 50 10
+   :header-rows: 1
+
+   * - AGREGAÇÂO
+     - MNEMÔNICO
+   * - Sistema Interligado
+     - `SIN`
+   * - Submercado
+     - `SBM`
+   * - Reservatório Equivalente
+     - `REE`
+   * - Usina Hidroelétrica
+     - `UHE`
+   * - Parque Eólico Equivalente
+     - `PEE`
+
+
+
+Etapa
+======
+
+A etapa diz o momento em que o valor de cenário foi utilizado.
+
+.. list-table:: Possíveis Etapas
+   :widths: 50 10
+   :header-rows: 1
+
+   * - ETAPA
+     - MNEMÔNICO
+   * - Forward
+     - `FOR`
+   * - Backward
+     - `BKW`
+   * - Simulação Final
+     - `SF`
 
 Política
 *********
 
-Informações sobre a política operativa construída (ou lida) pelo modelo (TODO)
+Informações sobre a política operativa construída (ou lida) pelo modelo.
+
+.. list-table:: Variáveis da Política
+   :widths: 50 10
+   :header-rows: 1
+
+   * - VARIÁVEL
+     - MNEMÔNICO
+   * - Cortes de Benders Calculados
+     - `CORTES`
+   * - Estados Visitados na Construção dos Cortes
+     - `ESTADOS`
+   * - Cortes de Benders Recebidos
+     - `FCF`
+
 
 Operação
 *********
 
-Informações da operação fornecida como saída pelo modelo. Estas informações são formadas a partir de três especificações:
+Informações da operação fornecida como saída pelo modelo. Assim como os dados de cenários, estas informações são formadas a partir de três especificações:
 
 Variável
 =========
@@ -211,13 +288,28 @@ A agregação espacial informa o nível de agregação da variável em questão 
 Estado do Desenvolvimento
 ***************************
 
-Todas as variáveis das categorias `Sistema`, `Execução`, `Cenários` e `Política` que são listadas
+Todas as variáveis das categorias `Sistema`, `Execução` e `Política` que são listadas
 e estão presentes no modelo NEWAVE, estão disponíveis para uso no sintetizador.
 
-Já para a categoria de operação, nem todas as combinações de agregações espaciais, temporais e variáveis
+Já para as categorias de cenários e operação, nem todas as combinações de agregações espaciais, temporais e variáveis
 fazem sentido, ou especialmente são modeladas ou possíveis de se obter no NEWAVE. Desta forma,
 o estado do desenvolvimento é listado a seguir, onde se encontram as combinações de sínteses da operação
 que estão disponíveis no modelo.
+
+
+.. list-table:: Sínteses de Cenários Existentes
+   :widths: 50 10 10
+   :header-rows: 1
+
+   * - VARIÁVEL
+     - AGREGAÇÃO ESPACIAL
+     - ETAPA
+   * - `ENAA`
+     - `REE`, `SBM`, `SIN`
+     - `FOR`, `BKW`, `SF`
+   * - `QINC`
+     - `UHE`, `REE`, `SBM`, `SIN`
+     - `FOR`, `BKW`, `SF`
 
 .. list-table:: Sínteses da Operação Existentes
    :widths: 50 10 10

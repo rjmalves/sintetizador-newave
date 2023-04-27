@@ -23,10 +23,12 @@ A saída observada deve ser::
     >>> 
     >>> Commands:
     >>>   completa  Realiza a síntese completa do NEWAVE.
+    >>>   cenarios  Realiza a síntese dos dados de cenários do NEWAVE.
     >>>   execucao  Realiza a síntese dos dados da execução do NEWAVE.
-    >>>   limpeza   Realiza a limpeza dos dados resultantes de uma síntese.
+    >>>   politica  Realiza a síntese dos dados da política do NEWAVE (NWLISTCF).
     >>>   operacao  Realiza a síntese dos dados da operação do NEWAVE (NWLISTOP).
     >>>   sistema   Realiza a síntese dos dados do sistema do NEWAVE.
+    >>>   limpeza   Realiza a limpeza dos dados resultantes de uma síntese.
 
 Além disso, cada um dos comandos possui um menu específico, que pode ser visto com, por exemplo::
 
