@@ -425,7 +425,11 @@ class ScenarioSynthetizer:
             uow,
         )
         col_list = [col] if col is not None else []
-        df = mlt_uhe.groupby(col_list + ["estagio"]).sum().reset_index()
+        df = (
+            mlt_uhe.groupby(col_list + ["estagio"])
+            .sum(numeric_only=True)
+            .reset_index()
+        )
         return df[col_list + ["estagio", "mlt"]]
 
     @classmethod
@@ -438,7 +442,11 @@ class ScenarioSynthetizer:
             uow,
         )
         col_list = [col] if col is not None else []
-        df = mlt_ree.groupby(col_list + ["estagio"]).sum().reset_index()
+        df = (
+            mlt_ree.groupby(col_list + ["estagio"])
+            .sum(numeric_only=True)
+            .reset_index()
+        )
         return df[col_list + ["estagio", "mlt"]]
 
     @classmethod
@@ -1410,7 +1418,7 @@ class ScenarioSynthetizer:
             cols = group_col + [
                 c for c in cls.COMMON_COLUMNS if c in df.columns
             ]
-            df_agrupado = df.groupby(cols).sum().reset_index()
+            df_agrupado = df.groupby(cols).sum(numeric_only=True).reset_index()
             return df_agrupado[cols + ["valor"]]
         else:
             return df
