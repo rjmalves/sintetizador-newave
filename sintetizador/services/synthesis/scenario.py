@@ -1466,7 +1466,7 @@ class ScenarioSynthetizer:
 
         mlts_ordenadas = np.repeat(df_mlts_elements.to_numpy(), num_series)
         df["mlt"] = np.tile(mlts_ordenadas, num_iteracoes)
-        df["valor_mlt"] = df["valor"] / df["mlt"]
+        df["valorMlt"] = df["valor"] / df["mlt"]
         df.replace([np.inf, -np.inf], 0, inplace=True)
         return df
 
@@ -1523,7 +1523,7 @@ class ScenarioSynthetizer:
             df_mlts_elements.to_numpy(), num_series * num_aberturas
         )
         df["mlt"] = mlts_ordenadas
-        df["valor_mlt"] = df["valor"] / df["mlt"]
+        df["valorMlt"] = df["valor"] / df["mlt"]
         df.replace([np.inf, -np.inf], 0, inplace=True)
         return df
 
@@ -1575,7 +1575,7 @@ class ScenarioSynthetizer:
 
         mlts_ordenadas = np.repeat(df_mlts_elements.to_numpy(), num_series)
         df["mlt"] = mlts_ordenadas
-        df["valor_mlt"] = df["valor"] / df["mlt"]
+        df["valorMlt"] = df["valor"] / df["mlt"]
         df.replace([np.inf, -np.inf], 0, inplace=True)
         return df
 
