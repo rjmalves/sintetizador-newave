@@ -1,7 +1,6 @@
 import click
 import os
 import time
-from sintetizador.model.settings import Settings
 import sintetizador.domain.commands as commands
 import sintetizador.services.handlers as handlers
 from sintetizador.services.unitofwork import factory

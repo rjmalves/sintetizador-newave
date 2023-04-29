@@ -1,13 +1,13 @@
-from typing import Callable, Dict, List
-import pandas as pd
-import numpy as np
+from typing import Callable, Dict, List, Type, TypeVar, Optional
+import pandas as pd  # type: ignore
+import numpy as np  # type: ignore
 import logging
 from inewave.config import MESES_DF
+from inewave.newave.modelos.eolicacadastro import RegistroPEECadastro
 from datetime import datetime
-from dateutil.relativedelta import relativedelta
+from dateutil.relativedelta import relativedelta  # type: ignore
 
 from sintetizador.services.unitofwork import AbstractUnitOfWork
-from sintetizador.utils.log import Log
 from sintetizador.model.system.variable import Variable
 from sintetizador.model.system.systemsynthesis import SystemSynthesis
 
@@ -38,12 +38,17 @@ class SystemSynthetizer:
         "UHE",
     ]
 
+    T = TypeVar("T")
+
+    logger: Optional[logging.Logger] = None
+
     @classmethod
     def _default_args(cls) -> List[SystemSynthesis]:
-        return [
+        args = [
             SystemSynthesis.factory(a)
             for a in cls.DEFAULT_SYSTEM_SYNTHESIS_ARGS
         ]
+        return [arg for arg in args if arg is not None]
 
     @classmethod
     def _process_variable_arguments(
@@ -51,11 +56,16 @@ class SystemSynthetizer:
         args: List[str],
     ) -> List[SystemSynthesis]:
         args_data = [SystemSynthesis.factory(c) for c in args]
-        for i, a in enumerate(args_data):
-            if a is None:
-                Log.log(f"Erro no argumento fornecido: {args[i]}")
-                return []
-        return args_data
+        valid_args = [arg for arg in args_data if arg is not None]
+        return valid_args
+
+    @classmethod
+    def _validate_data(cls, data, type: Type[T], msg: str = "dados") -> T:
+        if not isinstance(data, type):
+            if cls.logger is not None:
+                cls.logger.error(f"Erro na leitura de {msg}")
+            raise RuntimeError()
+        return data
 
     @classmethod
     def filter_valid_variables(
@@ -64,16 +74,26 @@ class SystemSynthetizer:
         with uow:
             dger = uow.files.get_dger()
             ree = uow.files.get_ree()
+
+        rees = cls._validate_data(ree.rees, pd.DataFrame, "REEs")
+        geracao_eolica = cls._validate_data(
+            dger.considera_geracao_eolica, int, "dger"
+        )
+
         valid_variables: List[SystemSynthesis] = []
-        indiv = ree.rees["Mês Fim Individualizado"].isna().sum() == 0
-        eolica = dger.considera_geracao_eolica != 0
-        cls.logger.info(f"Caso com geração de cenários de eólica: {eolica}")
-        cls.logger.info(f"Caso com modelagem híbrida: {indiv}")
+        indiv = rees["Mês Fim Individualizado"].isna().sum() == 0
+        eolica = geracao_eolica != 0
+        if cls.logger is not None:
+            cls.logger.info(
+                f"Caso com geração de cenários de eólica: {eolica}"
+            )
+            cls.logger.info(f"Caso com modelagem híbrida: {indiv}")
         for v in variables:
             if v.variable in [Variable.PEE] and not eolica:
                 continue
             valid_variables.append(v)
-        cls.logger.info(f"Variáveis: {valid_variables}")
+        if cls.logger is not None:
+            cls.logger.info(f"Variáveis: {valid_variables}")
         return valid_variables
 
     @classmethod
@@ -95,9 +115,21 @@ class SystemSynthetizer:
     def __resolve_EST(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         with uow:
             dger = uow.files.get_dger()
-        n_anos = dger.num_anos_estudo
-        mes_inicial = dger.mes_inicio_estudo
-        ano_inicial = dger.ano_inicio_estudo
+            ano_inicial = cls._validate_data(
+                dger.ano_inicio_estudo,
+                int,
+                "dger",
+            )
+            mes_inicial = cls._validate_data(
+                dger.mes_inicio_estudo,
+                int,
+                "dger",
+            )
+            n_anos = cls._validate_data(
+                dger.num_anos_estudo,
+                int,
+                "dger",
+            )
         datas_iniciais = pd.date_range(
             datetime(year=ano_inicial, month=mes_inicial, day=1),
             datetime(year=ano_inicial + n_anos - 1, month=12, day=1),
@@ -117,26 +149,53 @@ class SystemSynthetizer:
         with uow:
             dger = uow.files.get_dger()
             pat = uow.files.get_patamar()
-        meses_pre = dger.mes_inicio_estudo - dger.mes_inicio_pre_estudo
+            num_patamares = cls._validate_data(
+                pat.numero_patamares,
+                int,
+                "patamares",
+            )
+
+            duracao_patamares = cls._validate_data(
+                pat.duracao_mensal_patamares,
+                pd.DataFrame,
+                "patamares",
+            )
+            mes_inicio = cls._validate_data(
+                dger.mes_inicio_estudo,
+                int,
+                "dger",
+            )
+            mes_inicio_pre = cls._validate_data(
+                dger.mes_inicio_pre_estudo,
+                int,
+                "dger",
+            )
+            anos_estudo = cls._validate_data(
+                dger.num_anos_estudo,
+                int,
+                "dger",
+            )
+
+        meses_pre = mes_inicio - mes_inicio_pre
         estagios = (
-            np.array(range(1, dger.num_anos_estudo * len(MESES_DF) + 1))
-            - meses_pre
+            np.array(range(1, anos_estudo * len(MESES_DF) + 1)) - meses_pre
         )[meses_pre:]
         estagios = np.array(
             [
                 list(
                     range(12 * i + 1, 12 * (i + 1) + 1)
-                    for i in range(dger.num_anos_estudo)
+                    for i in range(anos_estudo)
                 )
             ]
         )
-        estagios = np.tile(estagios, pat.numero_patamares).flatten()
-        duracao = pat.duracao_mensal_patamares
-        patamares = np.array(list(range(1, pat.numero_patamares + 1)))
+        estagios = np.tile(estagios, num_patamares).flatten()
+        patamares = np.array(list(range(1, num_patamares + 1)))
         pats = np.tile(
-            np.repeat(patamares, len(MESES_DF)), dger.num_anos_estudo
+            np.repeat(patamares, len(MESES_DF)), anos_estudo
         ).flatten()
-        horas = HORAS_MES_NW * (duracao[MESES_DF].to_numpy().flatten())
+        horas = HORAS_MES_NW * (
+            duracao_patamares[MESES_DF].to_numpy().flatten()
+        )
         df = pd.DataFrame(
             data={"idEstagio": estagios, "patamar": pats, "duracao": horas}
         )
@@ -149,16 +208,22 @@ class SystemSynthetizer:
     @classmethod
     def __resolve_SBM(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         with uow:
-            sistema = uow.files.get_sistema()
-        df = sistema.custo_deficit[["Num. Subsistema", "Nome"]]
+            sistema = cls._validate_data(
+                uow.files.get_sistema().custo_deficit,
+                pd.DataFrame,
+                "submercados",
+            )
+        df = sistema[["Num. Subsistema", "Nome"]]
         df = df.rename(columns={"Num. Subsistema": "id", "Nome": "nome"})
         return df
 
     @classmethod
     def __resolve_REE(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         with uow:
-            ree = uow.files.get_ree()
-        df = ree.rees[["Número", "Nome", "Submercado"]]
+            rees = cls._validate_data(
+                uow.files.get_ree().rees, pd.DataFrame, "REEs"
+            )
+        df = rees[["Número", "Nome", "Submercado"]]
         df = df.rename(
             columns={
                 "Número": "id",
@@ -171,9 +236,11 @@ class SystemSynthetizer:
     @classmethod
     def __resolve_UTE(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         with uow:
-            conft = uow.files.get_conft()
+            conft = cls._validate_data(
+                uow.files.get_conft().usinas, pd.DataFrame, "UTEs"
+            )
 
-        df = conft.usinas[["Número", "Nome", "Subsistema"]]
+        df = conft[["Número", "Nome", "Subsistema"]]
         df = df.rename(
             columns={
                 "Número": "id",
@@ -186,11 +253,11 @@ class SystemSynthetizer:
     @classmethod
     def __resolve_UHE(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         with uow:
-            confhd = uow.files.get_confhd()
+            confhd = cls._validate_data(
+                uow.files.get_confhd().usinas, pd.DataFrame, "UHEs"
+            )
 
-        df = confhd.usinas[
-            ["Número", "Nome", "Posto", "REE", "Volume Inicial"]
-        ]
+        df = confhd[["Número", "Nome", "Posto", "REE", "Volume Inicial"]]
         df = df.rename(
             columns={
                 "Número": "id",
@@ -208,8 +275,16 @@ class SystemSynthetizer:
             eolica = uow.files.get_eolicacadastro()
 
         pees = eolica.pee_cad()
-        codigos = [p.codigo_pee for p in pees]
-        nomes = [p.nome_pee for p in pees]
+        if isinstance(pees, list):
+            codigos = [p.codigo_pee for p in pees]
+            nomes = [p.nome_pee for p in pees]
+        elif isinstance(pees, RegistroPEECadastro):
+            codigos = [pees.codigo_pee]
+            nomes = [pees.nome_pee]
+        else:
+            if cls.logger is not None:
+                cls.logger.error("Erro na leitura de PEEs")
+                raise RuntimeError()
         df = pd.DataFrame(data={"id": codigos, "nome": nomes})
         return df
 
@@ -218,13 +293,13 @@ class SystemSynthetizer:
         cls.logger = logging.getLogger("main")
         try:
             if len(variables) == 0:
-                variables = SystemSynthetizer._default_args()
+                synthesis_variables = SystemSynthetizer._default_args()
             else:
-                variables = SystemSynthetizer._process_variable_arguments(
-                    variables
+                synthesis_variables = (
+                    SystemSynthetizer._process_variable_arguments(variables)
                 )
             valid_synthesis = SystemSynthetizer.filter_valid_variables(
-                variables, uow
+                synthesis_variables, uow
             )
             for s in valid_synthesis:
                 filename = str(s)

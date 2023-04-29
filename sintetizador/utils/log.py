@@ -2,12 +2,15 @@ import logging
 import logging.handlers
 from queue import Queue
 from multiprocessing import Process
+from typing import Optional
 import errno
 import time
 from sintetizador.utils.singleton import Singleton
 
 
 class Log(metaclass=Singleton):
+    listener: Optional[Process] = None
+
     @classmethod
     def logging_process(cls, q: Queue):
         cls.configure_queue_logger()

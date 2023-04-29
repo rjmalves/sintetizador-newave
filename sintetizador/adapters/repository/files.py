@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Type, Optional, Tuple, Callable
+from typing import Dict, Type, Optional, Tuple, Callable, TypeVar
 import pandas as pd  # type: ignore
-import numpy as np  # type: ignore
 from datetime import datetime, timedelta
 import pathlib
 import asyncio
@@ -104,6 +103,13 @@ if platform.system() == "Windows":
 
 
 class AbstractFilesRepository(ABC):
+    T = TypeVar("T")
+
+    def _validate_data(self, data, type: Type[T]) -> T:
+        if not isinstance(data, type):
+            raise RuntimeError()
+        return data
+
     @property
     @abstractmethod
     def caso(self) -> Caso:
@@ -152,7 +158,7 @@ class AbstractFilesRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_newavetim(self) -> NewaveTim:
+    def get_newavetim(self) -> Optional[NewaveTim]:
         raise NotImplementedError
 
     @abstractmethod
@@ -171,47 +177,47 @@ class AbstractFilesRepository(ABC):
         pass
 
     @abstractmethod
-    def get_nwlistcf_cortes(self) -> Nwlistcf:
+    def get_nwlistcf_cortes(self) -> Optional[Nwlistcf]:
         raise NotImplementedError
 
     @abstractmethod
-    def get_nwlistcf_estados(self) -> Estados:
+    def get_nwlistcf_estados(self) -> Optional[Estados]:
         raise NotImplementedError
 
     @abstractmethod
-    def get_energiaf(self, iteracao: int) -> Energiaf:
+    def get_energiaf(self, iteracao: int) -> Optional[Energiaf]:
         pass
 
     @abstractmethod
-    def get_energiab(self) -> Energiab:
+    def get_energiab(self) -> Optional[Energiab]:
         pass
 
     @abstractmethod
-    def get_vazaof(self, iteracao: int) -> Vazaof:
+    def get_vazaof(self, iteracao: int) -> Optional[Vazaof]:
         pass
 
     @abstractmethod
-    def get_vazaob(self) -> Vazaob:
+    def get_vazaob(self) -> Optional[Vazaob]:
         pass
 
     @abstractmethod
-    def get_enavazf(self, iteracao: int) -> Enavazf:
+    def get_enavazf(self, iteracao: int) -> Optional[Enavazf]:
         pass
 
     @abstractmethod
-    def get_enavazb(self) -> Enavazb:
+    def get_enavazb(self) -> Optional[Enavazb]:
         pass
 
     @abstractmethod
-    def get_energias(self) -> Energias:
+    def get_energias(self) -> Optional[Energias]:
         pass
 
     @abstractmethod
-    def get_enavazs(self) -> Enavazf:
+    def get_enavazs(self) -> Optional[Enavazf]:
         pass
 
     @abstractmethod
-    def get_vazaos(self) -> Vazaos:
+    def get_vazaos(self) -> Optional[Vazaos]:
         pass
 
     @abstractmethod
@@ -219,7 +225,7 @@ class AbstractFilesRepository(ABC):
         pass
 
     @abstractmethod
-    def get_engnat(self) -> Engnat:
+    def get_engnat(self) -> Optional[Engnat]:
         pass
 
     @abstractmethod
@@ -766,7 +772,9 @@ class RawFilesRepository(AbstractFilesRepository):
         self, df: pd.DataFrame, patamares: Optional[list] = None
     ) -> pd.DataFrame:
         if patamares is None:
-            num_pats = self.get_patamar().numero_patamares
+            num_pats = self._validate_data(
+                self.get_patamar().numero_patamares, int
+            )
             if num_pats is None:
                 raise RuntimeError("Numero de patamares não encontrado")
             patamares = [str(i) for i in range(1, num_pats + 1)]
@@ -858,7 +866,7 @@ class RawFilesRepository(AbstractFilesRepository):
             self.__pmo = PMO.le_arquivo(self.__tmppath, self.arquivos.pmo)
         return self.__pmo
 
-    def get_newavetim(self) -> NewaveTim:
+    def get_newavetim(self) -> Optional[NewaveTim]:
         if self.__newavetim is None:
             try:
                 self.__newavetim = NewaveTim.le_arquivo(
@@ -897,7 +905,7 @@ class RawFilesRepository(AbstractFilesRepository):
             print(e)
             return None
 
-    def get_nwlistcf_cortes(self) -> Nwlistcf:
+    def get_nwlistcf_cortes(self) -> Optional[Nwlistcf]:
         if self.__nwlistcf is None:
             try:
                 self.__nwlistcf = Nwlistcf.le_arquivo(self.__tmppath)
@@ -905,7 +913,7 @@ class RawFilesRepository(AbstractFilesRepository):
                 pass
         return self.__nwlistcf
 
-    def get_nwlistcf_estados(self) -> Estados:
+    def get_nwlistcf_estados(self) -> Optional[Estados]:
         if self.__estados is None:
             try:
                 self.__estados = Estados.le_arquivo(self.__tmppath)
@@ -915,16 +923,20 @@ class RawFilesRepository(AbstractFilesRepository):
 
     def _numero_estagios_individualizados(self) -> int:
         dger = self.get_dger()
-        if dger.agregacao_simulacao_final == 1:
-            return dger.num_anos_estudo * 12
-        rees = self.get_ree().rees
+        agregacao = self._validate_data(dger.agregacao_simulacao_final, int)
+        anos_estudo = self._validate_data(dger.num_anos_estudo, int)
+        ano_inicio = self._validate_data(dger.ano_inicio_estudo, int)
+        mes_inicio = self._validate_data(dger.mes_inicio_estudo, int)
+        if agregacao == 1:
+            return anos_estudo * 12
+        rees = self._validate_data(self.get_ree().rees, pd.DataFrame)
         mes_fim_hib = rees["Mês Fim Individualizado"].iloc[0]
         ano_fim_hib = rees["Ano Fim Individualizado"].iloc[0]
 
         if mes_fim_hib is not None and ano_fim_hib is not None:
             data_inicio_estudo = datetime(
-                year=dger.ano_inicio_estudo,
-                month=dger.mes_inicio_estudo,
+                year=ano_inicio,
+                month=mes_inicio,
                 day=1,
             )
             data_fim_individualizado = datetime(
@@ -939,7 +951,7 @@ class RawFilesRepository(AbstractFilesRepository):
         else:
             return 0
 
-    def get_energiaf(self, iteracao: int) -> Energiaf:
+    def get_energiaf(self, iteracao: int) -> Optional[Energiaf]:
         nome_arq = (
             f"energiaf{str(iteracao).zfill(3)}.dat"
             if iteracao != 1
@@ -948,17 +960,22 @@ class RawFilesRepository(AbstractFilesRepository):
         if self.__energiaf.get(iteracao) is None:
             try:
                 dger = self.get_dger()
-                n_rees = self.get_ree().rees.shape[0]
-                n_estagios = dger.num_anos_estudo * 12
-                n_estagios_th = (
-                    12
-                    if dger.consideracao_media_anual_afluencias == 3
-                    else dger.ordem_maxima_parp
+                anos_estudo = self._validate_data(dger.num_anos_estudo, int)
+                num_forwards = self._validate_data(dger.num_forwards, int)
+                parpa = self._validate_data(
+                    dger.consideracao_media_anual_afluencias, int
                 )
+                ordem_maxima = self._validate_data(dger.ordem_maxima_parp, int)
+
+                rees = self._validate_data(self.get_ree().rees, pd.DataFrame)
+
+                n_rees = rees.shape[0]
+                n_estagios = anos_estudo * 12
+                n_estagios_th = 12 if parpa == 3 else ordem_maxima
                 self.__energiaf[iteracao] = Energiaf.le_arquivo(
                     self.__tmppath,
                     nome_arq,
-                    dger.num_forwards,
+                    num_forwards,
                     n_rees,
                     n_estagios,
                     n_estagios_th,
@@ -967,7 +984,7 @@ class RawFilesRepository(AbstractFilesRepository):
                 pass
         return self.__energiaf.get(iteracao)
 
-    def get_vazaof(self, iteracao: int) -> Vazaof:
+    def get_vazaof(self, iteracao: int) -> Optional[Vazaof]:
         nome_arq = (
             f"vazaof{str(iteracao).zfill(3)}.dat"
             if iteracao != 1
@@ -976,21 +993,25 @@ class RawFilesRepository(AbstractFilesRepository):
         if self.__vazaof.get(iteracao) is None:
             try:
                 dger = self.get_dger()
-                n_uhes = self.get_confhd().usinas.shape[0]
+                mes_inicio = self._validate_data(dger.mes_inicio_estudo, int)
+                num_forwards = self._validate_data(dger.num_forwards, int)
+
+                parpa = self._validate_data(
+                    dger.consideracao_media_anual_afluencias, int
+                )
+                ordem_maxima = self._validate_data(dger.ordem_maxima_parp, int)
+
+                n_uhes = self._validate_data(
+                    self.get_confhd().usinas, pd.DataFrame
+                ).shape[0]
                 n_estagios = (
-                    self._numero_estagios_individualizados()
-                    + dger.mes_inicio_estudo
-                    - 1
+                    self._numero_estagios_individualizados() + mes_inicio - 1
                 )
-                n_estagios_th = (
-                    12
-                    if dger.consideracao_media_anual_afluencias == 3
-                    else dger.ordem_maxima_parp
-                )
+                n_estagios_th = 12 if parpa == 3 else ordem_maxima
                 self.__vazaof[iteracao] = Vazaof.le_arquivo(
                     self.__tmppath,
                     nome_arq,
-                    dger.num_forwards,
+                    num_forwards,
                     n_uhes,
                     n_estagios,
                     n_estagios_th,
@@ -999,17 +1020,23 @@ class RawFilesRepository(AbstractFilesRepository):
                 pass
         return self.__vazaof.get(iteracao)
 
-    def get_energiab(self) -> Energiab:
+    def get_energiab(self) -> Optional[Energiab]:
         if self.__energiab is None:
             try:
                 dger = self.get_dger()
-                n_rees = self.get_ree().rees.shape[0]
-                n_estagios = dger.num_anos_estudo * 12
+                anos_estudo = self._validate_data(dger.num_anos_estudo, int)
+                num_forwards = self._validate_data(dger.num_forwards, int)
+                num_aberturas = self._validate_data(dger.num_aberturas, int)
+
+                n_rees = self._validate_data(
+                    self.get_ree().rees, pd.DataFrame
+                ).shape[0]
+                n_estagios = anos_estudo * 12
                 self.__energiab = Energiab.le_arquivo(
                     self.__tmppath,
                     "energiab.dat",
-                    dger.num_forwards,
-                    dger.num_aberturas,
+                    num_forwards,
+                    num_aberturas,
                     n_rees,
                     n_estagios,
                 )
@@ -1017,21 +1044,25 @@ class RawFilesRepository(AbstractFilesRepository):
                 pass
         return self.__energiab
 
-    def get_vazaob(self) -> Vazaob:
+    def get_vazaob(self) -> Optional[Vazaob]:
         if self.__vazaob is None:
             try:
                 dger = self.get_dger()
-                n_uhes = self.get_confhd().usinas.shape[0]
+                mes_inicio = self._validate_data(dger.mes_inicio_estudo, int)
+                num_forwards = self._validate_data(dger.num_forwards, int)
+                num_aberturas = self._validate_data(dger.num_aberturas, int)
+
+                n_uhes = self._validate_data(
+                    self.get_confhd().usinas, pd.DataFrame
+                ).shape[0]
                 n_estagios_hib = (
-                    self._numero_estagios_individualizados()
-                    + dger.mes_inicio_estudo
-                    - 1
+                    self._numero_estagios_individualizados() + mes_inicio - 1
                 )
                 self.__vazaob = Vazaob.le_arquivo(
                     self.__tmppath,
                     "vazaob.dat",
-                    dger.num_forwards,
-                    dger.num_aberturas,
+                    num_forwards,
+                    num_aberturas,
                     n_uhes,
                     n_estagios_hib,
                 )
@@ -1039,7 +1070,7 @@ class RawFilesRepository(AbstractFilesRepository):
                 pass
         return self.__vazaob
 
-    def get_enavazf(self, iteracao: int) -> Enavazf:
+    def get_enavazf(self, iteracao: int) -> Optional[Enavazf]:
         nome_arq = (
             f"enavazf{str(iteracao).zfill(3)}.dat"
             if iteracao != 1
@@ -1048,21 +1079,24 @@ class RawFilesRepository(AbstractFilesRepository):
         if self.__enavazf.get(iteracao) is None:
             try:
                 dger = self.get_dger()
-                n_rees = self.get_ree().rees.shape[0]
+                mes_inicio = self._validate_data(dger.mes_inicio_estudo, int)
+                num_forwards = self._validate_data(dger.num_forwards, int)
+                parpa = self._validate_data(
+                    dger.consideracao_media_anual_afluencias, int
+                )
+                ordem_maxima = self._validate_data(dger.ordem_maxima_parp, int)
+
+                n_rees = self._validate_data(
+                    self.get_ree().rees, pd.DataFrame
+                ).shape[0]
                 n_estagios = (
-                    self._numero_estagios_individualizados()
-                    + dger.mes_inicio_estudo
-                    - 1
+                    self._numero_estagios_individualizados() + mes_inicio - 1
                 )
-                n_estagios_th = (
-                    12
-                    if dger.consideracao_media_anual_afluencias == 3
-                    else dger.ordem_maxima_parp
-                )
+                n_estagios_th = 12 if parpa == 3 else ordem_maxima
                 self.__enavazf[iteracao] = Enavazf.le_arquivo(
                     self.__tmppath,
                     nome_arq,
-                    dger.num_forwards,
+                    num_forwards,
                     n_rees,
                     n_estagios,
                     n_estagios_th,
@@ -1071,21 +1105,25 @@ class RawFilesRepository(AbstractFilesRepository):
                 pass
         return self.__enavazf.get(iteracao)
 
-    def get_enavazb(self) -> Enavazb:
+    def get_enavazb(self) -> Optional[Enavazb]:
         if self.__enavazb is None:
             try:
                 dger = self.get_dger()
-                n_rees = self.get_ree().rees.shape[0]
+                mes_inicio = self._validate_data(dger.mes_inicio_estudo, int)
+                num_forwards = self._validate_data(dger.num_forwards, int)
+                num_aberturas = self._validate_data(dger.num_aberturas, int)
+
+                n_rees = self._validate_data(
+                    self.get_ree().rees, pd.DataFrame
+                ).shape[0]
                 n_estagios = (
-                    self._numero_estagios_individualizados()
-                    + dger.mes_inicio_estudo
-                    - 1
+                    self._numero_estagios_individualizados() + mes_inicio - 1
                 )
                 self.__enavazb = Enavazb.le_arquivo(
                     self.__tmppath,
                     "enavazb.dat",
-                    dger.num_forwards,
-                    dger.num_aberturas,
+                    num_forwards,
+                    num_aberturas,
                     n_rees,
                     n_estagios,
                 )
@@ -1093,23 +1131,35 @@ class RawFilesRepository(AbstractFilesRepository):
                 pass
         return self.__enavazb
 
-    def get_energias(self) -> Energias:
+    def get_energias(self) -> Optional[Energias]:
         if self.__energias is None:
             try:
                 dger = self.get_dger()
-                n_rees = self.get_ree().rees.shape[0]
-                n_estagios = dger.num_anos_estudo * 12
-                n_estagios_th = (
-                    12
-                    if dger.consideracao_media_anual_afluencias == 3
-                    else dger.ordem_maxima_parp
+                anos_estudo = self._validate_data(dger.num_anos_estudo, int)
+                ano_inicio = self._validate_data(dger.ano_inicio_estudo, int)
+                ano_inicio_historico = self._validate_data(
+                    dger.ano_inicial_historico, int
                 )
-                if dger.tipo_simulacao_final == 1:
-                    num_series = dger.num_series_sinteticas
+                num_series_sinteticas = self._validate_data(
+                    dger.num_series_sinteticas, int
+                )
+                tipo_simulacao_final = self._validate_data(
+                    dger.tipo_simulacao_final, int
+                )
+                parpa = self._validate_data(
+                    dger.consideracao_media_anual_afluencias, int
+                )
+                ordem_maxima = self._validate_data(dger.ordem_maxima_parp, int)
+
+                n_rees = self._validate_data(
+                    self.get_ree().rees, pd.DataFrame
+                ).shape[0]
+                n_estagios = anos_estudo * 12
+                n_estagios_th = 12 if parpa == 3 else ordem_maxima
+                if tipo_simulacao_final == 1:
+                    num_series = num_series_sinteticas
                 else:
-                    num_series = (
-                        dger.ano_inicio_estudo - dger.ano_inicial_historico - 1
-                    )
+                    num_series = ano_inicio - ano_inicio_historico - 1
                 self.__energias = Energias.le_arquivo(
                     self.__tmppath,
                     "energias.dat",
@@ -1122,27 +1172,37 @@ class RawFilesRepository(AbstractFilesRepository):
                 pass
         return self.__energias
 
-    def get_enavazs(self) -> Enavazf:
+    def get_enavazs(self) -> Optional[Enavazf]:
         if self.__enavazs is None:
             try:
                 dger = self.get_dger()
-                n_rees = self.get_ree().rees.shape[0]
+                mes_inicio = self._validate_data(dger.mes_inicio_estudo, int)
+                ano_inicio = self._validate_data(dger.ano_inicio_estudo, int)
+                ano_inicio_historico = self._validate_data(
+                    dger.ano_inicial_historico, int
+                )
+                num_series_sinteticas = self._validate_data(
+                    dger.num_series_sinteticas, int
+                )
+                tipo_simulacao_final = self._validate_data(
+                    dger.tipo_simulacao_final, int
+                )
+                parpa = self._validate_data(
+                    dger.consideracao_media_anual_afluencias, int
+                )
+                ordem_maxima = self._validate_data(dger.ordem_maxima_parp, int)
+
+                n_rees = self._validate_data(
+                    self.get_ree().rees, pd.DataFrame
+                ).shape[0]
                 n_estagios = (
-                    self._numero_estagios_individualizados()
-                    + dger.mes_inicio_estudo
-                    - 1
+                    self._numero_estagios_individualizados() + mes_inicio - 1
                 )
-                n_estagios_th = (
-                    12
-                    if dger.consideracao_media_anual_afluencias == 3
-                    else dger.ordem_maxima_parp
-                )
-                if dger.tipo_simulacao_final == 1:
-                    num_series = dger.num_series_sinteticas
+                n_estagios_th = 12 if parpa == 3 else ordem_maxima
+                if tipo_simulacao_final == 1:
+                    num_series = num_series_sinteticas
                 else:
-                    num_series = (
-                        dger.ano_inicio_estudo - dger.ano_inicial_historico - 1
-                    )
+                    num_series = ano_inicio - ano_inicio_historico - 1
                 self.__enavazs = Enavazf.le_arquivo(
                     self.__tmppath,
                     "enavazs.dat",
@@ -1155,27 +1215,33 @@ class RawFilesRepository(AbstractFilesRepository):
                 pass
         return self.__enavazs
 
-    def get_vazaos(self) -> Vazaos:
+    def get_vazaos(self) -> Optional[Vazaos]:
         if self.__vazaos is None:
             try:
                 dger = self.get_dger()
-                n_uhes = self.get_confhd().usinas.shape[0]
+                mes_inicio = self._validate_data(dger.mes_inicio_estudo, int)
+                parpa = self._validate_data(
+                    dger.consideracao_media_anual_afluencias, int
+                )
+                ordem_maxima = self._validate_data(dger.ordem_maxima_parp, int)
+                num_series_sinteticas = self._validate_data(
+                    dger.num_series_sinteticas, int
+                )
+                ano_inicio = self._validate_data(dger.ano_inicio_estudo, int)
+                ano_inicial_historico = self._validate_data(
+                    dger.ano_inicial_historico, int
+                )
+                n_uhes = self._validate_data(
+                    self.get_confhd().usinas, pd.DataFrame
+                ).shape[0]
                 n_estagios = (
-                    self._numero_estagios_individualizados()
-                    + dger.mes_inicio_estudo
-                    - 1
+                    self._numero_estagios_individualizados() + mes_inicio - 1
                 )
-                n_estagios_th = (
-                    12
-                    if dger.consideracao_media_anual_afluencias == 3
-                    else dger.ordem_maxima_parp
-                )
+                n_estagios_th = 12 if parpa == 3 else ordem_maxima
                 if dger.tipo_simulacao_final == 1:
-                    num_series = dger.num_series_sinteticas
+                    num_series = num_series_sinteticas
                 else:
-                    num_series = (
-                        dger.ano_inicio_estudo - dger.ano_inicial_historico - 1
-                    )
+                    num_series = ano_inicio - ano_inicial_historico - 1
                 self.__vazaos = Vazaos.le_arquivo(
                     self.__tmppath,
                     "vazaos.dat",
@@ -1196,7 +1262,7 @@ class RawFilesRepository(AbstractFilesRepository):
                     "vazoes.dat",
                 )
             except Exception:
-                pass
+                raise RuntimeError()
         return self.__vazoes
 
     def get_hidr(self) -> Hidr:
@@ -1207,10 +1273,10 @@ class RawFilesRepository(AbstractFilesRepository):
                     "hidr.dat",
                 )
             except Exception:
-                pass
+                raise RuntimeError()
         return self.__hidr
 
-    def get_engnat(self) -> Engnat:
+    def get_engnat(self) -> Optional[Engnat]:
         if self.__engnat is None:
             try:
                 self.__engnat = Engnat.le_arquivo(

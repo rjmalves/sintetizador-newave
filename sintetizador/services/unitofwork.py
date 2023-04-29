@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from os import chdir, curdir
-from typing import Dict
+from typing import Dict, Type
 from pathlib import Path
 from multiprocessing import Queue
 from sintetizador.model.settings import Settings
@@ -82,10 +82,14 @@ class FSUnitOfWork(AbstractUnitOfWork):
 
     @property
     def files(self) -> AbstractFilesRepository:
+        if self._files is None:
+            raise RuntimeError()
         return self._files
 
     @property
     def export(self) -> AbstractExportRepository:
+        if self._exporter is None:
+            raise RuntimeError()
         return self._exporter
 
     def rollback(self):
@@ -93,7 +97,7 @@ class FSUnitOfWork(AbstractUnitOfWork):
 
 
 def factory(kind: str, *args, **kwargs) -> AbstractUnitOfWork:
-    mappings: Dict[str, AbstractUnitOfWork] = {
+    mappings: Dict[str, Type[AbstractUnitOfWork]] = {
         "FS": FSUnitOfWork,
     }
     return mappings[kind](*args, **kwargs)

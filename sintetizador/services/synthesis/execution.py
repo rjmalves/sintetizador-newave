@@ -1,11 +1,10 @@
-from typing import Callable, Dict, List
+from typing import Callable, Dict, List, Optional, TypeVar, Type
 import pandas as pd  # type: ignore
 import pathlib
 import socket
 import logging
 
 from sintetizador.services.unitofwork import AbstractUnitOfWork
-from sintetizador.utils.log import Log
 from sintetizador.utils.fs import set_directory
 from sintetizador.model.execution.variable import Variable
 from sintetizador.model.execution.executionsynthesis import ExecutionSynthesis
@@ -21,12 +20,25 @@ class ExecutionSynthetizer:
         "RECURSOS_CLUSTER",
     ]
 
+    T = TypeVar("T")
+
+    logger: Optional[logging.Logger] = None
+
+    @classmethod
+    def _validate_data(cls, data, type: Type[T], msg: str = "dados") -> T:
+        if not isinstance(data, type):
+            if cls.logger is not None:
+                cls.logger.error(f"Erro na leitura de {msg}")
+            raise RuntimeError()
+        return data
+
     @classmethod
     def _default_args(cls) -> List[ExecutionSynthesis]:
-        return [
+        args = [
             ExecutionSynthesis.factory(a)
             for a in cls.DEFAULT_EXECUTION_SYNTHESIS_ARGS
         ]
+        return [arg for arg in args if arg is not None]
 
     @classmethod
     def _process_variable_arguments(
@@ -34,11 +46,8 @@ class ExecutionSynthetizer:
         args: List[str],
     ) -> List[ExecutionSynthesis]:
         args_data = [ExecutionSynthesis.factory(c) for c in args]
-        for i, a in enumerate(args_data):
-            if a is None:
-                Log.log(f"Erro no argumento fornecido: {args[i]}")
-                return []
-        return args_data
+        valid_args = [arg for arg in args_data if arg is not None]
+        return valid_args
 
     @classmethod
     def _resolve(
@@ -61,58 +70,52 @@ class ExecutionSynthetizer:
     @classmethod
     def _resolve_convergence(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         with uow:
-            pmo = uow.files.get_pmo()
-            df = pmo.convergencia
-            if isinstance(df, pd.DataFrame):
-                df_processed = pd.DataFrame(
-                    data={
-                        "iter": df["Iteração"][2::3].to_numpy(),
-                        "zinf": df["ZINF"][2::3].to_numpy(),
-                        "dZinf": df["Delta ZINF"][2::3].to_numpy(),
-                        "zsup": df["ZSUP Iteração"][2::3].to_numpy(),
-                        "tempo": df["Tempo"][::3]
-                        .dt.total_seconds()
-                        .to_numpy(),
-                    }
-                )
-                df_processed = df_processed.astype({"tempo": int})
-                return df_processed
-            else:
-                return None
+            df = cls._validate_data(
+                uow.files.get_pmo().convergencia, pd.DataFrame, "convergência"
+            )
+            df_processed = pd.DataFrame(
+                data={
+                    "iter": df["Iteração"][2::3].to_numpy(),
+                    "zinf": df["ZINF"][2::3].to_numpy(),
+                    "dZinf": df["Delta ZINF"][2::3].to_numpy(),
+                    "zsup": df["ZSUP Iteração"][2::3].to_numpy(),
+                    "tempo": df["Tempo"][::3].dt.total_seconds().to_numpy(),
+                }
+            )
+            df_processed = df_processed.astype({"tempo": int})
+            return df_processed
 
     @classmethod
     def _resolve_cost(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         with uow:
-            pmo = uow.files.get_pmo()
-            df = pmo.custo_operacao_series_simuladas
-            if isinstance(df, pd.DataFrame):
-                df_processed = df.rename(
-                    columns={
-                        "Parcela": "parcela",
-                        "Valor Esperado": "mean",
-                        "Desvio Padrão do VE": "std",
-                    }
-                )
-                return df_processed[["parcela", "mean", "std"]]
-            else:
-                return None
+            df = cls._validate_data(
+                uow.files.get_pmo().custo_operacao_series_simuladas,
+                pd.DataFrame,
+                "custo",
+            )
+            df_processed = df.rename(
+                columns={
+                    "Parcela": "parcela",
+                    "Valor Esperado": "mean",
+                    "Desvio Padrão do VE": "std",
+                }
+            )
+            return df_processed[["parcela", "mean", "std"]]
 
     @classmethod
     def _resolve_runtime(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         with uow:
             tim = uow.files.get_newavetim()
             if tim is None:
-                return None
-            else:
-                df = tim.tempos_etapas
-                if isinstance(df, pd.DataFrame):
-                    df = df.rename(
-                        columns={"Etapa": "etapa", "Tempo": "tempo"}
-                    )
-                    df["tempo"] = df["tempo"].dt.total_seconds()
-                    return df
-                else:
-                    return None
+                return pd.DataFrame()
+            df = cls._validate_data(
+                tim.tempos_etapas,
+                pd.DataFrame,
+                "tempos",
+            )
+            df = df.rename(columns={"Etapa": "etapa", "Tempo": "tempo"})
+            df["tempo"] = df["tempo"].dt.total_seconds()
+            return df
 
     @classmethod
     def _resolve_job_resources(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
@@ -124,9 +127,10 @@ class ExecutionSynthetizer:
                 try:
                     df = pd.read_csv(file)
                 except Exception as e:
-                    cls.logger.info(
-                        f"Erro ao acessar arquivo {file}: {str(e)}"
-                    )
+                    if cls.logger is not None:
+                        cls.logger.info(
+                            f"Erro ao acessar arquivo {file}: {str(e)}"
+                        )
                     return None
                 return df
             return None
@@ -143,9 +147,10 @@ class ExecutionSynthetizer:
                 try:
                     df_job = pd.read_csv(file)
                 except Exception as e:
-                    cls.logger.info(
-                        f"Erro ao acessar arquivo {file}: {str(e)}"
-                    )
+                    if cls.logger is not None:
+                        cls.logger.info(
+                            f"Erro ao acessar arquivo {file}: {str(e)}"
+                        )
                     return None
         if df_job is None:
             return None
@@ -160,9 +165,10 @@ class ExecutionSynthetizer:
                 try:
                     df = pd.read_csv(file)
                 except Exception as e:
-                    cls.logger.info(
-                        f"Erro ao acessar arquivo {file}: {str(e)}"
-                    )
+                    if cls.logger is not None:
+                        cls.logger.info(
+                            f"Erro ao acessar arquivo {file}: {str(e)}"
+                        )
                     return None
                 df["timeInstant"] = pd.to_datetime(
                     df["timeInstant"], format="ISO8601"
@@ -178,15 +184,16 @@ class ExecutionSynthetizer:
         cls.logger = logging.getLogger("main")
         try:
             if len(variables) == 0:
-                variables = ExecutionSynthetizer._default_args()
+                synthesis_variables = ExecutionSynthetizer._default_args()
             else:
-                variables = ExecutionSynthetizer._process_variable_arguments(
-                    variables
+                synthesis_variables = (
+                    ExecutionSynthetizer._process_variable_arguments(variables)
                 )
 
-            for s in variables:
+            for s in synthesis_variables:
                 filename = str(s)
-                cls.logger.info(f"Realizando síntese de {filename}")
+                if cls.logger is not None:
+                    cls.logger.info(f"Realizando síntese de {filename}")
                 df = cls._resolve(s, uow)
                 if df is not None:
                     with uow:
