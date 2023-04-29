@@ -902,7 +902,6 @@ class RawFilesRepository(AbstractFilesRepository):
                 return None
             return regra(self.__tmppath, *args, **kwargs)
         except Exception as e:
-            print(e)
             return None
 
     def get_nwlistcf_cortes(self) -> Optional[Nwlistcf]:
