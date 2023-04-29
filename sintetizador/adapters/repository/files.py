@@ -901,7 +901,7 @@ class RawFilesRepository(AbstractFilesRepository):
             if regra is None:
                 return None
             return regra(self.__tmppath, *args, **kwargs)
-        except Exception as e:
+        except Exception:
             return None
 
     def get_nwlistcf_cortes(self) -> Optional[Nwlistcf]:

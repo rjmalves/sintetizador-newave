@@ -1,4 +1,10 @@
 # sintetizador-newave
+
+
+[![tests](https://github.com/rjmalves/sintetizador-newave/actions/workflows/main.yml/badge.svg)](https://github.com/rjmalves/sintetizador-newave/actions/workflows/main.yml)
+[![codecov](https://codecov.io/gh/rjmalves/sintetizador-newave/branch/main/graph/badge.svg?token=9AJRL5L21W)](https://codecov.io/gh/rjmalves/sintetizador-newave)
+
+
 Programa auxiliar para realizar a síntese de dados do programa NEWAVE em arquivos ou banco de dados.
 
 
