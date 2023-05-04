@@ -790,8 +790,8 @@ class OperationSynthetizer:
                 )
             else:
                 fim = datetime(
-                    year=int(rees["Ano Fim Individualizado"].tolist()[0]),
-                    month=int(rees["Mês Fim Individualizado"].tolist()[0]),
+                    year=int(rees["Ano Fim Individualizado"].iloc[0]),
+                    month=int(rees["Mês Fim Individualizado"].iloc[0]),
                     day=1,
                 )
             uhes_idx = confhd["Número"]
@@ -888,8 +888,8 @@ class OperationSynthetizer:
                 )
             else:
                 fim = datetime(
-                    year=int(rees["Ano Fim Individualizado"].tolist()[0]),
-                    month=int(rees["Mês Fim Individualizado"].tolist()[0]),
+                    year=int(rees["Ano Fim Individualizado"].iloc[0]),
+                    month=int(rees["Mês Fim Individualizado"].iloc[0]),
                     day=1,
                 )
             uhes_idx = confhd["Número"]
@@ -1097,7 +1097,9 @@ class OperationSynthetizer:
                 r: str(
                     sistema.loc[
                         sistema["Num. Subsistema"]
-                        == int(rees.loc[rees["Número"] == r, "Submercado"]),
+                        == int(
+                            rees.loc[rees["Número"] == r, "Submercado"].iloc[0]
+                        ),
                         "Nome",
                     ].tolist()[0]
                 )
@@ -1124,7 +1126,7 @@ class OperationSynthetizer:
 
             df_uhe["group"] = df_uhe.apply(
                 lambda linha: int(
-                    confhd.loc[confhd["Nome"] == linha["usina"], "REE"]
+                    confhd.loc[confhd["Nome"] == linha["usina"], "REE"].iloc[0]
                 ),
                 axis=1,
             )
@@ -1214,8 +1216,8 @@ class OperationSynthetizer:
                 )
             else:
                 fim = datetime(
-                    year=int(rees["Ano Fim Individualizado"].tolist()[0]),
-                    month=int(rees["Mês Fim Individualizado"].tolist()[0]),
+                    year=int(rees["Ano Fim Individualizado"].iloc[0]),
+                    month=int(rees["Mês Fim Individualizado"].iloc[0]),
                     day=1,
                 )
             uhes_idx = confhd["Número"]
@@ -1342,8 +1344,8 @@ class OperationSynthetizer:
                 )
             else:
                 fim = datetime(
-                    year=int(rees["Ano Fim Individualizado"].tolist()[0]),
-                    month=int(rees["Mês Fim Individualizado"].tolist()[0]),
+                    year=int(rees["Ano Fim Individualizado"].iloc[0]),
+                    month=int(rees["Mês Fim Individualizado"].iloc[0]),
                     day=1,
                 )
             uhes_idx = confhd["Número"]
