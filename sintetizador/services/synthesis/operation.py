@@ -484,10 +484,7 @@ class OperationSynthetizer:
                 uow.files.get_ree().rees, pd.DataFrame, "REE"
             )
         valid_variables: List[OperationSynthesis] = []
-        agregacao_sim_final = cls._validate_data(
-            dger.agregacao_simulacao_final, int, "dger"
-        )
-        sf_indiv = agregacao_sim_final == 1
+        sf_indiv = dger.agregacao_simulacao_final == 1
         politica_indiv = rees["Mês Fim Individualizado"].isna().sum() == 0
         indiv = sf_indiv or politica_indiv
         geracao_eolica = cls._validate_data(
