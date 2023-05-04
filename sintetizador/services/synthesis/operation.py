@@ -2,6 +2,7 @@ from typing import Callable, Dict, List, Optional, Type, TypeVar
 import pandas as pd  # type: ignore
 import numpy as np
 import logging
+import traceback
 from multiprocessing import Pool
 from inewave.config import MESES_DF
 from datetime import datetime
@@ -1606,4 +1607,5 @@ class OperationSynthetizer:
                         df = cls._postprocess(df)
                         uow.export.synthetize_df(df, filename)
         except Exception as e:
+            traceback.print_exc()
             cls.logger.error(str(e))
