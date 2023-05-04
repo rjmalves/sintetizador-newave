@@ -855,6 +855,7 @@ class OperationSynthetizer:
                     df_completo["patamar"] == p0, cols_cenarios
                 ] += c
             df_completo = df_completo.loc[df_completo["patamar"] == p0, :]
+            df_completo = df_completo.drop(columns="patamar")
 
         df_completo = df_completo.loc[df_completo["dataInicio"] < fim, :]
         return df_completo
@@ -952,6 +953,7 @@ class OperationSynthetizer:
                     df_completo["patamar"] == p0, cols_cenarios
                 ] += c
             df_completo = df_completo.loc[df_completo["patamar"] == p0, :]
+            df_completo = df_completo.drop(columns="patamar")
 
         df_completo.loc[:, cols_cenarios] *= FATOR_HM3_M3S
         df_completo = df_completo.loc[df_completo["dataInicio"] < fim, :]
