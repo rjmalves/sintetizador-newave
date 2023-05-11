@@ -664,9 +664,8 @@ class OperationSynthetizer:
                 pd.DataFrame,
                 "submercados",
             )
-            sistemas_reais = sistema.loc[sistema["Fictício"] == 0, :]
-            sbms_idx = sistemas_reais["Num. Subsistema"]
-            sbms_name = sistemas_reais["Nome"]
+            sbms_idx = sistema["Num. Subsistema"]
+            sbms_name = sistema["Nome"]
             df = pd.DataFrame()
             for s1, n1 in zip(sbms_idx, sbms_name):
                 for s2, n2 in zip(sbms_idx, sbms_name):
