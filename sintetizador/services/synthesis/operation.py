@@ -1518,6 +1518,7 @@ class OperationSynthetizer:
                 ].sum(axis=1)
         else:
             df["mean"] = df[cols_cenarios].mean(axis=1)
+            df["std"] = df[cols_cenarios].std(axis=1)
         return df
 
     @classmethod
