@@ -1600,11 +1600,12 @@ class OperationSynthetizer:
                     df = cls._resolve_spatial_resolution(s, uow)
                     if s in cls.SYNTHESIS_TO_CACHE:
                         cls.CACHED_SYNTHESIS[s] = df.copy()
-                if not df.empty:
-                    df = cls._resolve_starting_stage(df, uow)
-                    with uow:
-                        df = cls._postprocess(df)
-                        uow.export.synthetize_df(df, filename)
+                if df is not None:
+                    if not df.empty:
+                        df = cls._resolve_starting_stage(df, uow)
+                        with uow:
+                            df = cls._postprocess(df)
+                            uow.export.synthetize_df(df, filename)
         except Exception as e:
             traceback.print_exc()
             cls.logger.error(str(e))
