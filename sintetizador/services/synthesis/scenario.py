@@ -2,6 +2,7 @@ from typing import Callable, Dict, List, Tuple, Optional, TypeVar, Type
 import pandas as pd  # type: ignore
 import numpy as np  # type: ignore
 import logging
+from traceback import print_exc
 from multiprocessing import Pool
 from datetime import datetime
 from dateutil.relativedelta import relativedelta  # type: ignore
@@ -47,6 +48,17 @@ class ScenarioSynthetizer:
         "data_fim",
         "serie",
         "abertura",
+    ]
+
+    IDENTIFICATION_COLUMNS = [
+        "dataInicio",
+        "dataFim",
+        "estagio",
+        "submercado",
+        "ree",
+        "pee",
+        "usina",
+        "iteracao",
     ]
 
     CACHED_SYNTHESIS: Dict[Tuple[Variable, Step], pd.DataFrame] = {}
@@ -1415,24 +1427,32 @@ class ScenarioSynthetizer:
         return df_completo
 
     @classmethod
-    def _resolve_enaa_backward(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def _resolve_enaa_backward_iteracao(
+        cls, uow: AbstractUnitOfWork, it: int
+    ) -> pd.DataFrame:
+        logger = Log.configure_process_logger(
+            uow._queue, Variable.ENA_ABSOLUTA.value, it
+        )
         with uow:
-            arq_enavazb = uow.files.get_enavazb()
+            arq_enavazb = uow.files.get_enavazb(it)
             if arq_enavazb is None:
-                if cls.logger is not None:
-                    cls.logger.error("Falha na leitura de séries de energia")
-                raise RuntimeError()
-            arq_energiab = uow.files.get_energiab()
+                logger.error(
+                    f"Falha na leitura de séries de energia da it {it}"
+                )
+            arq_energiab = uow.files.get_energiab(it)
             if arq_energiab is None:
-                if cls.logger is not None:
-                    cls.logger.error("Falha na leitura de séries de energia")
-                raise RuntimeError()
-
-            df_enavaz = (
-                arq_enavazb.series
-                if arq_enavazb.series is not None
-                else pd.DataFrame()
-            )
+                logger.error(
+                    f"Falha na leitura de séries de energia da it {it}"
+                )
+                return None
+            if arq_enavazb is not None:
+                df_enavaz = (
+                    arq_enavazb.series
+                    if arq_enavazb.series is not None
+                    else pd.DataFrame()
+                )
+            else:
+                df_enavaz = pd.DataFrame()
             df_energia = (
                 arq_energiab.series
                 if arq_energiab.series is not None
@@ -1449,23 +1469,87 @@ class ScenarioSynthetizer:
                 )
             else:
                 df_ena = df_energia
-            enas = (
+            ena_it = (
                 cls._adiciona_dados_rees_backward(uow, df_ena)
                 if not df_ena.empty
                 else pd.DataFrame()
             )
-        return enas
+            if not ena_it.empty:
+                ena_it["iteracao"] = it
+                return ena_it
+        return None
 
     @classmethod
-    def _resolve_qinc_backward(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def _resolve_enaa_backward(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         with uow:
-            arq = uow.files.get_vazaob()
-            df = (
+            convergencia = cls._validate_data(
+                uow.files.get_pmo().convergencia, pd.DataFrame, "convergência"
+            )
+            n_iters = convergencia["Iteração"].max()
+        df_completo = pd.DataFrame()
+        n_procs = int(Settings().processors)
+        with Pool(processes=n_procs) as pool:
+            if n_procs > 1:
+                if cls.logger is not None:
+                    cls.logger.info("Paralelizando...")
+            async_res = {
+                it: pool.apply_async(
+                    cls._resolve_enaa_backward_iteracao, (uow, it)
+                )
+                for it in range(1, n_iters + 1)
+            }
+            dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
+        if cls.logger is not None:
+            cls.logger.info("Compactando dados...")
+        for _, df in dfs.items():
+            df_completo = pd.concat([df_completo, df], ignore_index=True)
+        return df_completo
+
+    @classmethod
+    def _resolve_qinc_backward_iteracao(
+        cls, uow: AbstractUnitOfWork, it: int
+    ) -> pd.DataFrame:
+        logger = Log.configure_process_logger(
+            uow.queue, Variable.VAZAO_INCREMENTAL.value, it
+        )
+        with uow:
+            logger.info(f"Obtendo vazões backward da it. {it}")
+            arq = uow.files.get_vazaob(it)
+            vaz_it = (
                 cls._adiciona_dados_uhes_backward(uow, arq.series)
                 if arq is not None
                 else pd.DataFrame()
             )
-        return df
+            if not vaz_it.empty:
+                vaz_it["iteracao"] = it
+                return vaz_it
+            return None
+
+    @classmethod
+    def _resolve_qinc_backward(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        with uow:
+            convergencia = cls._validate_data(
+                uow.files.get_pmo().convergencia, pd.DataFrame, "convergência"
+            )
+            n_iters = convergencia["Iteração"].max()
+        df_completo = pd.DataFrame()
+        n_procs = int(Settings().processors)
+        with Pool(processes=n_procs) as pool:
+            if n_procs > 1:
+                if cls.logger is not None:
+                    cls.logger.info("Paralelizando...")
+            async_res = {
+                it: pool.apply_async(
+                    cls._resolve_qinc_backward_iteracao, (uow, it)
+                )
+                for it in range(1, n_iters + 1)
+            }
+            dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
+        if cls.logger is not None:
+            cls.logger.info("Compactando dados...")
+        for _, df in dfs.items():
+            df_completo = pd.concat([df_completo, df], ignore_index=True)
+        return df_completo
 
     @classmethod
     def _resolve_enaa_sf(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
@@ -1776,6 +1860,55 @@ class ScenarioSynthetizer:
         return cls._apply_mlt(synthesis, df, uow)
 
     @classmethod
+    def _process_quantiles(
+        cls, df: pd.DataFrame, quantiles: List[float]
+    ) -> pd.DataFrame:
+        group_cols = [
+            col
+            for col in df.columns.tolist()
+            if col in cls.IDENTIFICATION_COLUMNS
+        ]
+        for q in quantiles:
+            if q == 0:
+                label = "min"
+            elif q == 1:
+                label = "max"
+            elif q == 0.5:
+                label = "median"
+            else:
+                label = f"p{int(100 * q)}"
+            df_group = (
+                df.groupby(group_cols)
+                .quantile(q, numeric_only=True)
+                .reset_index()
+            )
+            if "abertura" in group_cols:
+                df_group["abertura"] = None
+            df_group["cenario"] = label
+            df = pd.concat([df, df_group], ignore_index=True)
+        return df
+
+    @classmethod
+    def _process_mean(cls, df: pd.DataFrame) -> pd.DataFrame:
+        group_cols = [
+            col
+            for col in df.columns.tolist()
+            if col in cls.IDENTIFICATION_COLUMNS
+        ]
+        cenarios = df["cenario"].unique()
+        cenarios = [c for c in cenarios if c not in ["min", "max", "median"]]
+        cenarios = [c for c in cenarios if "p" not in str(c)]
+        df_mean = df.groupby(group_cols).mean(numeric_only=True).reset_index()
+        df_std = df.groupby(group_cols).std(numeric_only=True).reset_index()
+        if "abertura" in group_cols:
+            df_mean["abertura"] = None
+            df_std["abertura"] = None
+        df_mean["cenario"] = "mean"
+        df_std["cenario"] = "std"
+
+        return pd.concat([df, df_mean, df_std], ignore_index=True)
+
+    @classmethod
     def _postprocess(cls, df: pd.DataFrame):
         column_names = {
             "data": "dataInicio",
@@ -1783,10 +1916,16 @@ class ScenarioSynthetizer:
             "nome_usina": "usina",
             "nome_ree": "ree",
             "nome_submercado": "submercado",
+            "serie": "cenario",
         }
-        return df.rename(
-            columns={k: v for k, v in column_names.items() if k in df.columns}
+        df.rename(
+            columns={k: v for k, v in column_names.items() if k in df.columns},
+            inplace=True,
         )
+        # Calcula estatisticas
+        df = cls._process_quantiles(df, [0.05 * i for i in range(21)])
+        df = cls._process_mean(df)
+        return df
 
     @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
@@ -1817,4 +1956,5 @@ class ScenarioSynthetizer:
                 with uow:
                     uow.export.synthetize_df(df, filename)
         except Exception as e:
+            print_exc()
             cls.logger.error(str(e))

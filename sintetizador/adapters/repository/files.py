@@ -189,7 +189,7 @@ class AbstractFilesRepository(ABC):
         pass
 
     @abstractmethod
-    def get_energiab(self) -> Optional[Energiab]:
+    def get_energiab(self, iteracao: int) -> Optional[Energiab]:
         pass
 
     @abstractmethod
@@ -197,7 +197,7 @@ class AbstractFilesRepository(ABC):
         pass
 
     @abstractmethod
-    def get_vazaob(self) -> Optional[Vazaob]:
+    def get_vazaob(self, iteracao: int) -> Optional[Vazaob]:
         pass
 
     @abstractmethod
@@ -205,7 +205,7 @@ class AbstractFilesRepository(ABC):
         pass
 
     @abstractmethod
-    def get_enavazb(self) -> Optional[Enavazb]:
+    def get_enavazb(self, iteracao: int) -> Optional[Enavazb]:
         pass
 
     @abstractmethod
@@ -256,11 +256,11 @@ class RawFilesRepository(AbstractFilesRepository):
         self.__nwlistcf: Optional[Nwlistcf] = None
         self.__estados: Optional[Estados] = None
         self.__energiaf: Dict[int, Energiaf] = {}
-        self.__energiab: Optional[Energiab] = None
+        self.__energiab: Dict[int, Energiab] = {}
         self.__vazaof: Dict[int, Vazaof] = {}
-        self.__vazaob: Optional[Vazaob] = None
+        self.__vazaob: Dict[int, Vazaob] = {}
         self.__enavazf: Dict[int, Enavazf] = {}
-        self.__enavazb: Optional[Enavazb] = None
+        self.__enavazb: Dict[int, Enavazb] = {}
         self.__energias: Optional[Energias] = None
         self.__enavazs: Optional[Enavazf] = None
         self.__vazaos: Optional[Vazaos] = None
@@ -1019,8 +1019,13 @@ class RawFilesRepository(AbstractFilesRepository):
                 pass
         return self.__vazaof.get(iteracao)
 
-    def get_energiab(self) -> Optional[Energiab]:
-        if self.__energiab is None:
+    def get_energiab(self, iteracao: int) -> Optional[Energiab]:
+        nome_arq = (
+            f"energiab{str(iteracao).zfill(3)}.dat"
+            if iteracao != 1
+            else "energiab.dat"
+        )
+        if self.__energiab.get(iteracao) is None:
             try:
                 dger = self.get_dger()
                 anos_estudo = self._validate_data(dger.num_anos_estudo, int)
@@ -1031,9 +1036,9 @@ class RawFilesRepository(AbstractFilesRepository):
                     self.get_ree().rees, pd.DataFrame
                 ).shape[0]
                 n_estagios = anos_estudo * 12
-                self.__energiab = Energiab.le_arquivo(
+                self.__energiab[iteracao] = Energiab.le_arquivo(
                     self.__tmppath,
-                    "energiab.dat",
+                    nome_arq,
                     num_forwards,
                     num_aberturas,
                     n_rees,
@@ -1041,10 +1046,15 @@ class RawFilesRepository(AbstractFilesRepository):
                 )
             except Exception:
                 pass
-        return self.__energiab
+        return self.__energiab.get(iteracao)
 
-    def get_vazaob(self) -> Optional[Vazaob]:
-        if self.__vazaob is None:
+    def get_vazaob(self, iteracao: int) -> Optional[Vazaob]:
+        nome_arq = (
+            f"vazaob{str(iteracao).zfill(3)}.dat"
+            if iteracao != 1
+            else "vazaob.dat"
+        )
+        if self.__vazaob.get(iteracao) is None:
             try:
                 dger = self.get_dger()
                 mes_inicio = self._validate_data(dger.mes_inicio_estudo, int)
@@ -1057,9 +1067,9 @@ class RawFilesRepository(AbstractFilesRepository):
                 n_estagios_hib = (
                     self._numero_estagios_individualizados() + mes_inicio - 1
                 )
-                self.__vazaob = Vazaob.le_arquivo(
+                self.__vazaob[iteracao] = Vazaob.le_arquivo(
                     self.__tmppath,
-                    "vazaob.dat",
+                    nome_arq,
                     num_forwards,
                     num_aberturas,
                     n_uhes,
@@ -1067,7 +1077,7 @@ class RawFilesRepository(AbstractFilesRepository):
                 )
             except Exception:
                 pass
-        return self.__vazaob
+        return self.__vazaob.get(iteracao)
 
     def get_enavazf(self, iteracao: int) -> Optional[Enavazf]:
         nome_arq = (
@@ -1104,8 +1114,13 @@ class RawFilesRepository(AbstractFilesRepository):
                 pass
         return self.__enavazf.get(iteracao)
 
-    def get_enavazb(self) -> Optional[Enavazb]:
-        if self.__enavazb is None:
+    def get_enavazb(self, iteracao: int) -> Optional[Enavazb]:
+        nome_arq = (
+            f"enavazb{str(iteracao).zfill(3)}.dat"
+            if iteracao != 1
+            else "enavazb.dat"
+        )
+        if self.__enavazb.get(iteracao) is None:
             try:
                 dger = self.get_dger()
                 mes_inicio = self._validate_data(dger.mes_inicio_estudo, int)
@@ -1118,9 +1133,9 @@ class RawFilesRepository(AbstractFilesRepository):
                 n_estagios = (
                     self._numero_estagios_individualizados() + mes_inicio - 1
                 )
-                self.__enavazb = Enavazb.le_arquivo(
+                self.__enavazb[iteracao] = Enavazb.le_arquivo(
                     self.__tmppath,
-                    "enavazb.dat",
+                    nome_arq,
                     num_forwards,
                     num_aberturas,
                     n_rees,
@@ -1128,7 +1143,7 @@ class RawFilesRepository(AbstractFilesRepository):
                 )
             except Exception:
                 pass
-        return self.__enavazb
+        return self.__enavazb.get(iteracao)
 
     def get_energias(self) -> Optional[Energias]:
         if self.__energias is None:
