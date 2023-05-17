@@ -1895,9 +1895,10 @@ class ScenarioSynthetizer:
             for col in df.columns.tolist()
             if col in cls.IDENTIFICATION_COLUMNS
         ]
+        df = df.astype({"cenario": str})
         cenarios = df["cenario"].unique()
         cenarios = [c for c in cenarios if c not in ["min", "max", "median"]]
-        cenarios = [c for c in cenarios if "p" not in str(c)]
+        cenarios = [c for c in cenarios if "p" not in c]
         df_mean = df.groupby(group_cols).mean(numeric_only=True).reset_index()
         df_std = df.groupby(group_cols).std(numeric_only=True).reset_index()
         if "abertura" in group_cols:

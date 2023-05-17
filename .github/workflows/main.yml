@@ -16,7 +16,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Instala os requisitos do módulo
       run: |
-        python -m pip install -r deploy-requirements.txt
+        python -m pip install -r dev-requirements.txt
     - name: Executa os testes do pacote
       run: |
         python -m pytest --cov-report=xml --cov=sintetizador tests/
