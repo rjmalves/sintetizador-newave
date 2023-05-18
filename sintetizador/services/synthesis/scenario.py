@@ -1724,6 +1724,8 @@ class ScenarioSynthetizer:
         estagios = df["estagio"].unique()
         aberturas = df["abertura"].unique()
         num_aberturas = len(aberturas)
+        iteracoes = df["iteracao"].unique()
+        num_iteracoes = len(iteracoes)
         elements = df[filter_col].unique() if filter_col is not None else []
 
         df_mlts_elements = pd.DataFrame()
@@ -1756,7 +1758,7 @@ class ScenarioSynthetizer:
         mlts_ordenadas = np.repeat(
             df_mlts_elements.to_numpy(), num_series * num_aberturas
         )
-        df["mlt"] = mlts_ordenadas
+        df["mlt"] = np.tile(mlts_ordenadas, num_iteracoes)
         df["valorMlt"] = df["valor"] / df["mlt"]
         df.replace([np.inf, -np.inf], 0, inplace=True)
         return df
