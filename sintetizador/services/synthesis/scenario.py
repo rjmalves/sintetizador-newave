@@ -19,25 +19,25 @@ from sintetizador.model.scenario.scenariosynthesis import ScenarioSynthesis
 class ScenarioSynthetizer:
     DEFAULT_SCENARIO_SYNTHESIS_ARGS: List[str] = [
         "ENAA_REE_FOR",
-        "ENAA_REE_BKW",
+        # "ENAA_REE_BKW",
         "ENAA_REE_SF",
         "ENAA_SBM_FOR",
-        "ENAA_SBM_BKW",
+        # "ENAA_SBM_BKW",
         "ENAA_SBM_SF",
         "ENAA_SIN_FOR",
-        "ENAA_SIN_BKW",
+        # "ENAA_SIN_BKW",
         "ENAA_SIN_SF",
         "QINC_UHE_FOR",
-        "QINC_UHE_BKW",
+        # "QINC_UHE_BKW",
         "QINC_UHE_SF",
         "QINC_REE_FOR",
-        "QINC_REE_BKW",
+        # "QINC_REE_BKW",
         "QINC_REE_SF",
         "QINC_SBM_FOR",
-        "QINC_SBM_BKW",
+        # "QINC_SBM_BKW",
         "QINC_SBM_SF",
         "QINC_SIN_FOR",
-        "QINC_SIN_BKW",
+        # "QINC_SIN_BKW",
         "QINC_SIN_SF",
     ]
 
@@ -1434,10 +1434,11 @@ class ScenarioSynthetizer:
             uow._queue, Variable.ENA_ABSOLUTA.value, it
         )
         with uow:
+            logger.info(f"Obtendo energias backward da it. {it}")
             arq_enavazb = uow.files.get_enavazb(it)
             if arq_enavazb is None:
                 logger.error(
-                    f"Falha na leitura de séries de energia da it {it}"
+                    f"Falha na leitura de séries de enavaz da it {it}"
                 )
             arq_energiab = uow.files.get_energiab(it)
             if arq_energiab is None:
