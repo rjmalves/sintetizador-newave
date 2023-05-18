@@ -103,7 +103,7 @@ def test_get_energiaf(test_settings):
 
 def test_get_energiab(test_settings):
     repo = factory("FS", DECK_TEST_DIR)
-    energiab = repo.get_energiab()
+    energiab = repo.get_energiab(1)
     assert isinstance(energiab.series, pd.DataFrame)
 
 
@@ -121,7 +121,7 @@ def test_get_enavazf(test_settings):
 
 def test_get_enavazb(test_settings):
     repo = factory("FS", DECK_TEST_DIR)
-    enavazb = repo.get_enavazb()
+    enavazb = repo.get_enavazb(1)
     assert isinstance(enavazb.series, pd.DataFrame)
 
 
@@ -139,7 +139,7 @@ def test_get_vazaof(test_settings):
 
 def test_get_vazaob(test_settings):
     repo = factory("FS", DECK_TEST_DIR)
-    vazaob = repo.get_vazaob()
+    vazaob = repo.get_vazaob(1)
     assert isinstance(vazaob.series, pd.DataFrame)
 
 

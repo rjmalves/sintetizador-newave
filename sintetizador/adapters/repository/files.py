@@ -4,6 +4,7 @@ import pandas as pd  # type: ignore
 from datetime import datetime, timedelta
 import pathlib
 import asyncio
+from traceback import print_exc
 
 from inewave.newave.caso import Caso
 from inewave.newave.arquivos import Arquivos
@@ -1226,6 +1227,7 @@ class RawFilesRepository(AbstractFilesRepository):
                     n_estagios_th,
                 )
             except Exception:
+                print_exc()
                 pass
         return self.__enavazs
 
