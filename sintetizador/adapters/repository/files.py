@@ -923,7 +923,11 @@ class RawFilesRepository(AbstractFilesRepository):
 
     def _numero_estagios_individualizados(self) -> int:
         dger = self.get_dger()
-        agregacao = self._validate_data(dger.agregacao_simulacao_final, int)
+        agregacao = (
+            self._validate_data(dger.agregacao_simulacao_final, int)
+            if dger.agregacao_simulacao_final is not None
+            else None
+        )
         anos_estudo = self._validate_data(dger.num_anos_estudo, int)
         ano_inicio = self._validate_data(dger.ano_inicio_estudo, int)
         mes_inicio = self._validate_data(dger.mes_inicio_estudo, int)
