@@ -4,7 +4,6 @@ import pandas as pd  # type: ignore
 from datetime import datetime, timedelta
 import pathlib
 import asyncio
-from traceback import print_exc
 
 from inewave.newave.caso import Caso
 from inewave.newave.arquivos import Arquivos
@@ -903,7 +902,6 @@ class RawFilesRepository(AbstractFilesRepository):
                 return None
             return regra(self.__tmppath, *args, **kwargs)
         except Exception:
-            print_exc()
             return None
 
     def get_nwlistcf_cortes(self) -> Optional[Nwlistcf]:
