@@ -512,6 +512,18 @@ class OperationSynthetizer:
                 and not indiv
             ):
                 continue
+            if (
+                v.variable
+                in [
+                    Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
+                    Variable.VIOLACAO_DEFLUENCIA_MINIMA,
+                    Variable.VIOLACAO_FPHA,
+                    Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
+                    Variable.VIOLACAO_TURBINAMENTO_MINIMO,
+                ]
+                and not indiv
+            ):
+                continue
             valid_variables.append(v)
         if cls.logger is not None:
             cls.logger.info(f"Variáveis: {valid_variables}")
