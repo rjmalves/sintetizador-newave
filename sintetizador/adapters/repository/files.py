@@ -898,6 +898,7 @@ class RawFilesRepository(AbstractFilesRepository):
             regra = self.__regras.get(
                 (variable, spatial_resolution, temporal_resolution)
             )
+            print(regra)
             if regra is None:
                 return None
             return regra(self.__tmppath, *args, **kwargs)
