@@ -70,9 +70,9 @@ class ExecutionSynthetizer:
     @classmethod
     def _resolve_convergence(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         with uow:
-            df = cls._validate_data(
-                uow.files.get_pmo().convergencia, pd.DataFrame, "convergência"
-            )
+            df = uow.files.get_pmo().convergencia
+            if df is None:
+                return pd.DataFrame()
             df_processed = pd.DataFrame(
                 data={
                     "iter": df["Iteração"][2::3].to_numpy(),
