@@ -893,8 +893,8 @@ class OperationSynthetizer:
             # Obtem o fim do periodo individualizado
             if rees["Ano Fim Individualizado"].isna().sum() > 0:
                 fim = datetime(
-                    year=ano_inicio + anos_estudo - 1,
-                    month=12,
+                    year=ano_inicio + anos_estudo,
+                    month=1,
                     day=1,
                 )
             else:
@@ -1221,8 +1221,8 @@ class OperationSynthetizer:
             # Obtem o fim do periodo individualizado
             if rees["Ano Fim Individualizado"].isna().sum() > 0:
                 fim = datetime(
-                    year=ano_inicio + anos_estudo - 1,
-                    month=12,
+                    year=ano_inicio + anos_estudo,
+                    month=1,
                     day=1,
                 )
             else:
