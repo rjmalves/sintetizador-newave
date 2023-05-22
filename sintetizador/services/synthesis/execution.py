@@ -88,11 +88,9 @@ class ExecutionSynthetizer:
     @classmethod
     def _resolve_cost(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         with uow:
-            df = cls._validate_data(
-                uow.files.get_pmo().custo_operacao_series_simuladas,
-                pd.DataFrame,
-                "custo",
-            )
+            df = uow.files.get_pmo().custo_operacao_series_simuladas
+            if df is None:
+                return pd.DataFrame()
             df_processed = df.rename(
                 columns={
                     "Parcela": "parcela",
@@ -108,11 +106,9 @@ class ExecutionSynthetizer:
             tim = uow.files.get_newavetim()
             if tim is None:
                 return pd.DataFrame()
-            df = cls._validate_data(
-                tim.tempos_etapas,
-                pd.DataFrame,
-                "tempos",
-            )
+            df = tim.tempos_etapas
+            if df is None:
+                return pd.DataFrame()
             df = df.rename(columns={"Etapa": "etapa", "Tempo": "tempo"})
             df["tempo"] = df["tempo"].dt.total_seconds()
             return df
