@@ -150,6 +150,9 @@ class OperationSynthetizer:
         "VTURMAX_SIN_EST",
         "VEVMIN_SIN_EST",
         "VFPHA_SIN_EST",
+        "VVMINOP_REE_EST",
+        "VVMINOP_SBM_EST",
+        "VVMINOP_SIN_EST",
     ]
 
     SYNTHESIS_TO_CACHE: List[OperationSynthesis] = [
@@ -417,6 +420,11 @@ class OperationSynthetizer:
             Variable.VIOLACAO_FPHA,
             SpatialResolution.SUBMERCADO,
             TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_VMINOP,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.ESTAGIO,
         ),
     ]
 
@@ -1183,6 +1191,31 @@ class OperationSynthetizer:
             return df_group
 
     @classmethod
+    def __resolve_stub_vminop_sin(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        sintese_sbm = OperationSynthesis(
+            variable=synthesis.variable,
+            spatial_resolution=SpatialResolution.SUBMERCADO,
+            temporal_resolution=synthesis.temporal_resolution,
+        )
+        cache_vminop = cls.CACHED_SYNTHESIS.get(sintese_sbm)
+        df_vminop = (
+            cache_vminop
+            if cache_vminop is not None
+            else cls.__resolve_SBM(sintese_sbm, uow)
+        )
+        cols_group = [
+            c
+            for c in df_vminop.columns
+            if c in cls.IDENTIFICATION_COLUMNS and c != "submercado"
+        ]
+        df_sin = (
+            df_vminop.groupby(cols_group).sum(numeric_only=True).reset_index()
+        )
+        return df_sin
+
+    @classmethod
     def __postprocess_violacoes_UHE_estagio(
         cls, df_completo: pd.DataFrame, cols_cenarios: List[str]
     ):
@@ -1592,6 +1625,14 @@ class OperationSynthetizer:
                 cls.logger.info(f"Realizando síntese de {filename}")
                 if s.variable == Variable.ENERGIA_VERTIDA:
                     df = cls.__stub_EVER(s, uow)
+                elif all(
+                    [
+                        s.variable == Variable.VIOLACAO_VMINOP,
+                        s.spatial_resolution
+                        == SpatialResolution.SISTEMA_INTERLIGADO,
+                    ]
+                ):
+                    df = cls.__resolve_stub_vminop_sin(s, uow)
                 elif all(
                     [
                         s.variable

@@ -67,6 +67,8 @@ from inewave.nwlistop.vagua import Vagua
 from inewave.nwlistop.vevmin import Vevmin
 from inewave.nwlistop.vevminm import Vevminm
 from inewave.nwlistop.vevminsin import VevminSIN
+from inewave.nwlistop.invade import Invade
+from inewave.nwlistop.invadem import Invadem
 
 from inewave.nwlistop.vento import Vento
 from inewave.nwlistop.geol import Geol
@@ -765,6 +767,20 @@ class RawFilesRepository(AbstractFilesRepository):
                 TemporalResolution.ESTAGIO,
             ): lambda dir, _: VevminSIN.le_arquivo(
                 dir, "vevminsin.out"
+            ).valores,
+            (
+                Variable.VIOLACAO_VMINOP,
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, ree=1: Invade.le_arquivo(
+                dir, f"invade{str(ree).zfill(3)}.out"
+            ).valores,
+            (
+                Variable.VIOLACAO_VMINOP,
+                SpatialResolution.SUBMERCADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, submercado=1: Invadem.le_arquivo(
+                dir, f"invadem{str(submercado).zfill(3)}.out"
             ).valores,
         }
 
