@@ -1655,6 +1655,7 @@ class OperationSynthetizer:
                         cls.CACHED_SYNTHESIS[s] = df.copy()
                 if df is not None:
                     if not df.empty:
+                        print(df)
                         df = cls._resolve_starting_stage(df, uow)
                         with uow:
                             df = cls._postprocess(df)
