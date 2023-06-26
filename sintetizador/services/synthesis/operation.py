@@ -1377,10 +1377,17 @@ class OperationSynthetizer:
             ano_inicio = cls._validate_data(
                 dger.ano_inicio_estudo, int, "dger"
             )
+            agregacao_sim_final = dger.agregacao_simulacao_final
             anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
 
             # Obtem o fim do periodo individualizado
-            if rees["Ano Fim Individualizado"].isna().sum() > 0:
+            if agregacao_sim_final == 1:
+                fim = datetime(
+                    year=ano_inicio + anos_estudo,
+                    month=1,
+                    day=1,
+                )
+            elif rees["Ano Fim Individualizado"].isna().sum() > 0:
                 fim = datetime(
                     year=ano_inicio + anos_estudo,
                     month=1,
@@ -1655,7 +1662,6 @@ class OperationSynthetizer:
                         cls.CACHED_SYNTHESIS[s] = df.copy()
                 if df is not None:
                     if not df.empty:
-                        print(df)
                         df = cls._resolve_starting_stage(df, uow)
                         with uow:
                             df = cls._postprocess(df)
