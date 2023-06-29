@@ -898,8 +898,15 @@ class OperationSynthetizer:
             )
             anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
 
+            agregacao_sim_final = dger.agregacao_simulacao_final
             # Obtem o fim do periodo individualizado
-            if rees["Ano Fim Individualizado"].isna().sum() > 0:
+            if agregacao_sim_final == 1:
+                fim = datetime(
+                    year=ano_inicio + anos_estudo,
+                    month=1,
+                    day=1,
+                )
+            elif rees["Ano Fim Individualizado"].isna().sum() > 0:
                 fim = datetime(
                     year=ano_inicio + anos_estudo,
                     month=1,
@@ -1246,13 +1253,20 @@ class OperationSynthetizer:
                 uow.files.get_ree().rees, pd.DataFrame, "REEs"
             )
             dger = uow.files.get_dger()
+            agregacao_sim_final = dger.agregacao_simulacao_final
             ano_inicio = cls._validate_data(
                 dger.ano_inicio_estudo, int, "dger"
             )
             anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
 
             # Obtem o fim do periodo individualizado
-            if rees["Ano Fim Individualizado"].isna().sum() > 0:
+            if agregacao_sim_final == 1:
+                fim = datetime(
+                    year=ano_inicio + anos_estudo,
+                    month=1,
+                    day=1,
+                )
+            elif rees["Ano Fim Individualizado"].isna().sum() > 0:
                 fim = datetime(
                     year=ano_inicio + anos_estudo,
                     month=1,
