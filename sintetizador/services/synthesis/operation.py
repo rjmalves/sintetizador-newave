@@ -800,10 +800,21 @@ class OperationSynthetizer:
                 dger.ano_inicio_estudo, int, "dger"
             )
             anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
+            agregacao_sim_final = dger.agregacao_simulacao_final
+            anos_pos_sim_final = cls._validate_data(
+                dger.num_anos_pos_sim_final, int, "dger"
+            )
+
             # Obtem o fim do periodo individualizado
-            if rees["Ano Fim Individualizado"].isna().sum() > 0:
+            if agregacao_sim_final == 1:
                 fim = datetime(
-                    year=ano_inicio + anos_estudo,
+                    year=ano_inicio + anos_estudo + anos_pos_sim_final,
+                    month=1,
+                    day=1,
+                )
+            elif rees["Ano Fim Individualizado"].isna().sum() > 0:
+                fim = datetime(
+                    year=ano_inicio + anos_estudo + anos_pos_sim_final,
                     month=1,
                     day=1,
                 )
@@ -897,18 +908,21 @@ class OperationSynthetizer:
                 dger.ano_inicio_estudo, int, "dger"
             )
             anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
+            anos_pos_sim_final = cls._validate_data(
+                dger.num_anos_pos_sim_final, int, "dger"
+            )
 
             agregacao_sim_final = dger.agregacao_simulacao_final
             # Obtem o fim do periodo individualizado
             if agregacao_sim_final == 1:
                 fim = datetime(
-                    year=ano_inicio + anos_estudo,
+                    year=ano_inicio + anos_estudo + anos_pos_sim_final,
                     month=1,
                     day=1,
                 )
             elif rees["Ano Fim Individualizado"].isna().sum() > 0:
                 fim = datetime(
-                    year=ano_inicio + anos_estudo,
+                    year=ano_inicio + anos_estudo + anos_pos_sim_final,
                     month=1,
                     day=1,
                 )
@@ -1259,16 +1273,20 @@ class OperationSynthetizer:
             )
             anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
 
+            anos_pos_sim_final = cls._validate_data(
+                dger.num_anos_pos_sim_final, int, "dger"
+            )
+
             # Obtem o fim do periodo individualizado
             if agregacao_sim_final == 1:
                 fim = datetime(
-                    year=ano_inicio + anos_estudo,
+                    year=ano_inicio + anos_estudo + anos_pos_sim_final,
                     month=1,
                     day=1,
                 )
             elif rees["Ano Fim Individualizado"].isna().sum() > 0:
                 fim = datetime(
-                    year=ano_inicio + anos_estudo,
+                    year=ano_inicio + anos_estudo + anos_pos_sim_final,
                     month=1,
                     day=1,
                 )
@@ -1393,17 +1411,20 @@ class OperationSynthetizer:
             )
             agregacao_sim_final = dger.agregacao_simulacao_final
             anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
+            anos_pos_sim_final = cls._validate_data(
+                dger.num_anos_pos_sim_final, int, "dger"
+            )
 
             # Obtem o fim do periodo individualizado
             if agregacao_sim_final == 1:
                 fim = datetime(
-                    year=ano_inicio + anos_estudo,
+                    year=ano_inicio + anos_estudo + anos_pos_sim_final,
                     month=1,
                     day=1,
                 )
             elif rees["Ano Fim Individualizado"].isna().sum() > 0:
                 fim = datetime(
-                    year=ano_inicio + anos_estudo,
+                    year=ano_inicio + anos_estudo + anos_pos_sim_final,
                     month=1,
                     day=1,
                 )
