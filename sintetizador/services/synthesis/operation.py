@@ -1277,6 +1277,9 @@ class OperationSynthetizer:
                 dger.num_anos_pos_sim_final, int, "dger"
             )
 
+            cls.logger.info(
+                f"Agregação da simulação final: {agregacao_sim_final}"
+            )
             # Obtem o fim do periodo individualizado
             if agregacao_sim_final == 1:
                 fim = datetime(
@@ -1296,6 +1299,7 @@ class OperationSynthetizer:
                     month=int(rees["Mês Fim Individualizado"].iloc[0]),
                     day=1,
                 )
+            cls.logger.info(f"Data de fim: {fim}")
             uhes_idx = confhd["Número"]
             uhes_name = confhd["Nome"]
 
