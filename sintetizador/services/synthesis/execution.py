@@ -116,12 +116,12 @@ class ExecutionSynthetizer:
     @classmethod
     def _resolve_job_resources(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         # REGRA DE NEGOCIO: arquivos do hpc-job-monitor
-        # monitor-job.csv
+        # monitor-job.parquet.gzip
         with uow:
-            file = "monitor-job.csv"
+            file = "monitor-job.parquet.gzip"
             if pathlib.Path(file).exists():
                 try:
-                    df = pd.read_csv(file)
+                    df = pd.read_parquet(file)
                 except Exception as e:
                     if cls.logger is not None:
                         cls.logger.info(
@@ -138,10 +138,10 @@ class ExecutionSynthetizer:
         # Le o do job para saber tempo inicial e final
         df_job = None
         with uow:
-            file = "monitor-job.csv"
+            file = "monitor-job.parquet.gzip"
             if pathlib.Path(file).exists():
                 try:
-                    df_job = pd.read_csv(file)
+                    df_job = pd.read_parquet(file)
                 except Exception as e:
                     if cls.logger is not None:
                         cls.logger.info(
@@ -154,12 +154,12 @@ class ExecutionSynthetizer:
             df_job["timeInstant"], format="ISO8601"
         ).tolist()
         # REGRA DE NEGOCIO: arquivos do hpc-job-monitor
-        # monitor-(hostname).csv
+        # monitor-(hostname).parquet.gzip
         with set_directory(str(pathlib.Path.home())):
-            file = f"monitor-{socket.gethostname()}.csv"
+            file = f"monitor-{socket.gethostname()}.parquet.gzip"
             if pathlib.Path(file).exists():
                 try:
-                    df = pd.read_csv(file)
+                    df = pd.read_parquet(file)
                 except Exception as e:
                     if cls.logger is not None:
                         cls.logger.info(
