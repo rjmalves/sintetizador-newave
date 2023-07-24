@@ -105,6 +105,8 @@ class OperationSynthetizer:
         "DEF_SIN_PAT",
         "CDEF_SBM_EST",
         "CDEF_SIN_EST",
+        "MER_SBM_EST",
+        "MER_SIN_EST",
         "VEOL_SBM_PAT",
         "VEOL_SBM_EST",
         "VDEFMIN_UHE_PAT",

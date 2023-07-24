@@ -42,6 +42,8 @@ from inewave.nwlistop.intercambio import Intercambio
 from inewave.nwlistop.deficit import Def
 from inewave.nwlistop.cdef import Cdef
 from inewave.nwlistop.cdefsin import CdefSIN
+from inewave.nwlistop.mercl import Mercl
+from inewave.nwlistop.merclsin import MerclSIN
 
 from inewave.nwlistop.earmfp import Earmfp
 from inewave.nwlistop.earmfpm import Earmfpm
@@ -683,6 +685,18 @@ class RawFilesRepository(AbstractFilesRepository):
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.ESTAGIO,
             ): lambda dir, _: CdefSIN.le_arquivo(dir, "cdefsin.out").valores,
+            (
+                Variable.MERCADO,
+                SpatialResolution.SUBMERCADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, submercado=1: Mercl.le_arquivo(
+                dir, f"mercl{str(submercado).zfill(3)}.out"
+            ).valores,
+            (
+                Variable.MERCADO,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, _: MerclSIN.le_arquivo(dir, "merclsin.out").valores,
             (
                 Variable.CORTE_GERACAO_EOLICA,
                 SpatialResolution.SUBMERCADO,
