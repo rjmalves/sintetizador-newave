@@ -686,14 +686,14 @@ class RawFilesRepository(AbstractFilesRepository):
                 TemporalResolution.ESTAGIO,
             ): lambda dir, _: CdefSIN.le_arquivo(dir, "cdefsin.out").valores,
             (
-                Variable.MERCADO,
+                Variable.MERCADO_LIQUIDO,
                 SpatialResolution.SUBMERCADO,
                 TemporalResolution.ESTAGIO,
             ): lambda dir, submercado=1: Mercl.le_arquivo(
                 dir, f"mercl{str(submercado).zfill(3)}.out"
             ).valores,
             (
-                Variable.MERCADO,
+                Variable.MERCADO_LIQUIDO,
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.ESTAGIO,
             ): lambda dir, _: MerclSIN.le_arquivo(dir, "merclsin.out").valores,
