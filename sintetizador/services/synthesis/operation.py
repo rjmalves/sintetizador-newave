@@ -495,7 +495,7 @@ class OperationSynthetizer:
             )
         valid_variables: List[OperationSynthesis] = []
         sf_indiv = dger.agregacao_simulacao_final == 1
-        politica_indiv = rees["Mês Fim Individualizado"].isna().sum() == 0
+        politica_indiv = rees["ano_fim_individualizado"].isna().sum() == 0
         indiv = sf_indiv or politica_indiv
         geracao_eolica = cls._validate_data(
             dger.considera_geracao_eolica, int, "dger"
@@ -541,26 +541,18 @@ class OperationSynthetizer:
 
     @classmethod
     def __resolve_EST(cls, df: pd.DataFrame) -> pd.DataFrame:
-        anos = df["Ano"].unique().tolist()
-        labels = pd.date_range(
-            datetime(year=anos[0], month=1, day=1),
-            datetime(year=anos[-1], month=12, day=1),
-            freq="MS",
+        cols = df.columns.tolist()
+        datas = df["data"].unique().tolist()
+        datas.sort()
+        df["estagio"] = df.apply(lambda x: datas.index(x["data"]) + 1, axis=1)
+        df["dataFim"] = df.apply(
+            lambda x: x["data"] + relativedelta(months=1), axis=1
         )
-        df_series = pd.DataFrame()
-        for a in anos:
-            df_ano = df.loc[df["Ano"] == a, MESES_DF].T
-            df_ano.columns = [
-                str(s) for s in list(range(1, df_ano.shape[1] + 1))
-            ]
-            df_series = pd.concat([df_series, df_ano], ignore_index=True)
-        cols = df_series.columns.tolist()
-        df_series["estagio"] = list(range(1, len(labels) + 1))
-        df_series["dataInicio"] = labels
-        df_series["dataFim"] = df_series.apply(
-            lambda x: x["dataInicio"] + relativedelta(months=1), axis=1
-        )
-        return df_series[["estagio", "dataInicio", "dataFim"] + cols]
+        df = df.rename(columns={"data": "dataInicio"})
+        return df[
+            ["estagio", "dataInicio", "dataFim"]
+            + [c for c in cols if c != "data"]
+        ]
 
     @classmethod
     def __resolve_PAT(cls, df: pd.DataFrame) -> pd.DataFrame:
@@ -647,9 +639,9 @@ class OperationSynthetizer:
                 pd.DataFrame,
                 "submercados",
             )
-            sistemas_reais = sistema.loc[sistema["Fictício"] == 0, :]
-            sbms_idx = sistemas_reais["Num. Subsistema"]
-            sbms_name = sistemas_reais["Nome"]
+            sistemas_reais = sistema.loc[sistema["ficticio"] == 0, :]
+            sbms_idx = sistemas_reais["codigo_submercado"]
+            sbms_name = sistemas_reais["nome_submercado"]
             df = pd.DataFrame()
             for s, n in zip(sbms_idx, sbms_name):
                 if cls.logger is not None:
@@ -686,8 +678,8 @@ class OperationSynthetizer:
                 pd.DataFrame,
                 "submercados",
             )
-            sbms_idx = sistema["Num. Subsistema"]
-            sbms_name = sistema["Nome"]
+            sbms_idx = sistema["codigo_submercado"]
+            sbms_name = sistema["nome_submercado"]
             df = pd.DataFrame()
             for s1, n1 in zip(sbms_idx, sbms_name):
                 for s2, n2 in zip(sbms_idx, sbms_name):
@@ -728,8 +720,8 @@ class OperationSynthetizer:
             rees = cls._validate_data(
                 uow.files.get_ree().rees, pd.DataFrame, "REEs"
             )
-            rees_idx = rees["Número"]
-            rees_name = rees["Nome"]
+            rees_idx = rees["codigo_ree"]
+            rees_name = rees["nome_ree"]
             df = pd.DataFrame()
             for s, n in zip(rees_idx, rees_name):
                 if cls.logger is not None:
@@ -746,8 +738,8 @@ class OperationSynthetizer:
                 if df_ree is None:
                     continue
                 cols = df_ree.columns.tolist()
-                df_ree["ree"] = n
-                df_ree = df_ree[["ree"] + cols]
+                df_ree["codigo_ree"] = n
+                df_ree = df_ree[["codigo_ree"] + cols]
                 df = pd.concat(
                     [df, df_ree],
                     ignore_index=True,
@@ -814,7 +806,7 @@ class OperationSynthetizer:
                     month=1,
                     day=1,
                 )
-            elif rees["Ano Fim Individualizado"].isna().sum() > 0:
+            elif rees["ano_fim_individualizado"].isna().sum() > 0:
                 fim = datetime(
                     year=ano_inicio + anos_estudo + anos_pos_sim_final,
                     month=1,
@@ -822,12 +814,12 @@ class OperationSynthetizer:
                 )
             else:
                 fim = datetime(
-                    year=int(rees["Ano Fim Individualizado"].iloc[0]),
-                    month=int(rees["Mês Fim Individualizado"].iloc[0]),
+                    year=int(rees["ano_fim_individualizado"].iloc[0]),
+                    month=int(rees["mes_fim_individualizado"].iloc[0]),
                     day=1,
                 )
-            uhes_idx = confhd["Número"]
-            uhes_name = confhd["Nome"]
+            uhes_idx = confhd["codigo_usina"]
+            uhes_name = confhd["nome_usina"]
 
         df_completo = pd.DataFrame()
         n_procs = int(Settings().processors)
@@ -857,18 +849,6 @@ class OperationSynthetizer:
         for _, df in dfs.items():
             df_completo = pd.concat([df_completo, df], ignore_index=True)
 
-        cols_nao_cenarios = [
-            "estagio",
-            "dataInicio",
-            "dataFim",
-            "patamar",
-            "usina",
-        ]
-        cols_cenarios = [
-            c
-            for c in df_completo.columns.tolist()
-            if c not in cols_nao_cenarios
-        ]
         if synthesis.temporal_resolution == TemporalResolution.ESTAGIO:
             patamares = df_completo["patamar"].unique().tolist()
             cenarios_patamares: List[np.ndarray] = []
@@ -876,14 +856,12 @@ class OperationSynthetizer:
             for p in patamares:
                 cenarios_patamares.append(
                     df_completo.loc[
-                        df_completo["patamar"] == p, cols_cenarios
+                        df_completo["patamar"] == p, "valor"
                     ].to_numpy()
                 )
-            df_completo.loc[df_completo["patamar"] == p0, cols_cenarios] = 0.0
+            df_completo.loc[df_completo["patamar"] == p0, "valor"] = 0.0
             for c in cenarios_patamares:
-                df_completo.loc[
-                    df_completo["patamar"] == p0, cols_cenarios
-                ] += c
+                df_completo.loc[df_completo["patamar"] == p0, "valor"] += c
             df_completo = df_completo.loc[df_completo["patamar"] == p0, :]
             df_completo = df_completo.drop(columns="patamar")
 
@@ -922,7 +900,7 @@ class OperationSynthetizer:
                     month=1,
                     day=1,
                 )
-            elif rees["Ano Fim Individualizado"].isna().sum() > 0:
+            elif rees["ano_fim_individualizado"].isna().sum() > 0:
                 fim = datetime(
                     year=ano_inicio + anos_estudo + anos_pos_sim_final,
                     month=1,
@@ -930,12 +908,12 @@ class OperationSynthetizer:
                 )
             else:
                 fim = datetime(
-                    year=int(rees["Ano Fim Individualizado"].iloc[0]),
-                    month=int(rees["Mês Fim Individualizado"].iloc[0]),
+                    year=int(rees["ano_fim_individualizado"].iloc[0]),
+                    month=int(rees["mes_fim_individualizado"].iloc[0]),
                     day=1,
                 )
-            uhes_idx = confhd["Número"]
-            uhes_name = confhd["Nome"]
+            uhes_idx = confhd["codigo_usina"]
+            uhes_name = confhd["nome_usina"]
 
         df_completo = pd.DataFrame()
         n_procs = int(Settings().processors)
@@ -965,18 +943,6 @@ class OperationSynthetizer:
         for _, df in dfs.items():
             df_completo = pd.concat([df_completo, df], ignore_index=True)
 
-        cols_nao_cenarios = [
-            "estagio",
-            "dataInicio",
-            "dataFim",
-            "patamar",
-            "usina",
-        ]
-        cols_cenarios = [
-            c
-            for c in df_completo.columns.tolist()
-            if c not in cols_nao_cenarios
-        ]
         if synthesis.temporal_resolution == TemporalResolution.ESTAGIO:
             patamares = df_completo["patamar"].unique().tolist()
             cenarios_patamares: List[np.ndarray] = []
@@ -984,18 +950,16 @@ class OperationSynthetizer:
             for p in patamares:
                 cenarios_patamares.append(
                     df_completo.loc[
-                        df_completo["patamar"] == p, cols_cenarios
+                        df_completo["patamar"] == p, "valor"
                     ].to_numpy()
                 )
-            df_completo.loc[df_completo["patamar"] == p0, cols_cenarios] = 0.0
+            df_completo.loc[df_completo["patamar"] == p0, "valor"] = 0.0
             for c in cenarios_patamares:
-                df_completo.loc[
-                    df_completo["patamar"] == p0, cols_cenarios
-                ] += c
+                df_completo.loc[df_completo["patamar"] == p0, "valor"] += c
             df_completo = df_completo.loc[df_completo["patamar"] == p0, :]
             df_completo = df_completo.drop(columns="patamar")
 
-        df_completo.loc[:, cols_cenarios] *= FATOR_HM3_M3S
+        df_completo.loc[:, "valor"] *= FATOR_HM3_M3S
         df_completo = df_completo.loc[df_completo["dataInicio"] < fim, :]
         return df_completo
 
@@ -1039,18 +1003,8 @@ class OperationSynthetizer:
                 uow,
             )
         )
-        cols_nao_cenarios = [
-            "estagio",
-            "dataInicio",
-            "dataFim",
-            "patamar",
-            "usina",
-        ]
-        cols_cenarios = [
-            c for c in df_ver.columns.tolist() if c not in cols_nao_cenarios
-        ]
-        df_ver.loc[:, cols_cenarios] = (
-            df_tur[cols_cenarios].to_numpy() + df_ver[cols_cenarios].to_numpy()
+        df_ver.loc[:, "valor"] = (
+            df_tur["valor"].to_numpy() + df_ver["valor"].to_numpy()
         )
         return df_ver
 
@@ -1095,21 +1049,9 @@ class OperationSynthetizer:
                 uow,
             )
         )
-        cols_nao_cenarios = [
-            "estagio",
-            "dataInicio",
-            "dataFim",
-            "patamar",
-            "usina",
-            "ree",
-            "submercado",
-        ]
-        cols_cenarios = [
-            c for c in df_reserv.columns.tolist() if c not in cols_nao_cenarios
-        ]
-        df_reserv.loc[:, cols_cenarios] = (
-            df_fio[cols_cenarios].to_numpy()
-            + df_reserv[cols_cenarios].to_numpy()
+
+        df_reserv.loc[:, "valor"] = (
+            df_fio["valor"].to_numpy() + df_reserv["valor"].to_numpy()
         )
         return df_reserv
 
@@ -1239,21 +1181,19 @@ class OperationSynthetizer:
         return df_sin
 
     @classmethod
-    def __postprocess_violacoes_UHE_estagio(
-        cls, df_completo: pd.DataFrame, cols_cenarios: List[str]
-    ):
+    def __postprocess_violacoes_UHE_estagio(cls, df_completo: pd.DataFrame):
         patamares = df_completo["patamar"].unique().tolist()
         cenarios_patamares: List[np.ndarray] = []
         p0 = patamares[0]
         for p in patamares:
             cenarios_patamares.append(
                 df_completo.loc[
-                    df_completo["patamar"] == p, cols_cenarios
+                    df_completo["patamar"] == p, "valor"
                 ].to_numpy()
             )
-        df_completo.loc[df_completo["patamar"] == p0, cols_cenarios] = 0.0
+        df_completo.loc[df_completo["patamar"] == p0, "valor"] = 0.0
         for c in cenarios_patamares:
-            df_completo.loc[df_completo["patamar"] == p0, cols_cenarios] += c
+            df_completo.loc[df_completo["patamar"] == p0, "valor"] += c
         df_completo = df_completo.loc[df_completo["patamar"] == p0, :]
         return df_completo.drop(columns=["patamar"])
 
@@ -1286,7 +1226,7 @@ class OperationSynthetizer:
                     month=1,
                     day=1,
                 )
-            elif rees["Ano Fim Individualizado"].isna().sum() > 0:
+            elif rees["ano_fim_individualizado"].isna().sum() > 0:
                 fim = datetime(
                     year=ano_inicio + anos_estudo + anos_pos_sim_final,
                     month=1,
@@ -1294,12 +1234,12 @@ class OperationSynthetizer:
                 )
             else:
                 fim = datetime(
-                    year=int(rees["Ano Fim Individualizado"].iloc[0]),
-                    month=int(rees["Mês Fim Individualizado"].iloc[0]),
+                    year=int(rees["ano_fim_individualizado"].iloc[0]),
+                    month=int(rees["mes_fim_individualizado"].iloc[0]),
                     day=1,
                 )
-            uhes_idx = confhd["Número"]
-            uhes_name = confhd["Nome"]
+            uhes_idx = confhd["codigo_usina"]
+            uhes_name = confhd["nome_usina"]
 
         df_completo = pd.DataFrame()
         n_procs = int(Settings().processors)
@@ -1329,24 +1269,10 @@ class OperationSynthetizer:
         for _, df in dfs.items():
             df_completo = pd.concat([df_completo, df], ignore_index=True)
 
-        cols_nao_cenarios = [
-            "estagio",
-            "dataInicio",
-            "dataFim",
-            "patamar",
-            "usina",
-        ]
-        cols_cenarios = [
-            c
-            for c in df_completo.columns.tolist()
-            if c not in cols_nao_cenarios
-        ]
         if synthesis.temporal_resolution == TemporalResolution.ESTAGIO:
-            df_completo = cls.__postprocess_violacoes_UHE_estagio(
-                df_completo, cols_cenarios
-            )
+            df_completo = cls.__postprocess_violacoes_UHE_estagio(df_completo)
 
-        df_completo.loc[:, cols_cenarios] *= FATOR_HM3_M3S
+        df_completo.loc[:, "valor"] *= FATOR_HM3_M3S
         if df_completo is not None:
             if not df_completo.empty:
                 df_completo = df_completo.loc[
@@ -1424,7 +1350,7 @@ class OperationSynthetizer:
                     month=1,
                     day=1,
                 )
-            elif rees["Ano Fim Individualizado"].isna().sum() > 0:
+            elif rees["ano_fim_individualizado"].isna().sum() > 0:
                 fim = datetime(
                     year=ano_inicio + anos_estudo + anos_pos_sim_final,
                     month=1,
@@ -1432,12 +1358,12 @@ class OperationSynthetizer:
                 )
             else:
                 fim = datetime(
-                    year=int(rees["Ano Fim Individualizado"].iloc[0]),
-                    month=int(rees["Mês Fim Individualizado"].iloc[0]),
+                    year=int(rees["ano_fim_individualizado"].iloc[0]),
+                    month=int(rees["mes_fim_individualizado"].iloc[0]),
                     day=1,
                 )
-            uhes_idx = confhd["Número"]
-            uhes_name = confhd["Nome"]
+            uhes_idx = confhd["codigo_usina"]
+            uhes_name = confhd["nome_usina"]
 
         df_completo = pd.DataFrame()
         n_procs = int(Settings().processors)
@@ -1469,8 +1395,8 @@ class OperationSynthetizer:
             conft = cls._validate_data(
                 uow.files.get_conft().usinas, pd.DataFrame, "UTEs"
             )
-            utes_idx = conft["Número"]
-            utes_name = conft["Nome"]
+            utes_idx = conft["codigo_usina"]
+            utes_name = conft["nome_usina"]
             df = pd.DataFrame()
             for s, n in zip(utes_idx, utes_name):
                 if cls.logger is not None:
@@ -1565,60 +1491,30 @@ class OperationSynthetizer:
         starting_date = datetime(year=ano_inicio, month=mes_inicio, day=1)
         starting_df = df.loc[df["dataInicio"] >= starting_date].copy()
         starting_df.loc[:, "estagio"] -= starting_date.month - 1
+        starting_df = starting_df.rename(columns={"serie": "cenario"})
         return starting_df.copy()
 
     @classmethod
-    def _processa_media(
-        cls, df: pd.DataFrame, probabilities: Optional[pd.DataFrame] = None
-    ) -> pd.DataFrame:
-        cols_cenarios = [
-            col
-            for col in df.columns.tolist()
-            if col not in cls.IDENTIFICATION_COLUMNS
-        ]
-        cols_cenarios = [
-            c for c in cols_cenarios if c not in ["min", "max", "median"]
-        ]
-        cols_cenarios = [c for c in cols_cenarios if "p" not in c]
-        estagios = [int(e) for e in df["estagio"].unique()]
-        if probabilities is not None:
-            df["mean"] = 0.0
-            for e in estagios:
-                df_estagio = probabilities.loc[
-                    probabilities["estagio"] == e, :
-                ]
-                probabilidades = {
-                    str(int(linha["cenario"])): linha["probabilidade"]
-                    for _, linha in df_estagio.iterrows()
-                }
-                probabilidades = {
-                    **probabilidades,
-                    **{
-                        c: 0.0
-                        for c in cols_cenarios
-                        if c not in probabilidades.keys()
-                    },
-                }
-                df_cenarios_estagio = df.loc[
-                    df["estagio"] == e, cols_cenarios
-                ].mul(probabilidades, fill_value=0.0)
-                df.loc[df["estagio"] == e, "mean"] = df_cenarios_estagio[
-                    list(probabilidades.keys())
-                ].sum(axis=1)
-        else:
-            df["mean"] = df[cols_cenarios].mean(axis=1)
-            df["std"] = df[cols_cenarios].std(axis=1)
+    def _processa_media(cls, df: pd.DataFrame) -> pd.DataFrame:
+        cols_valores = ["cenario", "valor"]
+        cols_agrupamento = [c for c in df.columns if c not in cols_valores]
+        df_mean = (
+            df.groupby(cols_agrupamento).mean(numeric_only=True).reset_index()
+        )
+        df_mean["cenario"] = "mean"
+        df_std = (
+            df.groupby(cols_agrupamento).std(numeric_only=True).reset_index()
+        )
+        df_std["cenario"] = "std"
+        df = pd.concat([df, df_mean, df_std], ignore_index=True)
         return df
 
     @classmethod
     def _processa_quantis(
         cls, df: pd.DataFrame, quantiles: List[float]
     ) -> pd.DataFrame:
-        cols_cenarios = [
-            col
-            for col in df.columns.tolist()
-            if col not in cls.IDENTIFICATION_COLUMNS
-        ]
+        cols_valores = ["cenario", "valor"]
+        cols_agrupamento = [c for c in df.columns if c not in cols_valores]
         for q in quantiles:
             if q == 0:
                 label = "min"
@@ -1628,26 +1524,19 @@ class OperationSynthetizer:
                 label = "median"
             else:
                 label = f"p{int(100 * q)}"
-            df[label] = df[cols_cenarios].quantile(q, axis=1)
+            df_q = (
+                df.groupby(cols_agrupamento)
+                .quantile(q, numeric_only=True)
+                .reset_index()
+            )
+            df_q["cenario"] = label
+            df = pd.concat([df, df_q], ignore_index=True)
         return df
 
     @classmethod
     def _postprocess(cls, df: pd.DataFrame) -> pd.DataFrame:
         df = cls._processa_quantis(df, [0.05 * i for i in range(21)])
-        df = cls._processa_media(df, None)
-        cols_not_scenarios = [
-            c for c in df.columns if c in cls.IDENTIFICATION_COLUMNS
-        ]
-        cols_scenarios = [
-            c for c in df.columns if c not in cls.IDENTIFICATION_COLUMNS
-        ]
-        df = pd.melt(
-            df,
-            id_vars=cols_not_scenarios,
-            value_vars=cols_scenarios,
-            var_name="cenario",
-            value_name="valor",
-        )
+        df = cls._processa_media(df)
         return df
 
     @classmethod

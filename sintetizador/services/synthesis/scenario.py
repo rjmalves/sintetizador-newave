@@ -2,10 +2,10 @@ from typing import Callable, Dict, List, Tuple, Optional, TypeVar, Type
 import pandas as pd  # type: ignore
 import numpy as np  # type: ignore
 import logging
+from traceback import print_exc
 from multiprocessing import Pool
 from datetime import datetime
 from dateutil.relativedelta import relativedelta  # type: ignore
-from inewave.config import MESES_DF
 from sintetizador.services.unitofwork import AbstractUnitOfWork
 from sintetizador.utils.log import Log
 from sintetizador.model.settings import Settings
@@ -126,7 +126,7 @@ class ScenarioSynthetizer:
         valid_variables: List[ScenarioSynthesis] = []
         sf_indiv = dger.agregacao_simulacao_final == 1
         rees = cls._validate_data(ree.rees, pd.DataFrame, "REEs")
-        politica_indiv = rees["Mês Fim Individualizado"].isna().sum() == 0
+        politica_indiv = rees["mes_fim_individualizado"].isna().sum() == 0
         indiv = sf_indiv or politica_indiv
         eolica = dger.considera_geracao_eolica != 0
         if cls.logger is not None:
@@ -164,16 +164,18 @@ class ScenarioSynthetizer:
         vazoes = cls._validate_data(
             uow.files.get_vazoes().vazoes, pd.DataFrame, "vazões"
         )
-        posto = uhes.loc[uhes["Número"] == uhe, "Posto"].tolist()[0]
+        posto = uhes.loc[uhes["codigo_usina"] == uhe, "posto"].tolist()[0]
         vazao_natural = vazoes[posto].to_numpy()
         posto_nulo = posto == 300
         if not posto_nulo:
-            uhes_montante = uhes.loc[uhes["Jusante"] == uhe, "Número"].tolist()
+            uhes_montante = uhes.loc[
+                uhes["codigo_usina_jusante"] == uhe, "codigo_usina"
+            ].tolist()
             uhes_montante = [u for u in uhes_montante if u != 0]
             postos_montante = list(
                 set(
                     [
-                        hidr.at[int(uhe_montante), "Posto"]
+                        hidr.at[int(uhe_montante), "posto"]
                         for uhe_montante in uhes_montante
                     ]
                 )
@@ -183,10 +185,12 @@ class ScenarioSynthetizer:
                     vazao_natural - vazoes[posto_montante].to_numpy()
                 )
         ano_inicio_historico = int(
-            uhes.loc[uhes["Número"] == uhe, "Início do Histórico"].iloc[0]
+            uhes.loc[uhes["codigo_usina"] == uhe, "ano_inicio_historico"].iloc[
+                0
+            ]
         )
         ano_fim_historico = int(
-            uhes.loc[uhes["Número"] == uhe, "Fim do Histórico"].iloc[0]
+            uhes.loc[uhes["codigo_usina"] == uhe, "ano_fim_historico"].iloc[0]
         )
         datas = pd.date_range(
             datetime(year=ano_inicio_historico, month=1, day=1),
@@ -276,14 +280,15 @@ class ScenarioSynthetizer:
             }
         )
         df_completo_mlt = pd.DataFrame()
-        for uhe in uhes["Número"]:
+        for uhe in uhes["codigo_usina"]:
             vazao = cls._gera_serie_incremental_uhe(uhe, uow)
             vazao_mlt = cls._mlt(vazao)
             df_mlt_uhe = df_mlt.merge(
                 pd.DataFrame(
                     data={
                         "codigo_usina": [uhe] * len(vazao_mlt),
-                        "nome_usina": [hidr.at[uhe, "Nome"]] * len(vazao_mlt),
+                        "nome_usina": [hidr.at[uhe, "nome_usina"]]
+                        * len(vazao_mlt),
                         "mes": vazao_mlt["mes"],
                         "mlt": vazao_mlt["vazao"].to_numpy(),
                     }
@@ -296,26 +301,26 @@ class ScenarioSynthetizer:
         # Adiciona dados de ree e submercado à série
         df_completo_mlt["codigo_ree"] = df_completo_mlt.apply(
             lambda linha: uhes.loc[
-                uhes["Número"] == linha["codigo_usina"], "REE"
+                uhes["codigo_usina"] == linha["codigo_usina"], "ree"
             ].tolist()[0],
             axis=1,
         )
         df_completo_mlt["nome_ree"] = df_completo_mlt.apply(
             lambda linha: rees.loc[
-                rees["Número"] == linha["codigo_ree"], "Nome"
+                rees["codigo"] == linha["codigo_ree"], "nome"
             ].tolist()[0],
             axis=1,
         )
         df_completo_mlt["codigo_submercado"] = df_completo_mlt.apply(
             lambda linha: rees.loc[
-                rees["Número"] == linha["codigo_ree"], "Submercado"
+                rees["codigo"] == linha["codigo_ree"], "submercado"
             ].tolist()[0],
             axis=1,
         )
         df_completo_mlt["nome_submercado"] = df_completo_mlt.apply(
             lambda linha: sistema.loc[
-                sistema["Num. Subsistema"] == linha["codigo_submercado"],
-                "Nome",
+                sistema["codigo_submercado"] == linha["codigo_submercado"],
+                "nome_submercado",
             ].tolist()[0],
             axis=1,
         )
@@ -366,7 +371,7 @@ class ScenarioSynthetizer:
         engnat = cls._validate_data(
             arq_engnat.series, pd.DataFrame, "séries de energia"
         )
-        cfgs = configuracoes[MESES_DF].to_numpy().flatten()[mes_inicio - 1 :]
+        cfgs = configuracoes["valor"].to_numpy().flatten()[mes_inicio - 1 :]
         datas = pd.date_range(
             datetime(year=ano_inicio - 1, month=1, day=1),
             datetime(year=ano_inicio + anos_estudo - 1, month=12, day=1),
@@ -398,59 +403,17 @@ class ScenarioSynthetizer:
                 mlt_ree[idx_ree] = mlt
             df_mlt_ree = df_mlt.copy()
             df_mlt_ree["mlt"] = mlt_ree
-            df_mlt_ree["codigo_ree"] = linha["Número"]
-            df_mlt_ree["nome_ree"] = linha["Nome"]
-            df_mlt_ree["codigo_submercado"] = linha["Submercado"]
+            df_mlt_ree["codigo_ree"] = linha["codigo"]
+            df_mlt_ree["nome_ree"] = linha["nome"]
+            df_mlt_ree["codigo_submercado"] = linha["submercado"]
             df_mlt_ree["nome_submercado"] = sistema.loc[
-                sistema["Num. Subsistema"] == linha["Submercado"], "Nome"
+                sistema["codigo_submercado"] == linha["submercado"],
+                "nome_submercado",
             ].iloc[0]
             dfs_mlt_rees = pd.concat(
                 [dfs_mlt_rees, df_mlt_ree], ignore_index=True
             )
         return dfs_mlt_rees
-
-        # prodts = pmo.produtibilidades_equivalentes
-        # prodts = prodts.loc[prodts["configuracao"] == 1]
-        # col_reserv = "produtibilidade_acumulada_calculo_altura_65"
-        # col_fio = "produtibilidade_equivalente_volmin_volmax"
-        # reservatorios = (
-        #     prodts[["nome_usina", col_reserv]].dropna()["nome_usina"].tolist()
-        # )
-        # mlt_uhe.loc[
-        #     mlt_uhe["nome_usina"].isin(reservatorios), "prodt"
-        # ] = mlt_uhe.loc[mlt_uhe["nome_usina"].isin(reservatorios)].apply(
-        #     lambda linha: prodts.loc[
-        #         prodts["nome_usina"] == linha["nome_usina"], col_reserv
-        #     ].tolist()[0],
-        #     axis=1,
-        # )
-        # mlt_uhe.loc[
-        #     ~mlt_uhe["nome_usina"].isin(reservatorios), "prodt"
-        # ] = mlt_uhe.loc[~mlt_uhe["nome_usina"].isin(reservatorios)].apply(
-        #     lambda linha: prodts.loc[
-        #         prodts["nome_usina"] == linha["nome_usina"], col_fio
-        #     ].tolist()[0],
-        #     axis=1,
-        # )
-        # Limita as afluências das fio d'água ao engolimento
-        # TODO - testar removendo
-        # engolimentos = cls._engolimento_maximo_uhes(uow)
-        # mlt_uhe.loc[
-        #     ~mlt_uhe["nome_usina"].isin(reservatorios), "vazao_max"
-        # ] = mlt_uhe.loc[~mlt_uhe["nome_usina"].isin(reservatorios)].apply(
-        #     lambda linha: engolimentos[linha["codigo_usina"]],
-        #     axis=1,
-        # )
-        # mlt_uhe.loc[
-        #     ~mlt_uhe["nome_usina"].isin(reservatorios), "vazao"
-        # ] = mlt_uhe.loc[
-        #     ~mlt_uhe["nome_usina"].isin(reservatorios), ["vazao", "vazao_max"]
-        # ].min(
-        #     axis=1
-        # )
-        # Multiplica todas pelas produtibilidades
-        # mlt_uhe["vazao"] = mlt_uhe["vazao"] * mlt_uhe["prodt"]
-        # return mlt_uhe.drop(columns=["prodt"])
 
     @classmethod
     def _engolimento_maximo_uhes(
@@ -460,10 +423,10 @@ class ScenarioSynthetizer:
         engolimentos: Dict[int, float] = {}
         for idx, linha in hidr.iterrows():
             engol_max = 0.0
-            n_conj = linha["Num. Conjuntos Máquinas"]
+            n_conj = linha["numero_conjuntos_maquinas"]
             for i in range(1, n_conj + 1):
-                n_maq = linha[f"Num. Máquinas Conjunto {i}"]
-                qef_maq = linha[f"QEf Conjunto {i}"]
+                n_maq = linha[f"numero_maquinas_conjunto_{i}"]
+                qef_maq = linha[f"vazao_nominal_conjunto_{i}"]
                 engol_max += n_maq * qef_maq
             engolimentos[idx] = engol_max
         return engolimentos
@@ -521,7 +484,7 @@ class ScenarioSynthetizer:
         if cls.logger is not None:
             cls.logger.info("Calculando séries de MLT para QINC - REE")
         return cls._agrega_serie_mlt_uhe(
-            Variable.VAZAO_INCREMENTAL, "nome_ree", uow
+            Variable.VAZAO_INCREMENTAL, "nome", uow
         )
 
     @classmethod
@@ -632,24 +595,27 @@ class ScenarioSynthetizer:
         dados_rees = cls._validate_data(
             uow.files.get_ree().rees, pd.DataFrame, "REEs"
         )
-        dados_rees["Nome Submercado"] = dados_rees.apply(
+        dados_rees["nome_submercado"] = dados_rees.apply(
             lambda linha: sistema.loc[
-                sistema["Num. Subsistema"] == linha["Submercado"], "Nome"
+                sistema["codigo_submercado"] == linha["submercado"],
+                "nome_submercado",
             ].tolist()[0],
             axis=1,
         )
         # Gera os vetores da dimensão do DF extraído do arquivo vazaof
         codigos_ordenados = cls._formata_dados_series(
-            dados_rees["Número"].to_numpy(), num_series, num_estagios
+            dados_rees["codigo"].to_numpy(), num_series, num_estagios
         )
         nomes_ordenados = cls._formata_dados_series(
-            dados_rees["Nome"].to_numpy(), num_series, num_estagios
+            dados_rees["nome"].to_numpy(), num_series, num_estagios
         )
         submercados_ordenados = cls._formata_dados_series(
-            dados_rees["Submercado"].to_numpy(), num_series, num_estagios
+            dados_rees["submercado"].to_numpy(),
+            num_series,
+            num_estagios,
         )
         nomes_submercados_ordenados = cls._formata_dados_series(
-            dados_rees["Nome Submercado"].to_numpy(), num_series, num_estagios
+            dados_rees["nome_submercado"].to_numpy(), num_series, num_estagios
         )
         datas = pd.date_range(
             datetime(
@@ -738,26 +704,26 @@ class ScenarioSynthetizer:
 
         dados_uhes = pd.DataFrame(uhes).apply(
             lambda linha: confhd.loc[
-                linha[0] - 1, ["Número", "Nome", "REE"]
+                linha[0] - 1, ["codigo_usina", "nome_usina", "ree"]
             ].tolist(),
             axis=1,
             result_type="expand",
         )
         dados_uhes[3] = dados_uhes.apply(
             lambda linha: rees.loc[
-                rees["Número"] == linha[2], "Nome"
+                rees["codigo"] == linha[2], "nome"
             ].tolist()[0],
             axis=1,
         )
         dados_uhes[4] = dados_uhes.apply(
             lambda linha: rees.loc[
-                rees["Número"] == linha[2], "Submercado"
+                rees["codigo"] == linha[2], "submercado"
             ].tolist()[0],
             axis=1,
         )
         dados_uhes[5] = dados_uhes.apply(
             lambda linha: sistema.loc[
-                sistema["Num. Subsistema"] == linha[4], "Nome"
+                sistema["codigo_submercado"] == linha[4], "nome_submercado"
             ].tolist()[0],
             axis=1,
         )
@@ -869,30 +835,31 @@ class ScenarioSynthetizer:
         ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
         anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
 
-        dados_rees["Nome Submercado"] = dados_rees.apply(
+        dados_rees["nome_submercado"] = dados_rees.apply(
             lambda linha: sistema.loc[
-                sistema["Num. Subsistema"] == linha["Submercado"], "Nome"
+                sistema["codigo_submercado"] == linha["submercado"],
+                "nome_submercado",
             ].tolist()[0],
             axis=1,
         )
         # Gera os vetores da dimensão do DF extraído do arquivo vazaob
         codigos_ordenados = cls._formata_dados_series(
-            dados_rees["Número"].to_numpy(),
+            dados_rees["codigo"].to_numpy(),
             num_series * num_aberturas,
             num_estagios,
         )
         nomes_ordenados = cls._formata_dados_series(
-            dados_rees["Nome"].to_numpy(),
+            dados_rees["nome"].to_numpy(),
             num_series * num_aberturas,
             num_estagios,
         )
         codigos_submercados_ordenados = cls._formata_dados_series(
-            dados_rees["Submercado"].to_numpy(),
+            dados_rees["submercado"].to_numpy(),
             num_series * num_aberturas,
             num_estagios,
         )
         nomes_submercados_ordenados = cls._formata_dados_series(
-            dados_rees["Nome Submercado"].to_numpy(),
+            dados_rees["nome_submercado"].to_numpy(),
             num_series * num_aberturas,
             num_estagios,
         )
@@ -989,26 +956,26 @@ class ScenarioSynthetizer:
 
         dados_uhes = pd.DataFrame(uhes).apply(
             lambda linha: confhd.loc[
-                linha[0] - 1, ["Número", "Nome", "REE"]
+                linha[0] - 1, ["codigo_usina", "nome_usina", "ree"]
             ].tolist(),
             axis=1,
             result_type="expand",
         )
         dados_uhes[3] = dados_uhes.apply(
             lambda linha: rees.loc[
-                rees["Número"] == linha[2], "Nome"
+                rees["codigo"] == linha[2], "nome"
             ].tolist()[0],
             axis=1,
         )
         dados_uhes[4] = dados_uhes.apply(
             lambda linha: rees.loc[
-                rees["Número"] == linha[2], "Submercado"
+                rees["codigo"] == linha[2], "submercado"
             ].tolist()[0],
             axis=1,
         )
         dados_uhes[5] = dados_uhes.apply(
             lambda linha: sistema.loc[
-                sistema["Num. Subsistema"] == linha[4], "Nome"
+                sistema["codigo_submercado"] == linha[4], "nome_submercado"
             ].tolist()[0],
             axis=1,
         )
@@ -1117,24 +1084,27 @@ class ScenarioSynthetizer:
         ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
         anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
 
-        dados_rees["Nome Submercado"] = dados_rees.apply(
+        dados_rees["nome_submercado"] = dados_rees.apply(
             lambda linha: sistema.loc[
-                sistema["Num. Subsistema"] == linha["Submercado"], "Nome"
+                sistema["codigo_submercado"] == linha["submercado"],
+                "nome_submercado",
             ].tolist()[0],
             axis=1,
         )
         # Gera os vetores da dimensão do DF extraído do arquivo vazaof
         codigos_ordenados = cls._formata_dados_series(
-            dados_rees["Número"].to_numpy(), num_series, num_estagios
+            dados_rees["codigo"].to_numpy(), num_series, num_estagios
         )
         nomes_ordenados = cls._formata_dados_series(
-            dados_rees["Nome"].to_numpy(), num_series, num_estagios
+            dados_rees["nome"].to_numpy(), num_series, num_estagios
         )
         submercados_ordenados = cls._formata_dados_series(
-            dados_rees["Submercado"].to_numpy(), num_series, num_estagios
+            dados_rees["submercado"].to_numpy(),
+            num_series,
+            num_estagios,
         )
         nomes_submercados_ordenados = cls._formata_dados_series(
-            dados_rees["Nome Submercado"].to_numpy(), num_series, num_estagios
+            dados_rees["nome_submercado"].to_numpy(), num_series, num_estagios
         )
         datas = pd.date_range(
             datetime(
@@ -1221,26 +1191,26 @@ class ScenarioSynthetizer:
 
         dados_uhes = pd.DataFrame(uhes).apply(
             lambda linha: confhd.loc[
-                linha[0] - 1, ["Número", "Nome", "REE"]
+                linha[0] - 1, ["codigo_usina", "nome_usina", "ree"]
             ].tolist(),
             axis=1,
             result_type="expand",
         )
         dados_uhes[3] = dados_uhes.apply(
             lambda linha: rees.loc[
-                rees["Número"] == linha[2], "Nome"
+                rees["codigo"] == linha[2], "nome"
             ].tolist()[0],
             axis=1,
         )
         dados_uhes[4] = dados_uhes.apply(
             lambda linha: rees.loc[
-                rees["Número"] == linha[2], "Submercado"
+                rees["codigo"] == linha[2], "submercado"
             ].tolist()[0],
             axis=1,
         )
         dados_uhes[5] = dados_uhes.apply(
             lambda linha: sistema.loc[
-                sistema["Num. Subsistema"] == linha[4], "Nome"
+                sistema["codigo_submercado"] == linha[4], "nome_submercado"
             ].tolist()[0],
             axis=1,
         )
@@ -1359,7 +1329,7 @@ class ScenarioSynthetizer:
             convergencia = cls._validate_data(
                 uow.files.get_pmo().convergencia, pd.DataFrame, "convergência"
             )
-            n_iters = convergencia["Iteração"].max()
+            n_iters = convergencia["iteracao"].max()
         df_completo = pd.DataFrame()
         n_procs = int(Settings().processors)
         with Pool(processes=n_procs) as pool:
@@ -1405,7 +1375,7 @@ class ScenarioSynthetizer:
             convergencia = cls._validate_data(
                 uow.files.get_pmo().convergencia, pd.DataFrame, "convergência"
             )
-            n_iters = convergencia["Iteração"].max()
+            n_iters = convergencia["iteracao"].max()
         df_completo = pd.DataFrame()
         n_procs = int(Settings().processors)
         with Pool(processes=n_procs) as pool:
@@ -1485,7 +1455,7 @@ class ScenarioSynthetizer:
             convergencia = cls._validate_data(
                 uow.files.get_pmo().convergencia, pd.DataFrame, "convergência"
             )
-            n_iters = convergencia["Iteração"].max()
+            n_iters = convergencia["iteracao"].max()
         df_completo = pd.DataFrame()
         n_procs = int(Settings().processors)
         with Pool(processes=n_procs) as pool:
@@ -1531,7 +1501,7 @@ class ScenarioSynthetizer:
             convergencia = cls._validate_data(
                 uow.files.get_pmo().convergencia, pd.DataFrame, "convergência"
             )
-            n_iters = convergencia["Iteração"].max()
+            n_iters = convergencia["iteracao"].max()
         df_completo = pd.DataFrame()
         n_procs = int(Settings().processors)
         with Pool(processes=n_procs) as pool:
@@ -1959,4 +1929,5 @@ class ScenarioSynthetizer:
                 with uow:
                     uow.export.synthetize_df(df, filename)
         except Exception as e:
+            print_exc()
             cls.logger.error(str(e))

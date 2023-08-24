@@ -4,19 +4,20 @@ import pandas as pd  # type: ignore
 from datetime import datetime, timedelta
 import pathlib
 import asyncio
+from os.path import join
 
 from inewave.newave.caso import Caso
 from inewave.newave.arquivos import Arquivos
 from inewave.newave.patamar import Patamar
-from inewave.newave.dger import DGer
+from inewave.newave.dger import Dger
 from inewave.newave.confhd import Confhd
-from inewave.newave.conft import ConfT
-from inewave.newave.clast import ClasT
+from inewave.newave.conft import Conft
+from inewave.newave.clast import Clast
 from inewave.newave.eolicacadastro import EolicaCadastro
-from inewave.newave.ree import REE
+from inewave.newave.ree import Ree
 from inewave.newave.sistema import Sistema
-from inewave.newave.pmo import PMO
-from inewave.newave.newavetim import NewaveTim
+from inewave.newave.pmo import Pmo
+from inewave.newave.newavetim import Newavetim
 from inewave.newave.vazoes import Vazoes
 from inewave.newave.hidr import Hidr
 
@@ -31,67 +32,67 @@ from inewave.newave.enavazb import Enavazb
 from inewave.newave.engnat import Engnat
 
 from inewave.nwlistop.cmarg import Cmarg
-from inewave.nwlistop.cmargmed import CmargMed
+from inewave.nwlistop.cmargmed import Cmargmed
 from inewave.nwlistop.cterm import Cterm
-from inewave.nwlistop.ctermsin import CtermSIN
+from inewave.nwlistop.ctermsin import Ctermsin
 from inewave.nwlistop.coper import Coper
 from inewave.nwlistop.eafb import Eafb
 from inewave.nwlistop.eafbm import Eafbm
-from inewave.nwlistop.eafbsin import EafbSIN
+from inewave.nwlistop.eafbsin import Eafbsin
 from inewave.nwlistop.intercambio import Intercambio
 from inewave.nwlistop.deficit import Def
 from inewave.nwlistop.cdef import Cdef
-from inewave.nwlistop.cdefsin import CdefSIN
+from inewave.nwlistop.cdefsin import Cdefsin
 from inewave.nwlistop.mercl import Mercl
-from inewave.nwlistop.merclsin import MerclSIN
+from inewave.nwlistop.merclsin import Merclsin
 
 from inewave.nwlistop.earmfp import Earmfp
 from inewave.nwlistop.earmfpm import Earmfpm
-from inewave.nwlistop.earmfpsin import EarmfpSIN
+from inewave.nwlistop.earmfpsin import Earmfpsin
 from inewave.nwlistop.earmf import Earmf
 from inewave.nwlistop.earmfm import Earmfm
-from inewave.nwlistop.earmfsin import EarmfSIN
+from inewave.nwlistop.earmfsin import Earmfsin
 from inewave.nwlistop.ghtot import Ghtot
 from inewave.nwlistop.ghtotm import Ghtotm
-from inewave.nwlistop.ghtotsin import GhtotSIN
+from inewave.nwlistop.ghtotsin import Ghtotsin
 from inewave.nwlistop.gttot import Gttot
-from inewave.nwlistop.gttotsin import GttotSIN
+from inewave.nwlistop.gttotsin import Gttotsin
 from inewave.nwlistop.evert import Evert
 from inewave.nwlistop.evertm import Evertm
-from inewave.nwlistop.evertsin import EvertSIN
+from inewave.nwlistop.evertsin import Evertsin
 from inewave.nwlistop.perdf import Perdf
 from inewave.nwlistop.perdfm import Perdfm
-from inewave.nwlistop.perdfsin import PerdfSIN
+from inewave.nwlistop.perdfsin import Perdfsin
 from inewave.nwlistop.verturb import Verturb
 from inewave.nwlistop.verturbm import Verturbm
-from inewave.nwlistop.verturbsin import VerturbSIN
+from inewave.nwlistop.verturbsin import Verturbsin
 from inewave.nwlistop.vagua import Vagua
 from inewave.nwlistop.vevmin import Vevmin
 from inewave.nwlistop.vevminm import Vevminm
-from inewave.nwlistop.vevminsin import VevminSIN
+from inewave.nwlistop.vevminsin import Vevminsin
 from inewave.nwlistop.invade import Invade
 from inewave.nwlistop.invadem import Invadem
 
 from inewave.nwlistop.vento import Vento
 from inewave.nwlistop.geol import Geol
 from inewave.nwlistop.geolm import Geolm
-from inewave.nwlistop.geolsin import GeolSIN
+from inewave.nwlistop.geolsin import Geolsin
 from inewave.nwlistop.corteolm import Corteolm
 
-from inewave.nwlistop.qafluh import QaflUH
-from inewave.nwlistop.qincruh import QincrUH
-from inewave.nwlistop.ghiduh import GhidUH
-from inewave.nwlistop.vturuh import VturUH
-from inewave.nwlistop.vertuh import VertUH
-from inewave.nwlistop.varmuh import VarmUH
-from inewave.nwlistop.varmpuh import VarmpUH
+from inewave.nwlistop.qafluh import Qafluh
+from inewave.nwlistop.qincruh import Qincruh
+from inewave.nwlistop.ghiduh import Ghiduh
+from inewave.nwlistop.vturuh import Vturuh
+from inewave.nwlistop.vertuh import Vertuh
+from inewave.nwlistop.varmuh import Varmuh
+from inewave.nwlistop.varmpuh import Varmpuh
 from inewave.nwlistop.dtbmax import Dtbmax
 from inewave.nwlistop.dtbmin import Dtbmin
 from inewave.nwlistop.dvazmax import Dvazmax
 from inewave.nwlistop.depminuh import Depminuh
 from inewave.nwlistop.dfphauh import Dfphauh
 
-from inewave.nwlistcf import Nwlistcf
+from inewave.nwlistcf import Nwlistcfrel
 from inewave.nwlistcf import Estados
 
 from sintetizador.model.settings import Settings
@@ -103,7 +104,7 @@ from sintetizador.model.operation.temporalresolution import TemporalResolution
 import platform
 
 if platform.system() == "Windows":
-    DGer.ENCODING = "iso-8859-1"
+    Dger.ENCODING = "iso-8859-1"
 
 
 class AbstractFilesRepository(ABC):
@@ -130,7 +131,7 @@ class AbstractFilesRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_dger(self) -> DGer:
+    def get_dger(self) -> Dger:
         raise NotImplementedError
 
     @abstractmethod
@@ -138,15 +139,15 @@ class AbstractFilesRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_conft(self) -> ConfT:
+    def get_conft(self) -> Conft:
         raise NotImplementedError
 
     @abstractmethod
-    def get_clast(self) -> ClasT:
+    def get_clast(self) -> Clast:
         raise NotImplementedError
 
     @abstractmethod
-    def get_ree(self) -> REE:
+    def get_ree(self) -> Ree:
         raise NotImplementedError
 
     @abstractmethod
@@ -158,11 +159,11 @@ class AbstractFilesRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_pmo(self) -> PMO:
+    def get_pmo(self) -> Pmo:
         raise NotImplementedError
 
     @abstractmethod
-    def get_newavetim(self) -> Optional[NewaveTim]:
+    def get_newavetim(self) -> Optional[Newavetim]:
         raise NotImplementedError
 
     @abstractmethod
@@ -181,7 +182,7 @@ class AbstractFilesRepository(ABC):
         pass
 
     @abstractmethod
-    def get_nwlistcf_cortes(self) -> Optional[Nwlistcf]:
+    def get_nwlistcf_cortes(self) -> Optional[Nwlistcfrel]:
         raise NotImplementedError
 
     @abstractmethod
@@ -244,20 +245,20 @@ class AbstractFilesRepository(ABC):
 class RawFilesRepository(AbstractFilesRepository):
     def __init__(self, tmppath: str):
         self.__tmppath = tmppath
-        self.__caso = Caso.le_arquivo(str(self.__tmppath))
+        self.__caso = Caso.read(join(str(self.__tmppath), "caso.dat"))
         self.__arquivos: Optional[Arquivos] = None
         self.__indices: Optional[pd.DataFrame] = None
-        self.__dger: Optional[DGer] = None
+        self.__dger: Optional[Dger] = None
         self.__patamar: Optional[Patamar] = None
         self.__sistema: Optional[Sistema] = None
-        self.__pmo: Optional[PMO] = None
-        self.__newavetim: Optional[NewaveTim] = None
-        self.__ree: Optional[REE] = None
+        self.__pmo: Optional[Pmo] = None
+        self.__newavetim: Optional[Newavetim] = None
+        self.__ree: Optional[Ree] = None
         self.__confhd: Optional[Confhd] = None
-        self.__conft: Optional[ConfT] = None
-        self.__clast: Optional[ClasT] = None
+        self.__conft: Optional[Conft] = None
+        self.__clast: Optional[Clast] = None
         self.__eolicacadastro: Optional[EolicaCadastro] = None
-        self.__nwlistcf: Optional[Nwlistcf] = None
+        self.__nwlistcf: Optional[Nwlistcfrel] = None
         self.__estados: Optional[Estados] = None
         self.__energiaf: Dict[int, Energiaf] = {}
         self.__energiab: Dict[int, Energiab] = {}
@@ -278,105 +279,105 @@ class RawFilesRepository(AbstractFilesRepository):
                 Variable.CUSTO_MARGINAL_OPERACAO,
                 SpatialResolution.SUBMERCADO,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: CmargMed.le_arquivo(
-                dir, f"cmarg{str(submercado).zfill(3)}-med.out"
+            ): lambda dir, submercado=1: Cmargmed.read(
+                join(dir, f"cmarg{str(submercado).zfill(3)}-med.out")
             ).valores,
             (
                 Variable.CUSTO_MARGINAL_OPERACAO,
                 SpatialResolution.SUBMERCADO,
                 TemporalResolution.PATAMAR,
-            ): lambda dir, submercado=1: Cmarg.le_arquivo(
-                dir, f"cmarg{str(submercado).zfill(3)}.out"
+            ): lambda dir, submercado=1: Cmarg.read(
+                join(dir, f"cmarg{str(submercado).zfill(3)}.out")
             ).valores,
             (
                 Variable.VALOR_AGUA,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, ree=1: Vagua.le_arquivo(
-                dir, f"vagua{str(ree).zfill(3)}.out"
+            ): lambda dir, ree=1: Vagua.read(
+                join(dir, f"vagua{str(ree).zfill(3)}.out")
             ).valores,
             (
                 Variable.CUSTO_GERACAO_TERMICA,
                 SpatialResolution.SUBMERCADO,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: Cterm.le_arquivo(
-                dir, f"cterm{str(submercado).zfill(3)}.out"
+            ): lambda dir, submercado=1: Cterm.read(
+                join(dir, f"cterm{str(submercado).zfill(3)}.out")
             ).valores,
             (
                 Variable.CUSTO_GERACAO_TERMICA,
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, _: CtermSIN.le_arquivo(dir, "ctermsin.out").valores,
+            ): lambda dir, _: Ctermsin.read(join(dir, "ctermsin.out")).valores,
             (
                 Variable.CUSTO_OPERACAO,
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, _: Coper.le_arquivo(dir, "coper.out").valores,
+            ): lambda dir, _: Coper.read(join(dir, "coper.out")).valores,
             (
                 Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, ree=1: Eafb.le_arquivo(
-                dir, f"eafb{str(ree).zfill(3)}.out"
+            ): lambda dir, ree=1: Eafb.read(
+                join(dir, f"eafb{str(ree).zfill(3)}.out")
             ).valores,
             (
                 Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA,
                 SpatialResolution.SUBMERCADO,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: Eafbm.le_arquivo(
-                dir, f"eafbm{str(submercado).zfill(3)}.out"
+            ): lambda dir, submercado=1: Eafbm.read(
+                join(dir, f"eafbm{str(submercado).zfill(3)}.out")
             ).valores,
             (
                 Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA,
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, _: EafbSIN.le_arquivo(dir, "eafbsin.out").valores,
+            ): lambda dir, _: Eafbsin.read(join(dir, "eafbsin.out")).valores,
             (
                 Variable.ENERGIA_ARMAZENADA_PERCENTUAL_FINAL,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, ree=1: Earmfp.le_arquivo(
-                dir, f"earmfp{str(ree).zfill(3)}.out"
+            ): lambda dir, ree=1: Earmfp.read(
+                join(dir, f"earmfp{str(ree).zfill(3)}.out")
             ).valores,
             (
                 Variable.ENERGIA_ARMAZENADA_PERCENTUAL_FINAL,
                 SpatialResolution.SUBMERCADO,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: Earmfpm.le_arquivo(
-                dir, f"earmfpm{str(submercado).zfill(3)}.out"
+            ): lambda dir, submercado=1: Earmfpm.read(
+                join(dir, f"earmfpm{str(submercado).zfill(3)}.out")
             ).valores,
             (
                 Variable.ENERGIA_ARMAZENADA_PERCENTUAL_FINAL,
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, _: EarmfpSIN.le_arquivo(
-                dir, "earmfpsin.out"
+            ): lambda dir, _: Earmfpsin.read(
+                join(dir, "earmfpsin.out")
             ).valores,
             (
                 Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, ree=1: Earmf.le_arquivo(
-                dir, f"earmf{str(ree).zfill(3)}.out"
+            ): lambda dir, ree=1: Earmf.read(
+                join(dir, f"earmf{str(ree).zfill(3)}.out")
             ).valores,
             (
                 Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
                 SpatialResolution.SUBMERCADO,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: Earmfm.le_arquivo(
-                dir, f"earmfm{str(submercado).zfill(3)}.out"
+            ): lambda dir, submercado=1: Earmfm.read(
+                join(dir, f"earmfm{str(submercado).zfill(3)}.out")
             ).valores,
             (
                 Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, _: EarmfSIN.le_arquivo(dir, "earmfsin.out").valores,
+            ): lambda dir, _: Earmfsin.read(join(dir, "earmfsin.out")).valores,
             (
                 Variable.GERACAO_HIDRAULICA,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
                 TemporalResolution.ESTAGIO,
             ): lambda dir, ree=1: self.__extrai_patamares_df(
-                Ghtot.le_arquivo(dir, f"ghtot{str(ree).zfill(3)}.out").valores,
+                Ghtot.read(join(dir, f"ghtot{str(ree).zfill(3)}.out")).valores,
                 ["TOTAL"],
             ),
             (
@@ -384,8 +385,8 @@ class RawFilesRepository(AbstractFilesRepository):
                 SpatialResolution.SUBMERCADO,
                 TemporalResolution.ESTAGIO,
             ): lambda dir, submercado=1: self.__extrai_patamares_df(
-                Ghtotm.le_arquivo(
-                    dir, f"ghtotm{str(submercado).zfill(3)}.out"
+                Ghtotm.read(
+                    join(dir, f"ghtotm{str(submercado).zfill(3)}.out")
                 ).valores,
                 ["TOTAL"],
             ),
@@ -394,22 +395,22 @@ class RawFilesRepository(AbstractFilesRepository):
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.ESTAGIO,
             ): lambda dir, _: self.__extrai_patamares_df(
-                GhtotSIN.le_arquivo(dir, "ghtotsin.out").valores, ["TOTAL"]
+                Ghtotsin.read(join(dir, "ghtotsin.out")).valores, ["TOTAL"]
             ),
             (
                 Variable.GERACAO_HIDRAULICA,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
                 TemporalResolution.PATAMAR,
             ): lambda dir, ree=1: self.__extrai_patamares_df(
-                Ghtot.le_arquivo(dir, f"ghtot{str(ree).zfill(3)}.out").valores,
+                Ghtot.read(join(dir, f"ghtot{str(ree).zfill(3)}.out")).valores,
             ),
             (
                 Variable.GERACAO_HIDRAULICA,
                 SpatialResolution.SUBMERCADO,
                 TemporalResolution.PATAMAR,
             ): lambda dir, submercado=1: self.__extrai_patamares_df(
-                Ghtotm.le_arquivo(
-                    dir, f"ghtotm{str(submercado).zfill(3)}.out"
+                Ghtotm.read(
+                    join(dir, f"ghtotm{str(submercado).zfill(3)}.out")
                 ).valores,
             ),
             (
@@ -417,15 +418,15 @@ class RawFilesRepository(AbstractFilesRepository):
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.PATAMAR,
             ): lambda dir, _: self.__extrai_patamares_df(
-                GhtotSIN.le_arquivo(dir, "ghtotsin.out").valores,
+                Ghtotsin.read(join(dir, "ghtotsin.out")).valores,
             ),
             (
                 Variable.GERACAO_TERMICA,
                 SpatialResolution.SUBMERCADO,
                 TemporalResolution.ESTAGIO,
             ): lambda dir, submercado=1: self.__extrai_patamares_df(
-                Gttot.le_arquivo(
-                    dir, f"gttot{str(submercado).zfill(3)}.out"
+                Gttot.read(
+                    join(dir, f"gttot{str(submercado).zfill(3)}.out")
                 ).valores,
                 ["TOTAL"],
             ),
@@ -434,15 +435,15 @@ class RawFilesRepository(AbstractFilesRepository):
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.ESTAGIO,
             ): lambda dir, _: self.__extrai_patamares_df(
-                GttotSIN.le_arquivo(dir, "gttotsin.out").valores, ["TOTAL"]
+                Gttotsin.read(join(dir, "gttotsin.out")).valores, ["TOTAL"]
             ),
             (
                 Variable.GERACAO_TERMICA,
                 SpatialResolution.SUBMERCADO,
                 TemporalResolution.PATAMAR,
             ): lambda dir, submercado=1: self.__extrai_patamares_df(
-                Gttot.le_arquivo(
-                    dir, f"gttot{str(submercado).zfill(3)}.out"
+                Gttot.read(
+                    join(dir, f"gttot{str(submercado).zfill(3)}.out")
                 ).valores,
             ),
             (
@@ -450,131 +451,131 @@ class RawFilesRepository(AbstractFilesRepository):
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.PATAMAR,
             ): lambda dir, _: self.__extrai_patamares_df(
-                GttotSIN.le_arquivo(dir, "gttotsin.out").valores,
+                Gttotsin.read(join(dir, "gttotsin.out")).valores,
             ),
             (
                 Variable.ENERGIA_VERTIDA_RESERV,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, ree=1: Evert.le_arquivo(
-                dir, f"evert{str(ree).zfill(3)}.out"
+            ): lambda dir, ree=1: Evert.read(
+                join(dir, f"evert{str(ree).zfill(3)}.out")
             ).valores,
             (
                 Variable.ENERGIA_VERTIDA_RESERV,
                 SpatialResolution.SUBMERCADO,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: Evertm.le_arquivo(
-                dir, f"evertm{str(submercado).zfill(3)}.out"
+            ): lambda dir, submercado=1: Evertm.read(
+                join(dir, f"evertm{str(submercado).zfill(3)}.out")
             ).valores,
             (
                 Variable.ENERGIA_VERTIDA_RESERV,
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, _: EvertSIN.le_arquivo(dir, "evertsin.out").valores,
+            ): lambda dir, _: Evertsin.read(join(dir, "evertsin.out")).valores,
             (
                 Variable.ENERGIA_VERTIDA_FIO,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, ree=1: Perdf.le_arquivo(
-                dir, f"perdf{str(ree).zfill(3)}.out"
+            ): lambda dir, ree=1: Perdf.read(
+                join(dir, f"perdf{str(ree).zfill(3)}.out")
             ).valores,
             (
                 Variable.ENERGIA_VERTIDA_FIO,
                 SpatialResolution.SUBMERCADO,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: Perdfm.le_arquivo(
-                dir, f"perdfm{str(submercado).zfill(3)}.out"
+            ): lambda dir, submercado=1: Perdfm.read(
+                join(dir, f"perdfm{str(submercado).zfill(3)}.out")
             ).valores,
             (
                 Variable.ENERGIA_VERTIDA_FIO,
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, _: PerdfSIN.le_arquivo(dir, "perdfsin.out").valores,
+            ): lambda dir, _: Perdfsin.read(join(dir, "perdfsin.out")).valores,
             (
                 Variable.ENERGIA_VERTIDA_FIO_TURBINAVEL,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, ree=1: Verturb.le_arquivo(
-                dir, f"verturb{str(ree).zfill(3)}.out"
+            ): lambda dir, ree=1: Verturb.read(
+                join(dir, f"verturb{str(ree).zfill(3)}.out")
             ).valores,
             (
                 Variable.ENERGIA_VERTIDA_FIO_TURBINAVEL,
                 SpatialResolution.SUBMERCADO,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: Verturbm.le_arquivo(
-                dir, f"verturbm{str(submercado).zfill(3)}.out"
+            ): lambda dir, submercado=1: Verturbm.read(
+                join(dir, f"verturbm{str(submercado).zfill(3)}.out")
             ).valores,
             (
                 Variable.ENERGIA_VERTIDA_FIO_TURBINAVEL,
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, _: VerturbSIN.le_arquivo(
-                dir, "verturbsin.out"
+            ): lambda dir, _: Verturbsin.read(
+                join(dir, "verturbsin.out")
             ).valores,
             (
                 Variable.VAZAO_AFLUENTE,
                 SpatialResolution.USINA_HIDROELETRICA,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, uhe=1: QaflUH.le_arquivo(
-                dir, f"qafluh{str(uhe).zfill(3)}.out"
+            ): lambda dir, uhe=1: Qafluh.read(
+                join(dir, f"qafluh{str(uhe).zfill(3)}.out")
             ).valores,
             (
                 Variable.VAZAO_INCREMENTAL,
                 SpatialResolution.USINA_HIDROELETRICA,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, uhe=1: QincrUH.le_arquivo(
-                dir, f"qincruh{str(uhe).zfill(3)}.out"
+            ): lambda dir, uhe=1: Qincruh.read(
+                join(dir, f"qincruh{str(uhe).zfill(3)}.out")
             ).valores,
             (
                 Variable.VOLUME_TURBINADO,
                 SpatialResolution.USINA_HIDROELETRICA,
                 TemporalResolution.PATAMAR,
-            ): lambda dir, uhe=1: VturUH.le_arquivo(
-                dir, f"vturuh{str(uhe).zfill(3)}.out"
+            ): lambda dir, uhe=1: Vturuh.read(
+                join(dir, f"vturuh{str(uhe).zfill(3)}.out")
             ).valores,
             (
                 Variable.VOLUME_VERTIDO,
                 SpatialResolution.USINA_HIDROELETRICA,
                 TemporalResolution.PATAMAR,
-            ): lambda dir, uhe=1: VertUH.le_arquivo(
-                dir, f"vertuh{str(uhe).zfill(3)}.out"
+            ): lambda dir, uhe=1: Vertuh.read(
+                join(dir, f"vertuh{str(uhe).zfill(3)}.out")
             ).valores,
             (
                 Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
                 SpatialResolution.USINA_HIDROELETRICA,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, uhe=1: VarmUH.le_arquivo(
-                dir, f"varmuh{str(uhe).zfill(3)}.out"
+            ): lambda dir, uhe=1: Varmuh.read(
+                join(dir, f"varmuh{str(uhe).zfill(3)}.out")
             ).valores,
             (
                 Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
                 SpatialResolution.USINA_HIDROELETRICA,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, uhe=1: VarmpUH.le_arquivo(
-                dir, f"varmpuh{str(uhe).zfill(3)}.out"
+            ): lambda dir, uhe=1: Varmpuh.read(
+                join(dir, f"varmpuh{str(uhe).zfill(3)}.out")
             ).valores,
             (
                 Variable.GERACAO_HIDRAULICA,
                 SpatialResolution.USINA_HIDROELETRICA,
                 TemporalResolution.PATAMAR,
             ): lambda dir, uhe=1: self.__extrai_patamares_df(
-                GhidUH.le_arquivo(
-                    dir, f"ghiduh{str(uhe).zfill(3)}.out"
+                Ghiduh.read(
+                    join(dir, f"ghiduh{str(uhe).zfill(3)}.out")
                 ).valores
             ),
             (
                 Variable.VELOCIDADE_VENTO,
                 SpatialResolution.PARQUE_EOLICO_EQUIVALENTE,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, uee=1: Vento.le_arquivo(
-                dir, f"vento{str(uee).zfill(3)}.out"
+            ): lambda dir, uee=1: Vento.read(
+                join(dir, f"vento{str(uee).zfill(3)}.out")
             ).valores,
             (
                 Variable.GERACAO_EOLICA,
                 SpatialResolution.PARQUE_EOLICO_EQUIVALENTE,
                 TemporalResolution.ESTAGIO,
             ): lambda dir, uee=1: self.__extrai_patamares_df(
-                Geol.le_arquivo(dir, f"geol{str(uee).zfill(3)}.out").valores,
+                Geol.read(join(dir, f"geol{str(uee).zfill(3)}.out")).valores,
                 ["TOTAL"],
             ),
             (
@@ -582,8 +583,8 @@ class RawFilesRepository(AbstractFilesRepository):
                 SpatialResolution.SUBMERCADO,
                 TemporalResolution.ESTAGIO,
             ): lambda dir, submercado=1: self.__extrai_patamares_df(
-                Geolm.le_arquivo(
-                    dir, f"geolm{str(submercado).zfill(3)}.out"
+                Geolm.read(
+                    join(dir, f"geolm{str(submercado).zfill(3)}.out")
                 ).valores,
                 ["TOTAL"],
             ),
@@ -592,22 +593,22 @@ class RawFilesRepository(AbstractFilesRepository):
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.ESTAGIO,
             ): lambda dir, _: self.__extrai_patamares_df(
-                GeolSIN.le_arquivo(dir, "geolsin.out").valores, ["TOTAL"]
+                Geolsin.read(join(dir, "geolsin.out")).valores, ["TOTAL"]
             ),
             (
                 Variable.GERACAO_EOLICA,
                 SpatialResolution.PARQUE_EOLICO_EQUIVALENTE,
                 TemporalResolution.PATAMAR,
             ): lambda dir, uee=1: self.__extrai_patamares_df(
-                Geol.le_arquivo(dir, f"geol{str(uee).zfill(3)}.out").valores
+                Geol.read(join(dir, f"geol{str(uee).zfill(3)}.out")).valores
             ),
             (
                 Variable.GERACAO_EOLICA,
                 SpatialResolution.SUBMERCADO,
                 TemporalResolution.PATAMAR,
             ): lambda dir, submercado=1: self.__extrai_patamares_df(
-                Geolm.le_arquivo(
-                    dir, f"geolm{str(submercado).zfill(3)}.out"
+                Geolm.read(
+                    join(dir, f"geolm{str(submercado).zfill(3)}.out")
                 ).valores
             ),
             (
@@ -615,15 +616,15 @@ class RawFilesRepository(AbstractFilesRepository):
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.PATAMAR,
             ): lambda dir, _: self.__extrai_patamares_df(
-                GeolSIN.le_arquivo(dir, "geolsin.out").valores
+                Geolsin.read(join(dir, "geolsin.out")).valores
             ),
             (
                 Variable.DEFICIT,
                 SpatialResolution.SUBMERCADO,
                 TemporalResolution.ESTAGIO,
             ): lambda dir, submercado=1: self.__extrai_patamares_df(
-                Def.le_arquivo(
-                    dir, f"def{str(submercado).zfill(3)}p001.out"
+                Def.read(
+                    join(dir, f"def{str(submercado).zfill(3)}p001.out")
                 ).valores,
                 ["TOTAL"],
             ),
@@ -632,15 +633,15 @@ class RawFilesRepository(AbstractFilesRepository):
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.ESTAGIO,
             ): lambda dir, _: self.__extrai_patamares_df(
-                Def.le_arquivo(dir, "defsinp001.out").valores, ["TOTAL"]
+                Def.read(join(dir, "defsinp001.out")).valores, ["TOTAL"]
             ),
             (
                 Variable.DEFICIT,
                 SpatialResolution.SUBMERCADO,
                 TemporalResolution.PATAMAR,
             ): lambda dir, submercado=1: self.__extrai_patamares_df(
-                Def.le_arquivo(
-                    dir, f"def{str(submercado).zfill(3)}p001.out"
+                Def.read(
+                    join(dir, f"def{str(submercado).zfill(3)}p001.out")
                 ).valores
             ),
             (
@@ -648,17 +649,19 @@ class RawFilesRepository(AbstractFilesRepository):
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.PATAMAR,
             ): lambda dir, _: self.__extrai_patamares_df(
-                Def.le_arquivo(dir, "defsinp001.out").valores
+                Def.read(join(dir, "defsinp001.out")).valores
             ),
             (
                 Variable.INTERCAMBIO,
                 SpatialResolution.PAR_SUBMERCADOS,
                 TemporalResolution.ESTAGIO,
             ): lambda dir, submercados=(1, 2): self.__extrai_patamares_df(
-                Intercambio.le_arquivo(
-                    dir,
-                    f"int{str(submercados[0]).zfill(3)}"
-                    + f"{str(submercados[1]).zfill(3)}.out",
+                Intercambio.read(
+                    join(
+                        dir,
+                        f"int{str(submercados[0]).zfill(3)}"
+                        + f"{str(submercados[1]).zfill(3)}.out",
+                    )
                 ).valores,
                 ["TOTAL"],
             ),
@@ -667,43 +670,45 @@ class RawFilesRepository(AbstractFilesRepository):
                 SpatialResolution.PAR_SUBMERCADOS,
                 TemporalResolution.PATAMAR,
             ): lambda dir, submercados=(1, 2): self.__extrai_patamares_df(
-                Intercambio.le_arquivo(
-                    dir,
-                    f"int{str(submercados[0]).zfill(3)}"
-                    + f"{str(submercados[1]).zfill(3)}.out",
+                Intercambio.read(
+                    join(
+                        dir,
+                        f"int{str(submercados[0]).zfill(3)}"
+                        + f"{str(submercados[1]).zfill(3)}.out",
+                    ),
                 ).valores
             ),
             (
                 Variable.CUSTO_DEFICIT,
                 SpatialResolution.SUBMERCADO,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: Cdef.le_arquivo(
-                dir, f"cdef{str(submercado).zfill(3)}.out"
+            ): lambda dir, submercado=1: Cdef.read(
+                join(dir, f"cdef{str(submercado).zfill(3)}.out")
             ).valores,
             (
                 Variable.CUSTO_DEFICIT,
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, _: CdefSIN.le_arquivo(dir, "cdefsin.out").valores,
+            ): lambda dir, _: Cdefsin.read(join(dir, "cdefsin.out")).valores,
             (
                 Variable.MERCADO_LIQUIDO,
                 SpatialResolution.SUBMERCADO,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: Mercl.le_arquivo(
-                dir, f"mercl{str(submercado).zfill(3)}.out"
+            ): lambda dir, submercado=1: Mercl.read(
+                join(dir, f"mercl{str(submercado).zfill(3)}.out")
             ).valores,
             (
                 Variable.MERCADO_LIQUIDO,
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, _: MerclSIN.le_arquivo(dir, "merclsin.out").valores,
+            ): lambda dir, _: Merclsin.read(join(dir, "merclsin.out")).valores,
             (
                 Variable.CORTE_GERACAO_EOLICA,
                 SpatialResolution.SUBMERCADO,
                 TemporalResolution.ESTAGIO,
             ): lambda dir, submercado=1: self.__extrai_patamares_df(
-                Corteolm.le_arquivo(
-                    dir, f"corteolm{str(submercado).zfill(3)}.out"
+                Corteolm.read(
+                    join(dir, f"corteolm{str(submercado).zfill(3)}.out")
                 ).valores,
                 ["TOTAL"],
             ),
@@ -712,8 +717,8 @@ class RawFilesRepository(AbstractFilesRepository):
                 SpatialResolution.SUBMERCADO,
                 TemporalResolution.PATAMAR,
             ): lambda dir, submercado=1: self.__extrai_patamares_df(
-                Corteolm.le_arquivo(
-                    dir, f"corteolm{str(submercado).zfill(3)}.out"
+                Corteolm.read(
+                    join(dir, f"corteolm{str(submercado).zfill(3)}.out")
                 ).valores
             ),
             (
@@ -721,8 +726,8 @@ class RawFilesRepository(AbstractFilesRepository):
                 SpatialResolution.USINA_HIDROELETRICA,
                 TemporalResolution.PATAMAR,
             ): lambda dir, uhe=1: self.__extrai_patamares_df(
-                Depminuh.le_arquivo(
-                    dir, f"depminuh{str(uhe).zfill(3)}.out"
+                Depminuh.read(
+                    join(dir, f"depminuh{str(uhe).zfill(3)}.out")
                 ).valores
             ),
             (
@@ -730,8 +735,8 @@ class RawFilesRepository(AbstractFilesRepository):
                 SpatialResolution.USINA_HIDROELETRICA,
                 TemporalResolution.PATAMAR,
             ): lambda dir, uhe=1: self.__extrai_patamares_df(
-                Dvazmax.le_arquivo(
-                    dir, f"dvazmax{str(uhe).zfill(3)}.out"
+                Dvazmax.read(
+                    join(dir, f"dvazmax{str(uhe).zfill(3)}.out")
                 ).valores
             ),
             (
@@ -739,8 +744,8 @@ class RawFilesRepository(AbstractFilesRepository):
                 SpatialResolution.USINA_HIDROELETRICA,
                 TemporalResolution.PATAMAR,
             ): lambda dir, uhe=1: self.__extrai_patamares_df(
-                Dtbmin.le_arquivo(
-                    dir, f"dtbmin{str(uhe).zfill(3)}.out"
+                Dtbmin.read(
+                    join(dir, f"dtbmin{str(uhe).zfill(3)}.out")
                 ).valores
             ),
             (
@@ -748,8 +753,8 @@ class RawFilesRepository(AbstractFilesRepository):
                 SpatialResolution.USINA_HIDROELETRICA,
                 TemporalResolution.PATAMAR,
             ): lambda dir, uhe=1: self.__extrai_patamares_df(
-                Dtbmax.le_arquivo(
-                    dir, f"dtbmax{str(uhe).zfill(3)}.out"
+                Dtbmax.read(
+                    join(dir, f"dtbmax{str(uhe).zfill(3)}.out")
                 ).valores
             ),
             (
@@ -757,44 +762,44 @@ class RawFilesRepository(AbstractFilesRepository):
                 SpatialResolution.USINA_HIDROELETRICA,
                 TemporalResolution.PATAMAR,
             ): lambda dir, uhe=1: self.__extrai_patamares_df(
-                Dfphauh.le_arquivo(
-                    dir, f"dfphauh{str(uhe).zfill(3)}.out"
+                Dfphauh.read(
+                    join(dir, f"dfphauh{str(uhe).zfill(3)}.out")
                 ).valores
             ),
             (
                 Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, ree=1: Vevmin.le_arquivo(
-                dir, f"vevmin{str(ree).zfill(3)}.out"
+            ): lambda dir, ree=1: Vevmin.read(
+                join(dir, f"vevmin{str(ree).zfill(3)}.out")
             ).valores,
             (
                 Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
                 SpatialResolution.SUBMERCADO,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: Vevminm.le_arquivo(
-                dir, f"vevminm{str(submercado).zfill(3)}.out"
+            ): lambda dir, submercado=1: Vevminm.read(
+                join(dir, f"vevminm{str(submercado).zfill(3)}.out")
             ).valores,
             (
                 Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, _: VevminSIN.le_arquivo(
-                dir, "vevminsin.out"
+            ): lambda dir, _: Vevminsin.read(
+                join(dir, "vevminsin.out")
             ).valores,
             (
                 Variable.VIOLACAO_VMINOP,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, ree=1: Invade.le_arquivo(
-                dir, f"invade{str(ree).zfill(3)}.out"
+            ): lambda dir, ree=1: Invade.read(
+                join(dir, f"invade{str(ree).zfill(3)}.out")
             ).valores,
             (
                 Variable.VIOLACAO_VMINOP,
                 SpatialResolution.SUBMERCADO,
                 TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: Invadem.le_arquivo(
-                dir, f"invadem{str(submercado).zfill(3)}.out"
+            ): lambda dir, submercado=1: Invadem.read(
+                join(dir, f"invadem{str(submercado).zfill(3)}.out")
             ).valores,
         }
 
@@ -808,7 +813,7 @@ class RawFilesRepository(AbstractFilesRepository):
             if num_pats is None:
                 raise RuntimeError("Numero de patamares não encontrado")
             patamares = [str(i) for i in range(1, num_pats + 1)]
-        return df.loc[df["Patamar"].isin(patamares), :]
+        return df.loc[df["patamar"].isin(patamares), :]
 
     @property
     def caso(self) -> Caso:
@@ -817,8 +822,8 @@ class RawFilesRepository(AbstractFilesRepository):
     @property
     def arquivos(self) -> Arquivos:
         if self.__arquivos is None:
-            self.__arquivos = Arquivos.le_arquivo(
-                self.__tmppath, self.__caso.arquivos
+            self.__arquivos = Arquivos.read(
+                join(self.__tmppath, self.__caso.arquivos)
             )
         return self.__arquivos
 
@@ -838,7 +843,7 @@ class RawFilesRepository(AbstractFilesRepository):
         )
         return self.__indices
 
-    def get_dger(self) -> DGer:
+    def get_dger(self) -> Dger:
         if self.__dger is None:
             arq_dger = self.arquivos.dger
             if arq_dger is None:
@@ -848,59 +853,59 @@ class RawFilesRepository(AbstractFilesRepository):
                 Settings().encoding_script
             )
             asyncio.run(converte_codificacao(str(caminho), str(script)))
-            self.__dger = DGer.le_arquivo(self.__tmppath, arq_dger)
+            self.__dger = Dger.read(join(self.__tmppath, arq_dger))
         return self.__dger
 
     def get_patamar(self) -> Patamar:
         if self.__patamar is None:
-            self.__patamar = Patamar.le_arquivo(
-                self.__tmppath, self.arquivos.patamar
+            self.__patamar = Patamar.read(
+                join(self.__tmppath, self.arquivos.patamar)
             )
         return self.__patamar
 
     def get_confhd(self) -> Confhd:
         if self.__confhd is None:
-            self.__confhd = Confhd.le_arquivo(
-                self.__tmppath, self.arquivos.confhd
+            self.__confhd = Confhd.read(
+                join(self.__tmppath, self.arquivos.confhd)
             )
         return self.__confhd
 
-    def get_conft(self) -> ConfT:
+    def get_conft(self) -> Conft:
         if self.__conft is None:
-            self.__conft = ConfT.le_arquivo(
-                self.__tmppath, self.arquivos.conft
+            self.__conft = Conft.read(
+                join(self.__tmppath, self.arquivos.conft)
             )
         return self.__conft
 
-    def get_clast(self) -> ClasT:
+    def get_clast(self) -> Clast:
         if self.__clast is None:
-            self.__clast = ClasT.le_arquivo(
-                self.__tmppath, self.arquivos.clast
+            self.__clast = Clast.read(
+                join(self.__tmppath, self.arquivos.clast)
             )
         return self.__clast
 
-    def get_ree(self) -> REE:
+    def get_ree(self) -> Ree:
         if self.__ree is None:
-            self.__ree = REE.le_arquivo(self.__tmppath, self.arquivos.ree)
+            self.__ree = Ree.read(join(self.__tmppath, self.arquivos.ree))
         return self.__ree
 
     def get_sistema(self) -> Sistema:
         if self.__sistema is None:
-            self.__sistema = Sistema.le_arquivo(
-                self.__tmppath, self.arquivos.sistema
+            self.__sistema = Sistema.read(
+                join(self.__tmppath, self.arquivos.sistema)
             )
         return self.__sistema
 
-    def get_pmo(self) -> PMO:
+    def get_pmo(self) -> Pmo:
         if self.__pmo is None:
-            self.__pmo = PMO.le_arquivo(self.__tmppath, self.arquivos.pmo)
+            self.__pmo = Pmo.read(join(self.__tmppath, self.arquivos.pmo))
         return self.__pmo
 
-    def get_newavetim(self) -> Optional[NewaveTim]:
+    def get_newavetim(self) -> Optional[Newavetim]:
         if self.__newavetim is None:
             try:
-                self.__newavetim = NewaveTim.le_arquivo(
-                    self.__tmppath, "newave.tim"
+                self.__newavetim = Newavetim.read(
+                    join(self.__tmppath, "newave.tim")
                 )
             except Exception:
                 pass
@@ -911,8 +916,8 @@ class RawFilesRepository(AbstractFilesRepository):
             arq = self.indices.at[
                 "PARQUE-EOLICO-EQUIVALENTE-CADASTRO", "arquivo"
             ]
-            self.__eolicacadastro = EolicaCadastro.le_arquivo(
-                self.__tmppath, arq
+            self.__eolicacadastro = EolicaCadastro.read(
+                join(self.__tmppath, arq)
             )
         return self.__eolicacadastro
 
@@ -934,10 +939,12 @@ class RawFilesRepository(AbstractFilesRepository):
         except Exception:
             return None
 
-    def get_nwlistcf_cortes(self) -> Optional[Nwlistcf]:
+    def get_nwlistcf_cortes(self) -> Optional[Nwlistcfrel]:
         if self.__nwlistcf is None:
             try:
-                self.__nwlistcf = Nwlistcf.le_arquivo(self.__tmppath)
+                self.__nwlistcf = Nwlistcfrel.read(
+                    join(self.__tmppath, "nwlistcf.rel")
+                )
             except Exception:
                 pass
         return self.__nwlistcf
@@ -945,7 +952,9 @@ class RawFilesRepository(AbstractFilesRepository):
     def get_nwlistcf_estados(self) -> Optional[Estados]:
         if self.__estados is None:
             try:
-                self.__estados = Estados.le_arquivo(self.__tmppath)
+                self.__estados = Estados.read(
+                    join(self.__tmppath, "estados.rel")
+                )
             except Exception:
                 pass
         return self.__estados
@@ -963,8 +972,8 @@ class RawFilesRepository(AbstractFilesRepository):
         if agregacao == 1:
             return anos_estudo * 12
         rees = self._validate_data(self.get_ree().rees, pd.DataFrame)
-        mes_fim_hib = rees["Mês Fim Individualizado"].iloc[0]
-        ano_fim_hib = rees["Ano Fim Individualizado"].iloc[0]
+        mes_fim_hib = rees["mes_fim_individualizado"].iloc[0]
+        ano_fim_hib = rees["ano_fim_individualizado"].iloc[0]
 
         if mes_fim_hib is not None and ano_fim_hib is not None:
             data_inicio_estudo = datetime(
@@ -1005,9 +1014,8 @@ class RawFilesRepository(AbstractFilesRepository):
                 n_rees = rees.shape[0]
                 n_estagios = anos_estudo * 12
                 n_estagios_th = 12 if parpa == 3 else ordem_maxima
-                self.__energiaf[iteracao] = Energiaf.le_arquivo(
-                    self.__tmppath,
-                    nome_arq,
+                self.__energiaf[iteracao] = Energiaf.read(
+                    join(self.__tmppath, nome_arq),
                     num_forwards,
                     n_rees,
                     n_estagios,
@@ -1041,9 +1049,8 @@ class RawFilesRepository(AbstractFilesRepository):
                     self._numero_estagios_individualizados() + mes_inicio - 1
                 )
                 n_estagios_th = 12 if parpa == 3 else ordem_maxima
-                self.__vazaof[iteracao] = Vazaof.le_arquivo(
-                    self.__tmppath,
-                    nome_arq,
+                self.__vazaof[iteracao] = Vazaof.read(
+                    join(self.__tmppath, nome_arq),
                     num_forwards,
                     n_uhes,
                     n_estagios,
@@ -1070,9 +1077,8 @@ class RawFilesRepository(AbstractFilesRepository):
                     self.get_ree().rees, pd.DataFrame
                 ).shape[0]
                 n_estagios = anos_estudo * 12
-                self.__energiab[iteracao] = Energiab.le_arquivo(
-                    self.__tmppath,
-                    nome_arq,
+                self.__energiab[iteracao] = Energiab.read(
+                    join(self.__tmppath, nome_arq),
                     num_forwards,
                     num_aberturas,
                     n_rees,
@@ -1101,9 +1107,8 @@ class RawFilesRepository(AbstractFilesRepository):
                 n_estagios_hib = (
                     self._numero_estagios_individualizados() + mes_inicio - 1
                 )
-                self.__vazaob[iteracao] = Vazaob.le_arquivo(
-                    self.__tmppath,
-                    nome_arq,
+                self.__vazaob[iteracao] = Vazaob.read(
+                    join(self.__tmppath, nome_arq),
                     num_forwards,
                     num_aberturas,
                     n_uhes,
@@ -1136,9 +1141,8 @@ class RawFilesRepository(AbstractFilesRepository):
                     self._numero_estagios_individualizados() + mes_inicio - 1
                 )
                 n_estagios_th = 12 if parpa == 3 else ordem_maxima
-                self.__enavazf[iteracao] = Enavazf.le_arquivo(
-                    self.__tmppath,
-                    nome_arq,
+                self.__enavazf[iteracao] = Enavazf.read(
+                    join(self.__tmppath, nome_arq),
                     num_forwards,
                     n_rees,
                     n_estagios,
@@ -1167,9 +1171,8 @@ class RawFilesRepository(AbstractFilesRepository):
                 n_estagios = (
                     self._numero_estagios_individualizados() + mes_inicio - 1
                 )
-                self.__enavazb[iteracao] = Enavazb.le_arquivo(
-                    self.__tmppath,
-                    nome_arq,
+                self.__enavazb[iteracao] = Enavazb.read(
+                    join(self.__tmppath, nome_arq),
                     num_forwards,
                     num_aberturas,
                     n_rees,
@@ -1208,9 +1211,8 @@ class RawFilesRepository(AbstractFilesRepository):
                     num_series = num_series_sinteticas
                 else:
                     num_series = ano_inicio - ano_inicio_historico - 1
-                self.__energias = Energias.le_arquivo(
-                    self.__tmppath,
-                    "energias.dat",
+                self.__energias = Energias.read(
+                    join(self.__tmppath, "energias.dat"),
                     num_series,
                     n_rees,
                     n_estagios,
@@ -1251,9 +1253,8 @@ class RawFilesRepository(AbstractFilesRepository):
                     num_series = num_series_sinteticas
                 else:
                     num_series = ano_inicio - ano_inicio_historico - 1
-                self.__enavazs = Enavazf.le_arquivo(
-                    self.__tmppath,
-                    "enavazs.dat",
+                self.__enavazs = Enavazf.read(
+                    join(self.__tmppath, "enavazs.dat"),
                     num_series,
                     n_rees,
                     n_estagios,
@@ -1290,9 +1291,8 @@ class RawFilesRepository(AbstractFilesRepository):
                     num_series = num_series_sinteticas
                 else:
                     num_series = ano_inicio - ano_inicial_historico - 1
-                self.__vazaos = Vazaos.le_arquivo(
-                    self.__tmppath,
-                    "vazaos.dat",
+                self.__vazaos = Vazaos.read(
+                    join(self.__tmppath, "vazaos.dat"),
                     num_series,
                     n_uhes,
                     n_estagios,
@@ -1305,10 +1305,7 @@ class RawFilesRepository(AbstractFilesRepository):
     def get_vazoes(self) -> Vazoes:
         if self.__vazoes is None:
             try:
-                self.__vazoes = Vazoes.le_arquivo(
-                    self.__tmppath,
-                    "vazoes.dat",
-                )
+                self.__vazoes = Vazoes.read(join(self.__tmppath, "vazoes.dat"))
             except Exception:
                 raise RuntimeError()
         return self.__vazoes
@@ -1316,9 +1313,8 @@ class RawFilesRepository(AbstractFilesRepository):
     def get_hidr(self) -> Hidr:
         if self.__hidr is None:
             try:
-                self.__hidr = Hidr.le_arquivo(
-                    self.__tmppath,
-                    "hidr.dat",
+                self.__hidr = Hidr.read(
+                    join(self.__tmppath, "hidr.dat"),
                 )
             except Exception:
                 raise RuntimeError()
@@ -1327,9 +1323,8 @@ class RawFilesRepository(AbstractFilesRepository):
     def get_engnat(self) -> Optional[Engnat]:
         if self.__engnat is None:
             try:
-                self.__engnat = Engnat.le_arquivo(
-                    self.__tmppath,
-                    "engnat.dat",
+                self.__engnat = Engnat.read(
+                    join(self.__tmppath, "engnat.dat"),
                 )
             except Exception:
                 pass

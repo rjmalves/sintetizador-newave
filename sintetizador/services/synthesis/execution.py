@@ -75,11 +75,11 @@ class ExecutionSynthetizer:
                 return pd.DataFrame()
             df_processed = pd.DataFrame(
                 data={
-                    "iter": df["Iteração"][2::3].to_numpy(),
-                    "zinf": df["ZINF"][2::3].to_numpy(),
-                    "dZinf": df["Delta ZINF"][2::3].to_numpy(),
-                    "zsup": df["ZSUP Iteração"][2::3].to_numpy(),
-                    "tempo": df["Tempo"][::3].dt.total_seconds().to_numpy(),
+                    "iter": df["iteracao"][2::3].to_numpy(),
+                    "zinf": df["zinf"][2::3].to_numpy(),
+                    "dZinf": df["delta_zinf"][2::3].to_numpy(),
+                    "zsup": df["zsup_iteracao"][2::3].to_numpy(),
+                    "tempo": df["tempo"][::3].dt.total_seconds().to_numpy(),
                 }
             )
             df_processed = df_processed.astype({"tempo": int})
@@ -93,9 +93,9 @@ class ExecutionSynthetizer:
                 return pd.DataFrame()
             df_processed = df.rename(
                 columns={
-                    "Parcela": "parcela",
-                    "Valor Esperado": "mean",
-                    "Desvio Padrão do VE": "std",
+                    "parcela": "parcela",
+                    "valor_esperado": "mean",
+                    "desvio_padrao": "std",
                 }
             )
             return df_processed[["parcela", "mean", "std"]]
@@ -109,7 +109,6 @@ class ExecutionSynthetizer:
             df = tim.tempos_etapas
             if df is None:
                 return pd.DataFrame()
-            df = df.rename(columns={"Etapa": "etapa", "Tempo": "tempo"})
             df["tempo"] = df["tempo"].dt.total_seconds()
             return df
 
