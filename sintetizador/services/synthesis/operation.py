@@ -4,9 +4,9 @@ import numpy as np
 import logging
 import traceback
 from multiprocessing import Pool
-from inewave.config import MESES_DF
 from datetime import datetime
 from dateutil.relativedelta import relativedelta  # type: ignore
+from inewave.newave import Dger, Ree, Confhd, Conft, Sistema
 from sintetizador.utils.log import Log
 from sintetizador.model.settings import Settings
 from sintetizador.services.unitofwork import AbstractUnitOfWork
@@ -437,6 +437,71 @@ class OperationSynthetizer:
     logger: Optional[logging.Logger] = None
 
     @classmethod
+    def _get_dger(cls, uow: AbstractUnitOfWork) -> Dger:
+        with uow:
+            dger = uow.files.get_dger()
+            if dger is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do dger.dat para"
+                        + " síntese da operação"
+                    )
+                raise RuntimeError()
+            return dger
+
+    @classmethod
+    def _get_ree(cls, uow: AbstractUnitOfWork) -> Ree:
+        with uow:
+            ree = uow.files.get_ree()
+            if ree is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do ree.dat para"
+                        + " síntese da operação"
+                    )
+                raise RuntimeError()
+            return ree
+
+    @classmethod
+    def _get_confhd(cls, uow: AbstractUnitOfWork) -> Confhd:
+        with uow:
+            confhd = uow.files.get_confhd()
+            if confhd is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do confhd.dat para"
+                        + " síntese da operação"
+                    )
+                raise RuntimeError()
+            return confhd
+
+    @classmethod
+    def _get_conft(cls, uow: AbstractUnitOfWork) -> Conft:
+        with uow:
+            conft = uow.files.get_conft()
+            if conft is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do conft.dat para"
+                        + " síntese da operação"
+                    )
+                raise RuntimeError()
+            return conft
+
+    @classmethod
+    def _get_sistema(cls, uow: AbstractUnitOfWork) -> Sistema:
+        with uow:
+            sist = uow.files.get_sistema()
+            if sist is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do sistema.dat para"
+                        + " síntese da operação"
+                    )
+                raise RuntimeError()
+            return sist
+
+    @classmethod
     def _validate_data(cls, data, type: Type[T], msg: str = "dados") -> T:
         if not isinstance(data, type):
             if cls.logger is not None:
@@ -488,11 +553,8 @@ class OperationSynthetizer:
     def filter_valid_variables(
         cls, variables: List[OperationSynthesis], uow: AbstractUnitOfWork
     ) -> List[OperationSynthesis]:
-        with uow:
-            dger = uow.files.get_dger()
-            rees = cls._validate_data(
-                uow.files.get_ree().rees, pd.DataFrame, "REE"
-            )
+        dger = cls._get_dger(uow)
+        rees = cls._validate_data(cls._get_ree(uow).rees, pd.DataFrame, "REE")
         valid_variables: List[OperationSynthesis] = []
         sf_indiv = dger.agregacao_simulacao_final == 1
         politica_indiv = rees["ano_fim_individualizado"].isna().sum() == 0
@@ -544,6 +606,7 @@ class OperationSynthetizer:
         cols = df.columns.tolist()
         datas = df["data"].unique().tolist()
         datas.sort()
+        df = df.copy()
         df["estagio"] = df.apply(lambda x: datas.index(x["data"]) + 1, axis=1)
         df["dataFim"] = df.apply(
             lambda x: x["data"] + relativedelta(months=1), axis=1
@@ -556,45 +619,19 @@ class OperationSynthetizer:
 
     @classmethod
     def __resolve_PAT(cls, df: pd.DataFrame) -> pd.DataFrame:
-        anos = df["Ano"].unique().tolist()
-        patamares = df["Patamar"].unique().tolist()
-        labels = []
-        for a in anos:
-            for p in patamares:
-                labels += pd.date_range(
-                    datetime(year=a, month=1, day=1),
-                    datetime(year=a, month=12, day=1),
-                    freq="MS",
-                ).tolist()
-        df_series = pd.DataFrame()
-        for a in anos:
-            for p in patamares:
-                df_ano_patamar = df.loc[
-                    (df["Ano"] == a) & (df["Patamar"] == p),
-                    MESES_DF,
-                ].T
-                cols = [
-                    str(s) for s in list(range(1, df_ano_patamar.shape[1] + 1))
-                ]
-                df_ano_patamar.columns = cols
-                df_ano_patamar["patamar"] = str(p)
-                df_ano_patamar = df_ano_patamar[["patamar"] + cols]
-                df_series = pd.concat(
-                    [df_series, df_ano_patamar], ignore_index=True
-                )
-        cols = df_series.columns.tolist()
-        labels_estagios = []
-        for i in range(len(anos)):
-            labels_estagios += list(range(12 * i + 1, 12 * (i + 1) + 1)) * len(
-                patamares
-            )
-
-        df_series["estagio"] = labels_estagios
-        df_series["dataInicio"] = labels
-        df_series["dataFim"] = df_series.apply(
-            lambda x: x["dataInicio"] + relativedelta(months=1), axis=1
+        cols = df.columns.tolist()
+        datas = df["data"].unique().tolist()
+        datas.sort()
+        df = df.copy()
+        df["estagio"] = df.apply(lambda x: datas.index(x["data"]) + 1, axis=1)
+        df["dataFim"] = df.apply(
+            lambda x: x["data"] + relativedelta(months=1), axis=1
         )
-        return df_series[["estagio", "dataInicio", "dataFim"] + cols]
+        df = df.rename(columns={"data": "dataInicio"})
+        return df[
+            ["estagio", "dataInicio", "dataFim", "patamar"]
+            + [c for c in cols if c not in ["patamar", "data"]]
+        ]
 
     @classmethod
     def _resolve_temporal_resolution(
@@ -633,16 +670,16 @@ class OperationSynthetizer:
     def __resolve_SBM(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
+        sistema = cls._validate_data(
+            cls._get_sistema(uow).custo_deficit,
+            pd.DataFrame,
+            "submercados",
+        )
+        sistemas_reais = sistema.loc[sistema["ficticio"] == 0, :]
+        sbms_idx = sistemas_reais["codigo_submercado"]
+        sbms_name = sistemas_reais["nome_submercado"]
+        df = pd.DataFrame()
         with uow:
-            sistema = cls._validate_data(
-                uow.files.get_sistema().custo_deficit,
-                pd.DataFrame,
-                "submercados",
-            )
-            sistemas_reais = sistema.loc[sistema["ficticio"] == 0, :]
-            sbms_idx = sistemas_reais["codigo_submercado"]
-            sbms_name = sistemas_reais["nome_submercado"]
-            df = pd.DataFrame()
             for s, n in zip(sbms_idx, sbms_name):
                 if cls.logger is not None:
                     cls.logger.info(
@@ -672,15 +709,15 @@ class OperationSynthetizer:
     def __resolve_SBP(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
+        sistema = cls._validate_data(
+            cls._get_sistema(uow).custo_deficit,
+            pd.DataFrame,
+            "submercados",
+        )
+        sbms_idx = sistema["codigo_submercado"]
+        sbms_name = sistema["nome_submercado"]
+        df = pd.DataFrame()
         with uow:
-            sistema = cls._validate_data(
-                uow.files.get_sistema().custo_deficit,
-                pd.DataFrame,
-                "submercados",
-            )
-            sbms_idx = sistema["codigo_submercado"]
-            sbms_name = sistema["nome_submercado"]
-            df = pd.DataFrame()
             for s1, n1 in zip(sbms_idx, sbms_name):
                 for s2, n2 in zip(sbms_idx, sbms_name):
                     # Ignora o mesmo SBM
@@ -716,13 +753,11 @@ class OperationSynthetizer:
     def __resolve_REE(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
+        rees = cls._validate_data(cls._get_ree(uow).rees, pd.DataFrame, "REEs")
+        rees_idx = rees["codigo"]
+        rees_name = rees["nome"]
+        df = pd.DataFrame()
         with uow:
-            rees = cls._validate_data(
-                uow.files.get_ree().rees, pd.DataFrame, "REEs"
-            )
-            rees_idx = rees["codigo_ree"]
-            rees_name = rees["nome_ree"]
-            df = pd.DataFrame()
             for s, n in zip(rees_idx, rees_name):
                 if cls.logger is not None:
                     cls.logger.info(f"Processando arquivo do REE: {s} - {n}")
@@ -738,8 +773,8 @@ class OperationSynthetizer:
                 if df_ree is None:
                     continue
                 cols = df_ree.columns.tolist()
-                df_ree["codigo_ree"] = n
-                df_ree = df_ree[["codigo_ree"] + cols]
+                df_ree["ree"] = n
+                df_ree = df_ree[["ree"] + cols]
                 df = pd.concat(
                     [df, df_ree],
                     ignore_index=True,
@@ -782,44 +817,39 @@ class OperationSynthetizer:
     def __stub_agrega_estagio_variaveis_por_patamar(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-        with uow:
-            confhd = cls._validate_data(
-                uow.files.get_confhd().usinas, pd.DataFrame, "UHEs"
-            )
-            rees = cls._validate_data(
-                uow.files.get_ree().rees, pd.DataFrame, "REEs"
-            )
-            dger = uow.files.get_dger()
-            ano_inicio = cls._validate_data(
-                dger.ano_inicio_estudo, int, "dger"
-            )
-            anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
-            agregacao_sim_final = dger.agregacao_simulacao_final
-            anos_pos_sim_final = cls._validate_data(
-                dger.num_anos_pos_sim_final, int, "dger"
-            )
+        confhd = cls._validate_data(
+            cls._get_confhd(uow).usinas, pd.DataFrame, "UHEs"
+        )
+        rees = cls._validate_data(cls._get_ree(uow).rees, pd.DataFrame, "REEs")
+        dger = cls._get_dger(uow)
+        ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
+        anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
+        agregacao_sim_final = dger.agregacao_simulacao_final
+        anos_pos_sim_final = cls._validate_data(
+            dger.num_anos_pos_sim_final, int, "dger"
+        )
 
-            # Obtem o fim do periodo individualizado
-            if agregacao_sim_final == 1:
-                fim = datetime(
-                    year=ano_inicio + anos_estudo + anos_pos_sim_final,
-                    month=1,
-                    day=1,
-                )
-            elif rees["ano_fim_individualizado"].isna().sum() > 0:
-                fim = datetime(
-                    year=ano_inicio + anos_estudo + anos_pos_sim_final,
-                    month=1,
-                    day=1,
-                )
-            else:
-                fim = datetime(
-                    year=int(rees["ano_fim_individualizado"].iloc[0]),
-                    month=int(rees["mes_fim_individualizado"].iloc[0]),
-                    day=1,
-                )
-            uhes_idx = confhd["codigo_usina"]
-            uhes_name = confhd["nome_usina"]
+        # Obtem o fim do periodo individualizado
+        if agregacao_sim_final == 1:
+            fim = datetime(
+                year=ano_inicio + anos_estudo + anos_pos_sim_final,
+                month=1,
+                day=1,
+            )
+        elif rees["ano_fim_individualizado"].isna().sum() > 0:
+            fim = datetime(
+                year=ano_inicio + anos_estudo + anos_pos_sim_final,
+                month=1,
+                day=1,
+            )
+        else:
+            fim = datetime(
+                year=int(rees["ano_fim_individualizado"].iloc[0]),
+                month=int(rees["mes_fim_individualizado"].iloc[0]),
+                day=1,
+            )
+        uhes_idx = confhd["codigo_usina"]
+        uhes_name = confhd["nome_usina"]
 
         df_completo = pd.DataFrame()
         n_procs = int(Settings().processors)
@@ -876,44 +906,39 @@ class OperationSynthetizer:
             Variable.VAZAO_VERTIDA: Variable.VOLUME_VERTIDO,
             Variable.VAZAO_TURBINADA: Variable.VOLUME_TURBINADO,
         }
-        with uow:
-            confhd = cls._validate_data(
-                uow.files.get_confhd().usinas, pd.DataFrame, "UHEs"
-            )
-            rees = cls._validate_data(
-                uow.files.get_ree().rees, pd.DataFrame, "REEs"
-            )
-            dger = uow.files.get_dger()
-            ano_inicio = cls._validate_data(
-                dger.ano_inicio_estudo, int, "dger"
-            )
-            anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
-            anos_pos_sim_final = cls._validate_data(
-                dger.num_anos_pos_sim_final, int, "dger"
-            )
+        confhd = cls._validate_data(
+            cls._get_confhd(uow).usinas, pd.DataFrame, "UHEs"
+        )
+        rees = cls._validate_data(cls._get_ree(uow).rees, pd.DataFrame, "REEs")
+        dger = cls._get_dger(uow)
+        ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
+        anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
+        anos_pos_sim_final = cls._validate_data(
+            dger.num_anos_pos_sim_final, int, "dger"
+        )
 
-            agregacao_sim_final = dger.agregacao_simulacao_final
-            # Obtem o fim do periodo individualizado
-            if agregacao_sim_final == 1:
-                fim = datetime(
-                    year=ano_inicio + anos_estudo + anos_pos_sim_final,
-                    month=1,
-                    day=1,
-                )
-            elif rees["ano_fim_individualizado"].isna().sum() > 0:
-                fim = datetime(
-                    year=ano_inicio + anos_estudo + anos_pos_sim_final,
-                    month=1,
-                    day=1,
-                )
-            else:
-                fim = datetime(
-                    year=int(rees["ano_fim_individualizado"].iloc[0]),
-                    month=int(rees["mes_fim_individualizado"].iloc[0]),
-                    day=1,
-                )
-            uhes_idx = confhd["codigo_usina"]
-            uhes_name = confhd["nome_usina"]
+        agregacao_sim_final = dger.agregacao_simulacao_final
+        # Obtem o fim do periodo individualizado
+        if agregacao_sim_final == 1:
+            fim = datetime(
+                year=ano_inicio + anos_estudo + anos_pos_sim_final,
+                month=1,
+                day=1,
+            )
+        elif rees["ano_fim_individualizado"].isna().sum() > 0:
+            fim = datetime(
+                year=ano_inicio + anos_estudo + anos_pos_sim_final,
+                month=1,
+                day=1,
+            )
+        else:
+            fim = datetime(
+                year=int(rees["ano_fim_individualizado"].iloc[0]),
+                month=int(rees["mes_fim_individualizado"].iloc[0]),
+                day=1,
+            )
+        uhes_idx = confhd["codigo_usina"]
+        uhes_name = confhd["nome_usina"]
 
         df_completo = pd.DataFrame()
         n_procs = int(Settings().processors)
@@ -1059,101 +1084,100 @@ class OperationSynthetizer:
     def __stub_agrega_variaveis_indiv_REE_SBM_SIN(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-        with uow:
-            sistema = cls._validate_data(
-                uow.files.get_sistema().custo_deficit,
-                pd.DataFrame,
-                "submercados",
-            )
-            confhd = cls._validate_data(
-                uow.files.get_confhd().usinas, pd.DataFrame, "UHEs"
-            )
-            rees = cls._validate_data(
-                uow.files.get_ree().rees, pd.DataFrame, "REEs"
-            )
+        sistema = cls._validate_data(
+            cls._get_sistema(uow).custo_deficit,
+            pd.DataFrame,
+            "submercados",
+        )
+        confhd = cls._validate_data(
+            cls._get_confhd(uow).usinas, pd.DataFrame, "UHEs"
+        )
+        rees = cls._validate_data(cls._get_ree(uow).rees, pd.DataFrame, "REEs")
 
-            rees_usinas = confhd["REE"].unique().tolist()
-            nomes_rees = {
-                r: str(rees.loc[rees["Número"] == r, "Nome"].tolist()[0])
-                for r in rees_usinas
-            }
-            rees_submercados = {
-                r: str(
-                    sistema.loc[
-                        sistema["Num. Subsistema"]
-                        == int(
-                            rees.loc[rees["Número"] == r, "Submercado"].iloc[0]
-                        ),
-                        "Nome",
-                    ].tolist()[0]
-                )
-                for r in rees_usinas
-            }
-            s = OperationSynthesis(
-                variable=synthesis.variable,
-                spatial_resolution=SpatialResolution.USINA_HIDROELETRICA,
-                temporal_resolution=synthesis.temporal_resolution,
+        rees_usinas = confhd["ree"].unique().tolist()
+        nomes_rees = {
+            r: str(rees.loc[rees["codigo"] == r, "nome"].tolist()[0])
+            for r in rees_usinas
+        }
+        rees_submercados = {
+            r: str(
+                sistema.loc[
+                    sistema["codigo_submercado"]
+                    == int(
+                        rees.loc[rees["codigo"] == r, "submercado"].iloc[0]
+                    ),
+                    "nome_submercado",
+                ].tolist()[0]
             )
-            cache_uhe = cls.CACHED_SYNTHESIS.get(s)
-            if cache_uhe is None:
-                df_uhe = cls._resolve_spatial_resolution(s, uow)
-                cls.CACHED_SYNTHESIS[s] = df_uhe
-            else:
-                df_uhe = cache_uhe
+            for r in rees_usinas
+        }
+        s = OperationSynthesis(
+            variable=synthesis.variable,
+            spatial_resolution=SpatialResolution.USINA_HIDROELETRICA,
+            temporal_resolution=synthesis.temporal_resolution,
+        )
+        cache_uhe = cls.CACHED_SYNTHESIS.get(s)
+        if cache_uhe is None:
+            df_uhe = cls._resolve_spatial_resolution(s, uow)
+            cls.CACHED_SYNTHESIS[s] = df_uhe
+        else:
+            df_uhe = cache_uhe
 
-            if df_uhe is None:
-                return None
-            if df_uhe.empty:
-                return None
+        if df_uhe is None:
+            return None
+        if df_uhe.empty:
+            return None
 
-            df_uhe = df_uhe.copy()
+        df_uhe = df_uhe.copy()
 
+        df_uhe["group"] = df_uhe.apply(
+            lambda linha: int(
+                confhd.loc[confhd["nome_usina"] == linha["usina"], "ree"].iloc[
+                    0
+                ]
+            ),
+            axis=1,
+        )
+        if (
+            synthesis.spatial_resolution
+            == SpatialResolution.RESERVATORIO_EQUIVALENTE
+        ):
             df_uhe["group"] = df_uhe.apply(
-                lambda linha: int(
-                    confhd.loc[confhd["Nome"] == linha["usina"], "REE"].iloc[0]
-                ),
-                axis=1,
+                lambda linha: nomes_rees[linha["group"]], axis=1
             )
-            if (
-                synthesis.spatial_resolution
-                == SpatialResolution.RESERVATORIO_EQUIVALENTE
-            ):
-                df_uhe["group"] = df_uhe.apply(
-                    lambda linha: nomes_rees[linha["group"]], axis=1
-                )
-            elif synthesis.spatial_resolution == SpatialResolution.SUBMERCADO:
-                df_uhe["group"] = df_uhe.apply(
-                    lambda linha: rees_submercados[linha["group"]], axis=1
-                )
-            elif (
-                synthesis.spatial_resolution
-                == SpatialResolution.SISTEMA_INTERLIGADO
-            ):
-                df_uhe["group"] = 1
-
-            cols_group = ["group"] + [
-                c
-                for c in df_uhe.columns
-                if c in cls.IDENTIFICATION_COLUMNS and c != "usina"
-            ]
-            df_group = (
-                df_uhe.groupby(cols_group).sum(numeric_only=True).reset_index()
+        elif synthesis.spatial_resolution == SpatialResolution.SUBMERCADO:
+            df_uhe["group"] = df_uhe.apply(
+                lambda linha: rees_submercados[linha["group"]], axis=1
             )
+        elif (
+            synthesis.spatial_resolution
+            == SpatialResolution.SISTEMA_INTERLIGADO
+        ):
+            df_uhe["group"] = 1
 
-            group_name = {
-                SpatialResolution.RESERVATORIO_EQUIVALENTE: "ree",
-                SpatialResolution.SUBMERCADO: "submercado",
-            }
-            if (
-                synthesis.spatial_resolution
-                == SpatialResolution.SISTEMA_INTERLIGADO
-            ):
-                df_group = df_group.drop(columns=["group"])
-            else:
-                df_group = df_group.rename(
-                    columns={"group": group_name[synthesis.spatial_resolution]}
-                )
-            return df_group
+        cols_group = ["group"] + [
+            c
+            for c in df_uhe.columns
+            if c in cls.IDENTIFICATION_COLUMNS and c != "usina"
+        ]
+        df_group = (
+            df_uhe.groupby(cols_group).sum(numeric_only=True).reset_index()
+        )
+
+        group_name = {
+            SpatialResolution.RESERVATORIO_EQUIVALENTE: "ree",
+            SpatialResolution.SUBMERCADO: "submercado",
+        }
+        if (
+            synthesis.spatial_resolution
+            == SpatialResolution.SISTEMA_INTERLIGADO
+        ):
+            df_group = df_group.drop(columns=["group"])
+        else:
+            df_group = df_group.rename(
+                columns={"group": group_name[synthesis.spatial_resolution]}
+            )
+        return df_group
 
     @classmethod
     def __resolve_stub_vminop_sin(
@@ -1201,45 +1225,40 @@ class OperationSynthetizer:
     def __stub_violacoes_UHE(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ):
-        with uow:
-            confhd = cls._validate_data(
-                uow.files.get_confhd().usinas, pd.DataFrame, "UHEs"
-            )
-            rees = cls._validate_data(
-                uow.files.get_ree().rees, pd.DataFrame, "REEs"
-            )
-            dger = uow.files.get_dger()
-            agregacao_sim_final = dger.agregacao_simulacao_final
-            ano_inicio = cls._validate_data(
-                dger.ano_inicio_estudo, int, "dger"
-            )
-            anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
+        confhd = cls._validate_data(
+            cls._get_confhd(uow).usinas, pd.DataFrame, "UHEs"
+        )
+        rees = cls._validate_data(cls._get_ree(uow).rees, pd.DataFrame, "REEs")
+        dger = cls._get_dger(uow)
+        agregacao_sim_final = dger.agregacao_simulacao_final
+        ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
+        anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
 
-            anos_pos_sim_final = cls._validate_data(
-                dger.num_anos_pos_sim_final, int, "dger"
-            )
+        anos_pos_sim_final = cls._validate_data(
+            dger.num_anos_pos_sim_final, int, "dger"
+        )
 
-            # Obtem o fim do periodo individualizado
-            if agregacao_sim_final == 1:
-                fim = datetime(
-                    year=ano_inicio + anos_estudo + anos_pos_sim_final,
-                    month=1,
-                    day=1,
-                )
-            elif rees["ano_fim_individualizado"].isna().sum() > 0:
-                fim = datetime(
-                    year=ano_inicio + anos_estudo + anos_pos_sim_final,
-                    month=1,
-                    day=1,
-                )
-            else:
-                fim = datetime(
-                    year=int(rees["ano_fim_individualizado"].iloc[0]),
-                    month=int(rees["mes_fim_individualizado"].iloc[0]),
-                    day=1,
-                )
-            uhes_idx = confhd["codigo_usina"]
-            uhes_name = confhd["nome_usina"]
+        # Obtem o fim do periodo individualizado
+        if agregacao_sim_final == 1:
+            fim = datetime(
+                year=ano_inicio + anos_estudo + anos_pos_sim_final,
+                month=1,
+                day=1,
+            )
+        elif rees["ano_fim_individualizado"].isna().sum() > 0:
+            fim = datetime(
+                year=ano_inicio + anos_estudo + anos_pos_sim_final,
+                month=1,
+                day=1,
+            )
+        else:
+            fim = datetime(
+                year=int(rees["ano_fim_individualizado"].iloc[0]),
+                month=int(rees["mes_fim_individualizado"].iloc[0]),
+                day=1,
+            )
+        uhes_idx = confhd["codigo_usina"]
+        uhes_name = confhd["nome_usina"]
 
         df_completo = pd.DataFrame()
         n_procs = int(Settings().processors)
@@ -1326,44 +1345,39 @@ class OperationSynthetizer:
             Variable.VIOLACAO_FPHA,
         ]:
             return cls.__resolve_stubs_UHE(synthesis, uow)
-        with uow:
-            confhd = cls._validate_data(
-                uow.files.get_confhd().usinas, pd.DataFrame, "UHEs"
-            )
-            rees = cls._validate_data(
-                uow.files.get_ree().rees, pd.DataFrame, "REEs"
-            )
-            dger = uow.files.get_dger()
-            ano_inicio = cls._validate_data(
-                dger.ano_inicio_estudo, int, "dger"
-            )
-            agregacao_sim_final = dger.agregacao_simulacao_final
-            anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
-            anos_pos_sim_final = cls._validate_data(
-                dger.num_anos_pos_sim_final, int, "dger"
-            )
+        confhd = cls._validate_data(
+            cls._get_confhd(uow).usinas, pd.DataFrame, "UHEs"
+        )
+        rees = cls._validate_data(cls._get_ree(uow).rees, pd.DataFrame, "REEs")
+        dger = cls._get_dger(uow)
+        ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
+        agregacao_sim_final = dger.agregacao_simulacao_final
+        anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
+        anos_pos_sim_final = cls._validate_data(
+            dger.num_anos_pos_sim_final, int, "dger"
+        )
 
-            # Obtem o fim do periodo individualizado
-            if agregacao_sim_final == 1:
-                fim = datetime(
-                    year=ano_inicio + anos_estudo + anos_pos_sim_final,
-                    month=1,
-                    day=1,
-                )
-            elif rees["ano_fim_individualizado"].isna().sum() > 0:
-                fim = datetime(
-                    year=ano_inicio + anos_estudo + anos_pos_sim_final,
-                    month=1,
-                    day=1,
-                )
-            else:
-                fim = datetime(
-                    year=int(rees["ano_fim_individualizado"].iloc[0]),
-                    month=int(rees["mes_fim_individualizado"].iloc[0]),
-                    day=1,
-                )
-            uhes_idx = confhd["codigo_usina"]
-            uhes_name = confhd["nome_usina"]
+        # Obtem o fim do periodo individualizado
+        if agregacao_sim_final == 1:
+            fim = datetime(
+                year=ano_inicio + anos_estudo + anos_pos_sim_final,
+                month=1,
+                day=1,
+            )
+        elif rees["ano_fim_individualizado"].isna().sum() > 0:
+            fim = datetime(
+                year=ano_inicio + anos_estudo + anos_pos_sim_final,
+                month=1,
+                day=1,
+            )
+        else:
+            fim = datetime(
+                year=int(rees["ano_fim_individualizado"].iloc[0]),
+                month=int(rees["mes_fim_individualizado"].iloc[0]),
+                day=1,
+            )
+        uhes_idx = confhd["codigo_usina"]
+        uhes_name = confhd["nome_usina"]
 
         df_completo = pd.DataFrame()
         n_procs = int(Settings().processors)
@@ -1391,13 +1405,13 @@ class OperationSynthetizer:
     def __resolve_UTE(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
+        conft = cls._validate_data(
+            cls._get_conft(uow).usinas, pd.DataFrame, "UTEs"
+        )
+        utes_idx = conft["codigo_usina"]
+        utes_name = conft["nome_usina"]
+        df = pd.DataFrame()
         with uow:
-            conft = cls._validate_data(
-                uow.files.get_conft().usinas, pd.DataFrame, "UTEs"
-            )
-            utes_idx = conft["codigo_usina"]
-            utes_name = conft["nome_usina"]
-            df = pd.DataFrame()
             for s, n in zip(utes_idx, utes_name):
                 if cls.logger is not None:
                     cls.logger.info(f"Processando arquivo da UTE: {s} - {n}")
@@ -1427,6 +1441,13 @@ class OperationSynthetizer:
     ) -> pd.DataFrame:
         with uow:
             eolica_cadastro = uow.files.get_eolicacadastro()
+            if eolica_cadastro is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do eolica-cadastro.csv para"
+                        + " síntese da operação"
+                    )
+                raise RuntimeError()
             uees_idx = []
             uees_name = []
             regs = eolica_cadastro.pee_cad()
@@ -1480,14 +1501,9 @@ class OperationSynthetizer:
     def _resolve_starting_stage(
         cls, df: pd.DataFrame, uow: AbstractUnitOfWork
     ):
-        with uow:
-            dger = uow.files.get_dger()
-            ano_inicio = cls._validate_data(
-                dger.ano_inicio_estudo, int, "dger"
-            )
-            mes_inicio = cls._validate_data(
-                dger.mes_inicio_estudo, int, "dger"
-            )
+        dger = cls._get_dger(uow)
+        ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
+        mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
         starting_date = datetime(year=ano_inicio, month=mes_inicio, day=1)
         starting_df = df.loc[df["dataInicio"] >= starting_date].copy()
         starting_df.loc[:, "estagio"] -= starting_date.month - 1

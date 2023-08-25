@@ -131,35 +131,35 @@ class AbstractFilesRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_dger(self) -> Dger:
+    def get_dger(self) -> Optional[Dger]:
         raise NotImplementedError
 
     @abstractmethod
-    def get_confhd(self) -> Confhd:
+    def get_confhd(self) -> Optional[Confhd]:
         raise NotImplementedError
 
     @abstractmethod
-    def get_conft(self) -> Conft:
+    def get_conft(self) -> Optional[Conft]:
         raise NotImplementedError
 
     @abstractmethod
-    def get_clast(self) -> Clast:
+    def get_clast(self) -> Optional[Clast]:
         raise NotImplementedError
 
     @abstractmethod
-    def get_ree(self) -> Ree:
+    def get_ree(self) -> Optional[Ree]:
         raise NotImplementedError
 
     @abstractmethod
-    def get_sistema(self) -> Sistema:
+    def get_sistema(self) -> Optional[Sistema]:
         raise NotImplementedError
 
     @abstractmethod
-    def get_patamar(self) -> Patamar:
+    def get_patamar(self) -> Optional[Patamar]:
         raise NotImplementedError
 
     @abstractmethod
-    def get_pmo(self) -> Pmo:
+    def get_pmo(self) -> Optional[Pmo]:
         raise NotImplementedError
 
     @abstractmethod
@@ -167,7 +167,7 @@ class AbstractFilesRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_eolicacadastro(self) -> EolicaCadastro:
+    def get_eolicacadastro(self) -> Optional[EolicaCadastro]:
         raise NotImplementedError
 
     @abstractmethod
@@ -226,7 +226,7 @@ class AbstractFilesRepository(ABC):
         pass
 
     @abstractmethod
-    def get_vazoes(self) -> Vazoes:
+    def get_vazoes(self) -> Optional[Vazoes]:
         pass
 
     @abstractmethod
@@ -234,7 +234,7 @@ class AbstractFilesRepository(ABC):
         pass
 
     @abstractmethod
-    def get_hidr(self) -> Hidr:
+    def get_hidr(self) -> Optional[Hidr]:
         pass
 
     @abstractmethod
@@ -807,10 +807,12 @@ class RawFilesRepository(AbstractFilesRepository):
         self, df: pd.DataFrame, patamares: Optional[list] = None
     ) -> pd.DataFrame:
         if patamares is None:
-            num_pats = self._validate_data(
-                self.get_patamar().numero_patamares, int
-            )
-            if num_pats is None:
+            arq_patamar = self.get_patamar()
+            if arq_patamar is not None:
+                num_pats = self._validate_data(
+                    arq_patamar.numero_patamares, int
+                )
+            else:
                 raise RuntimeError("Numero de patamares não encontrado")
             patamares = [str(i) for i in range(1, num_pats + 1)]
         return df.loc[df["patamar"].isin(patamares), :]
@@ -822,13 +824,14 @@ class RawFilesRepository(AbstractFilesRepository):
     @property
     def arquivos(self) -> Arquivos:
         if self.__arquivos is None:
-            self.__arquivos = Arquivos.read(
-                join(self.__tmppath, self.__caso.arquivos)
-            )
+            caminho_arquivos = join(self.__tmppath, self.__caso.arquivos)
+            if not pathlib.Path(caminho_arquivos).exists():
+                raise RuntimeError("Nomes dos arquivos não encontrados")
+            self.__arquivos = Arquivos.read(caminho_arquivos)
         return self.__arquivos
 
     @property
-    def indices(self) -> pd.DataFrame:
+    def indices(self) -> Optional[pd.DataFrame]:
         if self.__indices is None:
             caminho = pathlib.Path(self.__tmppath).joinpath("indices.csv")
             self.__indices = pd.read_csv(
@@ -843,7 +846,7 @@ class RawFilesRepository(AbstractFilesRepository):
         )
         return self.__indices
 
-    def get_dger(self) -> Dger:
+    def get_dger(self) -> Optional[Dger]:
         if self.__dger is None:
             arq_dger = self.arquivos.dger
             if arq_dger is None:
@@ -856,49 +859,56 @@ class RawFilesRepository(AbstractFilesRepository):
             self.__dger = Dger.read(join(self.__tmppath, arq_dger))
         return self.__dger
 
-    def get_patamar(self) -> Patamar:
+    def get_patamar(self) -> Optional[Patamar]:
         if self.__patamar is None:
-            self.__patamar = Patamar.read(
-                join(self.__tmppath, self.arquivos.patamar)
-            )
+            if self.arquivos.patamar is not None:
+                self.__patamar = Patamar.read(
+                    join(self.__tmppath, self.arquivos.patamar)
+                )
         return self.__patamar
 
-    def get_confhd(self) -> Confhd:
+    def get_confhd(self) -> Optional[Confhd]:
         if self.__confhd is None:
-            self.__confhd = Confhd.read(
-                join(self.__tmppath, self.arquivos.confhd)
-            )
+            if self.arquivos.confhd is not None:
+                self.__confhd = Confhd.read(
+                    join(self.__tmppath, self.arquivos.confhd)
+                )
         return self.__confhd
 
-    def get_conft(self) -> Conft:
+    def get_conft(self) -> Optional[Conft]:
         if self.__conft is None:
-            self.__conft = Conft.read(
-                join(self.__tmppath, self.arquivos.conft)
-            )
+            if self.arquivos.conft is not None:
+                self.__conft = Conft.read(
+                    join(self.__tmppath, self.arquivos.conft)
+                )
         return self.__conft
 
-    def get_clast(self) -> Clast:
+    def get_clast(self) -> Optional[Clast]:
         if self.__clast is None:
-            self.__clast = Clast.read(
-                join(self.__tmppath, self.arquivos.clast)
-            )
+            if self.arquivos.clast is not None:
+                self.__clast = Clast.read(
+                    join(self.__tmppath, self.arquivos.clast)
+                )
         return self.__clast
 
-    def get_ree(self) -> Ree:
+    def get_ree(self) -> Optional[Ree]:
         if self.__ree is None:
-            self.__ree = Ree.read(join(self.__tmppath, self.arquivos.ree))
+            if self.arquivos.ree is not None:
+                self.__ree = Ree.read(join(self.__tmppath, self.arquivos.ree))
         return self.__ree
 
-    def get_sistema(self) -> Sistema:
+    def get_sistema(self) -> Optional[Sistema]:
         if self.__sistema is None:
-            self.__sistema = Sistema.read(
-                join(self.__tmppath, self.arquivos.sistema)
-            )
+            if self.arquivos.sistema is not None:
+                self.__sistema = Sistema.read(
+                    join(self.__tmppath, self.arquivos.sistema)
+                )
         return self.__sistema
 
-    def get_pmo(self) -> Pmo:
+    def get_pmo(self) -> Optional[Pmo]:
         if self.__pmo is None:
-            self.__pmo = Pmo.read(join(self.__tmppath, self.arquivos.pmo))
+            if self.arquivos.pmo is not None:
+                self.__pmo = Pmo.read(join(self.__tmppath, self.arquivos.pmo))
         return self.__pmo
 
     def get_newavetim(self) -> Optional[Newavetim]:
@@ -911,14 +921,16 @@ class RawFilesRepository(AbstractFilesRepository):
                 pass
         return self.__newavetim
 
-    def get_eolicacadastro(self) -> EolicaCadastro:
+    def get_eolicacadastro(self) -> Optional[EolicaCadastro]:
         if self.__eolicacadastro is None:
-            arq = self.indices.at[
-                "PARQUE-EOLICO-EQUIVALENTE-CADASTRO", "arquivo"
-            ]
-            self.__eolicacadastro = EolicaCadastro.read(
-                join(self.__tmppath, arq)
-            )
+            df_indices = self.indices
+            if df_indices is not None:
+                arq: str = df_indices.at[
+                    "PARQUE-EOLICO-EQUIVALENTE-CADASTRO", "arquivo"
+                ]
+                self.__eolicacadastro = EolicaCadastro.read(
+                    join(self.__tmppath, arq)
+                )
         return self.__eolicacadastro
 
     def get_nwlistop(
@@ -961,6 +973,11 @@ class RawFilesRepository(AbstractFilesRepository):
 
     def _numero_estagios_individualizados(self) -> int:
         dger = self.get_dger()
+        if dger is None:
+            raise RuntimeError(
+                "Erro no processamento do dger.dat para"
+                + " número de estágios individualizados"
+            )
         agregacao = (
             self._validate_data(dger.agregacao_simulacao_final, int)
             if dger.agregacao_simulacao_final is not None
@@ -971,7 +988,13 @@ class RawFilesRepository(AbstractFilesRepository):
         mes_inicio = self._validate_data(dger.mes_inicio_estudo, int)
         if agregacao == 1:
             return anos_estudo * 12
-        rees = self._validate_data(self.get_ree().rees, pd.DataFrame)
+        arq_ree = self.get_ree()
+        if arq_ree is None:
+            raise RuntimeError(
+                "Erro no processamento do ree.dat para"
+                + " número de estágios individualizados"
+            )
+        rees = self._validate_data(arq_ree.rees, pd.DataFrame)
         mes_fim_hib = rees["mes_fim_individualizado"].iloc[0]
         ano_fim_hib = rees["ano_fim_individualizado"].iloc[0]
 
@@ -1000,29 +1023,35 @@ class RawFilesRepository(AbstractFilesRepository):
             else "energiaf.dat"
         )
         if self.__energiaf.get(iteracao) is None:
-            try:
-                dger = self.get_dger()
-                anos_estudo = self._validate_data(dger.num_anos_estudo, int)
-                num_forwards = self._validate_data(dger.num_forwards, int)
-                parpa = self._validate_data(
-                    dger.consideracao_media_anual_afluencias, int
+            dger = self.get_dger()
+            if dger is None:
+                raise RuntimeError(
+                    "dger.dat não encontrado para síntese" + " dos cenários"
                 )
-                ordem_maxima = self._validate_data(dger.ordem_maxima_parp, int)
+            anos_estudo = self._validate_data(dger.num_anos_estudo, int)
+            num_forwards = self._validate_data(dger.num_forwards, int)
+            parpa = self._validate_data(
+                dger.consideracao_media_anual_afluencias, int
+            )
+            ordem_maxima = self._validate_data(dger.ordem_maxima_parp, int)
+            arq_rees = self.get_ree()
+            if arq_rees is None:
+                raise RuntimeError(
+                    "ree.dat não encontrado para síntese" + " dos cenários"
+                )
+            n_rees = self._validate_data(arq_rees.rees, pd.DataFrame).shape[0]
 
-                rees = self._validate_data(self.get_ree().rees, pd.DataFrame)
-
-                n_rees = rees.shape[0]
-                n_estagios = anos_estudo * 12
-                n_estagios_th = 12 if parpa == 3 else ordem_maxima
+            n_estagios = anos_estudo * 12
+            n_estagios_th = 12 if parpa == 3 else ordem_maxima
+            caminho_arq = join(self.__tmppath, nome_arq)
+            if pathlib.Path(caminho_arq).exists():
                 self.__energiaf[iteracao] = Energiaf.read(
-                    join(self.__tmppath, nome_arq),
+                    caminho_arq,
                     num_forwards,
                     n_rees,
                     n_estagios,
                     n_estagios_th,
                 )
-            except Exception:
-                pass
         return self.__energiaf.get(iteracao)
 
     def get_vazaof(self, iteracao: int) -> Optional[Vazaof]:
@@ -1032,32 +1061,42 @@ class RawFilesRepository(AbstractFilesRepository):
             else "vazaof.dat"
         )
         if self.__vazaof.get(iteracao) is None:
-            try:
-                dger = self.get_dger()
-                mes_inicio = self._validate_data(dger.mes_inicio_estudo, int)
-                num_forwards = self._validate_data(dger.num_forwards, int)
-
-                parpa = self._validate_data(
-                    dger.consideracao_media_anual_afluencias, int
+            dger = self.get_dger()
+            if dger is None:
+                raise RuntimeError(
+                    "dger.dat não encontrado para síntese" + " dos cenários"
                 )
-                ordem_maxima = self._validate_data(dger.ordem_maxima_parp, int)
+            mes_inicio = self._validate_data(dger.mes_inicio_estudo, int)
+            num_forwards = self._validate_data(dger.num_forwards, int)
 
-                n_uhes = self._validate_data(
-                    self.get_confhd().usinas, pd.DataFrame
-                ).shape[0]
-                n_estagios = (
-                    self._numero_estagios_individualizados() + mes_inicio - 1
+            parpa = self._validate_data(
+                dger.consideracao_media_anual_afluencias, int
+            )
+            ordem_maxima = self._validate_data(dger.ordem_maxima_parp, int)
+
+            arq_uhes = self.get_confhd()
+            if arq_uhes is None:
+                raise RuntimeError(
+                    "confhd.dat não encontrado para síntese" + " dos cenários"
                 )
-                n_estagios_th = 12 if parpa == 3 else ordem_maxima
+            n_uhes = self._validate_data(arq_uhes.usinas, pd.DataFrame).shape[
+                0
+            ]
+
+            n_estagios = (
+                self._numero_estagios_individualizados() + mes_inicio - 1
+            )
+            n_estagios_th = 12 if parpa == 3 else ordem_maxima
+            caminho_arq = join(self.__tmppath, nome_arq)
+            if pathlib.Path(caminho_arq).exists():
                 self.__vazaof[iteracao] = Vazaof.read(
-                    join(self.__tmppath, nome_arq),
+                    caminho_arq,
                     num_forwards,
                     n_uhes,
                     n_estagios,
                     n_estagios_th,
                 )
-            except Exception:
-                pass
+
         return self.__vazaof.get(iteracao)
 
     def get_energiab(self, iteracao: int) -> Optional[Energiab]:
@@ -1067,25 +1106,31 @@ class RawFilesRepository(AbstractFilesRepository):
             else "energiab.dat"
         )
         if self.__energiab.get(iteracao) is None:
-            try:
-                dger = self.get_dger()
-                anos_estudo = self._validate_data(dger.num_anos_estudo, int)
-                num_forwards = self._validate_data(dger.num_forwards, int)
-                num_aberturas = self._validate_data(dger.num_aberturas, int)
-
-                n_rees = self._validate_data(
-                    self.get_ree().rees, pd.DataFrame
-                ).shape[0]
-                n_estagios = anos_estudo * 12
+            dger = self.get_dger()
+            if dger is None:
+                raise RuntimeError(
+                    "dger.dat não encontrado para síntese" + " dos cenários"
+                )
+            anos_estudo = self._validate_data(dger.num_anos_estudo, int)
+            num_forwards = self._validate_data(dger.num_forwards, int)
+            num_aberturas = self._validate_data(dger.num_aberturas, int)
+            arq_rees = self.get_ree()
+            if arq_rees is None:
+                raise RuntimeError(
+                    "ree.dat não encontrado para síntese" + " dos cenários"
+                )
+            n_rees = self._validate_data(arq_rees.rees, pd.DataFrame).shape[0]
+            n_estagios = anos_estudo * 12
+            caminho_arq = join(self.__tmppath, nome_arq)
+            if pathlib.Path(caminho_arq).exists():
                 self.__energiab[iteracao] = Energiab.read(
-                    join(self.__tmppath, nome_arq),
+                    caminho_arq,
                     num_forwards,
                     num_aberturas,
                     n_rees,
                     n_estagios,
                 )
-            except Exception:
-                pass
+
         return self.__energiab.get(iteracao)
 
     def get_vazaob(self, iteracao: int) -> Optional[Vazaob]:
@@ -1095,27 +1140,37 @@ class RawFilesRepository(AbstractFilesRepository):
             else "vazaob.dat"
         )
         if self.__vazaob.get(iteracao) is None:
-            try:
-                dger = self.get_dger()
-                mes_inicio = self._validate_data(dger.mes_inicio_estudo, int)
-                num_forwards = self._validate_data(dger.num_forwards, int)
-                num_aberturas = self._validate_data(dger.num_aberturas, int)
-
-                n_uhes = self._validate_data(
-                    self.get_confhd().usinas, pd.DataFrame
-                ).shape[0]
-                n_estagios_hib = (
-                    self._numero_estagios_individualizados() + mes_inicio - 1
+            dger = self.get_dger()
+            if dger is None:
+                raise RuntimeError(
+                    "dger.dat não encontrado para síntese" + " dos cenários"
                 )
+            mes_inicio = self._validate_data(dger.mes_inicio_estudo, int)
+            num_forwards = self._validate_data(dger.num_forwards, int)
+            num_aberturas = self._validate_data(dger.num_aberturas, int)
+
+            arq_uhes = self.get_confhd()
+            if arq_uhes is None:
+                raise RuntimeError(
+                    "confhd.dat não encontrado para síntese" + " dos cenários"
+                )
+            n_uhes = self._validate_data(arq_uhes.usinas, pd.DataFrame).shape[
+                0
+            ]
+
+            n_estagios_hib = (
+                self._numero_estagios_individualizados() + mes_inicio - 1
+            )
+            caminho_arq = join(self.__tmppath, nome_arq)
+            if pathlib.Path(caminho_arq).exists():
                 self.__vazaob[iteracao] = Vazaob.read(
-                    join(self.__tmppath, nome_arq),
+                    caminho_arq,
                     num_forwards,
                     num_aberturas,
                     n_uhes,
                     n_estagios_hib,
                 )
-            except Exception:
-                pass
+
         return self.__vazaob.get(iteracao)
 
     def get_enavazf(self, iteracao: int) -> Optional[Enavazf]:
@@ -1125,31 +1180,38 @@ class RawFilesRepository(AbstractFilesRepository):
             else "enavazf.dat"
         )
         if self.__enavazf.get(iteracao) is None:
-            try:
-                dger = self.get_dger()
-                mes_inicio = self._validate_data(dger.mes_inicio_estudo, int)
-                num_forwards = self._validate_data(dger.num_forwards, int)
-                parpa = self._validate_data(
-                    dger.consideracao_media_anual_afluencias, int
+            dger = self.get_dger()
+            if dger is None:
+                raise RuntimeError(
+                    "dger.dat não encontrado para síntese" + " dos cenários"
                 )
-                ordem_maxima = self._validate_data(dger.ordem_maxima_parp, int)
+            mes_inicio = self._validate_data(dger.mes_inicio_estudo, int)
+            num_forwards = self._validate_data(dger.num_forwards, int)
+            parpa = self._validate_data(
+                dger.consideracao_media_anual_afluencias, int
+            )
+            ordem_maxima = self._validate_data(dger.ordem_maxima_parp, int)
 
-                n_rees = self._validate_data(
-                    self.get_ree().rees, pd.DataFrame
-                ).shape[0]
-                n_estagios = (
-                    self._numero_estagios_individualizados() + mes_inicio - 1
+            arq_rees = self.get_ree()
+            if arq_rees is None:
+                raise RuntimeError(
+                    "ree.dat não encontrado para síntese" + " dos cenários"
                 )
-                n_estagios_th = 12 if parpa == 3 else ordem_maxima
+            n_rees = self._validate_data(arq_rees.rees, pd.DataFrame).shape[0]
+            n_estagios = (
+                self._numero_estagios_individualizados() + mes_inicio - 1
+            )
+            n_estagios_th = 12 if parpa == 3 else ordem_maxima
+            caminho_arq = join(self.__tmppath, nome_arq)
+            if pathlib.Path(caminho_arq).exists():
                 self.__enavazf[iteracao] = Enavazf.read(
-                    join(self.__tmppath, nome_arq),
+                    caminho_arq,
                     num_forwards,
                     n_rees,
                     n_estagios,
                     n_estagios_th,
                 )
-            except Exception:
-                pass
+
         return self.__enavazf.get(iteracao)
 
     def get_enavazb(self, iteracao: int) -> Optional[Enavazb]:
@@ -1159,150 +1221,179 @@ class RawFilesRepository(AbstractFilesRepository):
             else "enavazb.dat"
         )
         if self.__enavazb.get(iteracao) is None:
-            try:
-                dger = self.get_dger()
-                mes_inicio = self._validate_data(dger.mes_inicio_estudo, int)
-                num_forwards = self._validate_data(dger.num_forwards, int)
-                num_aberturas = self._validate_data(dger.num_aberturas, int)
-
-                n_rees = self._validate_data(
-                    self.get_ree().rees, pd.DataFrame
-                ).shape[0]
-                n_estagios = (
-                    self._numero_estagios_individualizados() + mes_inicio - 1
+            dger = self.get_dger()
+            if dger is None:
+                raise RuntimeError(
+                    "dger.dat não encontrado para síntese" + " dos cenários"
                 )
+            mes_inicio = self._validate_data(dger.mes_inicio_estudo, int)
+            num_forwards = self._validate_data(dger.num_forwards, int)
+            num_aberturas = self._validate_data(dger.num_aberturas, int)
+
+            arq_rees = self.get_ree()
+            if arq_rees is None:
+                raise RuntimeError(
+                    "ree.dat não encontrado para síntese" + " dos cenários"
+                )
+            n_rees = self._validate_data(arq_rees.rees, pd.DataFrame).shape[0]
+            n_estagios = (
+                self._numero_estagios_individualizados() + mes_inicio - 1
+            )
+            caminho_arq = join(self.__tmppath, nome_arq)
+            if pathlib.Path(caminho_arq).exists():
                 self.__enavazb[iteracao] = Enavazb.read(
-                    join(self.__tmppath, nome_arq),
+                    caminho_arq,
                     num_forwards,
                     num_aberturas,
                     n_rees,
                     n_estagios,
                 )
-            except Exception:
-                pass
+
         return self.__enavazb.get(iteracao)
 
     def get_energias(self) -> Optional[Energias]:
         if self.__energias is None:
-            try:
-                dger = self.get_dger()
-                anos_estudo = self._validate_data(dger.num_anos_estudo, int)
-                ano_inicio = self._validate_data(dger.ano_inicio_estudo, int)
-                ano_inicio_historico = self._validate_data(
-                    dger.ano_inicial_historico, int
+            dger = self.get_dger()
+            if dger is None:
+                raise RuntimeError(
+                    "dger.dat não encontrado para síntese" + " dos cenários"
                 )
-                num_series_sinteticas = self._validate_data(
-                    dger.num_series_sinteticas, int
-                )
-                tipo_simulacao_final = self._validate_data(
-                    dger.tipo_simulacao_final, int
-                )
-                parpa = self._validate_data(
-                    dger.consideracao_media_anual_afluencias, int
-                )
-                ordem_maxima = self._validate_data(dger.ordem_maxima_parp, int)
+            anos_estudo = self._validate_data(dger.num_anos_estudo, int)
+            ano_inicio = self._validate_data(dger.ano_inicio_estudo, int)
+            ano_inicio_historico = self._validate_data(
+                dger.ano_inicial_historico, int
+            )
+            num_series_sinteticas = self._validate_data(
+                dger.num_series_sinteticas, int
+            )
+            tipo_simulacao_final = self._validate_data(
+                dger.tipo_simulacao_final, int
+            )
+            parpa = self._validate_data(
+                dger.consideracao_media_anual_afluencias, int
+            )
+            ordem_maxima = self._validate_data(dger.ordem_maxima_parp, int)
 
-                n_rees = self._validate_data(
-                    self.get_ree().rees, pd.DataFrame
-                ).shape[0]
-                n_estagios = anos_estudo * 12
-                n_estagios_th = 12 if parpa == 3 else ordem_maxima
-                if tipo_simulacao_final == 1:
-                    num_series = num_series_sinteticas
-                else:
-                    num_series = ano_inicio - ano_inicio_historico - 1
+            arq_rees = self.get_ree()
+            if arq_rees is None:
+                raise RuntimeError(
+                    "ree.dat não encontrado para síntese" + " dos cenários"
+                )
+            n_rees = self._validate_data(arq_rees.rees, pd.DataFrame).shape[0]
+            n_estagios = anos_estudo * 12
+            n_estagios_th = 12 if parpa == 3 else ordem_maxima
+            if tipo_simulacao_final == 1:
+                num_series = num_series_sinteticas
+            else:
+                num_series = ano_inicio - ano_inicio_historico - 1
+            caminho_arq = join(self.__tmppath, "energias.dat")
+            if pathlib.Path(caminho_arq).exists():
                 self.__energias = Energias.read(
-                    join(self.__tmppath, "energias.dat"),
+                    caminho_arq,
                     num_series,
                     n_rees,
                     n_estagios,
                     n_estagios_th,
                 )
-            except Exception:
-                pass
+
         return self.__energias
 
     def get_enavazs(self) -> Optional[Enavazf]:
         if self.__enavazs is None:
-            try:
-                dger = self.get_dger()
-                mes_inicio = self._validate_data(dger.mes_inicio_estudo, int)
-                ano_inicio = self._validate_data(dger.ano_inicio_estudo, int)
-                ano_inicio_historico = self._validate_data(
-                    dger.ano_inicial_historico, int
+            dger = self.get_dger()
+            if dger is None:
+                raise RuntimeError(
+                    "dger.dat não encontrado para síntese" + " dos cenários"
                 )
-                num_series_sinteticas = self._validate_data(
-                    dger.num_series_sinteticas, int
-                )
-                tipo_simulacao_final = self._validate_data(
-                    dger.tipo_simulacao_final, int
-                )
-                parpa = self._validate_data(
-                    dger.consideracao_media_anual_afluencias, int
-                )
-                ordem_maxima = self._validate_data(dger.ordem_maxima_parp, int)
+            mes_inicio = self._validate_data(dger.mes_inicio_estudo, int)
+            ano_inicio = self._validate_data(dger.ano_inicio_estudo, int)
+            ano_inicio_historico = self._validate_data(
+                dger.ano_inicial_historico, int
+            )
+            num_series_sinteticas = self._validate_data(
+                dger.num_series_sinteticas, int
+            )
+            tipo_simulacao_final = self._validate_data(
+                dger.tipo_simulacao_final, int
+            )
+            parpa = self._validate_data(
+                dger.consideracao_media_anual_afluencias, int
+            )
+            ordem_maxima = self._validate_data(dger.ordem_maxima_parp, int)
 
-                n_rees = self._validate_data(
-                    self.get_ree().rees, pd.DataFrame
-                ).shape[0]
-                n_estagios = (
-                    self._numero_estagios_individualizados() + mes_inicio - 1
+            arq_rees = self.get_ree()
+            if arq_rees is None:
+                raise RuntimeError(
+                    "ree.dat não encontrado para síntese" + " dos cenários"
                 )
-                n_estagios_th = 12 if parpa == 3 else ordem_maxima
-                if tipo_simulacao_final == 1:
-                    num_series = num_series_sinteticas
-                else:
-                    num_series = ano_inicio - ano_inicio_historico - 1
+            n_rees = self._validate_data(arq_rees.rees, pd.DataFrame).shape[0]
+            n_estagios = (
+                self._numero_estagios_individualizados() + mes_inicio - 1
+            )
+            n_estagios_th = 12 if parpa == 3 else ordem_maxima
+            if tipo_simulacao_final == 1:
+                num_series = num_series_sinteticas
+            else:
+                num_series = ano_inicio - ano_inicio_historico - 1
+            caminho_arq = join(self.__tmppath, "enavazs.dat")
+            if pathlib.Path(caminho_arq).exists():
                 self.__enavazs = Enavazf.read(
-                    join(self.__tmppath, "enavazs.dat"),
+                    caminho_arq,
                     num_series,
                     n_rees,
                     n_estagios,
                     n_estagios_th,
                 )
-            except Exception:
-                pass
         return self.__enavazs
 
     def get_vazaos(self) -> Optional[Vazaos]:
         if self.__vazaos is None:
-            try:
-                dger = self.get_dger()
-                mes_inicio = self._validate_data(dger.mes_inicio_estudo, int)
-                parpa = self._validate_data(
-                    dger.consideracao_media_anual_afluencias, int
+            dger = self.get_dger()
+            if dger is None:
+                raise RuntimeError(
+                    "dger.dat não encontrado para síntese" + " dos cenários"
                 )
-                ordem_maxima = self._validate_data(dger.ordem_maxima_parp, int)
-                num_series_sinteticas = self._validate_data(
-                    dger.num_series_sinteticas, int
+            mes_inicio = self._validate_data(dger.mes_inicio_estudo, int)
+            parpa = self._validate_data(
+                dger.consideracao_media_anual_afluencias, int
+            )
+            ordem_maxima = self._validate_data(dger.ordem_maxima_parp, int)
+            num_series_sinteticas = self._validate_data(
+                dger.num_series_sinteticas, int
+            )
+            ano_inicio = self._validate_data(dger.ano_inicio_estudo, int)
+            ano_inicial_historico = self._validate_data(
+                dger.ano_inicial_historico, int
+            )
+            arq_uhes = self.get_confhd()
+            if arq_uhes is None:
+                raise RuntimeError(
+                    "confhd.dat não encontrado para síntese" + " dos cenários"
                 )
-                ano_inicio = self._validate_data(dger.ano_inicio_estudo, int)
-                ano_inicial_historico = self._validate_data(
-                    dger.ano_inicial_historico, int
-                )
-                n_uhes = self._validate_data(
-                    self.get_confhd().usinas, pd.DataFrame
-                ).shape[0]
-                n_estagios = (
-                    self._numero_estagios_individualizados() + mes_inicio - 1
-                )
-                n_estagios_th = 12 if parpa == 3 else ordem_maxima
-                if dger.tipo_simulacao_final == 1:
-                    num_series = num_series_sinteticas
-                else:
-                    num_series = ano_inicio - ano_inicial_historico - 1
+            n_uhes = self._validate_data(arq_uhes.usinas, pd.DataFrame).shape[
+                0
+            ]
+
+            n_estagios = (
+                self._numero_estagios_individualizados() + mes_inicio - 1
+            )
+            n_estagios_th = 12 if parpa == 3 else ordem_maxima
+            if dger.tipo_simulacao_final == 1:
+                num_series = num_series_sinteticas
+            else:
+                num_series = ano_inicio - ano_inicial_historico - 1
+            caminho_arq = join(self.__tmppath, "vazaos.dat")
+            if pathlib.Path(caminho_arq).exists():
                 self.__vazaos = Vazaos.read(
-                    join(self.__tmppath, "vazaos.dat"),
+                    caminho_arq,
                     num_series,
                     n_uhes,
                     n_estagios,
                     n_estagios_th,
                 )
-            except Exception:
-                pass
         return self.__vazaos
 
-    def get_vazoes(self) -> Vazoes:
+    def get_vazoes(self) -> Optional[Vazoes]:
         if self.__vazoes is None:
             try:
                 self.__vazoes = Vazoes.read(join(self.__tmppath, "vazoes.dat"))
@@ -1310,7 +1401,7 @@ class RawFilesRepository(AbstractFilesRepository):
                 raise RuntimeError()
         return self.__vazoes
 
-    def get_hidr(self) -> Hidr:
+    def get_hidr(self) -> Optional[Hidr]:
         if self.__hidr is None:
             try:
                 self.__hidr = Hidr.read(

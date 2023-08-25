@@ -1,6 +1,6 @@
 import logging
 import logging.handlers
-from queue import Queue
+from multiprocessing.queues import Queue
 from multiprocessing import Process
 from typing import Optional
 import errno

@@ -6,6 +6,7 @@ from traceback import print_exc
 from multiprocessing import Pool
 from datetime import datetime
 from dateutil.relativedelta import relativedelta  # type: ignore
+from inewave.newave import Dger, Ree, Confhd, Conft, Hidr, Vazoes, Sistema, Pmo
 from sintetizador.services.unitofwork import AbstractUnitOfWork
 from sintetizador.utils.log import Log
 from sintetizador.model.settings import Settings
@@ -117,12 +118,115 @@ class ScenarioSynthetizer:
         return valid
 
     @classmethod
+    def _get_dger(cls, uow: AbstractUnitOfWork) -> Dger:
+        with uow:
+            dger = uow.files.get_dger()
+            if dger is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do dger.dat para"
+                        + " síntese dos cenários"
+                    )
+                raise RuntimeError()
+            return dger
+
+    @classmethod
+    def _get_ree(cls, uow: AbstractUnitOfWork) -> Ree:
+        with uow:
+            ree = uow.files.get_ree()
+            if ree is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do ree.dat para"
+                        + " síntese dos cenários"
+                    )
+                raise RuntimeError()
+            return ree
+
+    @classmethod
+    def _get_confhd(cls, uow: AbstractUnitOfWork) -> Confhd:
+        with uow:
+            confhd = uow.files.get_confhd()
+            if confhd is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do confhd.dat para"
+                        + " síntese dos cenários"
+                    )
+                raise RuntimeError()
+            return confhd
+
+    @classmethod
+    def _get_conft(cls, uow: AbstractUnitOfWork) -> Conft:
+        with uow:
+            conft = uow.files.get_conft()
+            if conft is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do conft.dat para"
+                        + " síntese dos cenários"
+                    )
+                raise RuntimeError()
+            return conft
+
+    @classmethod
+    def _get_hidr(cls, uow: AbstractUnitOfWork) -> Hidr:
+        with uow:
+            hidr = uow.files.get_hidr()
+            if hidr is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do hidr.dat para"
+                        + " síntese dos cenários"
+                    )
+                raise RuntimeError()
+            return hidr
+
+    @classmethod
+    def _get_sistema(cls, uow: AbstractUnitOfWork) -> Sistema:
+        with uow:
+            sist = uow.files.get_sistema()
+            if sist is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do sistema.dat para"
+                        + " síntese dos cenários"
+                    )
+                raise RuntimeError()
+            return sist
+
+    @classmethod
+    def _get_vazoes(cls, uow: AbstractUnitOfWork) -> Vazoes:
+        with uow:
+            vaz = uow.files.get_vazoes()
+            if vaz is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do vazoes.dat para"
+                        + " síntese dos cenários"
+                    )
+                raise RuntimeError()
+            return vaz
+
+    @classmethod
+    def _get_pmo(cls, uow: AbstractUnitOfWork) -> Pmo:
+        with uow:
+            vaz = uow.files.get_pmo()
+            if vaz is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do pmo.dat para"
+                        + " síntese dos cenários"
+                    )
+                raise RuntimeError()
+            return vaz
+
+    @classmethod
     def filter_valid_variables(
         cls, variables: List[ScenarioSynthesis], uow: AbstractUnitOfWork
     ) -> List[ScenarioSynthesis]:
-        with uow:
-            dger = uow.files.get_dger()
-            ree = uow.files.get_ree()
+        dger = cls._get_dger(uow)
+        ree = cls._get_ree(uow)
         valid_variables: List[ScenarioSynthesis] = []
         sf_indiv = dger.agregacao_simulacao_final == 1
         rees = cls._validate_data(ree.rees, pd.DataFrame, "REEs")
@@ -156,13 +260,13 @@ class ScenarioSynthetizer:
         :rtype: pd.DataFrame | None
         """
         uhes = cls._validate_data(
-            uow.files.get_confhd().usinas, pd.DataFrame, "UHEs"
+            cls._get_confhd(uow).usinas, pd.DataFrame, "UHEs"
         )
         hidr = cls._validate_data(
-            uow.files.get_hidr().cadastro, pd.DataFrame, "hidr"
+            cls._get_hidr(uow).cadastro, pd.DataFrame, "hidr"
         )
         vazoes = cls._validate_data(
-            uow.files.get_vazoes().vazoes, pd.DataFrame, "vazões"
+            cls._get_vazoes(uow).vazoes, pd.DataFrame, "vazões"
         )
         posto = uhes.loc[uhes["codigo_usina"] == uhe, "posto"].tolist()[0]
         vazao_natural = vazoes[posto].to_numpy()
@@ -248,18 +352,16 @@ class ScenarioSynthetizer:
         if cls.logger is not None:
             cls.logger.info("Calculando séries de MLT para QINC - UHE")
         uhes = cls._validate_data(
-            uow.files.get_confhd().usinas, pd.DataFrame, "UHEs"
+            cls._get_confhd(uow).usinas, pd.DataFrame, "UHEs"
         )
+        rees = cls._validate_data(cls._get_ree(uow).rees, pd.DataFrame, "REEs")
         hidr = cls._validate_data(
-            uow.files.get_hidr().cadastro, pd.DataFrame, "hidr"
-        )
-        rees = cls._validate_data(
-            uow.files.get_ree().rees, pd.DataFrame, "REEs"
+            cls._get_hidr(uow).cadastro, pd.DataFrame, "hidr"
         )
         sistema = cls._validate_data(
-            uow.files.get_sistema().custo_deficit, pd.DataFrame, "submercados"
+            cls._get_sistema(uow).custo_deficit, pd.DataFrame, "vazões"
         )
-        dger = uow.files.get_dger()
+        dger = cls._get_dger(uow)
         mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
         ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
         anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
@@ -349,25 +451,24 @@ class ScenarioSynthetizer:
             cls.logger.info("Calculando séries de MLT para ENAA - REE")
         # Monta um df com estagio | configuracao | mes
         configuracoes = cls._validate_data(
-            uow.files.get_pmo().configuracoes_qualquer_modificacao,
+            cls._get_pmo(uow).configuracoes_qualquer_modificacao,
             pd.DataFrame,
             "configurações",
         )
-        dger = uow.files.get_dger()
+        dger = cls._get_dger(uow)
         mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
         ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
         anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
         sistema = cls._validate_data(
-            uow.files.get_sistema().custo_deficit, pd.DataFrame, "submercados"
+            cls._get_sistema(uow).custo_deficit, pd.DataFrame, "submercados"
         )
-        rees = cls._validate_data(
-            uow.files.get_ree().rees, pd.DataFrame, "REEs"
-        )
-        arq_engnat = uow.files.get_engnat()
-        if arq_engnat is None:
-            if cls.logger is not None:
-                cls.logger.error("Falha na leitura de séries de energia")
-            raise RuntimeError()
+        rees = cls._validate_data(cls._get_ree(uow).rees, pd.DataFrame, "REEs")
+        with uow:
+            arq_engnat = uow.files.get_engnat()
+            if arq_engnat is None:
+                if cls.logger is not None:
+                    cls.logger.error("Falha na leitura de séries de energia")
+                raise RuntimeError()
         engnat = cls._validate_data(
             arq_engnat.series, pd.DataFrame, "séries de energia"
         )
@@ -419,7 +520,7 @@ class ScenarioSynthetizer:
     def _engolimento_maximo_uhes(
         cls, uow: AbstractUnitOfWork
     ) -> Dict[int, float]:
-        hidr = uow.files.get_hidr().cadastro
+        hidr = cls._get_hidr(uow).cadastro
         engolimentos: Dict[int, float] = {}
         for idx, linha in hidr.iterrows():
             engol_max = 0.0
@@ -585,15 +686,15 @@ class ScenarioSynthetizer:
         estagios = energiaf_dados["estagio"].unique()
         num_estagios = len(estagios)
         # Obtem os dados de cada usina
-        dger = uow.files.get_dger()
+        dger = cls._get_dger(uow)
         ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
         mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
         anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
         sistema = cls._validate_data(
-            uow.files.get_sistema().custo_deficit, pd.DataFrame, "submercados"
+            cls._get_sistema(uow).custo_deficit, pd.DataFrame, "submercados"
         )
         dados_rees = cls._validate_data(
-            uow.files.get_ree().rees, pd.DataFrame, "REEs"
+            cls._get_ree(uow).rees, pd.DataFrame, "REEs"
         )
         dados_rees["nome_submercado"] = dados_rees.apply(
             lambda linha: sistema.loc[
@@ -689,16 +790,14 @@ class ScenarioSynthetizer:
         estagios = vazaof_dados["estagio"].unique()
         num_estagios = len(estagios)
         # Obtem os dados de cada usina
-        dger = uow.files.get_dger()
+        dger = cls._get_dger(uow)
         confhd = cls._validate_data(
-            uow.files.get_confhd().usinas, pd.DataFrame, "UHEs"
+            cls._get_confhd(uow).usinas, pd.DataFrame, "UHEs"
         )
         sistema = cls._validate_data(
-            uow.files.get_sistema().custo_deficit, pd.DataFrame, "submercados"
+            cls._get_sistema(uow).custo_deficit, pd.DataFrame, "submercados"
         )
-        rees = cls._validate_data(
-            uow.files.get_ree().rees, pd.DataFrame, "REEs"
-        )
+        rees = cls._validate_data(cls._get_ree(uow).rees, pd.DataFrame, "REEs")
         mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
         ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
 
@@ -824,12 +923,12 @@ class ScenarioSynthetizer:
         aberturas = energiab_dados["abertura"].unique()
         num_aberturas = len(aberturas)
         # Obtem os dados de cada usina
-        dger = uow.files.get_dger()
+        dger = cls._get_dger(uow)
         sistema = cls._validate_data(
-            uow.files.get_sistema().custo_deficit, pd.DataFrame, "submercados"
+            cls._get_sistema(uow).custo_deficit, pd.DataFrame, "submercados"
         )
         dados_rees = cls._validate_data(
-            uow.files.get_ree().rees, pd.DataFrame, "REEs"
+            cls._get_ree(uow).rees, pd.DataFrame, "REEs"
         )
         mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
         ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
@@ -941,16 +1040,14 @@ class ScenarioSynthetizer:
         aberturas = vazaob_dados["abertura"].unique()
         num_aberturas = len(aberturas)
         # Obtem os dados de cada usina
-        dger = uow.files.get_dger()
+        dger = cls._get_dger(uow)
         confhd = cls._validate_data(
-            uow.files.get_confhd().usinas, pd.DataFrame, "UHEs"
+            cls._get_confhd(uow).usinas, pd.DataFrame, "UHEs"
         )
         sistema = cls._validate_data(
-            uow.files.get_sistema().custo_deficit, pd.DataFrame, "submercados"
+            cls._get_sistema(uow).custo_deficit, pd.DataFrame, "submercados"
         )
-        rees = cls._validate_data(
-            uow.files.get_ree().rees, pd.DataFrame, "REEs"
-        )
+        rees = cls._validate_data(cls._get_ree(uow).rees, pd.DataFrame, "REEs")
         mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
         ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
 
@@ -1073,12 +1170,12 @@ class ScenarioSynthetizer:
         estagios = energias_dados["estagio"].unique()
         num_estagios = len(estagios)
         # Obtem os dados de cada usina
-        dger = uow.files.get_dger()
+        dger = cls._get_dger(uow)
         sistema = cls._validate_data(
-            uow.files.get_sistema().custo_deficit, pd.DataFrame, "submercados"
+            cls._get_sistema(uow).custo_deficit, pd.DataFrame, "submercados"
         )
         dados_rees = cls._validate_data(
-            uow.files.get_ree().rees, pd.DataFrame, "REEs"
+            cls._get_ree(uow).rees, pd.DataFrame, "REEs"
         )
         mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
         ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
@@ -1176,16 +1273,14 @@ class ScenarioSynthetizer:
         estagios = vazaos_dados["estagio"].unique()
         num_estagios = len(estagios)
         # Obtem os dados de cada usina
-        dger = uow.files.get_dger()
+        dger = cls._get_dger(uow)
         confhd = cls._validate_data(
-            uow.files.get_confhd().usinas, pd.DataFrame, "UHEs"
+            cls._get_confhd(uow).usinas, pd.DataFrame, "UHEs"
         )
         sistema = cls._validate_data(
-            uow.files.get_sistema().custo_deficit, pd.DataFrame, "submercados"
+            cls._get_sistema(uow).custo_deficit, pd.DataFrame, "submercados"
         )
-        rees = cls._validate_data(
-            uow.files.get_ree().rees, pd.DataFrame, "REEs"
-        )
+        rees = cls._validate_data(cls._get_ree(uow).rees, pd.DataFrame, "REEs")
         mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
         ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
 
@@ -1286,50 +1381,56 @@ class ScenarioSynthetizer:
             uow._queue, Variable.ENA_ABSOLUTA.value, it
         )
 
+        logger.info(f"Obtendo energias forward da it. {it}")
         with uow:
-            logger.info(f"Obtendo energias forward da it. {it}")
             arq_enavaz = uow.files.get_enavazf(it)
-            arq_energiaf = uow.files.get_energiaf(it)
             if arq_enavaz is None:
-                df_enavaz = pd.DataFrame()
-            else:
-                df_enavaz = (
-                    arq_enavaz.series
-                    if arq_enavaz.series is not None
-                    else pd.DataFrame()
-                )
+                if cls.logger is not None:
+                    cls.logger.error("Falha na leitura de séries de energia")
+            arq_energiaf = uow.files.get_energiaf(it)
             if arq_energiaf is None:
-                df_energia = pd.DataFrame()
-            else:
-                df_energia = (
-                    arq_energiaf.series
-                    if arq_energiaf.series is not None
-                    else pd.DataFrame()
-                )
-            if not df_enavaz.empty and not df_energia.empty:
+                if cls.logger is not None:
+                    cls.logger.error("Falha na leitura de séries de energia")
+        if arq_enavaz is None:
+            df_enavaz = pd.DataFrame()
+        else:
+            df_enavaz = (
+                arq_enavaz.series
+                if arq_enavaz.series is not None
+                else pd.DataFrame()
+            )
+        if arq_energiaf is None:
+            df_energia = pd.DataFrame()
+        else:
+            df_energia = (
+                arq_energiaf.series
+                if arq_energiaf.series is not None
+                else pd.DataFrame()
+            )
+        if not df_enavaz.empty and not df_energia.empty:
+            with uow:
                 n_indiv = uow.files._numero_estagios_individualizados()
-                df_ena = pd.concat(
-                    [
-                        df_enavaz.loc[df_enavaz["estagio"] <= n_indiv],
-                        df_energia.loc[df_energia["estagio"] > n_indiv],
-                    ],
-                    ignore_index=True,
-                )
-            else:
-                df_ena = df_energia
-            if not df_ena.empty:
-                ena_it = cls._adiciona_dados_rees_forward(uow, df_ena)
-                ena_it["iteracao"] = it
-                return ena_it
+            df_ena = pd.concat(
+                [
+                    df_enavaz.loc[df_enavaz["estagio"] <= n_indiv],
+                    df_energia.loc[df_energia["estagio"] > n_indiv],
+                ],
+                ignore_index=True,
+            )
+        else:
+            df_ena = df_energia
+        if not df_ena.empty:
+            ena_it = cls._adiciona_dados_rees_forward(uow, df_ena)
+            ena_it["iteracao"] = it
+            return ena_it
         return None
 
     @classmethod
     def _resolve_enaa_forward(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        with uow:
-            convergencia = cls._validate_data(
-                uow.files.get_pmo().convergencia, pd.DataFrame, "convergência"
-            )
-            n_iters = convergencia["iteracao"].max()
+        convergencia = cls._validate_data(
+            cls._get_pmo(uow).convergencia, pd.DataFrame, "convergência"
+        )
+        n_iters = convergencia["iteracao"].max()
         df_completo = pd.DataFrame()
         n_procs = int(Settings().processors)
         with Pool(processes=n_procs) as pool:
@@ -1356,26 +1457,29 @@ class ScenarioSynthetizer:
         logger = Log.configure_process_logger(
             uow.queue, Variable.VAZAO_INCREMENTAL.value, it
         )
+
+        logger.info(f"Obtendo vazões forward da it. {it}")
         with uow:
-            logger.info(f"Obtendo vazões forward da it. {it}")
             arq = uow.files.get_vazaof(it)
-            vaz_it = (
-                cls._adiciona_dados_uhes_forward(uow, arq.series)
-                if arq is not None
-                else pd.DataFrame()
-            )
-            if not vaz_it.empty:
-                vaz_it["iteracao"] = it
-                return vaz_it
-            return None
+            if arq is None:
+                if cls.logger is not None:
+                    cls.logger.error("Falha na leitura de séries de vazão")
+        vaz_it = (
+            cls._adiciona_dados_uhes_forward(uow, arq.series)
+            if arq is not None
+            else pd.DataFrame()
+        )
+        if not vaz_it.empty:
+            vaz_it["iteracao"] = it
+            return vaz_it
+        return None
 
     @classmethod
     def _resolve_qinc_forward(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        with uow:
-            convergencia = cls._validate_data(
-                uow.files.get_pmo().convergencia, pd.DataFrame, "convergência"
-            )
-            n_iters = convergencia["iteracao"].max()
+        convergencia = cls._validate_data(
+            cls._get_pmo(uow).convergencia, pd.DataFrame, "convergência"
+        )
+        n_iters = convergencia["iteracao"].max()
         df_completo = pd.DataFrame()
         n_procs = int(Settings().processors)
         with Pool(processes=n_procs) as pool:
@@ -1402,8 +1506,9 @@ class ScenarioSynthetizer:
         logger = Log.configure_process_logger(
             uow._queue, Variable.ENA_ABSOLUTA.value, it
         )
+
+        logger.info(f"Obtendo energias backward da it. {it}")
         with uow:
-            logger.info(f"Obtendo energias backward da it. {it}")
             arq_enavazb = uow.files.get_enavazb(it)
             if arq_enavazb is None:
                 logger.error(
@@ -1415,47 +1520,47 @@ class ScenarioSynthetizer:
                     f"Falha na leitura de séries de energia da it {it}"
                 )
                 return None
-            if arq_enavazb is not None:
-                df_enavaz = (
-                    arq_enavazb.series
-                    if arq_enavazb.series is not None
-                    else pd.DataFrame()
-                )
-            else:
-                df_enavaz = pd.DataFrame()
-            df_energia = (
-                arq_energiab.series
-                if arq_energiab.series is not None
+        if arq_enavazb is not None:
+            df_enavaz = (
+                arq_enavazb.series
+                if arq_enavazb.series is not None
                 else pd.DataFrame()
             )
-            if not df_enavaz.empty and not df_energia.empty:
+        else:
+            df_enavaz = pd.DataFrame()
+        df_energia = (
+            arq_energiab.series
+            if arq_energiab.series is not None
+            else pd.DataFrame()
+        )
+        if not df_enavaz.empty and not df_energia.empty:
+            with uow:
                 n_indiv = uow.files._numero_estagios_individualizados()
-                df_ena = pd.concat(
-                    [
-                        df_enavaz.loc[df_enavaz["estagio"] <= n_indiv],
-                        df_energia.loc[df_energia["estagio"] > n_indiv],
-                    ],
-                    ignore_index=True,
-                )
-            else:
-                df_ena = df_energia
-            ena_it = (
-                cls._adiciona_dados_rees_backward(uow, df_ena)
-                if not df_ena.empty
-                else pd.DataFrame()
+            df_ena = pd.concat(
+                [
+                    df_enavaz.loc[df_enavaz["estagio"] <= n_indiv],
+                    df_energia.loc[df_energia["estagio"] > n_indiv],
+                ],
+                ignore_index=True,
             )
-            if not ena_it.empty:
-                ena_it["iteracao"] = it
-                return ena_it
+        else:
+            df_ena = df_energia
+        ena_it = (
+            cls._adiciona_dados_rees_backward(uow, df_ena)
+            if not df_ena.empty
+            else pd.DataFrame()
+        )
+        if not ena_it.empty:
+            ena_it["iteracao"] = it
+            return ena_it
         return None
 
     @classmethod
     def _resolve_enaa_backward(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        with uow:
-            convergencia = cls._validate_data(
-                uow.files.get_pmo().convergencia, pd.DataFrame, "convergência"
-            )
-            n_iters = convergencia["iteracao"].max()
+        convergencia = cls._validate_data(
+            cls._get_pmo(uow).convergencia, pd.DataFrame, "convergência"
+        )
+        n_iters = convergencia["iteracao"].max()
         df_completo = pd.DataFrame()
         n_procs = int(Settings().processors)
         with Pool(processes=n_procs) as pool:
@@ -1482,26 +1587,25 @@ class ScenarioSynthetizer:
         logger = Log.configure_process_logger(
             uow.queue, Variable.VAZAO_INCREMENTAL.value, it
         )
+        logger.info(f"Obtendo vazões backward da it. {it}")
         with uow:
-            logger.info(f"Obtendo vazões backward da it. {it}")
             arq = uow.files.get_vazaob(it)
-            vaz_it = (
-                cls._adiciona_dados_uhes_backward(uow, arq.series)
-                if arq is not None
-                else pd.DataFrame()
-            )
-            if not vaz_it.empty:
-                vaz_it["iteracao"] = it
-                return vaz_it
-            return None
+        vaz_it = (
+            cls._adiciona_dados_uhes_backward(uow, arq.series)
+            if arq is not None
+            else pd.DataFrame()
+        )
+        if not vaz_it.empty:
+            vaz_it["iteracao"] = it
+            return vaz_it
+        return None
 
     @classmethod
     def _resolve_qinc_backward(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        with uow:
-            convergencia = cls._validate_data(
-                uow.files.get_pmo().convergencia, pd.DataFrame, "convergência"
-            )
-            n_iters = convergencia["iteracao"].max()
+        convergencia = cls._validate_data(
+            cls._get_pmo(uow).convergencia, pd.DataFrame, "convergência"
+        )
+        n_iters = convergencia["iteracao"].max()
         df_completo = pd.DataFrame()
         n_procs = int(Settings().processors)
         with Pool(processes=n_procs) as pool:
@@ -1528,49 +1632,51 @@ class ScenarioSynthetizer:
             if arq_enavaz is None:
                 if cls.logger is not None:
                     cls.logger.error("Falha na leitura de séries de energia")
-                raise RuntimeError()
             arq_energias = uow.files.get_energias()
             if arq_energias is None:
                 if cls.logger is not None:
                     cls.logger.error("Falha na leitura de séries de energia")
-                raise RuntimeError()
-            df_enavaz = (
-                arq_enavaz.series
-                if arq_enavaz.series is not None
-                else pd.DataFrame()
-            )
-            df_energia = (
-                arq_energias.series
-                if arq_energias.series is not None
-                else pd.DataFrame()
-            )
-            if not df_enavaz.empty and not df_energia.empty:
+        df_enavaz = (
+            arq_enavaz.series
+            if arq_enavaz.series is not None
+            else pd.DataFrame()
+        )
+        df_energia = (
+            arq_energias.series
+            if arq_energias.series is not None
+            else pd.DataFrame()
+        )
+        if not df_enavaz.empty and not df_energia.empty:
+            with uow:
                 n_indiv = uow.files._numero_estagios_individualizados()
-                df_ena = pd.concat(
-                    [
-                        df_enavaz.loc[df_enavaz["estagio"] <= n_indiv],
-                        df_energia.loc[df_energia["estagio"] > n_indiv],
-                    ],
-                    ignore_index=True,
-                )
-            else:
-                df_ena = df_energia
-            enas = (
-                cls._adiciona_dados_rees_sf(uow, df_ena)
-                if df_ena is not None
-                else pd.DataFrame()
+            df_ena = pd.concat(
+                [
+                    df_enavaz.loc[df_enavaz["estagio"] <= n_indiv],
+                    df_energia.loc[df_energia["estagio"] > n_indiv],
+                ],
+                ignore_index=True,
             )
+        else:
+            df_ena = df_energia
+        enas = (
+            cls._adiciona_dados_rees_sf(uow, df_ena)
+            if df_ena is not None
+            else pd.DataFrame()
+        )
         return enas
 
     @classmethod
     def _resolve_qinc_sf(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         with uow:
             arq = uow.files.get_vazaos()
-            df = (
-                cls._adiciona_dados_uhes_sf(uow, arq.series)
-                if arq is not None
-                else pd.DataFrame()
-            )
+            if arq is None:
+                if cls.logger is not None:
+                    cls.logger.error("Falha na leitura de séries de vazão")
+        df = (
+            cls._adiciona_dados_uhes_sf(uow, arq.series)
+            if arq is not None
+            else pd.DataFrame()
+        )
         return df
 
     @classmethod
@@ -1791,29 +1897,28 @@ class ScenarioSynthetizer:
         df: pd.DataFrame,
         uow: AbstractUnitOfWork,
     ) -> pd.DataFrame:
-        with uow:
-            # Descobre o valor em MLT
-            df = df.copy()
-            df_mlt = cls._get_cached_mlt(
-                synthesis.variable,
-                synthesis.spatial_resolution,
-                uow,
-            )
-            FILTER_MAP = {
-                SpatialResolution.USINA_HIDROELETRICA: "nome_usina",
-                SpatialResolution.RESERVATORIO_EQUIVALENTE: "nome_ree",
-                SpatialResolution.SUBMERCADO: "nome_submercado",
-                SpatialResolution.SISTEMA_INTERLIGADO: None,
-            }
+        # Descobre o valor em MLT
+        df = df.copy()
+        df_mlt = cls._get_cached_mlt(
+            synthesis.variable,
+            synthesis.spatial_resolution,
+            uow,
+        )
+        FILTER_MAP = {
+            SpatialResolution.USINA_HIDROELETRICA: "nome_usina",
+            SpatialResolution.RESERVATORIO_EQUIVALENTE: "nome_ree",
+            SpatialResolution.SUBMERCADO: "nome_submercado",
+            SpatialResolution.SISTEMA_INTERLIGADO: None,
+        }
 
-            filter_col = FILTER_MAP[synthesis.spatial_resolution]
-            # Aplica a conversão
-            APPLY_MAP: Dict[Step, Callable] = {
-                Step.FORWARD: cls._apply_mlt_forward,
-                Step.FINAL_SIMULATION: cls._apply_mlt_sf,
-                Step.BACKWARD: cls._apply_mlt_backward,
-            }
-            return APPLY_MAP[synthesis.step](df, df_mlt, filter_col)
+        filter_col = FILTER_MAP[synthesis.spatial_resolution]
+        # Aplica a conversão
+        APPLY_MAP: Dict[Step, Callable] = {
+            Step.FORWARD: cls._apply_mlt_forward,
+            Step.FINAL_SIMULATION: cls._apply_mlt_sf,
+            Step.BACKWARD: cls._apply_mlt_backward,
+        }
+        return APPLY_MAP[synthesis.step](df, df_mlt, filter_col)
 
     @classmethod
     def _resolve_spatial_resolution(

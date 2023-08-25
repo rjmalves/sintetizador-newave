@@ -70,7 +70,15 @@ class ExecutionSynthetizer:
     @classmethod
     def _resolve_convergence(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         with uow:
-            df = uow.files.get_pmo().convergencia
+            arq_pmo = uow.files.get_pmo()
+            if arq_pmo is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do pmo.dat para"
+                        + " síntese da execução"
+                    )
+                raise RuntimeError()
+            df = arq_pmo.convergencia
             if df is None:
                 return pd.DataFrame()
             df_processed = pd.DataFrame(
@@ -88,7 +96,15 @@ class ExecutionSynthetizer:
     @classmethod
     def _resolve_cost(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         with uow:
-            df = uow.files.get_pmo().custo_operacao_series_simuladas
+            arq_pmo = uow.files.get_pmo()
+            if arq_pmo is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do pmo.dat para"
+                        + " síntese da execução"
+                    )
+                raise RuntimeError()
+            df = arq_pmo.custo_operacao_series_simuladas
             if df is None:
                 return pd.DataFrame()
             df_processed = df.rename(
