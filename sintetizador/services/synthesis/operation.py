@@ -696,6 +696,7 @@ class OperationSynthetizer:
                         submercado=s,
                     ),
                 )
+                cls.logger.info(df_sbm)
                 if df_sbm is None:
                     continue
                 cols = df_sbm.columns.tolist()
