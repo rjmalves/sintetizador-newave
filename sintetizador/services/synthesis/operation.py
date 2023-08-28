@@ -1,4 +1,4 @@
-from typing import Callable, Dict, List, Optional, Type, TypeVar
+from typing import Callable, Dict, List, Tuple, Optional, Type, TypeVar
 import pandas as pd  # type: ignore
 import numpy as np
 import logging
@@ -1556,6 +1556,40 @@ class OperationSynthetizer:
         return df
 
     @classmethod
+    def _resolve_stub(
+        cls, s: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> Tuple[pd.DataFrame, bool]:
+        if s.variable == Variable.ENERGIA_VERTIDA:
+            df = cls.__stub_EVER(s, uow)
+            return df, True
+        elif all(
+            [
+                s.variable == Variable.VIOLACAO_VMINOP,
+                s.spatial_resolution == SpatialResolution.SISTEMA_INTERLIGADO,
+            ]
+        ):
+            df = cls.__resolve_stub_vminop_sin(s, uow)
+            return df, True
+        elif all(
+            [
+                s.variable
+                in [
+                    Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+                    Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
+                    Variable.VIOLACAO_DEFLUENCIA_MINIMA,
+                    Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
+                    Variable.VIOLACAO_TURBINAMENTO_MINIMO,
+                    Variable.VIOLACAO_FPHA,
+                ],
+                s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
+            ]
+        ):
+            df = cls.__stub_agrega_variaveis_indiv_REE_SBM_SIN(s, uow)
+            return df, True
+        else:
+            return pd.DataFrame(), False
+
+    @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
         cls.logger = logging.getLogger("main")
         try:
@@ -1572,33 +1606,8 @@ class OperationSynthetizer:
             for s in valid_synthesis:
                 filename = str(s)
                 cls.logger.info(f"Realizando síntese de {filename}")
-                if s.variable == Variable.ENERGIA_VERTIDA:
-                    df = cls.__stub_EVER(s, uow)
-                elif all(
-                    [
-                        s.variable == Variable.VIOLACAO_VMINOP,
-                        s.spatial_resolution
-                        == SpatialResolution.SISTEMA_INTERLIGADO,
-                    ]
-                ):
-                    df = cls.__resolve_stub_vminop_sin(s, uow)
-                elif all(
-                    [
-                        s.variable
-                        in [
-                            Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
-                            Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
-                            Variable.VIOLACAO_DEFLUENCIA_MINIMA,
-                            Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
-                            Variable.VIOLACAO_TURBINAMENTO_MINIMO,
-                            Variable.VIOLACAO_FPHA,
-                        ],
-                        s.spatial_resolution
-                        != SpatialResolution.USINA_HIDROELETRICA,
-                    ]
-                ):
-                    df = cls.__stub_agrega_variaveis_indiv_REE_SBM_SIN(s, uow)
-                else:
+                df, is_stub = cls._resolve_stub(s, uow)
+                if not is_stub:
                     df = cls._resolve_spatial_resolution(s, uow)
                     if s in cls.SYNTHESIS_TO_CACHE:
                         cls.CACHED_SYNTHESIS[s] = df.copy()
