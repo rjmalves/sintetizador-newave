@@ -1,7 +1,7 @@
 click
 pandas
 pyarrow
-inewave
+inewave<=0.0.98
 pylama
 mypy
 pytest-cov

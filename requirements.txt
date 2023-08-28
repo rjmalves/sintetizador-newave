@@ -1,4 +1,4 @@
 click
 pandas
 pyarrow
-inewave
+inewave<=0.0.98
