@@ -1513,10 +1513,13 @@ class OperationSynthetizer:
         ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
         mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
         starting_date = datetime(year=ano_inicio, month=mes_inicio, day=1)
-        starting_df = df.loc[df["dataInicio"] >= starting_date].copy()
-        starting_df.loc[:, "estagio"] -= starting_date.month - 1
-        starting_df = starting_df.rename(columns={"serie": "cenario"})
         cls.logger.info("DEBUG STARTING STAGE")
+        cls.logger.info(starting_df)
+        starting_df = df.loc[df["dataInicio"] >= starting_date].copy()
+        cls.logger.info(starting_df)
+        starting_df.loc[:, "estagio"] -= starting_date.month - 1
+        cls.logger.info(starting_df)
+        starting_df = starting_df.rename(columns={"serie": "cenario"})
         cls.logger.info(starting_df)
         return starting_df.copy()
 
@@ -1562,11 +1565,7 @@ class OperationSynthetizer:
     @classmethod
     def _postprocess(cls, df: pd.DataFrame) -> pd.DataFrame:
         df = cls._processa_quantis(df, [0.05 * i for i in range(21)])
-        cls.logger.info("DEBUG QUANTIS")
-        cls.logger.info(df)
         df = cls._processa_media(df)
-        cls.logger.info("DEBUG MEDIA")
-        cls.logger.info(df)
         return df
 
     @classmethod
