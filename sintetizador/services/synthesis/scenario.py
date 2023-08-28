@@ -1658,11 +1658,15 @@ class ScenarioSynthetizer:
             if arq_energias is None:
                 if cls.logger is not None:
                     cls.logger.error("Falha na leitura de séries de energia")
-        df_enavaz = (
-            arq_enavaz.series
-            if arq_enavaz.series is not None
-            else pd.DataFrame()
-        )
+                raise RuntimeError()
+        if arq_enavaz is not None:
+            df_enavaz = (
+                arq_enavaz.series
+                if arq_enavaz.series is not None
+                else pd.DataFrame()
+            )
+        else:
+            df_enavaz = pd.DataFrame()
         df_energia = (
             arq_energias.series
             if arq_energias.series is not None
