@@ -1514,13 +1514,9 @@ class OperationSynthetizer:
         mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
         starting_date = datetime(ano_inicio, mes_inicio, 1)
         data_starting_date = df["dataInicio"].min().to_pydatetime()
-        cls.logger.info("DEBUG STARTING STAGE")
-        cls.logger.info(starting_date)
-        cls.logger.info(data_starting_date)
         month_difference = int(
             (starting_date - data_starting_date) / timedelta(days=30)
         )
-        cls.logger.info(month_difference)
         starting_df = df.copy()
         starting_df.loc[:, "estagio"] -= month_difference
         starting_df = starting_df.rename(columns={"serie": "cenario"})
