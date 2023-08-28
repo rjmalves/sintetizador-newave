@@ -1512,10 +1512,8 @@ class OperationSynthetizer:
         dger = cls._get_dger(uow)
         ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
         mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
-        starting_date = pd.Timestamp(
-            f"{ano_inicio}-{str(mes_inicio).zfill(2)}-01"
-        )
-        data_starting_date = df["dataInicio"].min()
+        starting_date = datetime(ano_inicio, mes_inicio, 1)
+        data_starting_date = df["dataInicio"].min().to_pydatetime()
         cls.logger.info("DEBUG STARTING STAGE")
         cls.logger.info(starting_date)
         cls.logger.info(data_starting_date)
