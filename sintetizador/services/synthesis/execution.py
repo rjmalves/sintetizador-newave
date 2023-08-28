@@ -3,6 +3,7 @@ import pandas as pd  # type: ignore
 import pathlib
 import socket
 import logging
+from traceback import print_exc
 
 from sintetizador.services.unitofwork import AbstractUnitOfWork
 from sintetizador.utils.fs import set_directory
@@ -210,4 +211,5 @@ class ExecutionSynthetizer:
                     with uow:
                         uow.export.synthetize_df(df, filename)
         except Exception as e:
+            print_exc()
             cls.logger.error(str(e))
