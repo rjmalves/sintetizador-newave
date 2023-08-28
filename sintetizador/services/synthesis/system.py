@@ -3,6 +3,7 @@ import pandas as pd  # type: ignore
 import numpy as np  # type: ignore
 import logging
 from inewave.config import MESES_DF
+from inewave.newave import Dger, Ree, Confhd, Conft, Sistema
 from inewave.newave.modelos.eolicacadastro import RegistroPEECadastro
 from datetime import datetime
 from dateutil.relativedelta import relativedelta  # type: ignore
@@ -68,12 +69,68 @@ class SystemSynthetizer:
         return data
 
     @classmethod
+    def _get_dger(cls, uow: AbstractUnitOfWork) -> Dger:
+        with uow:
+            dger = uow.files.get_dger()
+            if dger is None:
+                raise RuntimeError(
+                    "Erro no processamento do dger.dat para"
+                    + " síntese do sistema"
+                )
+            return dger
+
+    @classmethod
+    def _get_ree(cls, uow: AbstractUnitOfWork) -> Ree:
+        with uow:
+            ree = uow.files.get_ree()
+            if ree is None:
+                raise RuntimeError(
+                    "Erro no processamento do ree.dat para"
+                    + " síntese do sistema"
+                )
+            return ree
+
+    @classmethod
+    def _get_confhd(cls, uow: AbstractUnitOfWork) -> Confhd:
+        with uow:
+            confhd = uow.files.get_confhd()
+            if confhd is None:
+                raise RuntimeError(
+                    "Erro no processamento do confhd.dat para"
+                    + " síntese do sistema"
+                )
+            return confhd
+
+    @classmethod
+    def _get_conft(cls, uow: AbstractUnitOfWork) -> Conft:
+        with uow:
+            conft = uow.files.get_conft()
+            if conft is None:
+                raise RuntimeError(
+                    "Erro no processamento do conft.dat para"
+                    + " síntese do sistema"
+                )
+            return conft
+
+    @classmethod
+    def _get_sistema(cls, uow: AbstractUnitOfWork) -> Sistema:
+        with uow:
+            sist = uow.files.get_sistema()
+            if sist is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do sistema.dat para"
+                        + " síntese dos cenários"
+                    )
+                raise RuntimeError()
+            return sist
+
+    @classmethod
     def filter_valid_variables(
         cls, variables: List[SystemSynthesis], uow: AbstractUnitOfWork
     ) -> List[SystemSynthesis]:
-        with uow:
-            dger = uow.files.get_dger()
-            ree = uow.files.get_ree()
+        dger = cls._get_dger(uow)
+        ree = cls._get_ree(uow)
 
         rees = cls._validate_data(ree.rees, pd.DataFrame, "REEs")
         geracao_eolica = cls._validate_data(
@@ -81,7 +138,7 @@ class SystemSynthetizer:
         )
 
         valid_variables: List[SystemSynthesis] = []
-        indiv = rees["Mês Fim Individualizado"].isna().sum() == 0
+        indiv = rees["mes_fim_individualizado"].isna().sum() == 0
         eolica = geracao_eolica != 0
         if cls.logger is not None:
             cls.logger.info(
@@ -113,23 +170,22 @@ class SystemSynthetizer:
 
     @classmethod
     def __resolve_EST(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        with uow:
-            dger = uow.files.get_dger()
-            ano_inicial = cls._validate_data(
-                dger.ano_inicio_estudo,
-                int,
-                "dger",
-            )
-            mes_inicial = cls._validate_data(
-                dger.mes_inicio_estudo,
-                int,
-                "dger",
-            )
-            n_anos = cls._validate_data(
-                dger.num_anos_estudo,
-                int,
-                "dger",
-            )
+        dger = cls._get_dger(uow)
+        ano_inicial = cls._validate_data(
+            dger.ano_inicio_estudo,
+            int,
+            "dger",
+        )
+        mes_inicial = cls._validate_data(
+            dger.mes_inicio_estudo,
+            int,
+            "dger",
+        )
+        n_anos = cls._validate_data(
+            dger.num_anos_estudo,
+            int,
+            "dger",
+        )
         datas_iniciais = pd.date_range(
             datetime(year=ano_inicial, month=mes_inicial, day=1),
             datetime(year=ano_inicial + n_anos - 1, month=12, day=1),
@@ -146,35 +202,44 @@ class SystemSynthetizer:
 
     @classmethod
     def __resolve_PAT(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        with uow:
-            dger = uow.files.get_dger()
-            pat = uow.files.get_patamar()
-            num_patamares = cls._validate_data(
-                pat.numero_patamares,
-                int,
-                "patamares",
+        dger = cls._get_dger(uow)
+        if dger is None:
+            raise RuntimeError(
+                "Erro no processamento do dger.dat para"
+                + " síntese do sistema"
             )
+        pat = uow.files.get_patamar()
+        if pat is None:
+            raise RuntimeError(
+                "Erro no processamento do patamar.dat para"
+                + " síntese do sistema"
+            )
+        num_patamares = cls._validate_data(
+            pat.numero_patamares,
+            int,
+            "patamares",
+        )
 
-            duracao_patamares = cls._validate_data(
-                pat.duracao_mensal_patamares,
-                pd.DataFrame,
-                "patamares",
-            )
-            mes_inicio = cls._validate_data(
-                dger.mes_inicio_estudo,
-                int,
-                "dger",
-            )
-            mes_inicio_pre = cls._validate_data(
-                dger.mes_inicio_pre_estudo,
-                int,
-                "dger",
-            )
-            anos_estudo = cls._validate_data(
-                dger.num_anos_estudo,
-                int,
-                "dger",
-            )
+        duracao_patamares = cls._validate_data(
+            pat.duracao_mensal_patamares,
+            pd.DataFrame,
+            "patamares",
+        )
+        mes_inicio = cls._validate_data(
+            dger.mes_inicio_estudo,
+            int,
+            "dger",
+        )
+        mes_inicio_pre = cls._validate_data(
+            dger.mes_inicio_pre_estudo,
+            int,
+            "dger",
+        )
+        anos_estudo = cls._validate_data(
+            dger.num_anos_estudo,
+            int,
+            "dger",
+        )
 
         meses_pre = mes_inicio - mes_inicio_pre
         estagios = (
@@ -207,22 +272,29 @@ class SystemSynthetizer:
 
     @classmethod
     def __resolve_SBM(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        with uow:
-            sistema = cls._validate_data(
-                uow.files.get_sistema().custo_deficit,
-                pd.DataFrame,
-                "submercados",
+        arq_sistema = cls._get_sistema(uow)
+        if arq_sistema is None:
+            raise RuntimeError(
+                "Erro no processamento do sistema.dat para"
+                + " síntese do sistema"
             )
+        sistema = cls._validate_data(
+            arq_sistema.custo_deficit,
+            pd.DataFrame,
+            "submercados",
+        )
         df = sistema[["Num. Subsistema", "Nome"]]
         df = df.rename(columns={"Num. Subsistema": "id", "Nome": "nome"})
         return df
 
     @classmethod
     def __resolve_REE(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        with uow:
-            rees = cls._validate_data(
-                uow.files.get_ree().rees, pd.DataFrame, "REEs"
+        arq_ree = cls._get_ree(uow)
+        if arq_ree is None:
+            raise RuntimeError(
+                "Erro no processamento do ree.dat para" + " síntese do sistema"
             )
+        rees = cls._validate_data(arq_ree.rees, pd.DataFrame, "REEs")
         df = rees[["Número", "Nome", "Submercado"]]
         df = df.rename(
             columns={
@@ -235,10 +307,8 @@ class SystemSynthetizer:
 
     @classmethod
     def __resolve_UTE(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        with uow:
-            conft = cls._validate_data(
-                uow.files.get_conft().usinas, pd.DataFrame, "UTEs"
-            )
+        arq_conft = cls._get_conft(uow)
+        conft = cls._validate_data(arq_conft.usinas, pd.DataFrame, "UTEs")
 
         df = conft[["Número", "Nome", "Subsistema"]]
         df = df.rename(
@@ -252,10 +322,13 @@ class SystemSynthetizer:
 
     @classmethod
     def __resolve_UHE(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        with uow:
-            confhd = cls._validate_data(
-                uow.files.get_confhd().usinas, pd.DataFrame, "UHEs"
+        arq_confhd = uow.files.get_confhd()
+        if arq_confhd is None:
+            raise RuntimeError(
+                "Erro no processamento do confhd.dat para"
+                + " síntese do sistema"
             )
+        confhd = cls._validate_data(arq_confhd.usinas, pd.DataFrame, "UHEs")
 
         df = confhd[["Número", "Nome", "Posto", "REE", "Volume Inicial"]]
         df = df.rename(
@@ -271,8 +344,12 @@ class SystemSynthetizer:
 
     @classmethod
     def __resolve_PEE(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        with uow:
-            eolica = uow.files.get_eolicacadastro()
+        eolica = uow.files.get_eolicacadastro()
+        if eolica is None:
+            raise RuntimeError(
+                "Erro no processamento do eolica-cadastro.csv para"
+                + " síntese do sistema"
+            )
 
         pees = eolica.pee_cad()
         if isinstance(pees, list):

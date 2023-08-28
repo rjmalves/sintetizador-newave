@@ -7,4 +7,4 @@ padronização dos arquivos de saída do NEWAVE em um
 modelo unificado de dados.
 """
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"

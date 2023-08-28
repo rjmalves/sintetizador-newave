@@ -2,10 +2,11 @@ from typing import Callable, Dict, List, Tuple, Optional, TypeVar, Type
 import pandas as pd  # type: ignore
 import numpy as np  # type: ignore
 import logging
+from traceback import print_exc
 from multiprocessing import Pool
 from datetime import datetime
 from dateutil.relativedelta import relativedelta  # type: ignore
-from inewave.config import MESES_DF
+from inewave.newave import Dger, Ree, Confhd, Conft, Hidr, Vazoes, Sistema, Pmo
 from sintetizador.services.unitofwork import AbstractUnitOfWork
 from sintetizador.utils.log import Log
 from sintetizador.model.settings import Settings
@@ -117,16 +118,119 @@ class ScenarioSynthetizer:
         return valid
 
     @classmethod
+    def _get_dger(cls, uow: AbstractUnitOfWork) -> Dger:
+        with uow:
+            dger = uow.files.get_dger()
+            if dger is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do dger.dat para"
+                        + " síntese dos cenários"
+                    )
+                raise RuntimeError()
+            return dger
+
+    @classmethod
+    def _get_ree(cls, uow: AbstractUnitOfWork) -> Ree:
+        with uow:
+            ree = uow.files.get_ree()
+            if ree is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do ree.dat para"
+                        + " síntese dos cenários"
+                    )
+                raise RuntimeError()
+            return ree
+
+    @classmethod
+    def _get_confhd(cls, uow: AbstractUnitOfWork) -> Confhd:
+        with uow:
+            confhd = uow.files.get_confhd()
+            if confhd is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do confhd.dat para"
+                        + " síntese dos cenários"
+                    )
+                raise RuntimeError()
+            return confhd
+
+    @classmethod
+    def _get_conft(cls, uow: AbstractUnitOfWork) -> Conft:
+        with uow:
+            conft = uow.files.get_conft()
+            if conft is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do conft.dat para"
+                        + " síntese dos cenários"
+                    )
+                raise RuntimeError()
+            return conft
+
+    @classmethod
+    def _get_hidr(cls, uow: AbstractUnitOfWork) -> Hidr:
+        with uow:
+            hidr = uow.files.get_hidr()
+            if hidr is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do hidr.dat para"
+                        + " síntese dos cenários"
+                    )
+                raise RuntimeError()
+            return hidr
+
+    @classmethod
+    def _get_sistema(cls, uow: AbstractUnitOfWork) -> Sistema:
+        with uow:
+            sist = uow.files.get_sistema()
+            if sist is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do sistema.dat para"
+                        + " síntese dos cenários"
+                    )
+                raise RuntimeError()
+            return sist
+
+    @classmethod
+    def _get_vazoes(cls, uow: AbstractUnitOfWork) -> Vazoes:
+        with uow:
+            vaz = uow.files.get_vazoes()
+            if vaz is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do vazoes.dat para"
+                        + " síntese dos cenários"
+                    )
+                raise RuntimeError()
+            return vaz
+
+    @classmethod
+    def _get_pmo(cls, uow: AbstractUnitOfWork) -> Pmo:
+        with uow:
+            vaz = uow.files.get_pmo()
+            if vaz is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do pmo.dat para"
+                        + " síntese dos cenários"
+                    )
+                raise RuntimeError()
+            return vaz
+
+    @classmethod
     def filter_valid_variables(
         cls, variables: List[ScenarioSynthesis], uow: AbstractUnitOfWork
     ) -> List[ScenarioSynthesis]:
-        with uow:
-            dger = uow.files.get_dger()
-            ree = uow.files.get_ree()
+        dger = cls._get_dger(uow)
+        ree = cls._get_ree(uow)
         valid_variables: List[ScenarioSynthesis] = []
         sf_indiv = dger.agregacao_simulacao_final == 1
         rees = cls._validate_data(ree.rees, pd.DataFrame, "REEs")
-        politica_indiv = rees["Mês Fim Individualizado"].isna().sum() == 0
+        politica_indiv = rees["mes_fim_individualizado"].isna().sum() == 0
         indiv = sf_indiv or politica_indiv
         eolica = dger.considera_geracao_eolica != 0
         if cls.logger is not None:
@@ -155,25 +259,45 @@ class ScenarioSynthetizer:
         :return: A tabela como um DataFrame
         :rtype: pd.DataFrame | None
         """
-        uhes = cls._validate_data(
-            uow.files.get_confhd().usinas, pd.DataFrame, "UHEs"
-        )
-        hidr = cls._validate_data(
-            uow.files.get_hidr().cadastro, pd.DataFrame, "hidr"
-        )
-        vazoes = cls._validate_data(
-            uow.files.get_vazoes().vazoes, pd.DataFrame, "vazões"
-        )
-        posto = uhes.loc[uhes["Número"] == uhe, "Posto"].tolist()[0]
+        arq_confhd = uow.files.get_confhd()
+        if arq_confhd is None:
+            if cls.logger is not None:
+                cls.logger.error(
+                    "Erro no processamento do confhd.dat para"
+                    + " síntese dos cenários"
+                )
+            raise RuntimeError()
+        uhes = cls._validate_data(arq_confhd.usinas, pd.DataFrame, "UHEs")
+        arq_hidr = uow.files.get_hidr()
+        if arq_hidr is None:
+            if cls.logger is not None:
+                cls.logger.error(
+                    "Erro no processamento do hidr.dat para"
+                    + " síntese dos cenários"
+                )
+            raise RuntimeError()
+        hidr = cls._validate_data(arq_hidr.cadastro, pd.DataFrame, "hidr")
+        arq_vazoes = uow.files.get_vazoes()
+        if arq_vazoes is None:
+            if cls.logger is not None:
+                cls.logger.error(
+                    "Erro no processamento do vazoes.dat para"
+                    + " síntese dos cenários"
+                )
+            raise RuntimeError()
+        vazoes = cls._validate_data(arq_vazoes.vazoes, pd.DataFrame, "vazões")
+        posto = uhes.loc[uhes["codigo_usina"] == uhe, "posto"].tolist()[0]
         vazao_natural = vazoes[posto].to_numpy()
         posto_nulo = posto == 300
         if not posto_nulo:
-            uhes_montante = uhes.loc[uhes["Jusante"] == uhe, "Número"].tolist()
+            uhes_montante = uhes.loc[
+                uhes["codigo_usina_jusante"] == uhe, "codigo_usina"
+            ].tolist()
             uhes_montante = [u for u in uhes_montante if u != 0]
             postos_montante = list(
                 set(
                     [
-                        hidr.at[int(uhe_montante), "Posto"]
+                        hidr.at[int(uhe_montante), "posto"]
                         for uhe_montante in uhes_montante
                     ]
                 )
@@ -183,10 +307,12 @@ class ScenarioSynthetizer:
                     vazao_natural - vazoes[posto_montante].to_numpy()
                 )
         ano_inicio_historico = int(
-            uhes.loc[uhes["Número"] == uhe, "Início do Histórico"].iloc[0]
+            uhes.loc[uhes["codigo_usina"] == uhe, "ano_inicio_historico"].iloc[
+                0
+            ]
         )
         ano_fim_historico = int(
-            uhes.loc[uhes["Número"] == uhe, "Fim do Histórico"].iloc[0]
+            uhes.loc[uhes["codigo_usina"] == uhe, "ano_fim_historico"].iloc[0]
         )
         datas = pd.date_range(
             datetime(year=ano_inicio_historico, month=1, day=1),
@@ -244,18 +370,16 @@ class ScenarioSynthetizer:
         if cls.logger is not None:
             cls.logger.info("Calculando séries de MLT para QINC - UHE")
         uhes = cls._validate_data(
-            uow.files.get_confhd().usinas, pd.DataFrame, "UHEs"
+            cls._get_confhd(uow).usinas, pd.DataFrame, "UHEs"
         )
+        rees = cls._validate_data(cls._get_ree(uow).rees, pd.DataFrame, "REEs")
         hidr = cls._validate_data(
-            uow.files.get_hidr().cadastro, pd.DataFrame, "hidr"
-        )
-        rees = cls._validate_data(
-            uow.files.get_ree().rees, pd.DataFrame, "REEs"
+            cls._get_hidr(uow).cadastro, pd.DataFrame, "hidr"
         )
         sistema = cls._validate_data(
-            uow.files.get_sistema().custo_deficit, pd.DataFrame, "submercados"
+            cls._get_sistema(uow).custo_deficit, pd.DataFrame, "vazões"
         )
-        dger = uow.files.get_dger()
+        dger = cls._get_dger(uow)
         mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
         ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
         anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
@@ -276,46 +400,51 @@ class ScenarioSynthetizer:
             }
         )
         df_completo_mlt = pd.DataFrame()
-        for uhe in uhes["Número"]:
-            vazao = cls._gera_serie_incremental_uhe(uhe, uow)
-            vazao_mlt = cls._mlt(vazao)
-            df_mlt_uhe = df_mlt.merge(
-                pd.DataFrame(
-                    data={
-                        "codigo_usina": [uhe] * len(vazao_mlt),
-                        "nome_usina": [hidr.at[uhe, "Nome"]] * len(vazao_mlt),
-                        "mes": vazao_mlt["mes"],
-                        "mlt": vazao_mlt["vazao"].to_numpy(),
-                    }
-                ),
-                on="mes",
-            )
-            df_completo_mlt = pd.concat(
-                [df_completo_mlt, df_mlt_uhe], ignore_index=True
-            )
+        # Modificação por desempenho:
+        # Abre o contexto do UoW antes de iterar para não repetir leituras
+        # de arquivos de maneira desnecessária
+        with uow:
+            for uhe in uhes["codigo_usina"]:
+                vazao = cls._gera_serie_incremental_uhe(uhe, uow)
+                vazao_mlt = cls._mlt(vazao)
+                df_mlt_uhe = df_mlt.merge(
+                    pd.DataFrame(
+                        data={
+                            "codigo_usina": [uhe] * len(vazao_mlt),
+                            "nome_usina": [hidr.at[uhe, "nome_usina"]]
+                            * len(vazao_mlt),
+                            "mes": vazao_mlt["mes"],
+                            "mlt": vazao_mlt["vazao"].to_numpy(),
+                        }
+                    ),
+                    on="mes",
+                )
+                df_completo_mlt = pd.concat(
+                    [df_completo_mlt, df_mlt_uhe], ignore_index=True
+                )
         # Adiciona dados de ree e submercado à série
         df_completo_mlt["codigo_ree"] = df_completo_mlt.apply(
             lambda linha: uhes.loc[
-                uhes["Número"] == linha["codigo_usina"], "REE"
+                uhes["codigo_usina"] == linha["codigo_usina"], "ree"
             ].tolist()[0],
             axis=1,
         )
         df_completo_mlt["nome_ree"] = df_completo_mlt.apply(
             lambda linha: rees.loc[
-                rees["Número"] == linha["codigo_ree"], "Nome"
+                rees["codigo"] == linha["codigo_ree"], "nome"
             ].tolist()[0],
             axis=1,
         )
         df_completo_mlt["codigo_submercado"] = df_completo_mlt.apply(
             lambda linha: rees.loc[
-                rees["Número"] == linha["codigo_ree"], "Submercado"
+                rees["codigo"] == linha["codigo_ree"], "submercado"
             ].tolist()[0],
             axis=1,
         )
         df_completo_mlt["nome_submercado"] = df_completo_mlt.apply(
             lambda linha: sistema.loc[
-                sistema["Num. Subsistema"] == linha["codigo_submercado"],
-                "Nome",
+                sistema["codigo_submercado"] == linha["codigo_submercado"],
+                "nome_submercado",
             ].tolist()[0],
             axis=1,
         )
@@ -344,29 +473,28 @@ class ScenarioSynthetizer:
             cls.logger.info("Calculando séries de MLT para ENAA - REE")
         # Monta um df com estagio | configuracao | mes
         configuracoes = cls._validate_data(
-            uow.files.get_pmo().configuracoes_qualquer_modificacao,
+            cls._get_pmo(uow).configuracoes_qualquer_modificacao,
             pd.DataFrame,
             "configurações",
         )
-        dger = uow.files.get_dger()
+        dger = cls._get_dger(uow)
         mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
         ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
         anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
         sistema = cls._validate_data(
-            uow.files.get_sistema().custo_deficit, pd.DataFrame, "submercados"
+            cls._get_sistema(uow).custo_deficit, pd.DataFrame, "submercados"
         )
-        rees = cls._validate_data(
-            uow.files.get_ree().rees, pd.DataFrame, "REEs"
-        )
-        arq_engnat = uow.files.get_engnat()
-        if arq_engnat is None:
-            if cls.logger is not None:
-                cls.logger.error("Falha na leitura de séries de energia")
-            raise RuntimeError()
+        rees = cls._validate_data(cls._get_ree(uow).rees, pd.DataFrame, "REEs")
+        with uow:
+            arq_engnat = uow.files.get_engnat()
+            if arq_engnat is None:
+                if cls.logger is not None:
+                    cls.logger.error("Falha na leitura de séries de energia")
+                raise RuntimeError()
         engnat = cls._validate_data(
             arq_engnat.series, pd.DataFrame, "séries de energia"
         )
-        cfgs = configuracoes[MESES_DF].to_numpy().flatten()[mes_inicio - 1 :]
+        cfgs = configuracoes["valor"].to_numpy().flatten()[mes_inicio - 1 :]
         datas = pd.date_range(
             datetime(year=ano_inicio - 1, month=1, day=1),
             datetime(year=ano_inicio + anos_estudo - 1, month=12, day=1),
@@ -398,72 +526,30 @@ class ScenarioSynthetizer:
                 mlt_ree[idx_ree] = mlt
             df_mlt_ree = df_mlt.copy()
             df_mlt_ree["mlt"] = mlt_ree
-            df_mlt_ree["codigo_ree"] = linha["Número"]
-            df_mlt_ree["nome_ree"] = linha["Nome"]
-            df_mlt_ree["codigo_submercado"] = linha["Submercado"]
+            df_mlt_ree["codigo_ree"] = linha["codigo"]
+            df_mlt_ree["nome_ree"] = linha["nome"]
+            df_mlt_ree["codigo_submercado"] = linha["submercado"]
             df_mlt_ree["nome_submercado"] = sistema.loc[
-                sistema["Num. Subsistema"] == linha["Submercado"], "Nome"
+                sistema["codigo_submercado"] == linha["submercado"],
+                "nome_submercado",
             ].iloc[0]
             dfs_mlt_rees = pd.concat(
                 [dfs_mlt_rees, df_mlt_ree], ignore_index=True
             )
         return dfs_mlt_rees
 
-        # prodts = pmo.produtibilidades_equivalentes
-        # prodts = prodts.loc[prodts["configuracao"] == 1]
-        # col_reserv = "produtibilidade_acumulada_calculo_altura_65"
-        # col_fio = "produtibilidade_equivalente_volmin_volmax"
-        # reservatorios = (
-        #     prodts[["nome_usina", col_reserv]].dropna()["nome_usina"].tolist()
-        # )
-        # mlt_uhe.loc[
-        #     mlt_uhe["nome_usina"].isin(reservatorios), "prodt"
-        # ] = mlt_uhe.loc[mlt_uhe["nome_usina"].isin(reservatorios)].apply(
-        #     lambda linha: prodts.loc[
-        #         prodts["nome_usina"] == linha["nome_usina"], col_reserv
-        #     ].tolist()[0],
-        #     axis=1,
-        # )
-        # mlt_uhe.loc[
-        #     ~mlt_uhe["nome_usina"].isin(reservatorios), "prodt"
-        # ] = mlt_uhe.loc[~mlt_uhe["nome_usina"].isin(reservatorios)].apply(
-        #     lambda linha: prodts.loc[
-        #         prodts["nome_usina"] == linha["nome_usina"], col_fio
-        #     ].tolist()[0],
-        #     axis=1,
-        # )
-        # Limita as afluências das fio d'água ao engolimento
-        # TODO - testar removendo
-        # engolimentos = cls._engolimento_maximo_uhes(uow)
-        # mlt_uhe.loc[
-        #     ~mlt_uhe["nome_usina"].isin(reservatorios), "vazao_max"
-        # ] = mlt_uhe.loc[~mlt_uhe["nome_usina"].isin(reservatorios)].apply(
-        #     lambda linha: engolimentos[linha["codigo_usina"]],
-        #     axis=1,
-        # )
-        # mlt_uhe.loc[
-        #     ~mlt_uhe["nome_usina"].isin(reservatorios), "vazao"
-        # ] = mlt_uhe.loc[
-        #     ~mlt_uhe["nome_usina"].isin(reservatorios), ["vazao", "vazao_max"]
-        # ].min(
-        #     axis=1
-        # )
-        # Multiplica todas pelas produtibilidades
-        # mlt_uhe["vazao"] = mlt_uhe["vazao"] * mlt_uhe["prodt"]
-        # return mlt_uhe.drop(columns=["prodt"])
-
     @classmethod
     def _engolimento_maximo_uhes(
         cls, uow: AbstractUnitOfWork
     ) -> Dict[int, float]:
-        hidr = uow.files.get_hidr().cadastro
+        hidr = cls._get_hidr(uow).cadastro
         engolimentos: Dict[int, float] = {}
         for idx, linha in hidr.iterrows():
             engol_max = 0.0
-            n_conj = linha["Num. Conjuntos Máquinas"]
+            n_conj = linha["numero_conjuntos_maquinas"]
             for i in range(1, n_conj + 1):
-                n_maq = linha[f"Num. Máquinas Conjunto {i}"]
-                qef_maq = linha[f"QEf Conjunto {i}"]
+                n_maq = linha[f"numero_maquinas_conjunto_{i}"]
+                qef_maq = linha[f"vazao_nominal_conjunto_{i}"]
                 engol_max += n_maq * qef_maq
             engolimentos[idx] = engol_max
         return engolimentos
@@ -521,7 +607,7 @@ class ScenarioSynthetizer:
         if cls.logger is not None:
             cls.logger.info("Calculando séries de MLT para QINC - REE")
         return cls._agrega_serie_mlt_uhe(
-            Variable.VAZAO_INCREMENTAL, "nome_ree", uow
+            Variable.VAZAO_INCREMENTAL, "nome", uow
         )
 
     @classmethod
@@ -622,34 +708,37 @@ class ScenarioSynthetizer:
         estagios = energiaf_dados["estagio"].unique()
         num_estagios = len(estagios)
         # Obtem os dados de cada usina
-        dger = uow.files.get_dger()
+        dger = cls._get_dger(uow)
         ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
         mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
         anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
         sistema = cls._validate_data(
-            uow.files.get_sistema().custo_deficit, pd.DataFrame, "submercados"
+            cls._get_sistema(uow).custo_deficit, pd.DataFrame, "submercados"
         )
         dados_rees = cls._validate_data(
-            uow.files.get_ree().rees, pd.DataFrame, "REEs"
+            cls._get_ree(uow).rees, pd.DataFrame, "REEs"
         )
-        dados_rees["Nome Submercado"] = dados_rees.apply(
+        dados_rees["nome_submercado"] = dados_rees.apply(
             lambda linha: sistema.loc[
-                sistema["Num. Subsistema"] == linha["Submercado"], "Nome"
+                sistema["codigo_submercado"] == linha["submercado"],
+                "nome_submercado",
             ].tolist()[0],
             axis=1,
         )
         # Gera os vetores da dimensão do DF extraído do arquivo vazaof
         codigos_ordenados = cls._formata_dados_series(
-            dados_rees["Número"].to_numpy(), num_series, num_estagios
+            dados_rees["codigo"].to_numpy(), num_series, num_estagios
         )
         nomes_ordenados = cls._formata_dados_series(
-            dados_rees["Nome"].to_numpy(), num_series, num_estagios
+            dados_rees["nome"].to_numpy(), num_series, num_estagios
         )
         submercados_ordenados = cls._formata_dados_series(
-            dados_rees["Submercado"].to_numpy(), num_series, num_estagios
+            dados_rees["submercado"].to_numpy(),
+            num_series,
+            num_estagios,
         )
         nomes_submercados_ordenados = cls._formata_dados_series(
-            dados_rees["Nome Submercado"].to_numpy(), num_series, num_estagios
+            dados_rees["nome_submercado"].to_numpy(), num_series, num_estagios
         )
         datas = pd.date_range(
             datetime(
@@ -723,41 +812,39 @@ class ScenarioSynthetizer:
         estagios = vazaof_dados["estagio"].unique()
         num_estagios = len(estagios)
         # Obtem os dados de cada usina
-        dger = uow.files.get_dger()
+        dger = cls._get_dger(uow)
         confhd = cls._validate_data(
-            uow.files.get_confhd().usinas, pd.DataFrame, "UHEs"
+            cls._get_confhd(uow).usinas, pd.DataFrame, "UHEs"
         )
         sistema = cls._validate_data(
-            uow.files.get_sistema().custo_deficit, pd.DataFrame, "submercados"
+            cls._get_sistema(uow).custo_deficit, pd.DataFrame, "submercados"
         )
-        rees = cls._validate_data(
-            uow.files.get_ree().rees, pd.DataFrame, "REEs"
-        )
+        rees = cls._validate_data(cls._get_ree(uow).rees, pd.DataFrame, "REEs")
         mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
         ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
 
         dados_uhes = pd.DataFrame(uhes).apply(
             lambda linha: confhd.loc[
-                linha[0] - 1, ["Número", "Nome", "REE"]
+                linha[0] - 1, ["codigo_usina", "nome_usina", "ree"]
             ].tolist(),
             axis=1,
             result_type="expand",
         )
         dados_uhes[3] = dados_uhes.apply(
             lambda linha: rees.loc[
-                rees["Número"] == linha[2], "Nome"
+                rees["codigo"] == linha[2], "nome"
             ].tolist()[0],
             axis=1,
         )
         dados_uhes[4] = dados_uhes.apply(
             lambda linha: rees.loc[
-                rees["Número"] == linha[2], "Submercado"
+                rees["codigo"] == linha[2], "submercado"
             ].tolist()[0],
             axis=1,
         )
         dados_uhes[5] = dados_uhes.apply(
             lambda linha: sistema.loc[
-                sistema["Num. Subsistema"] == linha[4], "Nome"
+                sistema["codigo_submercado"] == linha[4], "nome_submercado"
             ].tolist()[0],
             axis=1,
         )
@@ -858,41 +945,42 @@ class ScenarioSynthetizer:
         aberturas = energiab_dados["abertura"].unique()
         num_aberturas = len(aberturas)
         # Obtem os dados de cada usina
-        dger = uow.files.get_dger()
+        dger = cls._get_dger(uow)
         sistema = cls._validate_data(
-            uow.files.get_sistema().custo_deficit, pd.DataFrame, "submercados"
+            cls._get_sistema(uow).custo_deficit, pd.DataFrame, "submercados"
         )
         dados_rees = cls._validate_data(
-            uow.files.get_ree().rees, pd.DataFrame, "REEs"
+            cls._get_ree(uow).rees, pd.DataFrame, "REEs"
         )
         mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
         ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
         anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
 
-        dados_rees["Nome Submercado"] = dados_rees.apply(
+        dados_rees["nome_submercado"] = dados_rees.apply(
             lambda linha: sistema.loc[
-                sistema["Num. Subsistema"] == linha["Submercado"], "Nome"
+                sistema["codigo_submercado"] == linha["submercado"],
+                "nome_submercado",
             ].tolist()[0],
             axis=1,
         )
         # Gera os vetores da dimensão do DF extraído do arquivo vazaob
         codigos_ordenados = cls._formata_dados_series(
-            dados_rees["Número"].to_numpy(),
+            dados_rees["codigo"].to_numpy(),
             num_series * num_aberturas,
             num_estagios,
         )
         nomes_ordenados = cls._formata_dados_series(
-            dados_rees["Nome"].to_numpy(),
+            dados_rees["nome"].to_numpy(),
             num_series * num_aberturas,
             num_estagios,
         )
         codigos_submercados_ordenados = cls._formata_dados_series(
-            dados_rees["Submercado"].to_numpy(),
+            dados_rees["submercado"].to_numpy(),
             num_series * num_aberturas,
             num_estagios,
         )
         nomes_submercados_ordenados = cls._formata_dados_series(
-            dados_rees["Nome Submercado"].to_numpy(),
+            dados_rees["nome_submercado"].to_numpy(),
             num_series * num_aberturas,
             num_estagios,
         )
@@ -974,41 +1062,39 @@ class ScenarioSynthetizer:
         aberturas = vazaob_dados["abertura"].unique()
         num_aberturas = len(aberturas)
         # Obtem os dados de cada usina
-        dger = uow.files.get_dger()
+        dger = cls._get_dger(uow)
         confhd = cls._validate_data(
-            uow.files.get_confhd().usinas, pd.DataFrame, "UHEs"
+            cls._get_confhd(uow).usinas, pd.DataFrame, "UHEs"
         )
         sistema = cls._validate_data(
-            uow.files.get_sistema().custo_deficit, pd.DataFrame, "submercados"
+            cls._get_sistema(uow).custo_deficit, pd.DataFrame, "submercados"
         )
-        rees = cls._validate_data(
-            uow.files.get_ree().rees, pd.DataFrame, "REEs"
-        )
+        rees = cls._validate_data(cls._get_ree(uow).rees, pd.DataFrame, "REEs")
         mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
         ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
 
         dados_uhes = pd.DataFrame(uhes).apply(
             lambda linha: confhd.loc[
-                linha[0] - 1, ["Número", "Nome", "REE"]
+                linha[0] - 1, ["codigo_usina", "nome_usina", "ree"]
             ].tolist(),
             axis=1,
             result_type="expand",
         )
         dados_uhes[3] = dados_uhes.apply(
             lambda linha: rees.loc[
-                rees["Número"] == linha[2], "Nome"
+                rees["codigo"] == linha[2], "nome"
             ].tolist()[0],
             axis=1,
         )
         dados_uhes[4] = dados_uhes.apply(
             lambda linha: rees.loc[
-                rees["Número"] == linha[2], "Submercado"
+                rees["codigo"] == linha[2], "submercado"
             ].tolist()[0],
             axis=1,
         )
         dados_uhes[5] = dados_uhes.apply(
             lambda linha: sistema.loc[
-                sistema["Num. Subsistema"] == linha[4], "Nome"
+                sistema["codigo_submercado"] == linha[4], "nome_submercado"
             ].tolist()[0],
             axis=1,
         )
@@ -1106,35 +1192,38 @@ class ScenarioSynthetizer:
         estagios = energias_dados["estagio"].unique()
         num_estagios = len(estagios)
         # Obtem os dados de cada usina
-        dger = uow.files.get_dger()
+        dger = cls._get_dger(uow)
         sistema = cls._validate_data(
-            uow.files.get_sistema().custo_deficit, pd.DataFrame, "submercados"
+            cls._get_sistema(uow).custo_deficit, pd.DataFrame, "submercados"
         )
         dados_rees = cls._validate_data(
-            uow.files.get_ree().rees, pd.DataFrame, "REEs"
+            cls._get_ree(uow).rees, pd.DataFrame, "REEs"
         )
         mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
         ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
         anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
 
-        dados_rees["Nome Submercado"] = dados_rees.apply(
+        dados_rees["nome_submercado"] = dados_rees.apply(
             lambda linha: sistema.loc[
-                sistema["Num. Subsistema"] == linha["Submercado"], "Nome"
+                sistema["codigo_submercado"] == linha["submercado"],
+                "nome_submercado",
             ].tolist()[0],
             axis=1,
         )
         # Gera os vetores da dimensão do DF extraído do arquivo vazaof
         codigos_ordenados = cls._formata_dados_series(
-            dados_rees["Número"].to_numpy(), num_series, num_estagios
+            dados_rees["codigo"].to_numpy(), num_series, num_estagios
         )
         nomes_ordenados = cls._formata_dados_series(
-            dados_rees["Nome"].to_numpy(), num_series, num_estagios
+            dados_rees["nome"].to_numpy(), num_series, num_estagios
         )
         submercados_ordenados = cls._formata_dados_series(
-            dados_rees["Submercado"].to_numpy(), num_series, num_estagios
+            dados_rees["submercado"].to_numpy(),
+            num_series,
+            num_estagios,
         )
         nomes_submercados_ordenados = cls._formata_dados_series(
-            dados_rees["Nome Submercado"].to_numpy(), num_series, num_estagios
+            dados_rees["nome_submercado"].to_numpy(), num_series, num_estagios
         )
         datas = pd.date_range(
             datetime(
@@ -1206,41 +1295,39 @@ class ScenarioSynthetizer:
         estagios = vazaos_dados["estagio"].unique()
         num_estagios = len(estagios)
         # Obtem os dados de cada usina
-        dger = uow.files.get_dger()
+        dger = cls._get_dger(uow)
         confhd = cls._validate_data(
-            uow.files.get_confhd().usinas, pd.DataFrame, "UHEs"
+            cls._get_confhd(uow).usinas, pd.DataFrame, "UHEs"
         )
         sistema = cls._validate_data(
-            uow.files.get_sistema().custo_deficit, pd.DataFrame, "submercados"
+            cls._get_sistema(uow).custo_deficit, pd.DataFrame, "submercados"
         )
-        rees = cls._validate_data(
-            uow.files.get_ree().rees, pd.DataFrame, "REEs"
-        )
+        rees = cls._validate_data(cls._get_ree(uow).rees, pd.DataFrame, "REEs")
         mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
         ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
 
         dados_uhes = pd.DataFrame(uhes).apply(
             lambda linha: confhd.loc[
-                linha[0] - 1, ["Número", "Nome", "REE"]
+                linha[0] - 1, ["codigo_usina", "nome_usina", "ree"]
             ].tolist(),
             axis=1,
             result_type="expand",
         )
         dados_uhes[3] = dados_uhes.apply(
             lambda linha: rees.loc[
-                rees["Número"] == linha[2], "Nome"
+                rees["codigo"] == linha[2], "nome"
             ].tolist()[0],
             axis=1,
         )
         dados_uhes[4] = dados_uhes.apply(
             lambda linha: rees.loc[
-                rees["Número"] == linha[2], "Submercado"
+                rees["codigo"] == linha[2], "submercado"
             ].tolist()[0],
             axis=1,
         )
         dados_uhes[5] = dados_uhes.apply(
             lambda linha: sistema.loc[
-                sistema["Num. Subsistema"] == linha[4], "Nome"
+                sistema["codigo_submercado"] == linha[4], "nome_submercado"
             ].tolist()[0],
             axis=1,
         )
@@ -1316,50 +1403,56 @@ class ScenarioSynthetizer:
             uow._queue, Variable.ENA_ABSOLUTA.value, it
         )
 
+        logger.info(f"Obtendo energias forward da it. {it}")
         with uow:
-            logger.info(f"Obtendo energias forward da it. {it}")
             arq_enavaz = uow.files.get_enavazf(it)
-            arq_energiaf = uow.files.get_energiaf(it)
             if arq_enavaz is None:
-                df_enavaz = pd.DataFrame()
-            else:
-                df_enavaz = (
-                    arq_enavaz.series
-                    if arq_enavaz.series is not None
-                    else pd.DataFrame()
-                )
+                if cls.logger is not None:
+                    cls.logger.error("Falha na leitura de séries de energia")
+            arq_energiaf = uow.files.get_energiaf(it)
             if arq_energiaf is None:
-                df_energia = pd.DataFrame()
-            else:
-                df_energia = (
-                    arq_energiaf.series
-                    if arq_energiaf.series is not None
-                    else pd.DataFrame()
-                )
-            if not df_enavaz.empty and not df_energia.empty:
+                if cls.logger is not None:
+                    cls.logger.error("Falha na leitura de séries de energia")
+        if arq_enavaz is None:
+            df_enavaz = pd.DataFrame()
+        else:
+            df_enavaz = (
+                arq_enavaz.series
+                if arq_enavaz.series is not None
+                else pd.DataFrame()
+            )
+        if arq_energiaf is None:
+            df_energia = pd.DataFrame()
+        else:
+            df_energia = (
+                arq_energiaf.series
+                if arq_energiaf.series is not None
+                else pd.DataFrame()
+            )
+        if not df_enavaz.empty and not df_energia.empty:
+            with uow:
                 n_indiv = uow.files._numero_estagios_individualizados()
-                df_ena = pd.concat(
-                    [
-                        df_enavaz.loc[df_enavaz["estagio"] <= n_indiv],
-                        df_energia.loc[df_energia["estagio"] > n_indiv],
-                    ],
-                    ignore_index=True,
-                )
-            else:
-                df_ena = df_energia
-            if not df_ena.empty:
-                ena_it = cls._adiciona_dados_rees_forward(uow, df_ena)
-                ena_it["iteracao"] = it
-                return ena_it
+            df_ena = pd.concat(
+                [
+                    df_enavaz.loc[df_enavaz["estagio"] <= n_indiv],
+                    df_energia.loc[df_energia["estagio"] > n_indiv],
+                ],
+                ignore_index=True,
+            )
+        else:
+            df_ena = df_energia
+        if not df_ena.empty:
+            ena_it = cls._adiciona_dados_rees_forward(uow, df_ena)
+            ena_it["iteracao"] = it
+            return ena_it
         return None
 
     @classmethod
     def _resolve_enaa_forward(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        with uow:
-            convergencia = cls._validate_data(
-                uow.files.get_pmo().convergencia, pd.DataFrame, "convergência"
-            )
-            n_iters = convergencia["Iteração"].max()
+        convergencia = cls._validate_data(
+            cls._get_pmo(uow).convergencia, pd.DataFrame, "convergência"
+        )
+        n_iters = convergencia["iteracao"].max()
         df_completo = pd.DataFrame()
         n_procs = int(Settings().processors)
         with Pool(processes=n_procs) as pool:
@@ -1386,26 +1479,29 @@ class ScenarioSynthetizer:
         logger = Log.configure_process_logger(
             uow.queue, Variable.VAZAO_INCREMENTAL.value, it
         )
+
+        logger.info(f"Obtendo vazões forward da it. {it}")
         with uow:
-            logger.info(f"Obtendo vazões forward da it. {it}")
             arq = uow.files.get_vazaof(it)
-            vaz_it = (
-                cls._adiciona_dados_uhes_forward(uow, arq.series)
-                if arq is not None
-                else pd.DataFrame()
-            )
-            if not vaz_it.empty:
-                vaz_it["iteracao"] = it
-                return vaz_it
-            return None
+            if arq is None:
+                if cls.logger is not None:
+                    cls.logger.error("Falha na leitura de séries de vazão")
+        vaz_it = (
+            cls._adiciona_dados_uhes_forward(uow, arq.series)
+            if arq is not None
+            else pd.DataFrame()
+        )
+        if not vaz_it.empty:
+            vaz_it["iteracao"] = it
+            return vaz_it
+        return None
 
     @classmethod
     def _resolve_qinc_forward(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        with uow:
-            convergencia = cls._validate_data(
-                uow.files.get_pmo().convergencia, pd.DataFrame, "convergência"
-            )
-            n_iters = convergencia["Iteração"].max()
+        convergencia = cls._validate_data(
+            cls._get_pmo(uow).convergencia, pd.DataFrame, "convergência"
+        )
+        n_iters = convergencia["iteracao"].max()
         df_completo = pd.DataFrame()
         n_procs = int(Settings().processors)
         with Pool(processes=n_procs) as pool:
@@ -1432,8 +1528,9 @@ class ScenarioSynthetizer:
         logger = Log.configure_process_logger(
             uow._queue, Variable.ENA_ABSOLUTA.value, it
         )
+
+        logger.info(f"Obtendo energias backward da it. {it}")
         with uow:
-            logger.info(f"Obtendo energias backward da it. {it}")
             arq_enavazb = uow.files.get_enavazb(it)
             if arq_enavazb is None:
                 logger.error(
@@ -1445,47 +1542,47 @@ class ScenarioSynthetizer:
                     f"Falha na leitura de séries de energia da it {it}"
                 )
                 return None
-            if arq_enavazb is not None:
-                df_enavaz = (
-                    arq_enavazb.series
-                    if arq_enavazb.series is not None
-                    else pd.DataFrame()
-                )
-            else:
-                df_enavaz = pd.DataFrame()
-            df_energia = (
-                arq_energiab.series
-                if arq_energiab.series is not None
+        if arq_enavazb is not None:
+            df_enavaz = (
+                arq_enavazb.series
+                if arq_enavazb.series is not None
                 else pd.DataFrame()
             )
-            if not df_enavaz.empty and not df_energia.empty:
+        else:
+            df_enavaz = pd.DataFrame()
+        df_energia = (
+            arq_energiab.series
+            if arq_energiab.series is not None
+            else pd.DataFrame()
+        )
+        if not df_enavaz.empty and not df_energia.empty:
+            with uow:
                 n_indiv = uow.files._numero_estagios_individualizados()
-                df_ena = pd.concat(
-                    [
-                        df_enavaz.loc[df_enavaz["estagio"] <= n_indiv],
-                        df_energia.loc[df_energia["estagio"] > n_indiv],
-                    ],
-                    ignore_index=True,
-                )
-            else:
-                df_ena = df_energia
-            ena_it = (
-                cls._adiciona_dados_rees_backward(uow, df_ena)
-                if not df_ena.empty
-                else pd.DataFrame()
+            df_ena = pd.concat(
+                [
+                    df_enavaz.loc[df_enavaz["estagio"] <= n_indiv],
+                    df_energia.loc[df_energia["estagio"] > n_indiv],
+                ],
+                ignore_index=True,
             )
-            if not ena_it.empty:
-                ena_it["iteracao"] = it
-                return ena_it
+        else:
+            df_ena = df_energia
+        ena_it = (
+            cls._adiciona_dados_rees_backward(uow, df_ena)
+            if not df_ena.empty
+            else pd.DataFrame()
+        )
+        if not ena_it.empty:
+            ena_it["iteracao"] = it
+            return ena_it
         return None
 
     @classmethod
     def _resolve_enaa_backward(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        with uow:
-            convergencia = cls._validate_data(
-                uow.files.get_pmo().convergencia, pd.DataFrame, "convergência"
-            )
-            n_iters = convergencia["Iteração"].max()
+        convergencia = cls._validate_data(
+            cls._get_pmo(uow).convergencia, pd.DataFrame, "convergência"
+        )
+        n_iters = convergencia["iteracao"].max()
         df_completo = pd.DataFrame()
         n_procs = int(Settings().processors)
         with Pool(processes=n_procs) as pool:
@@ -1512,26 +1609,25 @@ class ScenarioSynthetizer:
         logger = Log.configure_process_logger(
             uow.queue, Variable.VAZAO_INCREMENTAL.value, it
         )
+        logger.info(f"Obtendo vazões backward da it. {it}")
         with uow:
-            logger.info(f"Obtendo vazões backward da it. {it}")
             arq = uow.files.get_vazaob(it)
-            vaz_it = (
-                cls._adiciona_dados_uhes_backward(uow, arq.series)
-                if arq is not None
-                else pd.DataFrame()
-            )
-            if not vaz_it.empty:
-                vaz_it["iteracao"] = it
-                return vaz_it
-            return None
+        vaz_it = (
+            cls._adiciona_dados_uhes_backward(uow, arq.series)
+            if arq is not None
+            else pd.DataFrame()
+        )
+        if not vaz_it.empty:
+            vaz_it["iteracao"] = it
+            return vaz_it
+        return None
 
     @classmethod
     def _resolve_qinc_backward(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        with uow:
-            convergencia = cls._validate_data(
-                uow.files.get_pmo().convergencia, pd.DataFrame, "convergência"
-            )
-            n_iters = convergencia["Iteração"].max()
+        convergencia = cls._validate_data(
+            cls._get_pmo(uow).convergencia, pd.DataFrame, "convergência"
+        )
+        n_iters = convergencia["iteracao"].max()
         df_completo = pd.DataFrame()
         n_procs = int(Settings().processors)
         with Pool(processes=n_procs) as pool:
@@ -1558,49 +1654,55 @@ class ScenarioSynthetizer:
             if arq_enavaz is None:
                 if cls.logger is not None:
                     cls.logger.error("Falha na leitura de séries de energia")
-                raise RuntimeError()
             arq_energias = uow.files.get_energias()
             if arq_energias is None:
                 if cls.logger is not None:
                     cls.logger.error("Falha na leitura de séries de energia")
                 raise RuntimeError()
+        if arq_enavaz is not None:
             df_enavaz = (
                 arq_enavaz.series
                 if arq_enavaz.series is not None
                 else pd.DataFrame()
             )
-            df_energia = (
-                arq_energias.series
-                if arq_energias.series is not None
-                else pd.DataFrame()
-            )
-            if not df_enavaz.empty and not df_energia.empty:
+        else:
+            df_enavaz = pd.DataFrame()
+        df_energia = (
+            arq_energias.series
+            if arq_energias.series is not None
+            else pd.DataFrame()
+        )
+        if not df_enavaz.empty and not df_energia.empty:
+            with uow:
                 n_indiv = uow.files._numero_estagios_individualizados()
-                df_ena = pd.concat(
-                    [
-                        df_enavaz.loc[df_enavaz["estagio"] <= n_indiv],
-                        df_energia.loc[df_energia["estagio"] > n_indiv],
-                    ],
-                    ignore_index=True,
-                )
-            else:
-                df_ena = df_energia
-            enas = (
-                cls._adiciona_dados_rees_sf(uow, df_ena)
-                if df_ena is not None
-                else pd.DataFrame()
+            df_ena = pd.concat(
+                [
+                    df_enavaz.loc[df_enavaz["estagio"] <= n_indiv],
+                    df_energia.loc[df_energia["estagio"] > n_indiv],
+                ],
+                ignore_index=True,
             )
+        else:
+            df_ena = df_energia
+        enas = (
+            cls._adiciona_dados_rees_sf(uow, df_ena)
+            if df_ena is not None
+            else pd.DataFrame()
+        )
         return enas
 
     @classmethod
     def _resolve_qinc_sf(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         with uow:
             arq = uow.files.get_vazaos()
-            df = (
-                cls._adiciona_dados_uhes_sf(uow, arq.series)
-                if arq is not None
-                else pd.DataFrame()
-            )
+            if arq is None:
+                if cls.logger is not None:
+                    cls.logger.error("Falha na leitura de séries de vazão")
+        df = (
+            cls._adiciona_dados_uhes_sf(uow, arq.series)
+            if arq is not None
+            else pd.DataFrame()
+        )
         return df
 
     @classmethod
@@ -1821,29 +1923,28 @@ class ScenarioSynthetizer:
         df: pd.DataFrame,
         uow: AbstractUnitOfWork,
     ) -> pd.DataFrame:
-        with uow:
-            # Descobre o valor em MLT
-            df = df.copy()
-            df_mlt = cls._get_cached_mlt(
-                synthesis.variable,
-                synthesis.spatial_resolution,
-                uow,
-            )
-            FILTER_MAP = {
-                SpatialResolution.USINA_HIDROELETRICA: "nome_usina",
-                SpatialResolution.RESERVATORIO_EQUIVALENTE: "nome_ree",
-                SpatialResolution.SUBMERCADO: "nome_submercado",
-                SpatialResolution.SISTEMA_INTERLIGADO: None,
-            }
+        # Descobre o valor em MLT
+        df = df.copy()
+        df_mlt = cls._get_cached_mlt(
+            synthesis.variable,
+            synthesis.spatial_resolution,
+            uow,
+        )
+        FILTER_MAP = {
+            SpatialResolution.USINA_HIDROELETRICA: "nome_usina",
+            SpatialResolution.RESERVATORIO_EQUIVALENTE: "nome_ree",
+            SpatialResolution.SUBMERCADO: "nome_submercado",
+            SpatialResolution.SISTEMA_INTERLIGADO: None,
+        }
 
-            filter_col = FILTER_MAP[synthesis.spatial_resolution]
-            # Aplica a conversão
-            APPLY_MAP: Dict[Step, Callable] = {
-                Step.FORWARD: cls._apply_mlt_forward,
-                Step.FINAL_SIMULATION: cls._apply_mlt_sf,
-                Step.BACKWARD: cls._apply_mlt_backward,
-            }
-            return APPLY_MAP[synthesis.step](df, df_mlt, filter_col)
+        filter_col = FILTER_MAP[synthesis.spatial_resolution]
+        # Aplica a conversão
+        APPLY_MAP: Dict[Step, Callable] = {
+            Step.FORWARD: cls._apply_mlt_forward,
+            Step.FINAL_SIMULATION: cls._apply_mlt_sf,
+            Step.BACKWARD: cls._apply_mlt_backward,
+        }
+        return APPLY_MAP[synthesis.step](df, df_mlt, filter_col)
 
     @classmethod
     def _resolve_spatial_resolution(
@@ -1959,4 +2060,5 @@ class ScenarioSynthetizer:
                 with uow:
                     uow.export.synthetize_df(df, filename)
         except Exception as e:
+            print_exc()
             cls.logger.error(str(e))
