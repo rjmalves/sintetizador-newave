@@ -1517,8 +1517,8 @@ class OperationSynthetizer:
         )
         cls.logger.info("DEBUG STARTING STAGE")
         cls.logger.info(df["dataInicio"])
-        cls.logger.info(type(df["dataInicio"].iloc[0]))
-        cls.logger.info(type(starting_date))
+        cls.logger.info(df["dataInicio"].iloc[0])
+        cls.logger.info(starting_date)
         cls.logger.info(df["dataInicio"] >= starting_date)
         starting_df = df.loc[df["dataInicio"] >= starting_date].copy()
         starting_df.loc[:, "estagio"] -= starting_date.month - 1
