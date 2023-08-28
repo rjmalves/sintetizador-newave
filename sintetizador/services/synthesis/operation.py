@@ -1512,7 +1512,7 @@ class OperationSynthetizer:
         dger = cls._get_dger(uow)
         ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
         mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
-        starting_date = pd.Timedelta(
+        starting_date = pd.Timestamp(
             f"{ano_inicio}-{str(mes_inicio).zfill(2)}-01"
         )
         cls.logger.info("DEBUG STARTING STAGE")
