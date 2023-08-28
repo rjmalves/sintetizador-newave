@@ -1518,7 +1518,7 @@ class OperationSynthetizer:
         cls.logger.info("DEBUG STARTING STAGE")
         cls.logger.info(df["dataInicio"])
         cls.logger.info(type(df["dataInicio"].iloc[0]))
-        cls.logger.info(df["dataInicio"].dt >= pd.to_datetime(starting_date))
+        cls.logger.info(df["dataInicio"] >= pd.to_datetime(starting_date))
         cls.logger.info(pd.to_datetime(df["dataInicio"]) >= starting_date)
         cls.logger.info(type(starting_date))
         starting_df = df.loc[df["dataInicio"] >= starting_date].copy()
