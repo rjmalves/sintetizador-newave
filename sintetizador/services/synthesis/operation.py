@@ -4,7 +4,7 @@ import numpy as np
 import logging
 import traceback
 from multiprocessing import Pool
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta  # type: ignore
 from inewave.newave import Dger, Ree, Confhd, Conft, Sistema
 from sintetizador.utils.log import Log
@@ -1518,7 +1518,7 @@ class OperationSynthetizer:
         cls.logger.info(starting_date)
         cls.logger.info(data_starting_date)
         month_difference = int(
-            (starting_date - data_starting_date) / relativedelta(months=1)
+            (starting_date - data_starting_date) / timedelta(days=30)
         )
         cls.logger.info(month_difference)
         starting_df = df.copy()
