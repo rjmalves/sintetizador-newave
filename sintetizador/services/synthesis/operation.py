@@ -1515,13 +1515,16 @@ class OperationSynthetizer:
         starting_date = pd.Timestamp(
             f"{ano_inicio}-{str(mes_inicio).zfill(2)}-01"
         )
+        data_starting_date = df["dataInicio"].min()
         cls.logger.info("DEBUG STARTING STAGE")
-        cls.logger.info(df["dataInicio"])
-        cls.logger.info(df["dataInicio"].iloc[0])
         cls.logger.info(starting_date)
-        cls.logger.info(df["dataInicio"] >= starting_date)
-        starting_df = df.loc[df["dataInicio"] >= starting_date].copy()
-        starting_df.loc[:, "estagio"] -= starting_date.month - 1
+        cls.logger.info(data_starting_date)
+        month_difference = int(
+            (starting_date - data_starting_date) / relativedelta(months=1)
+        )
+        cls.logger.info(month_difference)
+        starting_df = df.copy()
+        starting_df.loc[:, "estagio"] -= month_difference
         starting_df = starting_df.rename(columns={"serie": "cenario"})
         cls.logger.info(starting_df)
         return starting_df.copy()
