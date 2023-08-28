@@ -1512,11 +1512,13 @@ class OperationSynthetizer:
         dger = cls._get_dger(uow)
         ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
         mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
-        starting_date = datetime(year=ano_inicio, month=mes_inicio, day=1)
+        starting_date = pd.Timestamp(
+            f"{ano_inicio}-{str(mes_inicio).zfill(2)}-01"
+        )
         cls.logger.info("DEBUG STARTING STAGE")
         cls.logger.info(df["dataInicio"])
         cls.logger.info(type(df["dataInicio"].iloc[0]))
-        cls.logger.info(df["dataInicio"] >= pd.to_datetime(starting_date))
+        cls.logger.info(df["dataInicio"].dt >= pd.to_datetime(starting_date))
         cls.logger.info(pd.to_datetime(df["dataInicio"]) >= starting_date)
         cls.logger.info(type(starting_date))
         starting_df = df.loc[df["dataInicio"] >= starting_date].copy()
