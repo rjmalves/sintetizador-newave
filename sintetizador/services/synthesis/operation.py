@@ -676,11 +676,13 @@ class OperationSynthetizer:
             "submercados",
         )
         sistemas_reais = sistema.loc[sistema["ficticio"] == 0, :]
-        sbms_idx = sistemas_reais["codigo_submercado"]
-        sbms_name = sistemas_reais["nome_submercado"]
+        sbms_idx = sistemas_reais["codigo_submercado"].unique()
         df = pd.DataFrame()
         with uow:
-            for s, n in zip(sbms_idx, sbms_name):
+            for s in sbms_idx:
+                n = sistemas_reais.loc[
+                    sistemas_reais["codigo_submercado"] == s, "nome_submercado"
+                ].iloc[0]
                 if cls.logger is not None:
                     cls.logger.info(
                         f"Processando arquivo do submercado: {s} - {n}"
@@ -714,12 +716,18 @@ class OperationSynthetizer:
             pd.DataFrame,
             "submercados",
         )
-        sbms_idx = sistema["codigo_submercado"]
+        sbms_idx = sistema["codigo_submercado"].unique()
         sbms_name = sistema["nome_submercado"]
         df = pd.DataFrame()
         with uow:
-            for s1, n1 in zip(sbms_idx, sbms_name):
-                for s2, n2 in zip(sbms_idx, sbms_name):
+            for s1 in sbms_idx:
+                n1 = sistema.loc[
+                    sistema["codigo_submercado"] == s1, "nome_submercado"
+                ].iloc[0]
+                for s2 in sbms_idx:
+                    n2 = sistema.loc[
+                        sistema["codigo_submercado"] == s2, "nome_submercado"
+                    ].iloc[0]
                     # Ignora o mesmo SBM
                     if s1 >= s2:
                         continue
