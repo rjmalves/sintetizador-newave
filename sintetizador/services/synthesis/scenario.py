@@ -259,15 +259,33 @@ class ScenarioSynthetizer:
         :return: A tabela como um DataFrame
         :rtype: pd.DataFrame | None
         """
-        uhes = cls._validate_data(
-            cls._get_confhd(uow).usinas, pd.DataFrame, "UHEs"
-        )
-        hidr = cls._validate_data(
-            cls._get_hidr(uow).cadastro, pd.DataFrame, "hidr"
-        )
-        vazoes = cls._validate_data(
-            cls._get_vazoes(uow).vazoes, pd.DataFrame, "vazões"
-        )
+        arq_confhd = uow.files.get_confhd()
+        if arq_confhd is None:
+            if cls.logger is not None:
+                cls.logger.error(
+                    "Erro no processamento do confhd.dat para"
+                    + " síntese dos cenários"
+                )
+            raise RuntimeError()
+        uhes = cls._validate_data(arq_confhd.usinas, pd.DataFrame, "UHEs")
+        arq_hidr = uow.files.get_hidr()
+        if arq_hidr is None:
+            if cls.logger is not None:
+                cls.logger.error(
+                    "Erro no processamento do hidr.dat para"
+                    + " síntese dos cenários"
+                )
+            raise RuntimeError()
+        hidr = cls._validate_data(arq_hidr.cadastro, pd.DataFrame, "hidr")
+        arq_vazoes = uow.files.get_vazoes()
+        if arq_vazoes is None:
+            if cls.logger is not None:
+                cls.logger.error(
+                    "Erro no processamento do vazoes.dat para"
+                    + " síntese dos cenários"
+                )
+            raise RuntimeError()
+        vazoes = cls._validate_data(arq_vazoes.vazoes, pd.DataFrame, "vazões")
         posto = uhes.loc[uhes["codigo_usina"] == uhe, "posto"].tolist()[0]
         vazao_natural = vazoes[posto].to_numpy()
         posto_nulo = posto == 300
@@ -382,24 +400,28 @@ class ScenarioSynthetizer:
             }
         )
         df_completo_mlt = pd.DataFrame()
-        for uhe in uhes["codigo_usina"]:
-            vazao = cls._gera_serie_incremental_uhe(uhe, uow)
-            vazao_mlt = cls._mlt(vazao)
-            df_mlt_uhe = df_mlt.merge(
-                pd.DataFrame(
-                    data={
-                        "codigo_usina": [uhe] * len(vazao_mlt),
-                        "nome_usina": [hidr.at[uhe, "nome_usina"]]
-                        * len(vazao_mlt),
-                        "mes": vazao_mlt["mes"],
-                        "mlt": vazao_mlt["vazao"].to_numpy(),
-                    }
-                ),
-                on="mes",
-            )
-            df_completo_mlt = pd.concat(
-                [df_completo_mlt, df_mlt_uhe], ignore_index=True
-            )
+        # Modificação por desempenho:
+        # Abre o contexto do UoW antes de iterar para não repetir leituras
+        # de arquivos de maneira desnecessária
+        with uow:
+            for uhe in uhes["codigo_usina"]:
+                vazao = cls._gera_serie_incremental_uhe(uhe, uow)
+                vazao_mlt = cls._mlt(vazao)
+                df_mlt_uhe = df_mlt.merge(
+                    pd.DataFrame(
+                        data={
+                            "codigo_usina": [uhe] * len(vazao_mlt),
+                            "nome_usina": [hidr.at[uhe, "nome_usina"]]
+                            * len(vazao_mlt),
+                            "mes": vazao_mlt["mes"],
+                            "mlt": vazao_mlt["vazao"].to_numpy(),
+                        }
+                    ),
+                    on="mes",
+                )
+                df_completo_mlt = pd.concat(
+                    [df_completo_mlt, df_mlt_uhe], ignore_index=True
+                )
         # Adiciona dados de ree e submercado à série
         df_completo_mlt["codigo_ree"] = df_completo_mlt.apply(
             lambda linha: uhes.loc[
