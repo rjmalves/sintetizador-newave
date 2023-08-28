@@ -667,6 +667,38 @@ class OperationSynthetizer:
                 return pd.DataFrame()
 
     @classmethod
+    def _resolve_SBM_submercado(
+        cls,
+        uow: AbstractUnitOfWork,
+        synthesis: OperationSynthesis,
+        sbm_index: int,
+        sbm_name: str,
+    ) -> pd.DataFrame:
+        logger_name = f"{synthesis.variable.value}_{sbm_name}"
+        logger = Log.configure_process_logger(
+            uow.queue, logger_name, sbm_index
+        )
+        with uow:
+            logger.info(
+                f"Processando arquivo do submercado: {sbm_index} - {sbm_name}"
+            )
+            df_sbm = cls._resolve_temporal_resolution(
+                synthesis,
+                uow.files.get_nwlistop(
+                    synthesis.variable,
+                    synthesis.spatial_resolution,
+                    synthesis.temporal_resolution,
+                    submercado=sbm_index,
+                ),
+            )
+            if df_sbm is None:
+                return None
+            cols = df_sbm.columns.tolist()
+            df_sbm["submercado"] = sbm_name
+            df_sbm = df_sbm[["submercado"] + cols]
+            return df_sbm
+
+    @classmethod
     def __resolve_SBM(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
@@ -677,35 +709,69 @@ class OperationSynthetizer:
         )
         sistemas_reais = sistema.loc[sistema["ficticio"] == 0, :]
         sbms_idx = sistemas_reais["codigo_submercado"].unique()
-        df = pd.DataFrame()
-        with uow:
-            for s in sbms_idx:
-                n = sistemas_reais.loc[
-                    sistemas_reais["codigo_submercado"] == s, "nome_submercado"
-                ].iloc[0]
+        sbms_name = [
+            sistemas_reais.loc[
+                sistemas_reais["codigo_submercado"] == s, "nome_submercado"
+            ].iloc[0]
+            for s in sbms_idx
+        ]
+        df_completo = pd.DataFrame()
+        n_procs = int(Settings().processors)
+        with Pool(processes=n_procs) as pool:
+            if n_procs > 1:
                 if cls.logger is not None:
-                    cls.logger.info(
-                        f"Processando arquivo do submercado: {s} - {n}"
-                    )
-                df_sbm = cls._resolve_temporal_resolution(
-                    synthesis,
-                    uow.files.get_nwlistop(
-                        synthesis.variable,
-                        synthesis.spatial_resolution,
-                        synthesis.temporal_resolution,
-                        submercado=s,
-                    ),
+                    cls.logger.info("Paralelizando...")
+            async_res = {
+                idx: pool.apply_async(
+                    cls._resolve_SBM_submercado, (uow, synthesis, idx, name)
                 )
-                if df_sbm is None:
-                    continue
-                cols = df_sbm.columns.tolist()
-                df_sbm["submercado"] = n
-                df_sbm = df_sbm[["submercado"] + cols]
-                df = pd.concat(
-                    [df, df_sbm],
-                    ignore_index=True,
-                )
-            return df
+                for idx, name in zip(sbms_idx, sbms_name)
+            }
+            dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
+        if cls.logger is not None:
+            cls.logger.info("Compactando dados...")
+        for _, df in dfs.items():
+            df_completo = pd.concat([df_completo, df], ignore_index=True)
+
+        return df_completo
+
+    @classmethod
+    def _resolve_SBP_par_submercados(
+        cls,
+        uow: AbstractUnitOfWork,
+        synthesis: OperationSynthesis,
+        sbm1_index: int,
+        sbm1_name: str,
+        sbm2_index: int,
+        sbm2_name: str,
+    ) -> pd.DataFrame:
+        if sbm1_index >= sbm2_index:
+            return pd.DataFrame()
+        logger_name = f"{synthesis.variable.value}_{sbm1_name}_{sbm2_name}"
+        logger = Log.configure_process_logger(
+            uow.queue, logger_name, sbm1_index + 10 * sbm2_index
+        )
+        with uow:
+            logger.info(
+                "Processando arquivo do par de submercados:"
+                + f" {sbm1_index}[{sbm1_name}] - {sbm2_index}[{sbm2_name}]"
+            )
+            df_sbp = cls._resolve_temporal_resolution(
+                synthesis,
+                uow.files.get_nwlistop(
+                    synthesis.variable,
+                    synthesis.spatial_resolution,
+                    synthesis.temporal_resolution,
+                    submercados=(sbm1_index, sbm2_index),
+                ),
+            )
+            if df_sbp is None:
+                return None
+            cols = df_sbp.columns.tolist()
+            df_sbp["submercadoDe"] = sbm1_name
+            df_sbp["submercadoPara"] = sbm2_name
+            df_sbp = df_sbp[["submercadoDe", "submercadoPara"] + cols]
+            return df_sbp
 
     @classmethod
     def __resolve_SBP(
@@ -717,45 +783,65 @@ class OperationSynthetizer:
             "submercados",
         )
         sbms_idx = sistema["codigo_submercado"].unique()
-        sbms_name = sistema["nome_submercado"]
-        df = pd.DataFrame()
+        sbms_name = [
+            sistema.loc[
+                sistema["codigo_submercado"] == s, "nome_submercado"
+            ].iloc[0]
+            for s in sbms_idx
+        ]
+        df_completo = pd.DataFrame()
+        n_procs = int(Settings().processors)
+        with Pool(processes=n_procs) as pool:
+            if n_procs > 1:
+                if cls.logger is not None:
+                    cls.logger.info("Paralelizando...")
+            async_res = {
+                f"{idx1}-{idx2}": pool.apply_async(
+                    cls._resolve_SBP_par_submercados,
+                    (uow, synthesis, idx1, name1, idx2, name2),
+                )
+                for idx1, name1 in zip(sbms_idx, sbms_name)
+                for idx2, name2 in zip(sbms_idx, sbms_name)
+            }
+            dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
+        if cls.logger is not None:
+            cls.logger.info("Compactando dados...")
+        for _, df in dfs.items():
+            df_completo = pd.concat([df_completo, df], ignore_index=True)
+
+        return df_completo
+
+    @classmethod
+    def _resolve_REE_ree(
+        cls,
+        uow: AbstractUnitOfWork,
+        synthesis: OperationSynthesis,
+        ree_index: int,
+        ree_name: str,
+    ) -> pd.DataFrame:
+        logger_name = f"{synthesis.variable.value}_{ree_name}"
+        logger = Log.configure_process_logger(
+            uow.queue, logger_name, ree_index
+        )
         with uow:
-            for s1 in sbms_idx:
-                n1 = sistema.loc[
-                    sistema["codigo_submercado"] == s1, "nome_submercado"
-                ].iloc[0]
-                for s2 in sbms_idx:
-                    n2 = sistema.loc[
-                        sistema["codigo_submercado"] == s2, "nome_submercado"
-                    ].iloc[0]
-                    # Ignora o mesmo SBM
-                    if s1 >= s2:
-                        continue
-                    if cls.logger is not None:
-                        cls.logger.info(
-                            "Processando arquivo do par de "
-                            + f"submercados: {s1} - {n1} | {s2} - {n2}"
-                        )
-                    df_sbm = cls._resolve_temporal_resolution(
-                        synthesis,
-                        uow.files.get_nwlistop(
-                            synthesis.variable,
-                            synthesis.spatial_resolution,
-                            synthesis.temporal_resolution,
-                            submercados=(s1, s2),
-                        ),
-                    )
-                    if df_sbm is None:
-                        continue
-                    cols = df_sbm.columns.tolist()
-                    df_sbm["submercadoDe"] = n1
-                    df_sbm["submercadoPara"] = n2
-                    df_sbm = df_sbm[["submercadoDe", "submercadoPara"] + cols]
-                    df = pd.concat(
-                        [df, df_sbm],
-                        ignore_index=True,
-                    )
-            return df
+            logger.info(
+                f"Processando arquivo do REE: {ree_index} - {ree_name}"
+            )
+            df_sbm = cls._resolve_temporal_resolution(
+                synthesis,
+                uow.files.get_nwlistop(
+                    synthesis.variable,
+                    synthesis.spatial_resolution,
+                    synthesis.temporal_resolution,
+                    ree=ree_index,
+                ),
+            )
+            if df_sbm is None:
+                return None
+            cols = df_sbm.columns.tolist()
+            df_sbm["ree"] = ree_name
+            df_sbm = df_sbm[["ree"] + cols]
+            return df_sbm
 
     @classmethod
     def __resolve_REE(
@@ -764,30 +850,25 @@ class OperationSynthetizer:
         rees = cls._validate_data(cls._get_ree(uow).rees, pd.DataFrame, "REEs")
         rees_idx = rees["codigo"]
         rees_name = rees["nome"]
-        df = pd.DataFrame()
-        with uow:
-            for s, n in zip(rees_idx, rees_name):
+        df_completo = pd.DataFrame()
+        n_procs = int(Settings().processors)
+        with Pool(processes=n_procs) as pool:
+            if n_procs > 1:
                 if cls.logger is not None:
-                    cls.logger.info(f"Processando arquivo do REE: {s} - {n}")
-                df_ree = cls._resolve_temporal_resolution(
-                    synthesis,
-                    uow.files.get_nwlistop(
-                        synthesis.variable,
-                        synthesis.spatial_resolution,
-                        synthesis.temporal_resolution,
-                        ree=s,
-                    ),
+                    cls.logger.info("Paralelizando...")
+            async_res = {
+                idx: pool.apply_async(
+                    cls._resolve_REE_ree, (uow, synthesis, idx, name)
                 )
-                if df_ree is None:
-                    continue
-                cols = df_ree.columns.tolist()
-                df_ree["ree"] = n
-                df_ree = df_ree[["ree"] + cols]
-                df = pd.concat(
-                    [df, df_ree],
-                    ignore_index=True,
-                )
-            return df
+                for idx, name in zip(rees_idx, rees_name)
+            }
+            dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
+        if cls.logger is not None:
+            cls.logger.info("Compactando dados...")
+        for _, df in dfs.items():
+            df_completo = pd.concat([df_completo, df], ignore_index=True)
+
+        return df_completo
 
     @classmethod
     def _resolve_UHE_usina(
@@ -1520,7 +1601,6 @@ class OperationSynthetizer:
         starting_df = df.copy()
         starting_df.loc[:, "estagio"] -= month_difference
         starting_df = starting_df.rename(columns={"serie": "cenario"})
-        cls.logger.info(starting_df)
         return starting_df.copy()
 
     @classmethod
