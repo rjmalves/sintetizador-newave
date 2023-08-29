@@ -614,7 +614,7 @@ class OperationSynthetizer:
         df = df.rename(columns={"data": "dataInicio"})
         return df[
             ["estagio", "dataInicio", "dataFim"]
-            + [c for c in cols if c != "data"]
+            + [c for c in cols if c not in ["data", "patamar"]]
         ]
 
     @classmethod
