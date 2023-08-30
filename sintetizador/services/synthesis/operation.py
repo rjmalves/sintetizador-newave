@@ -1222,7 +1222,7 @@ class OperationSynthetizer:
         if df_uhe.empty:
             return None
 
-        df_uhe = df_uhe.copy()
+        df_uhe = df_uhe.copy().reset_index()
         if cls.logger is not None:
             cls.logger.info("Debug")
             cls.logger.info(df_uhe)
@@ -1231,7 +1231,9 @@ class OperationSynthetizer:
         # Extrai a lista de usinas e quantas linhas existem para cada
         usinas = df_uhe["usina"].drop_duplicates()
         if usinas.shape[0] > 1:
-            n_linhas_usina = usinas.index[1] - usinas.index[0]
+            n_linhas_usina = (
+                usinas.index[1:].to_numpy() - usinas.index[:-1].to_numpy()
+            )
         else:
             n_linhas_usina = df_uhe.shape[0]
         df_usina_group = pd.DataFrame(data={"usina": usinas.tolist()})
