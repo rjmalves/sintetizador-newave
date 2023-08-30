@@ -1273,8 +1273,7 @@ class OperationSynthetizer:
             df_uhe.groupby(cols_group).sum(numeric_only=True).reset_index()
         )
         df_group = df_group.astype({"serie": str})
-        if cls.logger is not None:
-            cls.logger.info(df_group)
+
         group_name = {
             SpatialResolution.RESERVATORIO_EQUIVALENTE: "ree",
             SpatialResolution.SUBMERCADO: "submercado",
