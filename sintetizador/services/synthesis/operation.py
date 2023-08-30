@@ -730,8 +730,8 @@ class OperationSynthetizer:
             dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
         if cls.logger is not None:
             cls.logger.info("Compactando dados...")
-        for _, df in dfs.items():
-            df_completo = pd.concat([df_completo, df], ignore_index=True)
+        if len(dfs) > 0:
+            df_completo = pd.concat(dfs.values(), ignore_index=True)
 
         return df_completo
 
