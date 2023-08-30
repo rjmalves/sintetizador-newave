@@ -1231,9 +1231,7 @@ class OperationSynthetizer:
         # Extrai a lista de usinas e quantas linhas existem para cada
         usinas = df_uhe["usina"].drop_duplicates()
         if usinas.shape[0] > 1:
-            n_linhas_usina = (
-                usinas.index[1:].to_numpy() - usinas.index[:-1].to_numpy()
-            )
+            n_linhas_usina = usinas.index[1] - usinas.index[0]
         else:
             n_linhas_usina = df_uhe.shape[0]
         df_usina_group = pd.DataFrame(data={"usina": usinas.tolist()})
