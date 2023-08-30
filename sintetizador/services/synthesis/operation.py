@@ -1222,11 +1222,7 @@ class OperationSynthetizer:
         if df_uhe.empty:
             return None
 
-        df_uhe = df_uhe.copy().reset_index()
-        if cls.logger is not None:
-            cls.logger.info("Debug")
-            cls.logger.info(df_uhe)
-            cls.logger.info(df_uhe["usina"].drop_duplicates())
+        df_uhe = df_uhe.copy().reset_index(drop=True)
 
         # Extrai a lista de usinas e quantas linhas existem para cada
         usinas = df_uhe["usina"].drop_duplicates()
@@ -1270,6 +1266,7 @@ class OperationSynthetizer:
         df_uhe["group"] = np.repeat(
             df_usina_group["group"].to_numpy(), n_linhas_usina
         )
+        df_uhe = df_uhe.astype({"cenario": int})
         df_group = (
             df_uhe.groupby(cols_group).sum(numeric_only=True).reset_index()
         )
