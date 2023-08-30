@@ -1267,11 +1267,14 @@ class OperationSynthetizer:
         df_uhe["group"] = np.repeat(
             df_usina_group["group"].to_numpy(), n_linhas_usina
         )
+
         df_uhe = df_uhe.astype({"serie": int})
         df_group = (
             df_uhe.groupby(cols_group).sum(numeric_only=True).reset_index()
         )
-
+        df_group = df_group.astype({"serie": str})
+        if cls.logger is not None:
+            cls.logger.info(df_group)
         group_name = {
             SpatialResolution.RESERVATORIO_EQUIVALENTE: "ree",
             SpatialResolution.SUBMERCADO: "submercado",
