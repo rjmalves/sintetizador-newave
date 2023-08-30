@@ -1223,6 +1223,9 @@ class OperationSynthetizer:
             return None
 
         df_uhe = df_uhe.copy()
+        if cls.logger is not None:
+            cls.logger.info("Debug")
+            cls.logger.info(df_uhe)
 
         # Extrai a lista de usinas e quantas linhas existem para cada
         usinas = df_uhe["usina"].drop_duplicates()
