@@ -31,6 +31,7 @@ class OperationSynthetizer:
         "pee",
         "usina",
         "patamar",
+        "serie",
     ]
 
     DEFAULT_OPERATION_SYNTHESIS_ARGS: List[str] = [
@@ -1266,7 +1267,7 @@ class OperationSynthetizer:
         df_uhe["group"] = np.repeat(
             df_usina_group["group"].to_numpy(), n_linhas_usina
         )
-        df_uhe = df_uhe.astype({"cenario": int})
+        df_uhe = df_uhe.astype({"serie": int})
         df_group = (
             df_uhe.groupby(cols_group).sum(numeric_only=True).reset_index()
         )
