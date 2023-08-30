@@ -1219,7 +1219,15 @@ class OperationSynthetizer:
 
         df_uhe = df_uhe.copy()
 
-        df_uhe["group"] = df_uhe.apply(
+        # Extrai a lista de usinas e quantas linhas existem para cada
+        usinas = df_uhe["usina"].drop_duplicates()
+        if usinas.shape[0] > 1:
+            n_linhas_usina = usinas.index[1] - usinas.index[0]
+        else:
+            n_linhas_usina = df_uhe.shape[0]
+        df_usina_group = pd.DataFrame(data={"usina": usinas.tolist()})
+
+        df_usina_group["group"] = df_usina_group.apply(
             lambda linha: int(
                 confhd.loc[confhd["nome_usina"] == linha["usina"], "ree"].iloc[
                     0
@@ -1231,24 +1239,28 @@ class OperationSynthetizer:
             synthesis.spatial_resolution
             == SpatialResolution.RESERVATORIO_EQUIVALENTE
         ):
-            df_uhe["group"] = df_uhe.apply(
+            df_usina_group["group"] = df_usina_group.apply(
                 lambda linha: nomes_rees[linha["group"]], axis=1
             )
         elif synthesis.spatial_resolution == SpatialResolution.SUBMERCADO:
-            df_uhe["group"] = df_uhe.apply(
+            df_usina_group["group"] = df_usina_group.apply(
                 lambda linha: rees_submercados[linha["group"]], axis=1
             )
         elif (
             synthesis.spatial_resolution
             == SpatialResolution.SISTEMA_INTERLIGADO
         ):
-            df_uhe["group"] = 1
+            df_usina_group["group"] = 1
 
         cols_group = ["group"] + [
             c
             for c in df_uhe.columns
             if c in cls.IDENTIFICATION_COLUMNS and c != "usina"
         ]
+        # Replica o grupo pelo número de linhas de cada usina e cria a coluna no df final
+        df_uhe["group"] = np.repeat(
+            df_usina_group["group"].to_numpy(), n_linhas_usina
+        )
         df_group = (
             df_uhe.groupby(cols_group).sum(numeric_only=True).reset_index()
         )
