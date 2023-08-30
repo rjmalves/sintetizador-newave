@@ -1600,6 +1600,8 @@ class OperationSynthetizer:
         )
         starting_df = df.copy()
         starting_df.loc[:, "estagio"] -= month_difference
+        # Considera somente estágios do período de estudo em diante
+        starting_df = starting_df.loc[starting_df["estagio"] > 0]
         starting_df = starting_df.rename(columns={"serie": "cenario"})
         return starting_df.copy()
 
