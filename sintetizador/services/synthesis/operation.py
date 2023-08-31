@@ -221,14 +221,14 @@ class OperationSynthetizer:
             TemporalResolution.PATAMAR,
         ),
         OperationSynthesis(
-            Variable.VAZAO_TURBINADA,
+            Variable.VOLUME_TURBINADO,
             SpatialResolution.USINA_HIDROELETRICA,
-            TemporalResolution.ESTAGIO,
+            TemporalResolution.PATAMAR,
         ),
         OperationSynthesis(
-            Variable.VAZAO_VERTIDA,
+            Variable.VOLUME_VERTIDO,
             SpatialResolution.USINA_HIDROELETRICA,
-            TemporalResolution.ESTAGIO,
+            TemporalResolution.PATAMAR,
         ),
         OperationSynthesis(
             Variable.VOLUME_TURBINADO,
@@ -251,14 +251,14 @@ class OperationSynthetizer:
             TemporalResolution.PATAMAR,
         ),
         OperationSynthesis(
-            Variable.VOLUME_TURBINADO,
+            Variable.VAZAO_TURBINADA,
             SpatialResolution.USINA_HIDROELETRICA,
-            TemporalResolution.PATAMAR,
+            TemporalResolution.ESTAGIO,
         ),
         OperationSynthesis(
-            Variable.VOLUME_VERTIDO,
+            Variable.VAZAO_VERTIDA,
             SpatialResolution.USINA_HIDROELETRICA,
-            TemporalResolution.PATAMAR,
+            TemporalResolution.ESTAGIO,
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
@@ -911,86 +911,40 @@ class OperationSynthetizer:
     def __stub_agrega_estagio_variaveis_por_patamar(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-        confhd = cls._validate_data(
-            cls._get_confhd(uow).usinas, pd.DataFrame, "UHEs"
+        synt_pat = OperationSynthesis(
+            synthesis.variable,
+            synthesis.spatial_resolution,
+            TemporalResolution.PATAMAR,
         )
-        rees = cls._validate_data(cls._get_ree(uow).rees, pd.DataFrame, "REEs")
-        dger = cls._get_dger(uow)
-        ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
-        anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
-        agregacao_sim_final = dger.agregacao_simulacao_final
-        anos_pos_sim_final = cls._validate_data(
-            dger.num_anos_pos_sim_final, int, "dger"
+        cache = cls.CACHED_SYNTHESIS.get(synt_pat)
+        df_completo = (
+            cache
+            if cache is not None
+            else cls.__resolve_UHE(
+                synt_pat,
+                uow,
+            )
         )
+        if cache is None:
+            cls.CACHED_SYNTHESIS[synt_pat] = df_completo.copy()
 
-        # Obtem o fim do periodo individualizado
-        if agregacao_sim_final == 1:
-            fim = datetime(
-                year=ano_inicio + anos_estudo + anos_pos_sim_final,
-                month=1,
-                day=1,
+        patamares = df_completo["patamar"].unique().tolist()
+        cenarios_patamares: List[np.ndarray] = []
+        p0 = patamares[0]
+        for p in patamares:
+            cenarios_patamares.append(
+                df_completo.loc[
+                    df_completo["patamar"] == p, "valor"
+                ].to_numpy()
             )
-        elif rees["ano_fim_individualizado"].isna().sum() > 0:
-            fim = datetime(
-                year=ano_inicio + anos_estudo + anos_pos_sim_final,
-                month=1,
-                day=1,
-            )
-        else:
-            fim = datetime(
-                year=int(rees["ano_fim_individualizado"].iloc[0]),
-                month=int(rees["mes_fim_individualizado"].iloc[0]),
-                day=1,
-            )
-        uhes_idx = confhd["codigo_usina"]
-        uhes_name = confhd["nome_usina"]
+        df_completo.loc[df_completo["patamar"] == p0, "valor"] = 0.0
+        for c in cenarios_patamares:
+            df_completo.loc[df_completo["patamar"] == p0, "valor"] += c
+        df_completo = df_completo.loc[df_completo["patamar"] == p0, :]
+        df_completo = df_completo.drop(columns="patamar")
 
-        df_completo = pd.DataFrame()
-        n_procs = int(Settings().processors)
-        with Pool(processes=n_procs) as pool:
-            if n_procs > 1:
-                if cls.logger is not None:
-                    cls.logger.info("Paralelizando...")
-            async_res = {
-                idx: pool.apply_async(
-                    cls._resolve_UHE_usina,
-                    (
-                        uow,
-                        OperationSynthesis(
-                            variable=synthesis.variable,
-                            spatial_resolution=synthesis.spatial_resolution,
-                            temporal_resolution=TemporalResolution.PATAMAR,
-                        ),
-                        idx,
-                        name,
-                    ),
-                )
-                for idx, name in zip(uhes_idx, uhes_name)
-            }
-            dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
-        if cls.logger is not None:
-            cls.logger.info("Compactando dados...")
-        dfs_validos = [d for d in dfs.values() if d is not None]
-        if len(dfs_validos) > 0:
-            df_completo = pd.concat(dfs_validos, ignore_index=True)
+        cls.CACHED_SYNTHESIS[synthesis] = df_completo.copy()
 
-        if synthesis.temporal_resolution == TemporalResolution.ESTAGIO:
-            patamares = df_completo["patamar"].unique().tolist()
-            cenarios_patamares: List[np.ndarray] = []
-            p0 = patamares[0]
-            for p in patamares:
-                cenarios_patamares.append(
-                    df_completo.loc[
-                        df_completo["patamar"] == p, "valor"
-                    ].to_numpy()
-                )
-            df_completo.loc[df_completo["patamar"] == p0, "valor"] = 0.0
-            for c in cenarios_patamares:
-                df_completo.loc[df_completo["patamar"] == p0, "valor"] += c
-            df_completo = df_completo.loc[df_completo["patamar"] == p0, :]
-            df_completo = df_completo.drop(columns="patamar")
-
-        df_completo = df_completo.loc[df_completo["dataInicio"] < fim, :]
         return df_completo
 
     @classmethod
@@ -1001,87 +955,26 @@ class OperationSynthetizer:
             Variable.VAZAO_VERTIDA: Variable.VOLUME_VERTIDO,
             Variable.VAZAO_TURBINADA: Variable.VOLUME_TURBINADO,
         }
-        confhd = cls._validate_data(
-            cls._get_confhd(uow).usinas, pd.DataFrame, "UHEs"
+        synt_vol = OperationSynthesis(
+            variable_map[synthesis.variable],
+            synthesis.spatial_resolution,
+            synthesis.temporal_resolution,
         )
-        rees = cls._validate_data(cls._get_ree(uow).rees, pd.DataFrame, "REEs")
-        dger = cls._get_dger(uow)
-        ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
-        anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
-        anos_pos_sim_final = cls._validate_data(
-            dger.num_anos_pos_sim_final, int, "dger"
+        cache = cls.CACHED_SYNTHESIS.get(synt_vol)
+        df_completo = (
+            cache
+            if cache is not None
+            else cls.__resolve_UHE(
+                synt_vol,
+                uow,
+            )
         )
-
-        agregacao_sim_final = dger.agregacao_simulacao_final
-        # Obtem o fim do periodo individualizado
-        if agregacao_sim_final == 1:
-            fim = datetime(
-                year=ano_inicio + anos_estudo + anos_pos_sim_final,
-                month=1,
-                day=1,
-            )
-        elif rees["ano_fim_individualizado"].isna().sum() > 0:
-            fim = datetime(
-                year=ano_inicio + anos_estudo + anos_pos_sim_final,
-                month=1,
-                day=1,
-            )
-        else:
-            fim = datetime(
-                year=int(rees["ano_fim_individualizado"].iloc[0]),
-                month=int(rees["mes_fim_individualizado"].iloc[0]),
-                day=1,
-            )
-        uhes_idx = confhd["codigo_usina"]
-        uhes_name = confhd["nome_usina"]
-
-        df_completo = pd.DataFrame()
-        n_procs = int(Settings().processors)
-        with Pool(processes=n_procs) as pool:
-            if n_procs > 1:
-                if cls.logger is not None:
-                    cls.logger.info("Paralelizando...")
-            async_res = {
-                idx: pool.apply_async(
-                    cls._resolve_UHE_usina,
-                    (
-                        uow,
-                        OperationSynthesis(
-                            variable=variable_map[synthesis.variable],
-                            spatial_resolution=synthesis.spatial_resolution,
-                            temporal_resolution=TemporalResolution.PATAMAR,
-                        ),
-                        idx,
-                        name,
-                    ),
-                )
-                for idx, name in zip(uhes_idx, uhes_name)
-            }
-            dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
-        if cls.logger is not None:
-            cls.logger.info("Compactando dados...")
-        dfs_validos = [d for d in dfs.values() if d is not None]
-        if len(dfs_validos) > 0:
-            df_completo = pd.concat(dfs_validos, ignore_index=True)
-
-        if synthesis.temporal_resolution == TemporalResolution.ESTAGIO:
-            patamares = df_completo["patamar"].unique().tolist()
-            cenarios_patamares: List[np.ndarray] = []
-            p0 = patamares[0]
-            for p in patamares:
-                cenarios_patamares.append(
-                    df_completo.loc[
-                        df_completo["patamar"] == p, "valor"
-                    ].to_numpy()
-                )
-            df_completo.loc[df_completo["patamar"] == p0, "valor"] = 0.0
-            for c in cenarios_patamares:
-                df_completo.loc[df_completo["patamar"] == p0, "valor"] += c
-            df_completo = df_completo.loc[df_completo["patamar"] == p0, :]
-            df_completo = df_completo.drop(columns="patamar")
+        if cache is None:
+            cls.CACHED_SYNTHESIS[synt_vol] = df_completo.copy()
 
         df_completo.loc[:, "valor"] *= FATOR_HM3_M3S
-        df_completo = df_completo.loc[df_completo["dataInicio"] < fim, :]
+        cls.CACHED_SYNTHESIS[synthesis] = df_completo.copy()
+
         return df_completo
 
     @classmethod
@@ -1336,127 +1229,31 @@ class OperationSynthetizer:
     def __stub_violacoes_UHE(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ):
-        confhd = cls._validate_data(
-            cls._get_confhd(uow).usinas, pd.DataFrame, "UHEs"
+        synt_pat = OperationSynthesis(
+            synthesis.variable,
+            spatial_resolution=synthesis.spatial_resolution,
+            temporal_resolution=TemporalResolution.PATAMAR,
         )
-        rees = cls._validate_data(cls._get_ree(uow).rees, pd.DataFrame, "REEs")
-        dger = cls._get_dger(uow)
-        agregacao_sim_final = dger.agregacao_simulacao_final
-        ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
-        anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
-
-        anos_pos_sim_final = cls._validate_data(
-            dger.num_anos_pos_sim_final, int, "dger"
+        cache = cls.CACHED_SYNTHESIS.get(synt_pat)
+        df_pat = (
+            cache
+            if cache is not None
+            else cls.__resolve_UHE_normal(synt_pat, uow)
         )
-
-        # Obtem o fim do periodo individualizado
-        if agregacao_sim_final == 1:
-            fim = datetime(
-                year=ano_inicio + anos_estudo + anos_pos_sim_final,
-                month=1,
-                day=1,
-            )
-        elif rees["ano_fim_individualizado"].isna().sum() > 0:
-            fim = datetime(
-                year=ano_inicio + anos_estudo + anos_pos_sim_final,
-                month=1,
-                day=1,
-            )
-        else:
-            fim = datetime(
-                year=int(rees["ano_fim_individualizado"].iloc[0]),
-                month=int(rees["mes_fim_individualizado"].iloc[0]),
-                day=1,
-            )
-        uhes_idx = confhd["codigo_usina"]
-        uhes_name = confhd["nome_usina"]
-
-        df_completo = pd.DataFrame()
-        n_procs = int(Settings().processors)
-        with Pool(processes=n_procs) as pool:
-            if n_procs > 1:
-                if cls.logger is not None:
-                    cls.logger.info("Paralelizando...")
-            async_res = {
-                idx: pool.apply_async(
-                    cls._resolve_UHE_usina,
-                    (
-                        uow,
-                        OperationSynthesis(
-                            variable=synthesis.variable,
-                            spatial_resolution=synthesis.spatial_resolution,
-                            temporal_resolution=TemporalResolution.PATAMAR,
-                        ),
-                        idx,
-                        name,
-                    ),
-                )
-                for idx, name in zip(uhes_idx, uhes_name)
-            }
-            dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
-        if cls.logger is not None:
-            cls.logger.info("Compactando dados...")
-        dfs_validos = [d for d in dfs.values() if d is not None]
-        if len(dfs_validos) > 0:
-            df_completo = pd.concat(dfs_validos, ignore_index=True)
+        df_pat.loc[:, "valor"] *= FATOR_HM3_M3S
+        if not df_pat.empty:
+            cls.CACHED_SYNTHESIS[synt_pat] = df_pat
 
         if synthesis.temporal_resolution == TemporalResolution.ESTAGIO:
-            df_completo = cls.__postprocess_violacoes_UHE_estagio(df_completo)
+            df_completo = cls.__postprocess_violacoes_UHE_estagio(df_pat)
 
-        df_completo.loc[:, "valor"] *= FATOR_HM3_M3S
-        if df_completo is not None:
-            if not df_completo.empty:
-                df_completo = df_completo.loc[
-                    df_completo["dataInicio"] < fim, :
-                ]
+        cls.CACHED_SYNTHESIS[synthesis] = df_completo
         return df_completo
 
     @classmethod
-    def __resolve_stubs_UHE(
+    def __resolve_UHE_normal(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-        if synthesis.variable in [
-            Variable.VAZAO_TURBINADA,
-            Variable.VAZAO_VERTIDA,
-        ]:
-            return cls.__stub_QTUR_QVER(synthesis, uow)
-        elif synthesis.variable == Variable.VAZAO_DEFLUENTE:
-            return cls.__stub_QDEF(synthesis, uow)
-        elif synthesis.variable in [
-            Variable.GERACAO_HIDRAULICA,
-            Variable.VOLUME_TURBINADO,
-            Variable.VOLUME_VERTIDO,
-        ]:
-            return cls.__stub_agrega_estagio_variaveis_por_patamar(
-                synthesis, uow
-            )
-        elif synthesis.variable in [
-            Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
-            Variable.VIOLACAO_DEFLUENCIA_MINIMA,
-            Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
-            Variable.VIOLACAO_TURBINAMENTO_MINIMO,
-            Variable.VIOLACAO_FPHA,
-        ]:
-            return cls.__stub_violacoes_UHE(synthesis, uow)
-
-    @classmethod
-    def __resolve_UHE(
-        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
-        if synthesis.variable in [
-            Variable.VAZAO_TURBINADA,
-            Variable.VAZAO_VERTIDA,
-            Variable.VAZAO_DEFLUENTE,
-            Variable.GERACAO_HIDRAULICA,
-            Variable.VOLUME_TURBINADO,
-            Variable.VOLUME_VERTIDO,
-            Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
-            Variable.VIOLACAO_DEFLUENCIA_MINIMA,
-            Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
-            Variable.VIOLACAO_TURBINAMENTO_MINIMO,
-            Variable.VIOLACAO_FPHA,
-        ]:
-            return cls.__resolve_stubs_UHE(synthesis, uow)
         confhd = cls._validate_data(
             cls._get_confhd(uow).usinas, pd.DataFrame, "UHEs"
         )
@@ -1512,6 +1309,39 @@ class OperationSynthetizer:
         if not df_completo.empty:
             df_completo = df_completo.loc[df_completo["dataInicio"] < fim, :]
         return df_completo
+
+    @classmethod
+    def __resolve_UHE(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        if (
+            synthesis.variable
+            in [
+                Variable.GERACAO_HIDRAULICA,
+                Variable.VOLUME_TURBINADO,
+                Variable.VOLUME_VERTIDO,
+            ]
+        ) and (synthesis.temporal_resolution == TemporalResolution.ESTAGIO):
+            return cls.__stub_agrega_estagio_variaveis_por_patamar(
+                synthesis, uow
+            )
+        elif synthesis.variable in [
+            Variable.VAZAO_TURBINADA,
+            Variable.VAZAO_VERTIDA,
+        ]:
+            return cls.__stub_QTUR_QVER(synthesis, uow)
+        elif synthesis.variable == Variable.VAZAO_DEFLUENTE:
+            return cls.__stub_QDEF(synthesis, uow)
+        elif synthesis.variable in [
+            Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
+            Variable.VIOLACAO_DEFLUENCIA_MINIMA,
+            Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
+            Variable.VIOLACAO_TURBINAMENTO_MINIMO,
+            Variable.VIOLACAO_FPHA,
+        ]:
+            return cls.__stub_violacoes_UHE(synthesis, uow)
+        else:
+            return cls.__resolve_UHE_normal(synthesis, uow)
 
     @classmethod
     def __resolve_UTE(
