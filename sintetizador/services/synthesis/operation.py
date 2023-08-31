@@ -1235,17 +1235,17 @@ class OperationSynthetizer:
             temporal_resolution=TemporalResolution.PATAMAR,
         )
         cache = cls.CACHED_SYNTHESIS.get(synt_pat)
-        df_pat = (
+        df_completo = (
             cache
             if cache is not None
             else cls.__resolve_UHE_normal(synt_pat, uow)
         )
-        df_pat.loc[:, "valor"] *= FATOR_HM3_M3S
-        if not df_pat.empty:
-            cls.CACHED_SYNTHESIS[synt_pat] = df_pat
+        df_completo.loc[:, "valor"] *= FATOR_HM3_M3S
+        if not df_completo.empty:
+            cls.CACHED_SYNTHESIS[synt_pat] = df_completo
 
         if synthesis.temporal_resolution == TemporalResolution.ESTAGIO:
-            df_completo = cls.__postprocess_violacoes_UHE_estagio(df_pat)
+            df_completo = cls.__postprocess_violacoes_UHE_estagio(df_completo)
 
         cls.CACHED_SYNTHESIS[synthesis] = df_completo
         return df_completo
