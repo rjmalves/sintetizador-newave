@@ -3,6 +3,7 @@ import pandas as pd  # type: ignore
 import numpy as np
 import logging
 import traceback
+from io import BytesIO
 from multiprocessing import Pool
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta  # type: ignore
@@ -1505,8 +1506,8 @@ class OperationSynthetizer:
             dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
         if cls.logger is not None:
             cls.logger.info("Compactando dados...")
-        for _, df in dfs.items():
-            df_completo = pd.concat([df_completo, df], ignore_index=True)
+        dfs_validos = [d for d in dfs.values()]
+        df_completo = pd.concat(dfs_validos, ignore_index=True)
 
         if not df_completo.empty:
             df_completo = df_completo.loc[df_completo["dataInicio"] < fim, :]
@@ -1643,27 +1644,47 @@ class OperationSynthetizer:
         return df
 
     @classmethod
+    def _resolve_quantil(cls, f: BytesIO, q: float) -> pd.DataFrame:
+        df = pd.read_parquet(f)
+        cols_valores = ["cenario", "valor"]
+        cols_agrupamento = [c for c in df.columns if c not in cols_valores]
+        if q == 0:
+            label = "min"
+        elif q == 1:
+            label = "max"
+        elif q == 0.5:
+            label = "median"
+        else:
+            label = f"p{int(100 * q)}"
+        df_q = (
+            df.groupby(cols_agrupamento)
+            .quantile(q, numeric_only=True)
+            .reset_index()
+        )
+        df_q["cenario"] = label
+        return df_q
+
+    @classmethod
     def _processa_quantis(
         cls, df: pd.DataFrame, quantiles: List[float]
     ) -> pd.DataFrame:
-        cols_valores = ["cenario", "valor"]
-        cols_agrupamento = [c for c in df.columns if c not in cols_valores]
-        for q in quantiles:
-            if q == 0:
-                label = "min"
-            elif q == 1:
-                label = "max"
-            elif q == 0.5:
-                label = "median"
-            else:
-                label = f"p{int(100 * q)}"
-            df_q = (
-                df.groupby(cols_agrupamento)
-                .quantile(q, numeric_only=True)
-                .reset_index()
-            )
-            df_q["cenario"] = label
-            df = pd.concat([df, df_q], ignore_index=True)
+        n_procs = int(Settings().processors)
+
+        def __serializa_df(df: pd.DataFrame) -> BytesIO:
+            f = BytesIO()
+            df.to_parquet(f, compression="gzip")
+            f.seek(0)
+            return f
+
+        with Pool(processes=n_procs) as pool:
+            serial_df = __serializa_df(df)
+            async_res = {
+                q: pool.apply_async(cls._resolve_quantil, (serial_df, q))
+                for q in quantiles
+            }
+            dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
+        dfs_validos = [d for d in dfs.values()]
+        df = pd.concat([df] + dfs_validos, ignore_index=True)
         return df
 
     @classmethod
@@ -1731,8 +1752,8 @@ class OperationSynthetizer:
                 if df is not None:
                     if not df.empty:
                         df = cls._resolve_starting_stage(df, uow)
+                        df = cls._postprocess(df)
                         with uow:
-                            df = cls._postprocess(df)
                             uow.export.synthetize_df(df, filename)
         except Exception as e:
             traceback.print_exc()
