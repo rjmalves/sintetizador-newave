@@ -1574,11 +1574,14 @@ class OperationSynthetizer:
             for s in valid_synthesis:
                 filename = str(s)
                 cls.logger.info(f"Realizando síntese de {filename}")
-                df, is_stub = cls._resolve_stub(s, uow)
-                if not is_stub:
-                    df = cls._resolve_spatial_resolution(s, uow)
-                    if s in cls.SYNTHESIS_TO_CACHE:
-                        cls.CACHED_SYNTHESIS[s] = df.copy()
+                if s in cls.CACHED_SYNTHESIS.keys():
+                    df = cls.CACHED_SYNTHESIS.get(s)
+                else:
+                    df, is_stub = cls._resolve_stub(s, uow)
+                    if not is_stub:
+                        df = cls._resolve_spatial_resolution(s, uow)
+                        if s in cls.SYNTHESIS_TO_CACHE:
+                            cls.CACHED_SYNTHESIS[s] = df.copy()
                 if df is not None:
                     if not df.empty:
                         df = cls._resolve_starting_stage(df, uow)
