@@ -1496,7 +1496,11 @@ class OperationSynthetizer:
             return label
 
         level_column = [c for c in df_q.columns if "level_" in c]
-        df_q = df_q.rename(columns={level_column: "cenario"})
+        if len(level_column) != 1:
+            if cls.logger is not None:
+                cls.logger.error("Erro no cálculo dos quantis")
+                raise RuntimeError()
+        df_q = df_q.rename(columns={level_column[0]: "cenario"})
         df_q["cenario"] = df_q["cenario"].apply(quantile_map)
         return pd.concat([df, df_q], ignore_index=True)
 
