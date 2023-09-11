@@ -3,7 +3,6 @@ import pandas as pd  # type: ignore
 import numpy as np
 import logging
 import traceback
-from io import BytesIO
 from multiprocessing import Pool
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta  # type: ignore
@@ -1474,48 +1473,32 @@ class OperationSynthetizer:
         return df
 
     @classmethod
-    def _resolve_quantil(cls, f: BytesIO, q: float) -> pd.DataFrame:
-        df = pd.read_parquet(f)
-        cols_valores = ["cenario", "valor"]
-        cols_agrupamento = [c for c in df.columns if c not in cols_valores]
-        if q == 0:
-            label = "min"
-        elif q == 1:
-            label = "max"
-        elif q == 0.5:
-            label = "median"
-        else:
-            label = f"p{int(100 * q)}"
-        df_q = (
-            df.groupby(cols_agrupamento)
-            .quantile(q, numeric_only=True)
-            .reset_index()
-        )
-        df_q["cenario"] = label
-        return df_q
-
-    @classmethod
     def _processa_quantis(
         cls, df: pd.DataFrame, quantiles: List[float]
     ) -> pd.DataFrame:
-        n_procs = int(Settings().processors)
+        cols_valores = ["cenario", "valor"]
+        cols_agrupamento = [c for c in df.columns if c not in cols_valores]
+        df_q = (
+            df.groupby(cols_agrupamento)
+            .quantile(quantiles, numeric_only=True)
+            .reset_index()
+        )
 
-        def __serializa_df(df: pd.DataFrame) -> BytesIO:
-            f = BytesIO()
-            df.to_parquet(f, compression="gzip")
-            f.seek(0)
-            return f
+        def quantile_map(q: float) -> str:
+            if q == 0:
+                label = "min"
+            elif q == 1:
+                label = "max"
+            elif q == 0.5:
+                label = "median"
+            else:
+                label = f"p{int(100 * q)}"
+            return label
 
-        with Pool(processes=n_procs) as pool:
-            serial_df = __serializa_df(df)
-            async_res = {
-                q: pool.apply_async(cls._resolve_quantil, (serial_df, q))
-                for q in quantiles
-            }
-            dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
-        dfs_validos = [d for d in dfs.values()]
-        df = pd.concat([df] + dfs_validos, ignore_index=True)
-        return df
+        level_column = [c for c in df_q.columns if "level_" in c]
+        df_q = df_q.rename(columns={level_column: "cenario"})
+        df_q["cenario"] = df_q["cenario"].apply(quantile_map)
+        return pd.concat([df, df_q], ignore_index=True)
 
     @classmethod
     def _postprocess(cls, df: pd.DataFrame) -> pd.DataFrame:
