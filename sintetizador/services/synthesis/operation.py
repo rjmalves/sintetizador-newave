@@ -38,6 +38,7 @@ class OperationSynthetizer:
         "CMO_SBM_EST",
         "CMO_SBM_PAT",
         "VAGUA_REE_EST",
+        "VAGUA_UHE_EST",
         "CTER_SBM_EST",
         "CTER_SIN_EST",
         "COP_SIN_EST",
@@ -1106,7 +1107,10 @@ class OperationSynthetizer:
         )
         cache_uhe = cls.CACHED_SYNTHESIS.get(s)
         if cache_uhe is None:
-            df_uhe = cls._resolve_spatial_resolution(s, uow)
+            if s.variable == Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL:
+                df_uhe = cls.__stub_resolve_volumes_iniciais_uhe(s, uow)
+            else:
+                df_uhe = cls._resolve_spatial_resolution(s, uow)
             cls.CACHED_SYNTHESIS[s] = df_uhe
         else:
             df_uhe = cache_uhe
@@ -1206,6 +1210,154 @@ class OperationSynthetizer:
             df_vminop.groupby(cols_group).sum(numeric_only=True).reset_index()
         )
         return df_sin
+
+    @classmethod
+    def __stub_resolve_energias_iniciais_ree(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        variable_map = {
+            Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL: Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
+            Variable.ENERGIA_ARMAZENADA_PERCENTUAL_INICIAL: Variable.ENERGIA_ARMAZENADA_PERCENTUAL_FINAL,
+        }
+        sintese_final = OperationSynthesis(
+            variable=variable_map[synthesis.variable],
+            spatial_resolution=synthesis.spatial_resolution,
+            temporal_resolution=synthesis.temporal_resolution,
+        )
+        resolve_func = {
+            SpatialResolution.RESERVATORIO_EQUIVALENTE: cls.__resolve_REE,
+            SpatialResolution.SUBMERCADO: cls.__resolve_SBM,
+            SpatialResolution.SISTEMA_INTERLIGADO: cls.__resolve_SIN,
+        }[synthesis.spatial_resolution]
+        cache_earm = cls.CACHED_SYNTHESIS.get(sintese_final)
+        df_final = (
+            cache_earm
+            if cache_earm is not None
+            else resolve_func(sintese_final, uow)
+        )
+        earmi_percentual = cls._earmi_percentual(synthesis, uow)
+
+        col_earmi_pmo = (
+            "valor_MWmes"
+            if synthesis.variable
+            == Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL
+            else "valor_percentual"
+        )
+        df_inicial = df_final.copy()
+        col_grp_map = {
+            SpatialResolution.RESERVATORIO_EQUIVALENTE: "ree",
+            SpatialResolution.SUBMERCADO: "submercado",
+            SpatialResolution.SISTEMA_INTERLIGADO: "",
+        }
+        col_grp = col_grp_map[synthesis.spatial_resolution]
+        if (
+            synthesis.spatial_resolution
+            == SpatialResolution.SISTEMA_INTERLIGADO
+        ):
+            estagios = df_inicial["estagio"].unique()
+            for estagio in sorted(estagios, reverse=True)[:-1]:
+                df_inicial.loc[
+                    df_inicial["estagio"] == estagio,
+                    "valor",
+                ] = df_inicial.loc[
+                    df_inicial["estagio"] == estagio - 1,
+                    "valor",
+                ].to_numpy()
+            df_inicial.loc[
+                df_inicial["estagio"] == 1,
+                "valor",
+            ] = earmi_percentual[col_earmi_pmo].iloc[0]
+        else:
+            groups = df_inicial[col_grp].unique()
+            estagios = df_inicial["estagio"].unique()
+            # Para cada par grupo x estagio, desloca os valores de 1 e para o
+            # primeiro estágio, coloca o valor do pmo.dat
+            for group in groups:
+                for estagio in sorted(estagios, reverse=True)[:-1]:
+                    df_inicial.loc[
+                        (df_inicial[col_grp] == group)
+                        & (df_inicial["estagio"] == estagio),
+                        "valor",
+                    ] = df_inicial.loc[
+                        (df_inicial[col_grp] == group)
+                        & (df_inicial["estagio"] == estagio - 1),
+                        "valor",
+                    ].to_numpy()
+                df_inicial.loc[
+                    (df_inicial[col_grp] == group)
+                    & (df_inicial["estagio"] == 1),
+                    "valor",
+                ] = earmi_percentual.loc[
+                    (earmi_percentual["group"] == group), col_earmi_pmo
+                ].iloc[
+                    0
+                ]
+
+        return df_inicial
+
+    @classmethod
+    def __stub_resolve_volumes_iniciais_uhe(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        variable_map = {
+            Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL: Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+            Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL: Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
+        }
+        sintese_final = OperationSynthesis(
+            variable=variable_map[synthesis.variable],
+            spatial_resolution=synthesis.spatial_resolution,
+            temporal_resolution=synthesis.temporal_resolution,
+        )
+        cache_varm = cls.CACHED_SYNTHESIS.get(sintese_final)
+        df_final = (
+            cache_varm
+            if cache_varm is not None
+            else cls.__resolve_UHE(sintese_final, uow)
+        )
+        with uow:
+            arq_pmo = uow.files.get_pmo()
+            if arq_pmo is not None:
+                varmi_pmo = cls._validate_data(
+                    arq_pmo.volume_armazenado_inicial, pd.DataFrame, "VARMI"
+                )
+            else:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro na leitura do VARM inicial do pmo.dat"
+                    )
+                raise RuntimeError()
+        col_varmi_pmo = (
+            "valor_hm3"
+            if synthesis.variable
+            == Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL
+            else "valor_percentual"
+        )
+        df_inicial = df_final.copy()
+        uhes = df_inicial["usina"].unique()
+        estagios = df_inicial["estagio"].unique()
+        # Para cada par uhe x estagio, desloca os valores de 1 e para o
+        # primeiro estágio, coloca o valor do pmo.dat
+        for uhe in uhes:
+            for estagio in sorted(estagios, reverse=True)[:-1]:
+                df_inicial.loc[
+                    (df_inicial["usina"] == uhe)
+                    & (df_inicial["estagio"] == estagio),
+                    "valor",
+                ] = df_inicial.loc[
+                    (df_inicial["usina"] == uhe)
+                    & (df_inicial["estagio"] == estagio - 1),
+                    "valor",
+                ].to_numpy()
+            df_inicial.loc[
+                (df_inicial["usina"] == uhe) & (df_inicial["estagio"] == 1),
+                "valor",
+            ] = varmi_pmo.loc[
+                (varmi_pmo["nome_usina"] == uhe), col_varmi_pmo
+            ].iloc[
+                0
+            ]
+
+        return df_inicial
 
     @classmethod
     def __postprocess_violacoes_UHE_estagio(cls, df_completo: pd.DataFrame):
@@ -1511,6 +1663,64 @@ class OperationSynthetizer:
         return df
 
     @classmethod
+    def _earmi_percentual(
+        cls, s: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        with uow:
+            arq_pmo = uow.files.get_pmo()
+            if arq_pmo is not None:
+                earmi_pmo = cls._validate_data(
+                    arq_pmo.energia_armazenada_inicial, pd.DataFrame, "EARMI"
+                )
+            else:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro na leitura do EARM inicial do pmo.dat"
+                    )
+                raise RuntimeError()
+        if s.spatial_resolution == SpatialResolution.RESERVATORIO_EQUIVALENTE:
+            return earmi_pmo.rename(columns={"nome_ree": "group"})
+        earmi_pmo["earmax"] = (
+            100 * earmi_pmo["valor_MWmes"] / earmi_pmo["valor_percentual"]
+        )
+        if s.spatial_resolution == SpatialResolution.SUBMERCADO:
+            sistema = cls._validate_data(
+                cls._get_sistema(uow).custo_deficit,
+                pd.DataFrame,
+                "submercados",
+            )
+            rees = cls._validate_data(
+                cls._get_ree(uow).rees, pd.DataFrame, "REEs"
+            )
+            nomes_rees = rees["nome"].unique().tolist()
+            rees_submercados = {
+                r: str(
+                    sistema.loc[
+                        sistema["codigo_submercado"]
+                        == int(
+                            rees.loc[rees["nome"] == r, "submercado"].iloc[0]
+                        ),
+                        "nome_submercado",
+                    ].tolist()[0]
+                )
+                for r in nomes_rees
+            }
+            earmi_pmo.dropna(inplace=True)
+            earmi_pmo["group"] = earmi_pmo.apply(
+                lambda linha: rees_submercados[linha["nome_ree"].strip()],
+                axis=1,
+            )
+        else:
+            earmi_pmo["group"] = 1
+        earmi_pmo = (
+            earmi_pmo.groupby("group").sum(numeric_only=True).reset_index()
+        )
+        earmi_pmo["valor_percentual"] = (
+            100 * earmi_pmo["valor_MWmes"] / (earmi_pmo["earmax"])
+        )
+        return earmi_pmo
+
+    @classmethod
     def _resolve_stub(
         cls, s: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> Tuple[pd.DataFrame, bool]:
@@ -1529,6 +1739,36 @@ class OperationSynthetizer:
             [
                 s.variable
                 in [
+                    Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
+                    Variable.ENERGIA_ARMAZENADA_PERCENTUAL_INICIAL,
+                ],
+                s.spatial_resolution
+                in [
+                    SpatialResolution.RESERVATORIO_EQUIVALENTE,
+                    SpatialResolution.SUBMERCADO,
+                    SpatialResolution.SISTEMA_INTERLIGADO,
+                ],
+            ]
+        ):
+            df = cls.__stub_resolve_energias_iniciais_ree(s, uow)
+            return df, True
+        elif all(
+            [
+                s.variable
+                in [
+                    Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
+                    Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
+                ],
+                s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+            ]
+        ):
+            df = cls.__stub_resolve_volumes_iniciais_uhe(s, uow)
+            return df, True
+        elif all(
+            [
+                s.variable
+                in [
+                    Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
                     Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
                     Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
                     Variable.VIOLACAO_DEFLUENCIA_MINIMA,

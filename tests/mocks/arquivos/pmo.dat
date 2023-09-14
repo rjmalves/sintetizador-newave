@@ -421,6 +421,186 @@
 X--------------------------------------------------------------------------------------------X
 
 
+
+     ENERGIA ARMAZENADA INICIAL (MWmes E %EARMx)
+
+   SUDESTE      MADEIRA      TPIRES       ITAIPU       PARANA       PRNPANEMA    SUL          IGUACU       NORDESTE     NORTE        BMONTE       MAN-AP
+    21386.9        299.6        847.5          0.0      43795.7       4797.9       3892.1       7174.6      34646.5      11517.8         25.2        452.9
+       42.0 %       95.5 %       92.7 %         -  %       31.2 %       40.6 %       41.7 %       69.5 %       67.0 %       83.4 %       89.7 %       57.6 %
+
+
+
+
+     VOLUME ARMAZENADO INICIAL
+
+ X-----X------------X--------------X------------X
+   NUM      NOME       V.INIC(Hm3)    V.INIC(%)
+ X-----X------------X--------------X------------X
+     4  FUNIL-GRANDE            -            0.00
+    20  BATALHA              800.1          59.20
+    21  SERRA FACAO          911.7          26.45
+    27  CAPIM BRANC1           7.5          58.64
+    28  CAPIM BRANC2            -            0.00
+    29  CORUMBA IV           738.3          95.71
+    48  PIRAJU                  -            0.00
+    66  ITAIPU                  -            0.00
+   131  NILO PECANHA            -            0.00
+   132  FONTES                  -            0.00
+   141  BAGUARI                 -            0.00
+   153  SAO DOMINGOS            -            0.00
+   155  RETIRO BAIXO          23.9          58.46
+   156  TRES MARIAS        10769.5          70.49
+   162  QUEIMADO             384.7          83.31
+   195  JAURU                   -            0.00
+   196  GUAPORE                 -            0.00
+   203  CORUMBA III          239.6          91.10
+   227  SINOP               1913.7          92.95
+   228  COLIDER                 -            0.00
+   229  TELES PIRES             -            0.00
+   230  SAO MANOEL              -            0.00
+   241  SLT VERDINHO            -            0.00
+   249  OURINHOS                -            0.00
+   251  SERRA MESA         15578.6          36.02
+   252  CANA BRAVA              -            0.00
+   253  SAO SALVADOR            -            0.00
+   257  PEIXE ANGIC          409.4          77.50
+   261  LAJEADO                 -            0.00
+   262  SALTO                   -            0.00
+   276  RONDON II            286.1         100.00
+   281  PONTE PEDRA             -            0.00
+   285  JIRAU                   -            0.00
+   287  STO ANTONIO             -            0.00
+   290  ESPORA                95.2          69.00
+   304  ITIQUIRA I              -            0.00
+   305  ITIQUIRA II             -            0.00
+   310  DARDANELOS              -            0.00
+   311  CACU                  28.5          90.00
+   312  B. COQUEIROS            -            0.00
+   315  FOZ R. CLARO            -            0.00
+   319  FICT.MAUA            391.8          59.00
+   117  GUARAPIRANGA         141.5          74.78
+   118  BILLINGS             830.4          73.38
+   119  HENRY BORDEN            -            0.00
+   120  JAGUARI              536.8          67.69
+   121  PARAIBUNA           1381.3          52.40
+   122  SANTA BRANCA         113.0          36.69
+   123  FUNIL                294.6          48.69
+   124  LAJES                398.4          89.47
+   126  PICADA                  -            0.00
+   127  SOBRAGI                 -            0.00
+   129  SIMPLICIO               -            0.00
+   130  ILHA POMBOS             -            0.00
+   133  P. PASSOS               -            0.00
+   134  SALTO GRANDE            -            0.00
+   135  P. ESTRELA            33.0         100.00
+   139  CANDONGA                -            0.00
+   143  AIMORES                 -            0.00
+   144  MASCARENHAS             -            0.00
+   192  GUILMAN-AMOR            -            0.00
+   193  SA CARVALHO             -            0.00
+   217  ROSAL                   -            0.00
+   279  SAMUEL              2422.2          94.98
+   148  IRAPE               2137.0          57.82
+   283  STA CLARA MG            -            0.00
+     1  CAMARGOS             513.1          76.35
+     2  ITUTINGA                -            0.00
+     6  FURNAS              6650.9          38.63
+     7  M. DE MORAES        1281.0          51.24
+     8  ESTREITO                -            0.00
+     9  JAGUARA                 -            0.00
+    10  IGARAPAVA               -            0.00
+    11  VOLTA GRANDE            -            0.00
+    12  P. COLOMBIA             -            0.00
+    14  CACONDE              150.7          29.90
+    15  E. DA CUNHA             -            0.00
+    16  A.S.OLIVEIRA            -            0.00
+    17  MARIMBONDO           640.1          12.17
+    18  A. VERMELHA          703.0          13.60
+    34  I. SOLTEIRA         2604.2          47.38
+    24  EMBORCACAO          2854.0          21.86
+    25  NOVA PONTE          1731.4          16.68
+    26  MIRANDA              100.9          69.08
+    30  CORUMBA I            955.5          92.77
+    31  ITUMBIARA           4202.0          33.74
+    32  CACH.DOURADA            -            0.00
+    33  SAO SIMAO           1102.5          19.90
+    37  BARRA BONITA        1475.5          57.50
+    38  A.S. LIMA               -            0.00
+    39  IBITINGA                -            0.00
+    40  PROMISSAO           1296.0          60.90
+    42  NAVANHANDAVA            -            0.00
+    43  TRES IRMAOS         1645.9          47.72
+    45  JUPIA                   -            0.00
+    46  P. PRIMAVERA            -            0.00
+   278  MANSO               1265.7          42.89
+    47  A.A. LAYDNER        1093.2          34.54
+    49  CHAVANTES            591.8          19.46
+    50  L.N. GARCEZ             -            0.00
+    51  CANOAS II               -            0.00
+    52  CANOAS I                -            0.00
+    61  CAPIVARA            3715.4          64.91
+    62  TAQUARUCU               -            0.00
+    63  ROSANA                  -            0.00
+    57  MAUA                 391.8          59.00
+    71  STA CLARA PR         157.2          60.00
+    72  FUNDAO                  -            0.00
+    74  G.B. MUNHOZ         2751.0          72.30
+    83  BAIXO IGUACU            -            0.00
+    86  BARRA GRANDE        1208.6          55.12
+    89  GARIBALDI             32.0          49.97
+    90  CAMPOS NOVOS          75.8          48.26
+    91  MACHADINHO           419.5          39.69
+    92  ITA                     -            0.00
+    93  PASSO FUNDO          617.9          44.01
+    94  MONJOLINHO              -            0.00
+    95  QUEBRA QUEIX          16.1          61.72
+   101  SAO JOSE                -            0.00
+   102  PASSO S JOAO            -            0.00
+   103  FOZ CHAPECO             -            0.00
+    97  CASTRO ALVES            -            0.00
+    98  MONTE CLARO             -            0.00
+    99  14 DE JULHO             -            0.00
+   110  ERNESTINA             67.1          28.20
+   111  PASSO REAL           892.6          26.59
+   112  JACUI                   -            0.00
+   113  ITAUBA                  -            0.00
+   114  D. FRANCISCA            -            0.00
+   115  G.P. SOUZA           108.4          69.50
+   215  SALTO PILAO             -            0.00
+    73  JORDAO                25.0         100.00
+    76  SEGREDO              233.6          60.20
+    77  SLT.SANTIAGO        2943.3          71.56
+    78  SALTO OSORIO            -            0.00
+    82  SALTO CAXIAS            -            0.00
+   169  SOBRADINHO         19755.8          68.91
+   172  ITAPARICA           1438.7          40.55
+   176  COMP PAF-MOX            -            0.00
+   178  XINGO                   -            0.00
+   294  FICT.QUEIMAD         384.7          83.31
+   295  FICT.TRES MA       10769.5          70.49
+   308  FICT.RETIRO           23.9          58.46
+   154  ITAPEBI                 -            0.00
+   298  FICT.IRAPE          2137.0          57.82
+   189  P. CAVALO            771.8          81.93
+   190  B. ESPERANCA        1751.0          91.58
+   204  CACH.CALDEIR            -            0.00
+   267  ESTREITO TOC            -            0.00
+   275  TUCURUI            38713.0          99.31
+   277  BALBINA             6199.2          60.22
+   280  COARACY NUNE            -            0.00
+   284  FERREIRA GOM            -            0.00
+   286  STO ANT JARI            -            0.00
+   291  FICT.SERRA M       15578.4          65.49
+   292  FICT.CANA BR            -            0.00
+   302  FICT.LAJEADO            -            0.00
+   303  FICT.PEIXE A         409.4          77.50
+   306  FICT.SAO SAL            -            0.00
+   314  PIMENTAL                -            0.00
+   272  CURUA-UNA            427.1          91.06
+   288  BELO MONTE              -            0.00
+ X-----X------------X--------------X------------X
+
+
 
  CEPEL                         MODELO ESTRATEGICO DE GERACAO HIDROTERMICA A SUBSISTEMAS              VERSAO  28.12_L                           
                                                                                                          PAG.  24

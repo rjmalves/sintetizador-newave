@@ -91,6 +91,7 @@ from inewave.nwlistop.dtbmin import Dtbmin
 from inewave.nwlistop.dvazmax import Dvazmax
 from inewave.nwlistop.depminuh import Depminuh
 from inewave.nwlistop.dfphauh import Dfphauh
+from inewave.nwlistop.pivarm import Pivarm
 
 from inewave.nwlistcf import Nwlistcfrel
 from inewave.nwlistcf import Estados
@@ -295,6 +296,13 @@ class RawFilesRepository(AbstractFilesRepository):
                 TemporalResolution.ESTAGIO,
             ): lambda dir, ree=1: Vagua.read(
                 join(dir, f"vagua{str(ree).zfill(3)}.out")
+            ).valores,
+            (
+                Variable.VALOR_AGUA,
+                SpatialResolution.USINA_HIDROELETRICA,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, uhe=1: Pivarm.read(
+                join(dir, f"pivarm{str(uhe).zfill(3)}.out")
             ).valores,
             (
                 Variable.CUSTO_GERACAO_TERMICA,

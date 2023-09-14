@@ -198,3 +198,123 @@ def test_sintese_qdef_uhe(test_settings):
     m.assert_called_once()
     df = m.mock_calls[0].args[0]
     assert df.at[0, "valor"] == 267.19011406844106
+
+
+def test_sintese_earmi_ree(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.ParquetExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["EARMI_REE_EST"], uow)
+    m.assert_called_once()
+    df = m.mock_calls[0].args[0]
+    assert df.at[0, "valor"] == 21386.9
+
+
+def test_sintese_earmi_sbm(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.ParquetExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["EARMI_SBM_EST"], uow)
+    m.assert_called_once()
+    df = m.mock_calls[0].args[0]
+    assert round(df.at[0, "valor"], 1) == 71127.6
+
+
+def test_sintese_earmi_sin(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.ParquetExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["EARMI_SIN_EST"], uow)
+    m.assert_called_once()
+    df = m.mock_calls[0].args[0]
+    assert df.at[0, "valor"] == 128836.7
+
+
+def test_sintese_earpi_ree(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.ParquetExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["EARPI_REE_EST"], uow)
+    m.assert_called_once()
+    df = m.mock_calls[0].args[0]
+    assert df.at[0, "valor"] == 42.0
+
+
+def test_sintese_earpi_sbm(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.ParquetExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["EARPI_SBM_EST"], uow)
+    m.assert_called_once()
+    df = m.mock_calls[0].args[0]
+    assert round(df.at[0, "valor"], 2) == 34.81
+
+
+def test_sintese_earpi_sin(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.ParquetExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["EARPI_SIN_EST"], uow)
+    m.assert_called_once()
+    df = m.mock_calls[0].args[0]
+    assert round(df.at[0, "valor"], 2) == 44.38
+
+
+def test_sintese_varmi_uhe(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.ParquetExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["VARMI_UHE_EST"], uow)
+    m.assert_called_once()
+    df = m.mock_calls[0].args[0]
+    assert df.at[0, "valor"] == 513.1
+
+
+def test_sintese_varmi_ree(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.ParquetExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["VARMI_REE_EST"], uow)
+    m.assert_called_once()
+    df = m.mock_calls[0].args[0]
+    assert df.at[0, "valor"] == 513.1
+
+
+def test_sintese_varmi_sbm(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.ParquetExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["VARMI_SBM_EST"], uow)
+    m.assert_called_once()
+    df = m.mock_calls[0].args[0]
+    assert df.at[0, "valor"] == 513.1
+
+
+def test_sintese_varmi_sin(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.ParquetExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["VARMI_SIN_EST"], uow)
+    m.assert_called_once()
+    df = m.mock_calls[0].args[0]
+    assert df.at[0, "valor"] == 513.1
