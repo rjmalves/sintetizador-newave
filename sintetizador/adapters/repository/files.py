@@ -55,6 +55,7 @@ from inewave.nwlistop.earmfsin import Earmfsin
 from inewave.nwlistop.ghtot import Ghtot
 from inewave.nwlistop.ghtotm import Ghtotm
 from inewave.nwlistop.ghtotsin import Ghtotsin
+from inewave.nwlistop.gtert import Gtert
 from inewave.nwlistop.gttot import Gttot
 from inewave.nwlistop.gttotsin import Gttotsin
 from inewave.nwlistop.evert import Evert
@@ -427,6 +428,15 @@ class RawFilesRepository(AbstractFilesRepository):
                 TemporalResolution.PATAMAR,
             ): lambda dir, _: self.__extrai_patamares_df(
                 Ghtotsin.read(join(dir, "ghtotsin.out")).valores,
+            ),
+            (
+                Variable.GERACAO_TERMICA,
+                SpatialResolution.USINA_TERMELETRICA,
+                TemporalResolution.PATAMAR,
+            ): lambda dir, submercado=1: self.__extrai_patamares_df(
+                Gtert.read(
+                    join(dir, f"gtert{str(submercado).zfill(3)}.out")
+                ).valores,
             ),
             (
                 Variable.GERACAO_TERMICA,

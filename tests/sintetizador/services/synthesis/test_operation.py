@@ -318,3 +318,29 @@ def test_sintese_varmi_sin(test_settings):
     m.assert_called_once()
     df = m.mock_calls[0].args[0]
     assert df.at[0, "valor"] == 513.1
+
+
+def test_sintese_gter_ute_pat(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.ParquetExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["GTER_UTE_PAT"], uow)
+    m.assert_called_once()
+    df = m.mock_calls[0].args[0]
+    assert df.at[0, "valor"] == 0.0
+    assert df.at[1, "valor"] == 162.9
+
+
+def test_sintese_gter_ute_est(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.ParquetExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["GTER_UTE_EST"], uow)
+    m.assert_called_once()
+    df = m.mock_calls[0].args[0]
+    assert df.at[0, "valor"] == 0.0
+    assert df.at[1, "valor"] == 640.0
