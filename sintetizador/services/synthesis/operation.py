@@ -1335,7 +1335,9 @@ class OperationSynthetizer:
                             ],
                             n_series,
                         ),
-                        df_inicial["valor"].to_numpy()[n_series:],
+                        df_inicial.loc[
+                            df_inicial[col_grp] == group, "valor"
+                        ].to_numpy()[n_series:],
                     ]
                 )
 
