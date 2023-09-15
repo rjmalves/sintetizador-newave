@@ -1,4 +1,4 @@
 click
 pandas
 pyarrow
-inewave>=1.2.0
+inewave>=1.2.2

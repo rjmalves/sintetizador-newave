@@ -1,6 +1,6 @@
 # v1.1.0
 
-- Compatibilização com `inewave` após a primeira major release (>= 1.2.1)
+- Compatibilização com `inewave` após a primeira major release (>= 1.2.2)
 -
 
 # v1.0.0
