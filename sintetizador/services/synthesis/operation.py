@@ -1814,6 +1814,7 @@ class OperationSynthetizer:
     def _postprocess(cls, df: pd.DataFrame) -> pd.DataFrame:
         df = cls._processa_quantis(df, [0.05 * i for i in range(21)])
         df = cls._processa_media(df)
+        df = df.astype({"cenario": str})
         return df
 
     @classmethod
