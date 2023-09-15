@@ -1387,29 +1387,31 @@ class OperationSynthetizer:
         df_inicial = df_final.copy()
         uhes = df_inicial["usina"].unique()
         estagios = df_inicial["estagio"].unique()
+        series = df_inicial["serie"].unique().tolist()
+        n_series = len(series)
         # Para cada par uhe x estagio, desloca os valores de 1 e para o
         # primeiro estágio, coloca o valor do pmo.dat
         for uhe in uhes:
             if cls.logger is not None:
                 cls.logger.info(f"Gerando VARM inicial para {uhe}")
-            for estagio in sorted(estagios, reverse=True)[:-1]:
-                df_inicial.loc[
-                    (df_inicial["usina"] == uhe)
-                    & (df_inicial["estagio"] == estagio),
-                    "valor",
-                ] = df_inicial.loc[
-                    (df_inicial["usina"] == uhe)
-                    & (df_inicial["estagio"] == estagio - 1),
-                    "valor",
-                ].to_numpy()
             df_inicial.loc[
-                (df_inicial["usina"] == uhe) & (df_inicial["estagio"] == 1),
-                "valor",
-            ] = varmi_pmo.loc[
-                (varmi_pmo["nome_usina"] == uhe), col_varmi_pmo
-            ].iloc[
-                0
-            ]
+                df_inicial["usina"] == uhe, "valor"
+            ] = np.concatenate(
+                [
+                    np.repeat(
+                        [
+                            varmi_pmo.loc[
+                                (varmi_pmo["nome_usina"] == uhe),
+                                col_varmi_pmo,
+                            ].iloc[0]
+                        ],
+                        n_series,
+                    ),
+                    df_inicial.loc[
+                        df_inicial["usina"] == uhe, "valor"
+                    ].to_numpy()[n_series:],
+                ]
+            )
 
         return df_inicial
 
