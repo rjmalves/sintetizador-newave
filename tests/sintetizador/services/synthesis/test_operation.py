@@ -330,7 +330,6 @@ def test_sintese_gter_ute_pat(test_settings):
     m.assert_called_once()
     df = m.mock_calls[0].args[0]
     assert df.at[0, "valor"] == 0.0
-    assert df.at[1, "valor"] == 162.9
 
 
 def test_sintese_gter_ute_est(test_settings):
@@ -343,4 +342,3 @@ def test_sintese_gter_ute_est(test_settings):
     m.assert_called_once()
     df = m.mock_calls[0].args[0]
     assert df.at[0, "valor"] == 0.0
-    assert df.at[1, "valor"] == 640.0

@@ -1301,56 +1301,43 @@ class OperationSynthetizer:
             SpatialResolution.SISTEMA_INTERLIGADO: "",
         }
         col_grp = col_grp_map[synthesis.spatial_resolution]
-        print("\n", df_inicial)
-        # Ordem dos elementos
-        # Verificar padrão de ordenação dos elementos
-        # Ao invés de fazer com for, defasar os valores por blocos
-        # e montar via numpy
-        # Isto limita a velocidade hoje.
+        series = df_inicial["serie"].unique().tolist()
+        n_series = len(series)
         if cls.logger is not None:
             cls.logger.info("Gerando EARM inicial...")
         if (
             synthesis.spatial_resolution
             == SpatialResolution.SISTEMA_INTERLIGADO
         ):
-            estagios = df_inicial["estagio"].unique()
-            for estagio in sorted(estagios, reverse=True)[:-1]:
-                df_inicial.loc[
-                    df_inicial["estagio"] == estagio,
-                    "valor",
-                ] = df_inicial.loc[
-                    df_inicial["estagio"] == estagio - 1,
-                    "valor",
-                ].to_numpy()
-            df_inicial.loc[
-                df_inicial["estagio"] == 1,
-                "valor",
-            ] = earmi_percentual[col_earmi_pmo].iloc[0]
+            df_inicial["valor"] = np.concatenate(
+                [
+                    np.repeat(
+                        [earmi_percentual[col_earmi_pmo].iloc[0]], n_series
+                    ),
+                    df_inicial["valor"].to_numpy()[n_series:],
+                ]
+            )
         else:
-            groups = df_inicial[col_grp].unique()
-            estagios = df_inicial["estagio"].unique()
+            groups = df_inicial[col_grp].unique().tolist()
             # Para cada par grupo x estagio, desloca os valores de 1 e para o
             # primeiro estágio, coloca o valor do pmo.dat
             for group in groups:
-                for estagio in sorted(estagios, reverse=True)[:-1]:
-                    df_inicial.loc[
-                        (df_inicial[col_grp] == group)
-                        & (df_inicial["estagio"] == estagio),
-                        "valor",
-                    ] = df_inicial.loc[
-                        (df_inicial[col_grp] == group)
-                        & (df_inicial["estagio"] == estagio - 1),
-                        "valor",
-                    ].to_numpy()
                 df_inicial.loc[
-                    (df_inicial[col_grp] == group)
-                    & (df_inicial["estagio"] == 1),
-                    "valor",
-                ] = earmi_percentual.loc[
-                    (earmi_percentual["group"] == group), col_earmi_pmo
-                ].iloc[
-                    0
-                ]
+                    df_inicial[col_grp] == group, "valor"
+                ] = np.concatenate(
+                    [
+                        np.repeat(
+                            [
+                                earmi_percentual.loc[
+                                    (earmi_percentual["group"] == group),
+                                    col_earmi_pmo,
+                                ].iloc[0]
+                            ],
+                            n_series,
+                        ),
+                        df_inicial["valor"].to_numpy()[n_series:],
+                    ]
+                )
 
         return df_inicial
 
