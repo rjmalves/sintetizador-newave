@@ -1385,34 +1385,28 @@ class OperationSynthetizer:
             else "valor_percentual"
         )
         df_inicial = df_final.copy()
-        uhes = df_inicial["usina"].unique()
-        estagios = df_inicial["estagio"].unique()
+        uhes = df_inicial["usina"].unique().tolist()
+        n_uhes = len(uhes)
         series = df_inicial["serie"].unique().tolist()
         n_series = len(series)
-        # Para cada par uhe x estagio, desloca os valores de 1 e para o
-        # primeiro estágio, coloca o valor do pmo.dat
-        for uhe in uhes:
-            if cls.logger is not None:
-                cls.logger.info(f"Gerando VARM inicial para {uhe}")
-            df_inicial.loc[
-                df_inicial["usina"] == uhe, "valor"
-            ] = np.concatenate(
-                [
-                    np.repeat(
-                        [
-                            varmi_pmo.loc[
-                                (varmi_pmo["nome_usina"] == uhe),
-                                col_varmi_pmo,
-                            ].iloc[0]
-                        ],
-                        n_series,
-                    ),
-                    df_inicial.loc[
-                        df_inicial["usina"] == uhe, "valor"
-                    ].to_numpy()[n_series:],
-                ]
-            )
-
+        estagios = df_inicial["estagio"].unique().tolist()
+        n_estagios = len(estagios)
+        # Faz uma atribuição posicional. A maneira mais pythonica é lenta.
+        offsets_uhes = [i * n_series * n_estagios for i in range(n_uhes)]
+        indices_primeiros_estagios = np.tile(np.arange(n_series), n_uhes)
+        indices_primeiros_estagios += np.repeat(offsets_uhes, n_series)
+        varmi_pmo = varmi_pmo.loc[varmi_pmo["nome_usina"].isin(uhes)]
+        valores_varmi = (
+            varmi_pmo.set_index("nome_usina")
+            .loc[uhes, col_varmi_pmo]
+            .to_numpy()
+        )
+        valores_iniciais = df_inicial["valor"].to_numpy()
+        valores_iniciais[n_series:] = valores_iniciais[:-n_series]
+        valores_iniciais[indices_primeiros_estagios] = np.repeat(
+            valores_varmi, n_series
+        )
+        df_inicial["valor"] = valores_iniciais
         return df_inicial
 
     @classmethod
