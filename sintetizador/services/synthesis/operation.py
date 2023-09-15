@@ -1392,8 +1392,11 @@ class OperationSynthetizer:
         estagios = df_inicial["estagio"].unique().tolist()
         n_estagios = len(estagios)
         # Faz uma atribuição posicional. A maneira mais pythonica é lenta.
+        offset_meses = cls._offset_meses_inicio(df_inicial, uow)
         offsets_uhes = [i * n_series * n_estagios for i in range(n_uhes)]
-        indices_primeiros_estagios = np.tile(np.arange(n_series), n_uhes)
+        indices_primeiros_estagios = offset_meses * n_series + np.tile(
+            np.arange(n_series), n_uhes
+        )
         indices_primeiros_estagios += np.repeat(offsets_uhes, n_series)
         varmi_pmo = varmi_pmo.loc[varmi_pmo["nome_usina"].isin(uhes)]
         valores_varmi = (
@@ -1504,7 +1507,7 @@ class OperationSynthetizer:
             dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
         if cls.logger is not None:
             cls.logger.info("Compactando dados...")
-        dfs_validos = [d for d in dfs.values()]
+        dfs_validos = [d for d in dfs.values() if d is not None]
         df_completo = pd.concat(dfs_validos, ignore_index=True)
 
         if not df_completo.empty:
@@ -1735,9 +1738,9 @@ class OperationSynthetizer:
         return solver(synthesis, uow)
 
     @classmethod
-    def _resolve_starting_stage(
+    def _offset_meses_inicio(
         cls, df: pd.DataFrame, uow: AbstractUnitOfWork
-    ):
+    ) -> int:
         dger = cls._get_dger(uow)
         ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
         mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
@@ -1746,6 +1749,13 @@ class OperationSynthetizer:
         month_difference = int(
             (starting_date - data_starting_date) / timedelta(days=30)
         )
+        return month_difference
+
+    @classmethod
+    def _resolve_starting_stage(
+        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
+    ):
+        month_difference = cls._offset_meses_inicio(df, uow)
         starting_df = df.copy()
         starting_df.loc[:, "estagio"] -= month_difference
         # Considera somente estágios do período de estudo em diante
