@@ -1300,6 +1300,8 @@ class OperationSynthetizer:
             SpatialResolution.SISTEMA_INTERLIGADO: "",
         }
         col_grp = col_grp_map[synthesis.spatial_resolution]
+        if cls.logger is not None:
+            cls.logger.info("Gerando EARM inicial...")
         if (
             synthesis.spatial_resolution
             == SpatialResolution.SISTEMA_INTERLIGADO
@@ -1380,6 +1382,8 @@ class OperationSynthetizer:
                         "Erro na leitura do VARM inicial do pmo.dat"
                     )
                 raise RuntimeError()
+        if cls.logger is not None:
+            cls.logger.info("Gerando VARM inicial...")
         col_varmi_pmo = (
             "valor_hm3"
             if synthesis.variable
@@ -1800,7 +1804,10 @@ class OperationSynthetizer:
             if cls.logger is not None:
                 cls.logger.error("Erro no cálculo dos quantis")
                 raise RuntimeError()
-        df_q = df_q.rename(columns={level_column[0]: "cenario"})
+
+        df_q = df_q.drop(columns=["cenario"]).rename(
+            columns={level_column[0]: "cenario"}
+        )
         df_q["cenario"] = df_q["cenario"].apply(quantile_map)
         return pd.concat([df, df_q], ignore_index=True)
 
