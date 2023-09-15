@@ -656,10 +656,11 @@ class OperationSynthetizer:
             lambda x: x["data"] + relativedelta(months=1), axis=1
         )
         df = df.rename(columns={"data": "dataInicio"})
-        return df[
+        df = df[
             ["estagio", "dataInicio", "dataFim"]
             + [c for c in cols if c not in ["data", "patamar"]]
         ]
+        return df.sort_values(["estagio", "serie"])
 
     @classmethod
     def __resolve_PAT(cls, df: pd.DataFrame) -> pd.DataFrame:
@@ -672,10 +673,11 @@ class OperationSynthetizer:
             lambda x: x["data"] + relativedelta(months=1), axis=1
         )
         df = df.rename(columns={"data": "dataInicio"})
-        return df[
+        df = df[
             ["estagio", "dataInicio", "dataFim", "patamar"]
             + [c for c in cols if c not in ["patamar", "data"]]
         ]
+        return df.sort_values(["estagio", "serie", "patamar"])
 
     @classmethod
     def _resolve_temporal_resolution(
@@ -1299,6 +1301,12 @@ class OperationSynthetizer:
             SpatialResolution.SISTEMA_INTERLIGADO: "",
         }
         col_grp = col_grp_map[synthesis.spatial_resolution]
+        print("\n", df_inicial)
+        # Ordem dos elementos
+        # Verificar padrão de ordenação dos elementos
+        # Ao invés de fazer com for, defasar os valores por blocos
+        # e montar via numpy
+        # Isto limita a velocidade hoje.
         if cls.logger is not None:
             cls.logger.info("Gerando EARM inicial...")
         if (
