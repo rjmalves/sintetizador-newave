@@ -6,7 +6,7 @@ import traceback
 from multiprocessing import Pool
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta  # type: ignore
-from inewave.newave import Dger, Ree, Confhd, Conft, Sistema
+from inewave.newave import Dger, Ree, Confhd, Conft, Sistema, Clast
 from sintetizador.utils.log import Log
 from sintetizador.model.settings import Settings
 from sintetizador.services.unitofwork import AbstractUnitOfWork
@@ -38,15 +38,22 @@ class OperationSynthetizer:
         "CMO_SBM_EST",
         "CMO_SBM_PAT",
         "VAGUA_REE_EST",
+        "VAGUA_UHE_EST",
         "CTER_SBM_EST",
         "CTER_SIN_EST",
         "COP_SIN_EST",
         "ENAA_REE_EST",
         "ENAA_SBM_EST",
         "ENAA_SIN_EST",
+        "EARPI_REE_EST",
+        "EARPI_SBM_EST",
+        "EARPI_SIN_EST",
         "EARPF_REE_EST",
         "EARPF_SBM_EST",
         "EARPF_SIN_EST",
+        "EARMI_REE_EST",
+        "EARMI_SBM_EST",
+        "EARMI_SIN_EST",
         "EARMF_REE_EST",
         "EARMF_SBM_EST",
         "EARMF_SIN_EST",
@@ -58,6 +65,8 @@ class OperationSynthetizer:
         "GHID_REE_PAT",
         "GHID_SBM_PAT",
         "GHID_SIN_PAT",
+        "GTER_UTE_PAT",
+        "GTER_UTE_EST",
         "GTER_SBM_PAT",
         "GTER_SIN_PAT",
         "EVER_REE_EST",
@@ -84,10 +93,15 @@ class OperationSynthetizer:
         "VVER_UHE_PAT",
         "QVER_UHE_EST",
         "QVER_UHE_PAT",
+        "VARMI_UHE_EST",
+        "VARMI_REE_EST",
+        "VARMI_SBM_EST",
+        "VARMI_SIN_EST",
         "VARMF_UHE_EST",
         "VARMF_REE_EST",
         "VARMF_SBM_EST",
         "VARMF_SIN_EST",
+        "VARPI_UHE_EST",
         "VARPF_UHE_EST",
         "GHID_UHE_PAT",
         "GHID_UHE_EST",
@@ -429,6 +443,11 @@ class OperationSynthetizer:
             SpatialResolution.SUBMERCADO,
             TemporalResolution.ESTAGIO,
         ),
+        OperationSynthesis(
+            Variable.GERACAO_TERMICA,
+            SpatialResolution.USINA_TERMELETRICA,
+            TemporalResolution.PATAMAR,
+        ),
     ]
 
     CACHED_SYNTHESIS: Dict[OperationSynthesis, pd.DataFrame] = {}
@@ -497,6 +516,19 @@ class OperationSynthetizer:
                 if cls.logger is not None:
                     cls.logger.error(
                         "Erro no processamento do sistema.dat para"
+                        + " síntese da operação"
+                    )
+                raise RuntimeError()
+            return sist
+
+    @classmethod
+    def _get_clast(cls, uow: AbstractUnitOfWork) -> Clast:
+        with uow:
+            sist = uow.files.get_clast()
+            if sist is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do clast.dat para"
                         + " síntese da operação"
                     )
                 raise RuntimeError()
@@ -593,8 +625,19 @@ class OperationSynthetizer:
                     Variable.VIOLACAO_FPHA,
                     Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
                     Variable.VIOLACAO_TURBINAMENTO_MINIMO,
+                    Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
+                    Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
                 ]
                 and not indiv
+            ):
+                continue
+            if all(
+                [
+                    v.variable == Variable.VALOR_AGUA,
+                    v.spatial_resolution
+                    == SpatialResolution.USINA_HIDROELETRICA,
+                    not indiv,
+                ]
             ):
                 continue
             valid_variables.append(v)
@@ -916,10 +959,14 @@ class OperationSynthetizer:
             TemporalResolution.PATAMAR,
         )
         cache = cls.CACHED_SYNTHESIS.get(synt_pat)
+        resolve_func = {
+            SpatialResolution.USINA_HIDROELETRICA: cls.__resolve_UHE,
+            SpatialResolution.USINA_TERMELETRICA: cls.__stub_GTER_UTE_patamar,
+        }[synthesis.spatial_resolution]
         df_completo = (
             cache
             if cache is not None
-            else cls.__resolve_UHE(
+            else resolve_func(
                 synt_pat,
                 uow,
             )
@@ -1106,7 +1153,10 @@ class OperationSynthetizer:
         )
         cache_uhe = cls.CACHED_SYNTHESIS.get(s)
         if cache_uhe is None:
-            df_uhe = cls._resolve_spatial_resolution(s, uow)
+            if s.variable == Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL:
+                df_uhe = cls.__stub_resolve_volumes_iniciais_uhe(s, uow)
+            else:
+                df_uhe = cls._resolve_spatial_resolution(s, uow)
             cls.CACHED_SYNTHESIS[s] = df_uhe
         else:
             df_uhe = cache_uhe
@@ -1206,6 +1256,162 @@ class OperationSynthetizer:
             df_vminop.groupby(cols_group).sum(numeric_only=True).reset_index()
         )
         return df_sin
+
+    @classmethod
+    def __stub_resolve_energias_iniciais_ree(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        earmi = Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL
+        earmf = Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL
+        earpi = Variable.ENERGIA_ARMAZENADA_PERCENTUAL_INICIAL
+        earpf = Variable.ENERGIA_ARMAZENADA_PERCENTUAL_FINAL
+        variable_map = {
+            earmi: earmf,
+            earpi: earpf,
+        }
+        sintese_final = OperationSynthesis(
+            variable=variable_map[synthesis.variable],
+            spatial_resolution=synthesis.spatial_resolution,
+            temporal_resolution=synthesis.temporal_resolution,
+        )
+        resolve_func = {
+            SpatialResolution.RESERVATORIO_EQUIVALENTE: cls.__resolve_REE,
+            SpatialResolution.SUBMERCADO: cls.__resolve_SBM,
+            SpatialResolution.SISTEMA_INTERLIGADO: cls.__resolve_SIN,
+        }[synthesis.spatial_resolution]
+        cache_earm = cls.CACHED_SYNTHESIS.get(sintese_final)
+        df_final = (
+            cache_earm
+            if cache_earm is not None
+            else resolve_func(sintese_final, uow)
+        )
+        earmi_percentual = cls._earmi_percentual(synthesis, uow)
+
+        col_earmi_pmo = (
+            "valor_MWmes"
+            if synthesis.variable
+            == Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL
+            else "valor_percentual"
+        )
+        df_inicial = df_final.copy()
+        col_grp_map = {
+            SpatialResolution.RESERVATORIO_EQUIVALENTE: "ree",
+            SpatialResolution.SUBMERCADO: "submercado",
+            SpatialResolution.SISTEMA_INTERLIGADO: "",
+        }
+        col_grp = col_grp_map[synthesis.spatial_resolution]
+        if (
+            synthesis.spatial_resolution
+            == SpatialResolution.SISTEMA_INTERLIGADO
+        ):
+            estagios = df_inicial["estagio"].unique()
+            for estagio in sorted(estagios, reverse=True)[:-1]:
+                df_inicial.loc[
+                    df_inicial["estagio"] == estagio,
+                    "valor",
+                ] = df_inicial.loc[
+                    df_inicial["estagio"] == estagio - 1,
+                    "valor",
+                ].to_numpy()
+            df_inicial.loc[
+                df_inicial["estagio"] == 1,
+                "valor",
+            ] = earmi_percentual[col_earmi_pmo].iloc[0]
+        else:
+            groups = df_inicial[col_grp].unique()
+            estagios = df_inicial["estagio"].unique()
+            # Para cada par grupo x estagio, desloca os valores de 1 e para o
+            # primeiro estágio, coloca o valor do pmo.dat
+            for group in groups:
+                for estagio in sorted(estagios, reverse=True)[:-1]:
+                    df_inicial.loc[
+                        (df_inicial[col_grp] == group)
+                        & (df_inicial["estagio"] == estagio),
+                        "valor",
+                    ] = df_inicial.loc[
+                        (df_inicial[col_grp] == group)
+                        & (df_inicial["estagio"] == estagio - 1),
+                        "valor",
+                    ].to_numpy()
+                df_inicial.loc[
+                    (df_inicial[col_grp] == group)
+                    & (df_inicial["estagio"] == 1),
+                    "valor",
+                ] = earmi_percentual.loc[
+                    (earmi_percentual["group"] == group), col_earmi_pmo
+                ].iloc[
+                    0
+                ]
+
+        return df_inicial
+
+    @classmethod
+    def __stub_resolve_volumes_iniciais_uhe(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        varmi = Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL
+        varmf = Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL
+        varpi = Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL
+        varpf = Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL
+        variable_map = {
+            varmi: varmf,
+            varpi: varpf,
+        }
+        sintese_final = OperationSynthesis(
+            variable=variable_map[synthesis.variable],
+            spatial_resolution=synthesis.spatial_resolution,
+            temporal_resolution=synthesis.temporal_resolution,
+        )
+        cache_varm = cls.CACHED_SYNTHESIS.get(sintese_final)
+        df_final = (
+            cache_varm
+            if cache_varm is not None
+            else cls.__resolve_UHE(sintese_final, uow)
+        )
+        with uow:
+            arq_pmo = uow.files.get_pmo()
+            if arq_pmo is not None:
+                varmi_pmo = cls._validate_data(
+                    arq_pmo.volume_armazenado_inicial, pd.DataFrame, "VARMI"
+                )
+            else:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro na leitura do VARM inicial do pmo.dat"
+                    )
+                raise RuntimeError()
+        col_varmi_pmo = (
+            "valor_hm3"
+            if synthesis.variable
+            == Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL
+            else "valor_percentual"
+        )
+        df_inicial = df_final.copy()
+        uhes = df_inicial["usina"].unique()
+        estagios = df_inicial["estagio"].unique()
+        # Para cada par uhe x estagio, desloca os valores de 1 e para o
+        # primeiro estágio, coloca o valor do pmo.dat
+        for uhe in uhes:
+            for estagio in sorted(estagios, reverse=True)[:-1]:
+                df_inicial.loc[
+                    (df_inicial["usina"] == uhe)
+                    & (df_inicial["estagio"] == estagio),
+                    "valor",
+                ] = df_inicial.loc[
+                    (df_inicial["usina"] == uhe)
+                    & (df_inicial["estagio"] == estagio - 1),
+                    "valor",
+                ].to_numpy()
+            df_inicial.loc[
+                (df_inicial["usina"] == uhe) & (df_inicial["estagio"] == 1),
+                "valor",
+            ] = varmi_pmo.loc[
+                (varmi_pmo["nome_usina"] == uhe), col_varmi_pmo
+            ].iloc[
+                0
+            ]
+
+        return df_inicial
 
     @classmethod
     def __postprocess_violacoes_UHE_estagio(cls, df_completo: pd.DataFrame):
@@ -1343,7 +1549,7 @@ class OperationSynthetizer:
             return cls.__resolve_UHE_normal(synthesis, uow)
 
     @classmethod
-    def __resolve_UTE(
+    def __resolve_UTE_normal(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         conft = cls._validate_data(
@@ -1375,6 +1581,100 @@ class OperationSynthetizer:
                     ignore_index=True,
                 )
             return df
+
+    @classmethod
+    def __stub_GTER_UTE_patamar(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        sistema = cls._validate_data(
+            cls._get_sistema(uow).custo_deficit,
+            pd.DataFrame,
+            "submercados",
+        )
+        sistemas_reais = sistema.loc[sistema["ficticio"] == 0, :]
+        sbms_idx = sistemas_reais["codigo_submercado"].unique()
+        sbms_name = [
+            sistemas_reais.loc[
+                sistemas_reais["codigo_submercado"] == s, "nome_submercado"
+            ].iloc[0]
+            for s in sbms_idx
+        ]
+        df_completo = pd.DataFrame()
+        n_procs = int(Settings().processors)
+        synthesis = OperationSynthesis(
+            variable=synthesis.variable,
+            spatial_resolution=synthesis.spatial_resolution,
+            temporal_resolution=TemporalResolution.PATAMAR,
+        )
+        with Pool(processes=n_procs) as pool:
+            if n_procs > 1:
+                if cls.logger is not None:
+                    cls.logger.info("Paralelizando...")
+            async_res = {
+                idx: pool.apply_async(
+                    cls._resolve_SBM_submercado, (uow, synthesis, idx, name)
+                )
+                for idx, name in zip(sbms_idx, sbms_name)
+            }
+            dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
+        if cls.logger is not None:
+            cls.logger.info("Compactando dados...")
+        dfs_validos = [d for d in dfs.values() if d is not None]
+        if len(dfs_validos) > 0:
+            df_completo = pd.concat(dfs_validos, ignore_index=True)
+
+        clast = cls._validate_data(
+            cls._get_clast(uow).usinas,
+            pd.DataFrame,
+            "usinas termelétricas",
+        )[["codigo_usina", "nome_usina"]].drop_duplicates()
+        usinas_arquivo = [int(c) for c in df_completo["classe"].unique()]
+        nomes_usinas_arquivo = [
+            clast.loc[clast["codigo_usina"] == c, "nome_usina"].iloc[0]
+            for c in usinas_arquivo
+        ]
+        linhas_por_usina = df_completo.loc[
+            df_completo["classe"] == str(usinas_arquivo[0])
+        ].shape[0]
+        df_completo["classe"] = np.repeat(
+            nomes_usinas_arquivo, linhas_por_usina
+        )
+        return df_completo.rename(columns={"classe": "usina"}).drop(
+            columns=["submercado"]
+        )[
+            [
+                "usina",
+                "estagio",
+                "dataInicio",
+                "dataFim",
+                "patamar",
+                "serie",
+                "valor",
+            ]
+        ]
+
+    @classmethod
+    def __resolve_UTE(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        if (
+            synthesis.variable
+            in [
+                Variable.GERACAO_TERMICA,
+            ]
+        ) and (synthesis.temporal_resolution == TemporalResolution.PATAMAR):
+            return cls.__stub_GTER_UTE_patamar(synthesis, uow)
+        elif (
+            synthesis.variable
+            in [
+                Variable.GERACAO_TERMICA,
+            ]
+        ) and (synthesis.temporal_resolution == TemporalResolution.ESTAGIO):
+            return cls.__stub_agrega_estagio_variaveis_por_patamar(
+                synthesis, uow
+            )
+        else:
+            return cls.__resolve_UTE_normal(synthesis, uow)
 
     @classmethod
     def __resolve_PEE(
@@ -1511,6 +1811,64 @@ class OperationSynthetizer:
         return df
 
     @classmethod
+    def _earmi_percentual(
+        cls, s: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        with uow:
+            arq_pmo = uow.files.get_pmo()
+            if arq_pmo is not None:
+                earmi_pmo = cls._validate_data(
+                    arq_pmo.energia_armazenada_inicial, pd.DataFrame, "EARMI"
+                )
+            else:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro na leitura do EARM inicial do pmo.dat"
+                    )
+                raise RuntimeError()
+        if s.spatial_resolution == SpatialResolution.RESERVATORIO_EQUIVALENTE:
+            return earmi_pmo.rename(columns={"nome_ree": "group"})
+        earmi_pmo["earmax"] = (
+            100 * earmi_pmo["valor_MWmes"] / earmi_pmo["valor_percentual"]
+        )
+        if s.spatial_resolution == SpatialResolution.SUBMERCADO:
+            sistema = cls._validate_data(
+                cls._get_sistema(uow).custo_deficit,
+                pd.DataFrame,
+                "submercados",
+            )
+            rees = cls._validate_data(
+                cls._get_ree(uow).rees, pd.DataFrame, "REEs"
+            )
+            nomes_rees = rees["nome"].unique().tolist()
+            rees_submercados = {
+                r: str(
+                    sistema.loc[
+                        sistema["codigo_submercado"]
+                        == int(
+                            rees.loc[rees["nome"] == r, "submercado"].iloc[0]
+                        ),
+                        "nome_submercado",
+                    ].tolist()[0]
+                )
+                for r in nomes_rees
+            }
+            earmi_pmo.dropna(inplace=True)
+            earmi_pmo["group"] = earmi_pmo.apply(
+                lambda linha: rees_submercados[linha["nome_ree"].strip()],
+                axis=1,
+            )
+        else:
+            earmi_pmo["group"] = 1
+        earmi_pmo = (
+            earmi_pmo.groupby("group").sum(numeric_only=True).reset_index()
+        )
+        earmi_pmo["valor_percentual"] = (
+            100 * earmi_pmo["valor_MWmes"] / (earmi_pmo["earmax"])
+        )
+        return earmi_pmo
+
+    @classmethod
     def _resolve_stub(
         cls, s: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> Tuple[pd.DataFrame, bool]:
@@ -1529,6 +1887,36 @@ class OperationSynthetizer:
             [
                 s.variable
                 in [
+                    Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
+                    Variable.ENERGIA_ARMAZENADA_PERCENTUAL_INICIAL,
+                ],
+                s.spatial_resolution
+                in [
+                    SpatialResolution.RESERVATORIO_EQUIVALENTE,
+                    SpatialResolution.SUBMERCADO,
+                    SpatialResolution.SISTEMA_INTERLIGADO,
+                ],
+            ]
+        ):
+            df = cls.__stub_resolve_energias_iniciais_ree(s, uow)
+            return df, True
+        elif all(
+            [
+                s.variable
+                in [
+                    Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
+                    Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
+                ],
+                s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+            ]
+        ):
+            df = cls.__stub_resolve_volumes_iniciais_uhe(s, uow)
+            return df, True
+        elif all(
+            [
+                s.variable
+                in [
+                    Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
                     Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
                     Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
                     Variable.VIOLACAO_DEFLUENCIA_MINIMA,
