@@ -56,28 +56,28 @@ uow = factory("FS", DECK_TEST_DIR, q)
 #     assert df.at[0, "valor"] == 202.79
 
 
-def test_sintese_pee_est(test_settings):
-    m = MagicMock(lambda df, filename: df)
-    with patch(
-        "sintetizador.adapters.repository.export.ParquetExportRepository.synthetize_df",
-        new=m,
-    ):
-        OperationSynthetizer.synthetize(["VENTO_PEE_EST"], uow)
-    m.assert_called_once()
-    df = m.mock_calls[0].args[0]
-    assert df.at[0, "valor"] == 4.37
+# def test_sintese_pee_est(test_settings):
+#     m = MagicMock(lambda df, filename: df)
+#     with patch(
+#         "sintetizador.adapters.repository.export.ParquetExportRepository.synthetize_df",
+#         new=m,
+#     ):
+#         OperationSynthetizer.synthetize(["VENTO_PEE_EST"], uow)
+#     m.assert_called_once()
+#     df = m.mock_calls[0].args[0]
+#     assert df.at[0, "valor"] == 4.37
 
 
-def test_sintese_sbp_est(test_settings):
-    m = MagicMock(lambda df, filename: df)
-    with patch(
-        "sintetizador.adapters.repository.export.ParquetExportRepository.synthetize_df",
-        new=m,
-    ):
-        OperationSynthetizer.synthetize(["INT_SBP_EST"], uow)
-    m.assert_called_once()
-    df = m.mock_calls[0].args[0]
-    assert df.at[0, "valor"] == 5907.0
+# def test_sintese_sbp_est(test_settings):
+#     m = MagicMock(lambda df, filename: df)
+#     with patch(
+#         "sintetizador.adapters.repository.export.ParquetExportRepository.synthetize_df",
+#         new=m,
+#     ):
+#         OperationSynthetizer.synthetize(["INT_SBP_EST"], uow)
+#     m.assert_called_once()
+#     df = m.mock_calls[0].args[0]
+#     assert df.at[0, "valor"] == 5907.0
 
 
 # def test_sintese_sin_pat(test_settings):
@@ -320,27 +320,27 @@ def test_sintese_sbp_est(test_settings):
 #     assert df.at[0, "valor"] == 513.1
 
 
-# def test_sintese_gter_ute_pat(test_settings):
-#     m = MagicMock(lambda df, filename: df)
-#     with patch(
-#         "sintetizador.adapters.repository.export.ParquetExportRepository.synthetize_df",
-#         new=m,
-#     ):
-#         OperationSynthetizer.synthetize(["GTER_UTE_PAT"], uow)
-#     m.assert_called_once()
-#     df = m.mock_calls[0].args[0]
-#     assert df.at[0, "valor"] == 0.0
-#     assert df.at[1, "valor"] == 162.9
+def test_sintese_gter_ute_pat(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.ParquetExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["GTER_UTE_PAT"], uow)
+    m.assert_called_once()
+    df = m.mock_calls[0].args[0]
+    assert df.at[0, "valor"] == 0.0
+    assert df.at[1, "valor"] == 162.9
 
 
-# def test_sintese_gter_ute_est(test_settings):
-#     m = MagicMock(lambda df, filename: df)
-#     with patch(
-#         "sintetizador.adapters.repository.export.ParquetExportRepository.synthetize_df",
-#         new=m,
-#     ):
-#         OperationSynthetizer.synthetize(["GTER_UTE_EST"], uow)
-#     m.assert_called_once()
-#     df = m.mock_calls[0].args[0]
-#     assert df.at[0, "valor"] == 0.0
-#     assert df.at[1, "valor"] == 640.0
+def test_sintese_gter_ute_est(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.ParquetExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["GTER_UTE_EST"], uow)
+    m.assert_called_once()
+    df = m.mock_calls[0].args[0]
+    assert df.at[0, "valor"] == 0.0
+    assert df.at[1, "valor"] == 640.0

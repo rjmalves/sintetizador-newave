@@ -1215,7 +1215,6 @@ class OperationSynthetizer:
         df_group = (
             df_uhe.groupby(cols_group).sum(numeric_only=True).reset_index()
         )
-        df_group = df_group.astype({"serie": str})
 
         group_name = {
             SpatialResolution.RESERVATORIO_EQUIVALENTE: "ree",
@@ -1632,13 +1631,13 @@ class OperationSynthetizer:
             pd.DataFrame,
             "usinas termelétricas",
         )[["codigo_usina", "nome_usina"]].drop_duplicates()
-        usinas_arquivo = [int(c) for c in df_completo["classe"].unique()]
+        usinas_arquivo = df_completo["classe"].unique().tolist()
         nomes_usinas_arquivo = [
             clast.loc[clast["codigo_usina"] == c, "nome_usina"].iloc[0]
             for c in usinas_arquivo
         ]
         linhas_por_usina = df_completo.loc[
-            df_completo["classe"] == str(usinas_arquivo[0])
+            df_completo["classe"] == usinas_arquivo[0]
         ].shape[0]
         df_completo["classe"] = np.repeat(
             nomes_usinas_arquivo, linhas_por_usina
