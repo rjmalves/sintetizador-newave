@@ -1381,8 +1381,6 @@ class OperationSynthetizer:
                         "Erro na leitura do VARM inicial do pmo.dat"
                     )
                 raise RuntimeError()
-        if cls.logger is not None:
-            cls.logger.info("Gerando VARM inicial...")
         col_varmi_pmo = (
             "valor_hm3"
             if synthesis.variable
@@ -1395,6 +1393,8 @@ class OperationSynthetizer:
         # Para cada par uhe x estagio, desloca os valores de 1 e para o
         # primeiro estágio, coloca o valor do pmo.dat
         for uhe in uhes:
+            if cls.logger is not None:
+                cls.logger.info(f"Gerando VARM inicial para {uhe}")
             for estagio in sorted(estagios, reverse=True)[:-1]:
                 df_inicial.loc[
                     (df_inicial["usina"] == uhe)
