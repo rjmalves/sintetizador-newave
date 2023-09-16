@@ -83,8 +83,12 @@ class OperationSynthetizer:
         "EVERFT_SIN_EST",
         "QAFL_UHE_EST",
         "QINC_UHE_EST",
+        "VAFL_UHE_EST",
+        "VINC_UHE_EST",
         "QDEF_UHE_EST",
         "QDEF_UHE_PAT",
+        "VDEF_UHE_EST",
+        "VDEF_UHE_PAT",
         "VTUR_UHE_EST",
         "VTUR_UHE_PAT",
         "QTUR_UHE_EST",
@@ -170,6 +174,15 @@ class OperationSynthetizer:
         "VVMINOP_REE_EST",
         "VVMINOP_SBM_EST",
         "VVMINOP_SIN_EST",
+        "HMON_UHE_EST",
+        "HJUS_UHE_PAT",
+        "HLIQ_UHE_PAT",
+        "VRET_UHE_EST",
+        "VDES_UHE_PAT",
+        "VDES_UHE_EST",  # calculado com agregação
+        "QRET_UHE_EST",
+        "QDES_UHE_PAT",
+        "QDES_UHE_EST",  # calculado com agregação
     ]
 
     SYNTHESIS_TO_CACHE: List[OperationSynthesis] = [
@@ -446,6 +459,36 @@ class OperationSynthetizer:
         OperationSynthesis(
             Variable.GERACAO_TERMICA,
             SpatialResolution.USINA_TERMELETRICA,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_AFLUENTE,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_INCREMENTAL,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_RETIRADO,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_DESVIADO,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_DESVIADO,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_DESVIADA,
+            SpatialResolution.USINA_HIDROELETRICA,
             TemporalResolution.PATAMAR,
         ),
     ]
@@ -996,12 +1039,14 @@ class OperationSynthetizer:
         return df_completo
 
     @classmethod
-    def __stub_QTUR_QVER(
+    def __stub_converte_volume_em_vazao(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         variable_map = {
             Variable.VAZAO_VERTIDA: Variable.VOLUME_VERTIDO,
             Variable.VAZAO_TURBINADA: Variable.VOLUME_TURBINADO,
+            Variable.VAZAO_DESVIADA: Variable.VOLUME_DESVIADO,
+            Variable.VAZAO_RETIRADA: Variable.VOLUME_RETIRADO,
         }
         synt_vol = OperationSynthesis(
             variable_map[synthesis.variable],
@@ -1026,6 +1071,36 @@ class OperationSynthetizer:
         return df_completo
 
     @classmethod
+    def __stub_converte_vazao_em_volume(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        variable_map = {
+            Variable.VOLUME_AFLUENTE: Variable.VAZAO_AFLUENTE,
+            Variable.VOLUME_INCREMENTAL: Variable.VAZAO_INCREMENTAL,
+        }
+        synt_vol = OperationSynthesis(
+            variable_map[synthesis.variable],
+            synthesis.spatial_resolution,
+            synthesis.temporal_resolution,
+        )
+        cache = cls.CACHED_SYNTHESIS.get(synt_vol)
+        df_completo = (
+            cache
+            if cache is not None
+            else cls.__resolve_UHE(
+                synt_vol,
+                uow,
+            )
+        )
+        if cache is None:
+            cls.CACHED_SYNTHESIS[synt_vol] = df_completo.copy()
+
+        df_completo.loc[:, "valor"] /= FATOR_HM3_M3S
+        cls.CACHED_SYNTHESIS[synthesis] = df_completo.copy()
+
+        return df_completo
+
+    @classmethod
     def __stub_QDEF(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
@@ -1044,7 +1119,7 @@ class OperationSynthetizer:
         df_tur = (
             cache_tur
             if cache_tur is not None
-            else cls.__stub_QTUR_QVER(
+            else cls.__stub_converte_volume_em_vazao(
                 OperationSynthesis(
                     Variable.VAZAO_TURBINADA,
                     synthesis.spatial_resolution,
@@ -1056,9 +1131,54 @@ class OperationSynthetizer:
         df_ver = (
             cache_ver
             if cache_ver is not None
-            else cls.__stub_QTUR_QVER(
+            else cls.__stub_converte_volume_em_vazao(
                 OperationSynthesis(
                     Variable.VAZAO_VERTIDA,
+                    synthesis.spatial_resolution,
+                    synthesis.temporal_resolution,
+                ),
+                uow,
+            )
+        )
+        df_ver.loc[:, "valor"] = (
+            df_tur["valor"].to_numpy() + df_ver["valor"].to_numpy()
+        )
+        return df_ver
+
+    @classmethod
+    def __stub_VDEF(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        sintese_tur = OperationSynthesis(
+            Variable.VOLUME_TURBINADO,
+            synthesis.spatial_resolution,
+            synthesis.temporal_resolution,
+        )
+        sintese_ver = OperationSynthesis(
+            Variable.VOLUME_VERTIDO,
+            synthesis.spatial_resolution,
+            synthesis.temporal_resolution,
+        )
+        cache_tur = cls.CACHED_SYNTHESIS.get(sintese_tur)
+        cache_ver = cls.CACHED_SYNTHESIS.get(sintese_ver)
+        df_tur = (
+            cache_tur
+            if cache_tur is not None
+            else cls.__stub_converte_volume_em_vazao(
+                OperationSynthesis(
+                    Variable.VOLUME_TURBINADO,
+                    synthesis.spatial_resolution,
+                    synthesis.temporal_resolution,
+                ),
+                uow,
+            )
+        )
+        df_ver = (
+            cache_ver
+            if cache_ver is not None
+            else cls.__stub_converte_volume_em_vazao(
+                OperationSynthesis(
+                    Variable.VOLUME_VERTIDO,
                     synthesis.spatial_resolution,
                     synthesis.temporal_resolution,
                 ),
@@ -1508,7 +1628,8 @@ class OperationSynthetizer:
         if cls.logger is not None:
             cls.logger.info("Compactando dados...")
         dfs_validos = [d for d in dfs.values() if d is not None]
-        df_completo = pd.concat(dfs_validos, ignore_index=True)
+        if len(dfs_validos) > 0:
+            df_completo = pd.concat(dfs_validos, ignore_index=True)
 
         if not df_completo.empty:
             df_completo = df_completo.loc[df_completo["dataInicio"] < fim, :]
@@ -1524,6 +1645,7 @@ class OperationSynthetizer:
                 Variable.GERACAO_HIDRAULICA,
                 Variable.VOLUME_TURBINADO,
                 Variable.VOLUME_VERTIDO,
+                Variable.VOLUME_DESVIADO,
             ]
         ) and (synthesis.temporal_resolution == TemporalResolution.ESTAGIO):
             return cls.__stub_agrega_estagio_variaveis_por_patamar(
@@ -1532,10 +1654,19 @@ class OperationSynthetizer:
         elif synthesis.variable in [
             Variable.VAZAO_TURBINADA,
             Variable.VAZAO_VERTIDA,
+            Variable.VAZAO_RETIRADA,
+            Variable.VAZAO_DESVIADA,
         ]:
-            return cls.__stub_QTUR_QVER(synthesis, uow)
+            return cls.__stub_converte_volume_em_vazao(synthesis, uow)
+        elif synthesis.variable in [
+            Variable.VOLUME_AFLUENTE,
+            Variable.VOLUME_INCREMENTAL,
+        ]:
+            return cls.__stub_converte_vazao_em_volume(synthesis, uow)
         elif synthesis.variable == Variable.VAZAO_DEFLUENTE:
             return cls.__stub_QDEF(synthesis, uow)
+        elif synthesis.variable == Variable.VOLUME_DEFLUENTE:
+            return cls.__stub_VDEF(synthesis, uow)
         elif synthesis.variable in [
             Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
             Variable.VIOLACAO_DEFLUENCIA_MINIMA,

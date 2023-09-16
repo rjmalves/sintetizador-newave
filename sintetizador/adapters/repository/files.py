@@ -93,6 +93,11 @@ from inewave.nwlistop.dvazmax import Dvazmax
 from inewave.nwlistop.depminuh import Depminuh
 from inewave.nwlistop.dfphauh import Dfphauh
 from inewave.nwlistop.pivarm import Pivarm
+from inewave.nwlistop.desvuh import Desvuh
+from inewave.nwlistop.vdesviouh import Vdesviouh
+from inewave.nwlistop.hmont import Hmont
+from inewave.nwlistop.hjus import Hjus
+from inewave.nwlistop.hliq import Hliq
 
 from inewave.nwlistcf import Nwlistcfrel
 from inewave.nwlistcf import Estados
@@ -818,6 +823,41 @@ class RawFilesRepository(AbstractFilesRepository):
                 TemporalResolution.ESTAGIO,
             ): lambda dir, submercado=1: Invadem.read(
                 join(dir, f"invadem{str(submercado).zfill(3)}.out")
+            ).valores,
+            (
+                Variable.VOLUME_RETIRADO,
+                SpatialResolution.USINA_HIDROELETRICA,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, uhe=1: Desvuh.read(
+                join(dir, f"desvuh{str(uhe).zfill(3)}.out")
+            ).valores,
+            (
+                Variable.VOLUME_DESVIADO,
+                SpatialResolution.USINA_HIDROELETRICA,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, uhe=1: Vdesviouh.read(
+                join(dir, f"vdesviouh{str(uhe).zfill(3)}.out")
+            ).valores,
+            (
+                Variable.COTA_MONTANTE,
+                SpatialResolution.USINA_HIDROELETRICA,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, uhe=1: Hmont.read(
+                join(dir, f"hmont{str(uhe).zfill(3)}.out")
+            ).valores,
+            (
+                Variable.COTA_JUSANTE,
+                SpatialResolution.USINA_HIDROELETRICA,
+                TemporalResolution.PATAMAR,
+            ): lambda dir, uhe=1: Hjus.read(
+                join(dir, f"hjus{str(uhe).zfill(3)}.out")
+            ).valores,
+            (
+                Variable.QUEDA_LIQUIDA,
+                SpatialResolution.USINA_HIDROELETRICA,
+                TemporalResolution.PATAMAR,
+            ): lambda dir, uhe=1: Hliq.read(
+                join(dir, f"hliq{str(uhe).zfill(3)}.out")
             ).valores,
         }
 
