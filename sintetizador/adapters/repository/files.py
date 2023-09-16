@@ -834,7 +834,7 @@ class RawFilesRepository(AbstractFilesRepository):
             (
                 Variable.VOLUME_DESVIADO,
                 SpatialResolution.USINA_HIDROELETRICA,
-                TemporalResolution.ESTAGIO,
+                TemporalResolution.PATAMAR,
             ): lambda dir, uhe=1: Vdesviouh.read(
                 join(dir, f"vdesviouh{str(uhe).zfill(3)}.out")
             ).valores,
