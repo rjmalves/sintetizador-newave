@@ -41,8 +41,9 @@ Que deve ter como saída::
     >>>   Realiza a síntese dos dados da operação do NEWAVE (NWLISTOP).
     >>> 
     >>> Options:
-    >>>   --formato TEXT  formato para escrita da síntese
-    >>>   --help          Show this message and exit.
+    >>>   --formato TEXT           formato para escrita da síntese
+    >>>   --processadores INTEGER  numero de processadores para paralelizar
+    >>>   --help                   Show this message and exit.
 
 
 Argumentos Existentes
@@ -63,3 +64,6 @@ Caso seja desejado, é possível forçar a saída das sínteses através do argu
 
     $ sintetizador-newave execucao --formato CSV
 
+No caso da síntese da operação, é possível paralelizar a leitura dos arquivos através do argumento opcional `--processadores`::
+
+    $ sintetizador-newave operacao --processadores 8

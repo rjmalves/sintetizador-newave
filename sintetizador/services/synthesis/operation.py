@@ -179,10 +179,10 @@ class OperationSynthetizer:
         "HLIQ_UHE_PAT",
         "VRET_UHE_EST",
         "VDES_UHE_PAT",
-        "VDES_UHE_EST",  # calculado com agregação
+        "VDES_UHE_EST",
         "QRET_UHE_EST",
         "QDES_UHE_PAT",
-        "QDES_UHE_EST",  # calculado com agregação
+        "QDES_UHE_EST",
     ]
 
     SYNTHESIS_TO_CACHE: List[OperationSynthesis] = [
