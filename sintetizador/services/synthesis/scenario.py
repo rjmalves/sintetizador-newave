@@ -105,7 +105,6 @@ class ScenarioSynthetizer:
             SpatialResolution.SUBMERCADO: ["submercado"],
             SpatialResolution.RESERVATORIO_EQUIVALENTE: ["ree"],
             SpatialResolution.USINA_HIDROELETRICA: ["uhe"],
-            SpatialResolution.PARQUE_EOLICO_EQUIVALENTE: ["pee"],
         }
 
         mandatory = RESOLUTION_ARGS_MAP[spatial_resolution]
