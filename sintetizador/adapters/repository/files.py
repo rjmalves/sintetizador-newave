@@ -52,6 +52,9 @@ from inewave.nwlistop.earmfpsin import Earmfpsin
 from inewave.nwlistop.earmf import Earmf
 from inewave.nwlistop.earmfm import Earmfm
 from inewave.nwlistop.earmfsin import Earmfsin
+from inewave.nwlistop.ghidr import Ghidr
+from inewave.nwlistop.ghidrm import Ghidrm
+from inewave.nwlistop.ghidrsin import Ghidrsin
 from inewave.nwlistop.ghtot import Ghtot
 from inewave.nwlistop.ghtotm import Ghtotm
 from inewave.nwlistop.ghtotsin import Ghtotsin
@@ -61,6 +64,18 @@ from inewave.nwlistop.gttotsin import Gttotsin
 from inewave.nwlistop.evert import Evert
 from inewave.nwlistop.evertm import Evertm
 from inewave.nwlistop.evertsin import Evertsin
+from inewave.nwlistop.edesvc import Edesvc
+from inewave.nwlistop.edesvcm import Edesvcm
+from inewave.nwlistop.edesvcsin import Edesvcsin
+from inewave.nwlistop.evapo import Evapo
+from inewave.nwlistop.evapom import Evapom
+from inewave.nwlistop.evaporsin import Evaporsin
+from inewave.nwlistop.mevmin import Mevmin
+from inewave.nwlistop.mevminm import Mevminm
+from inewave.nwlistop.mevminsin import Mevminsin
+from inewave.nwlistop.vmort import Vmort
+from inewave.nwlistop.vmortm import Vmortm
+from inewave.nwlistop.vmortsin import Vmortsin
 from inewave.nwlistop.perdf import Perdf
 from inewave.nwlistop.perdfm import Perdfm
 from inewave.nwlistop.perdfsin import Perdfsin
@@ -387,6 +402,54 @@ class RawFilesRepository(AbstractFilesRepository):
                 TemporalResolution.ESTAGIO,
             ): lambda dir, _: Earmfsin.read(join(dir, "earmfsin.out")).valores,
             (
+                Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, ree=1: self.__extrai_patamares_df(
+                Ghidr.read(join(dir, f"ghidr{str(ree).zfill(3)}.out")).valores,
+                ["TOTAL"],
+            ),
+            (
+                Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
+                SpatialResolution.SUBMERCADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, submercado=1: self.__extrai_patamares_df(
+                Ghidrm.read(
+                    join(dir, f"ghidrm{str(submercado).zfill(3)}.out")
+                ).valores,
+                ["TOTAL"],
+            ),
+            (
+                Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, _: self.__extrai_patamares_df(
+                Ghidrsin.read(join(dir, "ghidrsin.out")).valores, ["TOTAL"]
+            ),
+            (
+                Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+                TemporalResolution.PATAMAR,
+            ): lambda dir, ree=1: self.__extrai_patamares_df(
+                Ghidr.read(join(dir, f"ghidr{str(ree).zfill(3)}.out")).valores,
+            ),
+            (
+                Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
+                SpatialResolution.SUBMERCADO,
+                TemporalResolution.PATAMAR,
+            ): lambda dir, submercado=1: self.__extrai_patamares_df(
+                Ghidrm.read(
+                    join(dir, f"ghidrm{str(submercado).zfill(3)}.out")
+                ).valores,
+            ),
+            (
+                Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+                TemporalResolution.PATAMAR,
+            ): lambda dir, _: self.__extrai_patamares_df(
+                Ghidrsin.read(join(dir, "ghidrsin.out")).valores,
+            ),
+            (
                 Variable.GERACAO_HIDRAULICA,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
                 TemporalResolution.ESTAGIO,
@@ -534,6 +597,112 @@ class RawFilesRepository(AbstractFilesRepository):
                 TemporalResolution.ESTAGIO,
             ): lambda dir, _: Verturbsin.read(
                 join(dir, "verturbsin.out")
+            ).valores,
+            (
+                Variable.ENERGIA_DESVIO_CONTROLAVEL,
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, ree=1: Edesvc.read(
+                join(dir, f"edesvc{str(ree).zfill(3)}.out")
+            ).valores,
+            (
+                Variable.ENERGIA_DESVIO_CONTROLAVEL,
+                SpatialResolution.SUBMERCADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, submercado=1: Edesvcm.read(
+                join(dir, f"edesvcm{str(submercado).zfill(3)}.out")
+            ).valores,
+            (
+                Variable.ENERGIA_DESVIO_CONTROLAVEL,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, _: Edesvcsin.read(
+                join(dir, "edesvcsin.out")
+            ).valores,
+            (
+                # TODO - substituir quando existir na inewave
+                Variable.ENERGIA_DESVIO_FIO,
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, ree=1: Edesvc.read(
+                join(dir, f"edesvf{str(ree).zfill(3)}.out")
+            ).valores,
+            (
+                # TODO - substituir quando existir na inewave
+                Variable.ENERGIA_DESVIO_FIO,
+                SpatialResolution.SUBMERCADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, submercado=1: Edesvcm.read(
+                join(dir, f"edesvfm{str(submercado).zfill(3)}.out")
+            ).valores,
+            (
+                # TODO - substituir quando existir na inewave
+                Variable.ENERGIA_DESVIO_FIO,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, _: Edesvcsin.read(
+                join(dir, "edesvfsin.out")
+            ).valores,
+            (
+                Variable.META_ENERGIA_DEFLUENCIA_MINIMA,
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, ree=1: Mevmin.read(
+                join(dir, f"mevmin{str(ree).zfill(3)}.out")
+            ).valores,
+            (
+                Variable.META_ENERGIA_DEFLUENCIA_MINIMA,
+                SpatialResolution.SUBMERCADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, submercado=1: Mevminm.read(
+                join(dir, f"mevminm{str(submercado).zfill(3)}.out")
+            ).valores,
+            (
+                Variable.META_ENERGIA_DEFLUENCIA_MINIMA,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, _: Mevminsin.read(
+                join(dir, "mevminsin.out")
+            ).valores,
+            (
+                Variable.ENERGIA_VOLUME_MORTO,
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, ree=1: Vmort.read(
+                join(dir, f"vmort{str(ree).zfill(3)}.out")
+            ).valores,
+            (
+                Variable.ENERGIA_VOLUME_MORTO,
+                SpatialResolution.SUBMERCADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, submercado=1: Vmortm.read(
+                join(dir, f"vmortm{str(submercado).zfill(3)}.out")
+            ).valores,
+            (
+                Variable.ENERGIA_VOLUME_MORTO,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, _: Vmortsin.read(join(dir, "vmortsin.out")).valores,
+            (
+                Variable.ENERGIA_EVAPORACAO,
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, ree=1: Evapo.read(
+                join(dir, f"evapo{str(ree).zfill(3)}.out")
+            ).valores,
+            (
+                Variable.ENERGIA_EVAPORACAO,
+                SpatialResolution.SUBMERCADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, submercado=1: Evapom.read(
+                join(dir, f"evapom{str(submercado).zfill(3)}.out")
+            ).valores,
+            (
+                Variable.ENERGIA_EVAPORACAO,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, _: Evaporsin.read(
+                join(dir, "evaporsin.out")
             ).valores,
             (
                 Variable.VAZAO_AFLUENTE,

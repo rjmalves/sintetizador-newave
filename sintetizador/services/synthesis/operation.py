@@ -57,14 +57,26 @@ class OperationSynthetizer:
         "EARMF_REE_EST",
         "EARMF_SBM_EST",
         "EARMF_SIN_EST",
+        "GHIDC_REE_EST",
+        "GHIDC_SBM_EST",
+        "GHIDC_SIN_EST",
         "GHID_REE_EST",
         "GHID_SBM_EST",
         "GHID_SIN_EST",
+        "GHIDF_REE_EST",
+        "GHIDF_SBM_EST",
+        "GHIDF_SIN_EST",
         "GTER_SBM_EST",
         "GTER_SIN_EST",
+        "GHIDC_REE_PAT",
+        "GHIDC_SBM_PAT",
+        "GHIDC_SIN_PAT",
         "GHID_REE_PAT",
         "GHID_SBM_PAT",
         "GHID_SIN_PAT",
+        "GHIDF_REE_PAT",
+        "GHIDF_SBM_PAT",
+        "GHIDF_SIN_PAT",
         "GTER_UTE_PAT",
         "GTER_UTE_EST",
         "GTER_SBM_PAT",
@@ -81,6 +93,21 @@ class OperationSynthetizer:
         "EVERFT_REE_EST",
         "EVERFT_SBM_EST",
         "EVERFT_SIN_EST",
+        "EDESC_REE_EST",
+        "EDESC_SBM_EST",
+        "EDESC_SIN_EST",
+        "EDESF_REE_EST",
+        "EDESF_SBM_EST",
+        "EDESF_SIN_EST",
+        "EVMIN_REE_EST",
+        "EVMIN_SBM_EST",
+        "EVMIN_SIN_EST",
+        "EVMOR_REE_EST",
+        "EVMOR_SBM_EST",
+        "EVMOR_SIN_EST",
+        "EEVAP_REE_EST",
+        "EEVAP_SBM_EST",
+        "EEVAP_SIN_EST",
         "QAFL_UHE_EST",
         "QINC_UHE_EST",
         "VAFL_UHE_EST",
@@ -215,6 +242,96 @@ class OperationSynthetizer:
             Variable.ENERGIA_VERTIDA_FIO,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
             TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.PATAMAR,
         ),
         OperationSynthesis(
             Variable.ENERGIA_VERTIDA_RESERV,
@@ -1530,7 +1647,86 @@ class OperationSynthetizer:
             valores_varmi, n_series
         )
         df_inicial["valor"] = valores_iniciais
+        df_inicial["valor"] = df_inicial["valor"].fillna(0.0)
         return df_inicial
+
+    @classmethod
+    def __stub_geracao_hidraulica_fio(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        sintese_total = OperationSynthesis(
+            Variable.GERACAO_HIDRAULICA,
+            synthesis.spatial_resolution,
+            synthesis.temporal_resolution,
+        )
+        sintese_controlavel = OperationSynthesis(
+            Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
+            synthesis.spatial_resolution,
+            synthesis.temporal_resolution,
+        )
+        cache_total = cls.CACHED_SYNTHESIS.get(sintese_total)
+        cache_controlavel = cls.CACHED_SYNTHESIS.get(sintese_controlavel)
+
+        df_total = (
+            cache_total
+            if cache_total is not None
+            else cls._resolve_spatial_resolution(
+                sintese_total,
+                uow,
+            )
+        )
+        df_controlavel = (
+            cache_controlavel
+            if cache_controlavel is not None
+            else cls._resolve_spatial_resolution(
+                sintese_controlavel,
+                uow,
+            )
+        )
+
+        df_total.loc[:, "valor"] = (
+            df_total["valor"].to_numpy() - df_controlavel["valor"].to_numpy()
+        )
+        return df_total
+
+    @classmethod
+    def __stub_energia_defluencia_minima(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        sintese_meta = OperationSynthesis(
+            Variable.META_ENERGIA_DEFLUENCIA_MINIMA,
+            synthesis.spatial_resolution,
+            synthesis.temporal_resolution,
+        )
+        sintese_violacao = OperationSynthesis(
+            Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
+            synthesis.spatial_resolution,
+            synthesis.temporal_resolution,
+        )
+        cache_meta = cls.CACHED_SYNTHESIS.get(sintese_meta)
+        cache_violacao = cls.CACHED_SYNTHESIS.get(sintese_violacao)
+
+        df_meta = (
+            cache_meta
+            if cache_meta is not None
+            else cls._resolve_spatial_resolution(
+                sintese_meta,
+                uow,
+            )
+        )
+        df_violacao = (
+            cache_violacao
+            if cache_violacao is not None
+            else cls._resolve_spatial_resolution(
+                sintese_violacao,
+                uow,
+            )
+        )
+
+        df_meta.loc[:, "valor"] = (
+            df_meta["valor"].to_numpy() - df_violacao["valor"].to_numpy()
+        )
+        return df_meta
 
     @classmethod
     def __postprocess_violacoes_UHE_estagio(cls, df_completo: pd.DataFrame):
@@ -2069,6 +2265,12 @@ class OperationSynthetizer:
             ]
         ):
             df = cls.__stub_agrega_variaveis_indiv_REE_SBM_SIN(s, uow)
+            return df, True
+        elif s.variable in [Variable.GERACAO_HIDRAULICA_FIO]:
+            df = cls.__stub_geracao_hidraulica_fio(s, uow)
+            return df, True
+        elif s.variable in [Variable.ENERGIA_DEFLUENCIA_MINIMA]:
+            df = cls.__stub_energia_defluencia_minima(s, uow)
             return df, True
         else:
             return pd.DataFrame(), False
