@@ -1486,10 +1486,9 @@ class OperationSynthetizer:
         col_group = col_group_map[synthesis.spatial_resolution]
         if col_group is not None:
             groups = df_inicial[col_group].unique().tolist()
-            n_groups = len(groups)
         else:
-            groups = []
-            n_groups = 0
+            groups = [1]
+        n_groups = len(groups)
         series = df_inicial["serie"].unique().tolist()
         n_series = len(series)
         estagios = df_inicial["estagio"].unique().tolist()
