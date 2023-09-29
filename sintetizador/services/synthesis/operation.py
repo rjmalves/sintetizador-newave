@@ -1478,22 +1478,32 @@ class OperationSynthetizer:
             else "valor_percentual"
         )
         df_inicial = df_final.copy()
-        rees = df_inicial["ree"].unique().tolist()
-        n_rees = len(rees)
+        col_group_map = {
+            SpatialResolution.RESERVATORIO_EQUIVALENTE: "ree",
+            SpatialResolution.SUBMERCADO: "submercado",
+            SpatialResolution.SISTEMA_INTERLIGADO: None,
+        }
+        col_group = col_group_map[synthesis.spatial_resolution]
+        if col_group is not None:
+            groups = df_inicial["ree"].unique().tolist()
+            n_groups = len(groups)
+        else:
+            groups = []
+            n_groups = 0
         series = df_inicial["serie"].unique().tolist()
         n_series = len(series)
         estagios = df_inicial["estagio"].unique().tolist()
         n_estagios = len(estagios)
         # Faz uma atribuição posicional. A maneira mais pythonica é lenta.
         offset_meses = cls._offset_meses_inicio(df_inicial, uow)
-        offsets_rees = [i * n_series * n_estagios for i in range(n_rees)]
+        offsets_groups = [i * n_series * n_estagios for i in range(n_groups)]
         indices_primeiros_estagios = offset_meses * n_series + np.tile(
-            np.arange(n_series), n_rees
+            np.arange(n_series), n_groups
         )
-        indices_primeiros_estagios += np.repeat(offsets_rees, n_series)
-        earmi_pmo = earmi_pmo.loc[earmi_pmo["group"].isin(rees)]
+        indices_primeiros_estagios += np.repeat(offsets_groups, n_series)
+        earmi_pmo = earmi_pmo.loc[earmi_pmo["group"].isin(groups)]
         valores_earmi = (
-            earmi_pmo.set_index("group").loc[rees, col_earmi_pmo].to_numpy()
+            earmi_pmo.set_index("group").loc[groups, col_earmi_pmo].to_numpy()
         )
         valores_iniciais = df_inicial["valor"].to_numpy()
         valores_iniciais[n_series:] = valores_iniciais[:-n_series]
