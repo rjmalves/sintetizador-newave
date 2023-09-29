@@ -497,16 +497,18 @@ class RawFilesRepository(AbstractFilesRepository):
                 Variable.GERACAO_HIDRAULICA_FIO,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
                 TemporalResolution.ESTAGIO,
+                # TODO - Substituir quando existir na inewave
             ): lambda dir, ree=1: self.__extrai_patamares_df(
-                Ghidr.read(join(dir, f"gfiol{str(ree).zfill(3)}.out")).valores,
+                Evert.read(join(dir, f"gfiol{str(ree).zfill(3)}.out")).valores,
                 ["TOTAL"],
             ),
             (
                 Variable.GERACAO_HIDRAULICA_FIO,
                 SpatialResolution.SUBMERCADO,
                 TemporalResolution.ESTAGIO,
+                # TODO - Substituir quando existir na inewave
             ): lambda dir, submercado=1: self.__extrai_patamares_df(
-                Ghidrm.read(
+                Evertm.read(
                     join(dir, f"gfiolm{str(submercado).zfill(3)}.out")
                 ).valores,
                 ["TOTAL"],
@@ -515,8 +517,9 @@ class RawFilesRepository(AbstractFilesRepository):
                 Variable.GERACAO_HIDRAULICA_FIO,
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.ESTAGIO,
+                # TODO - Substituir quando existir na inewave
             ): lambda dir, _: self.__extrai_patamares_df(
-                Ghidrsin.read(join(dir, "gfiolsin.out")).valores, ["TOTAL"]
+                Evertsin.read(join(dir, "gfiolsin.out")).valores, ["TOTAL"]
             ),
             (
                 Variable.GERACAO_HIDRAULICA_FIO,
