@@ -1529,8 +1529,8 @@ class OperationSynthetizer:
             if cache_earm is not None
             else resolve_func(sintese_final, uow)
         )
-        earmi_percentual = cls._earmi_percentual(synthesis, uow)
-
+        # Contém as duas colunas: absoluta e percentual
+        earmi_pmo = cls._earmi_percentual(synthesis, uow)
         col_earmi_pmo = (
             "valor_MWmes"
             if synthesis.variable
@@ -1538,52 +1538,30 @@ class OperationSynthetizer:
             else "valor_percentual"
         )
         df_inicial = df_final.copy()
-        col_grp_map = {
-            SpatialResolution.RESERVATORIO_EQUIVALENTE: "ree",
-            SpatialResolution.SUBMERCADO: "submercado",
-            SpatialResolution.SISTEMA_INTERLIGADO: "",
-        }
-        col_grp = col_grp_map[synthesis.spatial_resolution]
+        rees = df_inicial["ree"].unique().tolist()
+        n_rees = len(rees)
         series = df_inicial["serie"].unique().tolist()
         n_series = len(series)
-        if cls.logger is not None:
-            cls.logger.info("Gerando EARM inicial...")
-        if (
-            synthesis.spatial_resolution
-            == SpatialResolution.SISTEMA_INTERLIGADO
-        ):
-            df_inicial["valor"] = np.concatenate(
-                [
-                    np.repeat(
-                        [earmi_percentual[col_earmi_pmo].iloc[0]], n_series
-                    ),
-                    df_inicial["valor"].to_numpy()[n_series:],
-                ]
-            )
-        else:
-            groups = df_inicial[col_grp].unique().tolist()
-            # Para cada par grupo x estagio, desloca os valores de 1 e para o
-            # primeiro estágio, coloca o valor do pmo.dat
-            for group in groups:
-                df_inicial.loc[
-                    df_inicial[col_grp] == group, "valor"
-                ] = np.concatenate(
-                    [
-                        np.repeat(
-                            [
-                                earmi_percentual.loc[
-                                    (earmi_percentual["group"] == group),
-                                    col_earmi_pmo,
-                                ].iloc[0]
-                            ],
-                            n_series,
-                        ),
-                        df_inicial.loc[
-                            df_inicial[col_grp] == group, "valor"
-                        ].to_numpy()[n_series:],
-                    ]
-                )
-
+        estagios = df_inicial["estagio"].unique().tolist()
+        n_estagios = len(estagios)
+        # Faz uma atribuição posicional. A maneira mais pythonica é lenta.
+        offset_meses = cls._offset_meses_inicio(df_inicial, uow)
+        offsets_rees = [i * n_series * n_estagios for i in range(n_rees)]
+        indices_primeiros_estagios = offset_meses * n_series + np.tile(
+            np.arange(n_series), n_rees
+        )
+        indices_primeiros_estagios += np.repeat(offsets_rees, n_series)
+        earmi_pmo = earmi_pmo.loc[earmi_pmo["nome_ree"].isin(rees)]
+        valores_earmi = (
+            earmi_pmo.set_index("nome_ree").loc[rees, col_earmi_pmo].to_numpy()
+        )
+        valores_iniciais = df_inicial["valor"].to_numpy()
+        valores_iniciais[n_series:] = valores_iniciais[:-n_series]
+        valores_iniciais[indices_primeiros_estagios] = np.repeat(
+            valores_earmi, n_series
+        )
+        df_inicial["valor"] = valores_iniciais
+        df_inicial["valor"] = df_inicial["valor"].fillna(0.0)
         return df_inicial
 
     @classmethod
