@@ -1551,9 +1551,9 @@ class OperationSynthetizer:
             np.arange(n_series), n_rees
         )
         indices_primeiros_estagios += np.repeat(offsets_rees, n_series)
-        earmi_pmo = earmi_pmo.loc[earmi_pmo["nome_ree"].isin(rees)]
+        earmi_pmo = earmi_pmo.loc[earmi_pmo["group"].isin(rees)]
         valores_earmi = (
-            earmi_pmo.set_index("nome_ree").loc[rees, col_earmi_pmo].to_numpy()
+            earmi_pmo.set_index("group").loc[rees, col_earmi_pmo].to_numpy()
         )
         valores_iniciais = df_inicial["valor"].to_numpy()
         valores_iniciais[n_series:] = valores_iniciais[:-n_series]
