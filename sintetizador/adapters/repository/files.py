@@ -39,6 +39,8 @@ from inewave.nwlistop.coper import Coper
 from inewave.nwlistop.eafb import Eafb
 from inewave.nwlistop.eafbm import Eafbm
 from inewave.nwlistop.eafbsin import Eafbsin
+from inewave.nwlistop.eaf import Eaf
+from inewave.nwlistop.eafm import Eafm
 from inewave.nwlistop.intercambio import Intercambio
 from inewave.nwlistop.deficit import Def
 from inewave.nwlistop.cdef import Cdef
@@ -361,6 +363,48 @@ class RawFilesRepository(AbstractFilesRepository):
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.ESTAGIO,
             ): lambda dir, _: Eafbsin.read(join(dir, "eafbsin.out")).valores,
+            (
+                Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA_CONTROLAVEL,
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, ree=1: Eaf.read(
+                join(dir, f"eaf{str(ree).zfill(3)}.out")
+            ).valores,
+            (
+                Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA_CONTROLAVEL,
+                SpatialResolution.SUBMERCADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, submercado=1: Eafm.read(
+                join(dir, f"eafm{str(submercado).zfill(3)}.out")
+            ).valores,
+            (
+                Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA_CONTROLAVEL,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+                TemporalResolution.ESTAGIO,
+                # TODO - substituir quando existir na inewave
+            ): lambda dir, _: Eafbsin.read(join(dir, "eafmsin.out")).valores,
+            (
+                Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA_FIO,
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+                TemporalResolution.ESTAGIO,
+                # TODO - substituir quando existir na inewave
+            ): lambda dir, ree=1: Eaf.read(
+                join(dir, f"efdf{str(ree).zfill(3)}.out")
+            ).valores,
+            (
+                Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA_FIO,
+                SpatialResolution.SUBMERCADO,
+                TemporalResolution.ESTAGIO,
+                # TODO - substituir quando existir na inewave
+            ): lambda dir, submercado=1: Eafm.read(
+                join(dir, f"efdfm{str(submercado).zfill(3)}.out")
+            ).valores,
+            (
+                Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA_FIO,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+                TemporalResolution.ESTAGIO,
+                # TODO - substituir quando existir na inewave
+            ): lambda dir, _: Eafbsin.read(join(dir, "efdfsin.out")).valores,
             (
                 Variable.ENERGIA_ARMAZENADA_PERCENTUAL_FINAL,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
