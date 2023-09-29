@@ -1575,45 +1575,6 @@ class OperationSynthetizer:
         return df_inicial
 
     @classmethod
-    def __stub_geracao_hidraulica_fio(
-        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
-        sintese_total = OperationSynthesis(
-            Variable.GERACAO_HIDRAULICA,
-            synthesis.spatial_resolution,
-            synthesis.temporal_resolution,
-        )
-        sintese_controlavel = OperationSynthesis(
-            Variable.GERACAO_HIDRAULICA_RESERVATORIO,
-            synthesis.spatial_resolution,
-            synthesis.temporal_resolution,
-        )
-        cache_total = cls.CACHED_SYNTHESIS.get(sintese_total)
-        cache_controlavel = cls.CACHED_SYNTHESIS.get(sintese_controlavel)
-
-        df_total = (
-            cache_total
-            if cache_total is not None
-            else cls._resolve_spatial_resolution(
-                sintese_total,
-                uow,
-            )
-        )
-        df_controlavel = (
-            cache_controlavel
-            if cache_controlavel is not None
-            else cls._resolve_spatial_resolution(
-                sintese_controlavel,
-                uow,
-            )
-        )
-
-        df_total.loc[:, "valor"] = (
-            df_total["valor"].to_numpy() - df_controlavel["valor"].to_numpy()
-        )
-        return df_total
-
-    @classmethod
     def __stub_energia_defluencia_minima(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
