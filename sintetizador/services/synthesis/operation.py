@@ -1485,7 +1485,7 @@ class OperationSynthetizer:
         }
         col_group = col_group_map[synthesis.spatial_resolution]
         if col_group is not None:
-            groups = df_inicial["ree"].unique().tolist()
+            groups = df_inicial[col_group].unique().tolist()
             n_groups = len(groups)
         else:
             groups = []
