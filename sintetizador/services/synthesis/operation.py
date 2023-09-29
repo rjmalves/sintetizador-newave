@@ -45,9 +45,9 @@ class OperationSynthetizer:
         "ENAA_REE_EST",
         "ENAA_SBM_EST",
         "ENAA_SIN_EST",
-        "ENAAC_REE_EST",
-        "ENAAC_SBM_EST",
-        "ENAAC_SIN_EST",
+        "ENAAR_REE_EST",
+        "ENAAR_SBM_EST",
+        "ENAAR_SIN_EST",
         "ENAAF_REE_EST",
         "ENAAF_SBM_EST",
         "ENAAF_SIN_EST",
@@ -63,9 +63,9 @@ class OperationSynthetizer:
         "EARMF_REE_EST",
         "EARMF_SBM_EST",
         "EARMF_SIN_EST",
-        "GHIDC_REE_EST",
-        "GHIDC_SBM_EST",
-        "GHIDC_SIN_EST",
+        "GHIDR_REE_EST",
+        "GHIDR_SBM_EST",
+        "GHIDR_SIN_EST",
         "GHID_REE_EST",
         "GHID_SBM_EST",
         "GHID_SIN_EST",
@@ -74,9 +74,9 @@ class OperationSynthetizer:
         "GHIDF_SIN_EST",
         "GTER_SBM_EST",
         "GTER_SIN_EST",
-        "GHIDC_REE_PAT",
-        "GHIDC_SBM_PAT",
-        "GHIDC_SIN_PAT",
+        "GHIDR_REE_PAT",
+        "GHIDR_SBM_PAT",
+        "GHIDR_SIN_PAT",
         "GHID_REE_PAT",
         "GHID_SBM_PAT",
         "GHID_SIN_PAT",
@@ -99,9 +99,9 @@ class OperationSynthetizer:
         "EVERFT_REE_EST",
         "EVERFT_SBM_EST",
         "EVERFT_SIN_EST",
-        "EDESC_REE_EST",
-        "EDESC_SBM_EST",
-        "EDESC_SIN_EST",
+        "EDESR_REE_EST",
+        "EDESR_SBM_EST",
+        "EDESR_SIN_EST",
         "EDESF_REE_EST",
         "EDESF_SBM_EST",
         "EDESF_SIN_EST",
@@ -248,66 +248,6 @@ class OperationSynthetizer:
             Variable.ENERGIA_VERTIDA_FIO,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
             TemporalResolution.ESTAGIO,
-        ),
-        OperationSynthesis(
-            Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
-            SpatialResolution.SISTEMA_INTERLIGADO,
-            TemporalResolution.ESTAGIO,
-        ),
-        OperationSynthesis(
-            Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
-            SpatialResolution.SUBMERCADO,
-            TemporalResolution.ESTAGIO,
-        ),
-        OperationSynthesis(
-            Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
-            SpatialResolution.RESERVATORIO_EQUIVALENTE,
-            TemporalResolution.ESTAGIO,
-        ),
-        OperationSynthesis(
-            Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
-            SpatialResolution.SISTEMA_INTERLIGADO,
-            TemporalResolution.PATAMAR,
-        ),
-        OperationSynthesis(
-            Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
-            SpatialResolution.SUBMERCADO,
-            TemporalResolution.PATAMAR,
-        ),
-        OperationSynthesis(
-            Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
-            SpatialResolution.RESERVATORIO_EQUIVALENTE,
-            TemporalResolution.PATAMAR,
-        ),
-        OperationSynthesis(
-            Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
-            SpatialResolution.SISTEMA_INTERLIGADO,
-            TemporalResolution.ESTAGIO,
-        ),
-        OperationSynthesis(
-            Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
-            SpatialResolution.SUBMERCADO,
-            TemporalResolution.ESTAGIO,
-        ),
-        OperationSynthesis(
-            Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
-            SpatialResolution.RESERVATORIO_EQUIVALENTE,
-            TemporalResolution.ESTAGIO,
-        ),
-        OperationSynthesis(
-            Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
-            SpatialResolution.SISTEMA_INTERLIGADO,
-            TemporalResolution.PATAMAR,
-        ),
-        OperationSynthesis(
-            Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
-            SpatialResolution.SUBMERCADO,
-            TemporalResolution.PATAMAR,
-        ),
-        OperationSynthesis(
-            Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
-            SpatialResolution.RESERVATORIO_EQUIVALENTE,
-            TemporalResolution.PATAMAR,
         ),
         OperationSynthesis(
             Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
@@ -1644,7 +1584,7 @@ class OperationSynthetizer:
             synthesis.temporal_resolution,
         )
         sintese_controlavel = OperationSynthesis(
-            Variable.GERACAO_HIDRAULICA_CONTROLAVEL,
+            Variable.GERACAO_HIDRAULICA_RESERVATORIO,
             synthesis.spatial_resolution,
             synthesis.temporal_resolution,
         )
@@ -2249,9 +2189,6 @@ class OperationSynthetizer:
             ]
         ):
             df = cls.__stub_agrega_variaveis_indiv_REE_SBM_SIN(s, uow)
-            return df, True
-        elif s.variable in [Variable.GERACAO_HIDRAULICA_FIO]:
-            df = cls.__stub_geracao_hidraulica_fio(s, uow)
             return df, True
         elif s.variable in [Variable.ENERGIA_DEFLUENCIA_MINIMA]:
             df = cls.__stub_energia_defluencia_minima(s, uow)
