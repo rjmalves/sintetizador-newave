@@ -1058,6 +1058,63 @@ class OperationSynthetizer:
             return df_uhe
 
     @classmethod
+    def _resolve_gtert_temporal(
+        cls, df: Optional[pd.DataFrame]
+    ) -> pd.DataFrame:
+        if df is None:
+            return df
+        df.sort_values(["classe", "data", "serie", "patamar"], inplace=True)
+        classes = df["classe"].unique().tolist()
+        n_classes = len(classes)
+        datas = df["data"].unique().tolist()
+        datas.sort()
+        n_datas = len(datas)
+        series = df["serie"].unique().tolist()
+        n_series = len(series)
+        patamares = df["patamar"].unique().tolist()
+        n_patamares = len(patamares)
+        # Atribui estagio e dataFim de forma posicional
+        estagios = list(range(1, n_datas + 1))
+        estagios_df = np.tile(
+            np.repeat(estagios, n_series * n_patamares), n_classes
+        )
+        datasFim = [d + relativedelta(months=1) for d in datas]
+        datasFim_df = np.tile(
+            np.repeat(datasFim, n_series * n_patamares), n_classes
+        )
+        df = df.copy()
+        df["estagio"] = estagios_df
+        df["dataFim"] = datasFim_df
+        df = df.rename(columns={"data": "dataInicio"})
+        return df
+
+    @classmethod
+    def _resolve_gtert(
+        cls,
+        uow: AbstractUnitOfWork,
+        synthesis: OperationSynthesis,
+        sbm_index: int,
+        sbm_name: str,
+    ) -> pd.DataFrame:
+        logger_name = f"{synthesis.variable.value}_{sbm_name}"
+        logger = Log.configure_process_logger(
+            uow.queue, logger_name, sbm_index
+        )
+        with uow:
+            logger.info(
+                f"Processando arquivo do submercado: {sbm_index} - {sbm_name}"
+            )
+            df_gtert = cls._resolve_gtert_temporal(
+                uow.files.get_nwlistop(
+                    synthesis.variable,
+                    synthesis.spatial_resolution,
+                    synthesis.temporal_resolution,
+                    submercado=sbm_index,
+                )
+            )
+            return df_gtert
+
+    @classmethod
     def __stub_agrega_estagio_variaveis_por_patamar(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
@@ -1832,7 +1889,7 @@ class OperationSynthetizer:
                     cls.logger.info("Paralelizando...")
             async_res = {
                 idx: pool.apply_async(
-                    cls._resolve_SBM_submercado, (uow, synthesis, idx, name)
+                    cls._resolve_gtert, (uow, synthesis, idx, name)
                 )
                 for idx, name in zip(sbms_idx, sbms_name)
             }
@@ -1859,9 +1916,7 @@ class OperationSynthetizer:
         df_completo["classe"] = np.repeat(
             nomes_usinas_arquivo, linhas_por_usina
         )
-        return df_completo.rename(columns={"classe": "usina"}).drop(
-            columns=["submercado"]
-        )[
+        return df_completo.rename(columns={"classe": "usina"})[
             [
                 "usina",
                 "estagio",
