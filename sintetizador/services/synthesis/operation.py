@@ -753,37 +753,51 @@ class OperationSynthetizer:
 
     @classmethod
     def __resolve_EST(cls, df: pd.DataFrame) -> pd.DataFrame:
+        df = df.copy()
+        df.sort_values(["data", "serie"], inplace=True)
         cols = df.columns.tolist()
         datas = df["data"].unique().tolist()
         datas.sort()
-        df = df.copy()
-        df["estagio"] = df.apply(lambda x: datas.index(x["data"]) + 1, axis=1)
-        df["dataFim"] = df.apply(
-            lambda x: x["data"] + relativedelta(months=1), axis=1
-        )
+        n_datas = len(datas)
+        series = df["serie"].unique().tolist()
+        n_series = len(series)
+        # Atribui estagio e dataFim de forma posicional
+        estagios = list(range(1, n_datas + 1))
+        estagios_df = np.repeat(estagios, n_series)
+        datasFim = [d + relativedelta(months=1) for d in datas]
+        datasFim_df = np.repeat(datasFim, n_series)
         df = df.rename(columns={"data": "dataInicio"})
-        df = df[
+        df["estagio"] = estagios_df
+        df["dataFim"] = datasFim_df
+        return df[
             ["estagio", "dataInicio", "dataFim"]
             + [c for c in cols if c not in ["data", "patamar"]]
         ]
-        return df.sort_values(["estagio", "serie"])
 
     @classmethod
     def __resolve_PAT(cls, df: pd.DataFrame) -> pd.DataFrame:
+        df = df.copy()
+        df.sort_values(["data", "serie", "patamar"], inplace=True)
         cols = df.columns.tolist()
         datas = df["data"].unique().tolist()
         datas.sort()
-        df = df.copy()
-        df["estagio"] = df.apply(lambda x: datas.index(x["data"]) + 1, axis=1)
-        df["dataFim"] = df.apply(
-            lambda x: x["data"] + relativedelta(months=1), axis=1
-        )
+        n_datas = len(datas)
+        series = df["serie"].unique().tolist()
+        n_series = len(series)
+        patamares = df["patamar"].unique().tolist()
+        n_patamares = len(patamares)
+        # Atribui estagio e dataFim de forma posicional
+        estagios = list(range(1, n_datas + 1))
+        estagios_df = np.repeat(estagios, n_series * n_patamares)
+        datasFim = [d + relativedelta(months=1) for d in datas]
+        datasFim_df = np.repeat(datasFim, n_series * n_patamares)
         df = df.rename(columns={"data": "dataInicio"})
-        df = df[
+        df["estagio"] = estagios_df
+        df["dataFim"] = datasFim_df
+        return df[
             ["estagio", "dataInicio", "dataFim", "patamar"]
             + [c for c in cols if c not in ["patamar", "data"]]
         ]
-        return df.sort_values(["estagio", "serie", "patamar"])
 
     @classmethod
     def _resolve_temporal_resolution(
