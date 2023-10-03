@@ -45,6 +45,12 @@ class OperationSynthetizer:
         "ENAA_REE_EST",
         "ENAA_SBM_EST",
         "ENAA_SIN_EST",
+        "ENAAR_REE_EST",
+        "ENAAR_SBM_EST",
+        "ENAAR_SIN_EST",
+        "ENAAF_REE_EST",
+        "ENAAF_SBM_EST",
+        "ENAAF_SIN_EST",
         "EARPI_REE_EST",
         "EARPI_SBM_EST",
         "EARPI_SIN_EST",
@@ -57,14 +63,26 @@ class OperationSynthetizer:
         "EARMF_REE_EST",
         "EARMF_SBM_EST",
         "EARMF_SIN_EST",
+        "GHIDR_REE_EST",
+        "GHIDR_SBM_EST",
+        "GHIDR_SIN_EST",
         "GHID_REE_EST",
         "GHID_SBM_EST",
         "GHID_SIN_EST",
+        "GHIDF_REE_EST",
+        "GHIDF_SBM_EST",
+        "GHIDF_SIN_EST",
         "GTER_SBM_EST",
         "GTER_SIN_EST",
+        "GHIDR_REE_PAT",
+        "GHIDR_SBM_PAT",
+        "GHIDR_SIN_PAT",
         "GHID_REE_PAT",
         "GHID_SBM_PAT",
         "GHID_SIN_PAT",
+        "GHIDF_REE_PAT",
+        "GHIDF_SBM_PAT",
+        "GHIDF_SIN_PAT",
         "GTER_UTE_PAT",
         "GTER_UTE_EST",
         "GTER_SBM_PAT",
@@ -81,6 +99,21 @@ class OperationSynthetizer:
         "EVERFT_REE_EST",
         "EVERFT_SBM_EST",
         "EVERFT_SIN_EST",
+        "EDESR_REE_EST",
+        "EDESR_SBM_EST",
+        "EDESR_SIN_EST",
+        "EDESF_REE_EST",
+        "EDESF_SBM_EST",
+        "EDESF_SIN_EST",
+        "EVMIN_REE_EST",
+        "EVMIN_SBM_EST",
+        "EVMIN_SIN_EST",
+        "EVMOR_REE_EST",
+        "EVMOR_SBM_EST",
+        "EVMOR_SIN_EST",
+        "EEVAP_REE_EST",
+        "EEVAP_SBM_EST",
+        "EEVAP_SIN_EST",
         "QAFL_UHE_EST",
         "QINC_UHE_EST",
         "VAFL_UHE_EST",
@@ -215,6 +248,36 @@ class OperationSynthetizer:
             Variable.ENERGIA_VERTIDA_FIO,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
             TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.PATAMAR,
         ),
         OperationSynthesis(
             Variable.ENERGIA_VERTIDA_RESERV,
@@ -690,37 +753,51 @@ class OperationSynthetizer:
 
     @classmethod
     def __resolve_EST(cls, df: pd.DataFrame) -> pd.DataFrame:
+        df = df.copy()
+        df.sort_values(["data", "serie"], inplace=True)
         cols = df.columns.tolist()
         datas = df["data"].unique().tolist()
         datas.sort()
-        df = df.copy()
-        df["estagio"] = df.apply(lambda x: datas.index(x["data"]) + 1, axis=1)
-        df["dataFim"] = df.apply(
-            lambda x: x["data"] + relativedelta(months=1), axis=1
-        )
+        n_datas = len(datas)
+        series = df["serie"].unique().tolist()
+        n_series = len(series)
+        # Atribui estagio e dataFim de forma posicional
+        estagios = list(range(1, n_datas + 1))
+        estagios_df = np.repeat(estagios, n_series)
+        datasFim = [d + relativedelta(months=1) for d in datas]
+        datasFim_df = np.repeat(datasFim, n_series)
         df = df.rename(columns={"data": "dataInicio"})
-        df = df[
+        df["estagio"] = estagios_df
+        df["dataFim"] = datasFim_df
+        return df[
             ["estagio", "dataInicio", "dataFim"]
             + [c for c in cols if c not in ["data", "patamar"]]
         ]
-        return df.sort_values(["estagio", "serie"])
 
     @classmethod
     def __resolve_PAT(cls, df: pd.DataFrame) -> pd.DataFrame:
+        df = df.copy()
+        df.sort_values(["data", "serie", "patamar"], inplace=True)
         cols = df.columns.tolist()
         datas = df["data"].unique().tolist()
         datas.sort()
-        df = df.copy()
-        df["estagio"] = df.apply(lambda x: datas.index(x["data"]) + 1, axis=1)
-        df["dataFim"] = df.apply(
-            lambda x: x["data"] + relativedelta(months=1), axis=1
-        )
+        n_datas = len(datas)
+        series = df["serie"].unique().tolist()
+        n_series = len(series)
+        patamares = df["patamar"].unique().tolist()
+        n_patamares = len(patamares)
+        # Atribui estagio e dataFim de forma posicional
+        estagios = list(range(1, n_datas + 1))
+        estagios_df = np.repeat(estagios, n_series * n_patamares)
+        datasFim = [d + relativedelta(months=1) for d in datas]
+        datasFim_df = np.repeat(datasFim, n_series * n_patamares)
         df = df.rename(columns={"data": "dataInicio"})
-        df = df[
+        df["estagio"] = estagios_df
+        df["dataFim"] = datasFim_df
+        return df[
             ["estagio", "dataInicio", "dataFim", "patamar"]
             + [c for c in cols if c not in ["patamar", "data"]]
         ]
-        return df.sort_values(["estagio", "serie", "patamar"])
 
     @classmethod
     def _resolve_temporal_resolution(
@@ -993,6 +1070,63 @@ class OperationSynthetizer:
             df_uhe["usina"] = uhe_name
             df_uhe = df_uhe[["usina"] + cols]
             return df_uhe
+
+    @classmethod
+    def _resolve_gtert_temporal(
+        cls, df: Optional[pd.DataFrame]
+    ) -> pd.DataFrame:
+        if df is None:
+            return df
+        df.sort_values(["classe", "data", "serie", "patamar"], inplace=True)
+        classes = df["classe"].unique().tolist()
+        n_classes = len(classes)
+        datas = df["data"].unique().tolist()
+        datas.sort()
+        n_datas = len(datas)
+        series = df["serie"].unique().tolist()
+        n_series = len(series)
+        patamares = df["patamar"].unique().tolist()
+        n_patamares = len(patamares)
+        # Atribui estagio e dataFim de forma posicional
+        estagios = list(range(1, n_datas + 1))
+        estagios_df = np.tile(
+            np.repeat(estagios, n_series * n_patamares), n_classes
+        )
+        datasFim = [d + relativedelta(months=1) for d in datas]
+        datasFim_df = np.tile(
+            np.repeat(datasFim, n_series * n_patamares), n_classes
+        )
+        df = df.copy()
+        df["estagio"] = estagios_df
+        df["dataFim"] = datasFim_df
+        df = df.rename(columns={"data": "dataInicio"})
+        return df
+
+    @classmethod
+    def _resolve_gtert(
+        cls,
+        uow: AbstractUnitOfWork,
+        synthesis: OperationSynthesis,
+        sbm_index: int,
+        sbm_name: str,
+    ) -> pd.DataFrame:
+        logger_name = f"{synthesis.variable.value}_{sbm_name}"
+        logger = Log.configure_process_logger(
+            uow.queue, logger_name, sbm_index
+        )
+        with uow:
+            logger.info(
+                f"Processando arquivo do submercado: {sbm_index} - {sbm_name}"
+            )
+            df_gtert = cls._resolve_gtert_temporal(
+                uow.files.get_nwlistop(
+                    synthesis.variable,
+                    synthesis.spatial_resolution,
+                    synthesis.temporal_resolution,
+                    submercado=sbm_index,
+                )
+            )
+            return df_gtert
 
     @classmethod
     def __stub_agrega_estagio_variaveis_por_patamar(
@@ -1406,8 +1540,8 @@ class OperationSynthetizer:
             if cache_earm is not None
             else resolve_func(sintese_final, uow)
         )
-        earmi_percentual = cls._earmi_percentual(synthesis, uow)
-
+        # Contém as duas colunas: absoluta e percentual
+        earmi_pmo = cls._earmi_percentual(synthesis, uow)
         col_earmi_pmo = (
             "valor_MWmes"
             if synthesis.variable
@@ -1415,52 +1549,39 @@ class OperationSynthetizer:
             else "valor_percentual"
         )
         df_inicial = df_final.copy()
-        col_grp_map = {
+        col_group_map = {
             SpatialResolution.RESERVATORIO_EQUIVALENTE: "ree",
             SpatialResolution.SUBMERCADO: "submercado",
-            SpatialResolution.SISTEMA_INTERLIGADO: "",
+            SpatialResolution.SISTEMA_INTERLIGADO: None,
         }
-        col_grp = col_grp_map[synthesis.spatial_resolution]
+        col_group = col_group_map[synthesis.spatial_resolution]
+        if col_group is not None:
+            groups = df_inicial[col_group].unique().tolist()
+        else:
+            groups = [1]
+        n_groups = len(groups)
         series = df_inicial["serie"].unique().tolist()
         n_series = len(series)
-        if cls.logger is not None:
-            cls.logger.info("Gerando EARM inicial...")
-        if (
-            synthesis.spatial_resolution
-            == SpatialResolution.SISTEMA_INTERLIGADO
-        ):
-            df_inicial["valor"] = np.concatenate(
-                [
-                    np.repeat(
-                        [earmi_percentual[col_earmi_pmo].iloc[0]], n_series
-                    ),
-                    df_inicial["valor"].to_numpy()[n_series:],
-                ]
-            )
-        else:
-            groups = df_inicial[col_grp].unique().tolist()
-            # Para cada par grupo x estagio, desloca os valores de 1 e para o
-            # primeiro estágio, coloca o valor do pmo.dat
-            for group in groups:
-                df_inicial.loc[
-                    df_inicial[col_grp] == group, "valor"
-                ] = np.concatenate(
-                    [
-                        np.repeat(
-                            [
-                                earmi_percentual.loc[
-                                    (earmi_percentual["group"] == group),
-                                    col_earmi_pmo,
-                                ].iloc[0]
-                            ],
-                            n_series,
-                        ),
-                        df_inicial.loc[
-                            df_inicial[col_grp] == group, "valor"
-                        ].to_numpy()[n_series:],
-                    ]
-                )
-
+        estagios = df_inicial["estagio"].unique().tolist()
+        n_estagios = len(estagios)
+        # Faz uma atribuição posicional. A maneira mais pythonica é lenta.
+        offset_meses = cls._offset_meses_inicio(df_inicial, uow)
+        offsets_groups = [i * n_series * n_estagios for i in range(n_groups)]
+        indices_primeiros_estagios = offset_meses * n_series + np.tile(
+            np.arange(n_series), n_groups
+        )
+        indices_primeiros_estagios += np.repeat(offsets_groups, n_series)
+        earmi_pmo = earmi_pmo.loc[earmi_pmo["group"].isin(groups)]
+        valores_earmi = (
+            earmi_pmo.set_index("group").loc[groups, col_earmi_pmo].to_numpy()
+        )
+        valores_iniciais = df_inicial["valor"].to_numpy()
+        valores_iniciais[n_series:] = valores_iniciais[:-n_series]
+        valores_iniciais[indices_primeiros_estagios] = np.repeat(
+            valores_earmi, n_series
+        )
+        df_inicial["valor"] = valores_iniciais
+        df_inicial["valor"] = df_inicial["valor"].fillna(0.0)
         return df_inicial
 
     @classmethod
@@ -1530,7 +1651,47 @@ class OperationSynthetizer:
             valores_varmi, n_series
         )
         df_inicial["valor"] = valores_iniciais
+        df_inicial["valor"] = df_inicial["valor"].fillna(0.0)
         return df_inicial
+
+    @classmethod
+    def __stub_energia_defluencia_minima(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        sintese_meta = OperationSynthesis(
+            Variable.META_ENERGIA_DEFLUENCIA_MINIMA,
+            synthesis.spatial_resolution,
+            synthesis.temporal_resolution,
+        )
+        sintese_violacao = OperationSynthesis(
+            Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
+            synthesis.spatial_resolution,
+            synthesis.temporal_resolution,
+        )
+        cache_meta = cls.CACHED_SYNTHESIS.get(sintese_meta)
+        cache_violacao = cls.CACHED_SYNTHESIS.get(sintese_violacao)
+
+        df_meta = (
+            cache_meta
+            if cache_meta is not None
+            else cls._resolve_spatial_resolution(
+                sintese_meta,
+                uow,
+            )
+        )
+        df_violacao = (
+            cache_violacao
+            if cache_violacao is not None
+            else cls._resolve_spatial_resolution(
+                sintese_violacao,
+                uow,
+            )
+        )
+
+        df_meta.loc[:, "valor"] = (
+            df_meta["valor"].to_numpy() - df_violacao["valor"].to_numpy()
+        )
+        return df_meta
 
     @classmethod
     def __postprocess_violacoes_UHE_estagio(cls, df_completo: pd.DataFrame):
@@ -1742,7 +1903,7 @@ class OperationSynthetizer:
                     cls.logger.info("Paralelizando...")
             async_res = {
                 idx: pool.apply_async(
-                    cls._resolve_SBM_submercado, (uow, synthesis, idx, name)
+                    cls._resolve_gtert, (uow, synthesis, idx, name)
                 )
                 for idx, name in zip(sbms_idx, sbms_name)
             }
@@ -1769,9 +1930,7 @@ class OperationSynthetizer:
         df_completo["classe"] = np.repeat(
             nomes_usinas_arquivo, linhas_por_usina
         )
-        return df_completo.rename(columns={"classe": "usina"}).drop(
-            columns=["submercado"]
-        )[
+        return df_completo.rename(columns={"classe": "usina"})[
             [
                 "usina",
                 "estagio",
@@ -2069,6 +2228,9 @@ class OperationSynthetizer:
             ]
         ):
             df = cls.__stub_agrega_variaveis_indiv_REE_SBM_SIN(s, uow)
+            return df, True
+        elif s.variable in [Variable.ENERGIA_DEFLUENCIA_MINIMA]:
+            df = cls.__stub_energia_defluencia_minima(s, uow)
             return df, True
         else:
             return pd.DataFrame(), False
