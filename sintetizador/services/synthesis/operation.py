@@ -2371,6 +2371,20 @@ class OperationSynthetizer:
             return pd.DataFrame(), False
 
     @classmethod
+    def __get_from_cache_if_exists(cls, s: OperationSynthesis) -> pd.DataFrame:
+        if s in cls.CACHED_SYNTHESIS.keys():
+            return cls.CACHED_SYNTHESIS.get(s)
+        else:
+            return pd.DataFrame()
+
+    @classmethod
+    def __store_in_cache_if_needed(
+        cls, s: OperationSynthesis, df: pd.DataFrame
+    ):
+        if s in cls.SYNTHESIS_TO_CACHE:
+            cls.CACHED_SYNTHESIS[s] = df.copy()
+
+    @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
         cls.logger = logging.getLogger("main")
         try:
@@ -2386,21 +2400,29 @@ class OperationSynthetizer:
 
             for s in valid_synthesis:
                 filename = str(s)
+                found_synthesis = False
                 cls.logger.info(f"Realizando síntese de {filename}")
-                if s in cls.CACHED_SYNTHESIS.keys():
-                    df = cls.CACHED_SYNTHESIS.get(s)
-                else:
+                df = cls.__get_from_cache_if_exists(s)
+                if df.empty:
                     df, is_stub = cls._resolve_stub(s, uow)
                     if not is_stub:
                         df = cls._resolve_spatial_resolution(s, uow)
-                        if s in cls.SYNTHESIS_TO_CACHE:
-                            cls.CACHED_SYNTHESIS[s] = df.copy()
+                        cls.__store_in_cache_if_needed(s, df)
                 if df is not None:
                     if not df.empty:
+                        found_synthesis = True
                         df = cls._resolve_starting_stage(df, uow)
                         df = cls._postprocess(df)
                         with uow:
                             uow.export.synthetize_df(df, filename)
+                if not found_synthesis:
+                    cls.logger.warning(
+                        "Não foram encontrados dados"
+                        + f" para a síntese de {str(s)}"
+                    )
         except Exception as e:
             traceback.print_exc()
             cls.logger.error(str(e))
+            cls.logger.error(
+                f"Não foi possível realizar a síntese de: {str(s)}"
+            )
