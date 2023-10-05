@@ -310,6 +310,16 @@ class OperationSynthetizer:
             TemporalResolution.PATAMAR,
         ),
         OperationSynthesis(
+            Variable.VOLUME_AFLUENTE,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_INCREMENTAL,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
             Variable.VOLUME_TURBINADO,
             SpatialResolution.USINA_HIDROELETRICA,
             TemporalResolution.PATAMAR,
@@ -320,6 +330,21 @@ class OperationSynthetizer:
             TemporalResolution.PATAMAR,
         ),
         OperationSynthesis(
+            Variable.VOLUME_DESVIADO,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_AFLUENTE,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_INCREMENTAL,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
             Variable.VOLUME_TURBINADO,
             SpatialResolution.USINA_HIDROELETRICA,
             TemporalResolution.ESTAGIO,
@@ -328,6 +353,26 @@ class OperationSynthetizer:
             Variable.VOLUME_VERTIDO,
             SpatialResolution.USINA_HIDROELETRICA,
             TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_RETIRADO,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_DESVIADO,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_AFLUENTE,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_INCREMENTAL,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.PATAMAR,
         ),
         OperationSynthesis(
             Variable.VAZAO_TURBINADA,
@@ -340,12 +385,37 @@ class OperationSynthetizer:
             TemporalResolution.PATAMAR,
         ),
         OperationSynthesis(
+            Variable.VAZAO_DESVIADA,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_AFLUENTE,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_INCREMENTAL,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
             Variable.VAZAO_TURBINADA,
             SpatialResolution.USINA_HIDROELETRICA,
             TemporalResolution.ESTAGIO,
         ),
         OperationSynthesis(
             Variable.VAZAO_VERTIDA,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_RETIRADA,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_DESVIADA,
             SpatialResolution.USINA_HIDROELETRICA,
             TemporalResolution.ESTAGIO,
         ),
@@ -531,21 +601,6 @@ class OperationSynthetizer:
         ),
         OperationSynthesis(
             Variable.VAZAO_INCREMENTAL,
-            SpatialResolution.USINA_HIDROELETRICA,
-            TemporalResolution.ESTAGIO,
-        ),
-        OperationSynthesis(
-            Variable.VOLUME_RETIRADO,
-            SpatialResolution.USINA_HIDROELETRICA,
-            TemporalResolution.ESTAGIO,
-        ),
-        OperationSynthesis(
-            Variable.VOLUME_DESVIADO,
-            SpatialResolution.USINA_HIDROELETRICA,
-            TemporalResolution.PATAMAR,
-        ),
-        OperationSynthesis(
-            Variable.VOLUME_DESVIADO,
             SpatialResolution.USINA_HIDROELETRICA,
             TemporalResolution.ESTAGIO,
         ),
@@ -2223,6 +2278,20 @@ class OperationSynthetizer:
                     Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
                     Variable.VIOLACAO_TURBINAMENTO_MINIMO,
                     Variable.VIOLACAO_FPHA,
+                    Variable.VOLUME_AFLUENTE,
+                    Variable.VOLUME_INCREMENTAL,
+                    Variable.VOLUME_DEFLUENTE,
+                    Variable.VOLUME_VERTIDO,
+                    Variable.VOLUME_TURBINADO,
+                    Variable.VOLUME_RETIRADO,
+                    Variable.VOLUME_DESVIADO,
+                    Variable.VAZAO_AFLUENTE,
+                    Variable.VAZAO_INCREMENTAL,
+                    Variable.VAZAO_DEFLUENTE,
+                    Variable.VAZAO_VERTIDA,
+                    Variable.VAZAO_TURBINADA,
+                    Variable.VAZAO_RETIRADA,
+                    Variable.VAZAO_DESVIADA,
                 ],
                 s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
             ]
