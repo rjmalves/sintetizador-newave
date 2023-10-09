@@ -2,7 +2,8 @@ from typing import Callable, Dict, List, Tuple, Optional, Type, TypeVar
 import pandas as pd  # type: ignore
 import numpy as np
 import logging
-import traceback
+
+# import traceback
 from multiprocessing import Pool
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta  # type: ignore
@@ -2387,18 +2388,18 @@ class OperationSynthetizer:
     @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
         cls.logger = logging.getLogger("main")
-        try:
-            if len(variables) == 0:
-                synthesis_variables = OperationSynthetizer._default_args()
-            else:
-                synthesis_variables = (
-                    OperationSynthetizer._process_variable_arguments(variables)
-                )
-            valid_synthesis = OperationSynthetizer.filter_valid_variables(
-                synthesis_variables, uow
+        if len(variables) == 0:
+            synthesis_variables = OperationSynthetizer._default_args()
+        else:
+            synthesis_variables = (
+                OperationSynthetizer._process_variable_arguments(variables)
             )
+        valid_synthesis = OperationSynthetizer.filter_valid_variables(
+            synthesis_variables, uow
+        )
 
-            for s in valid_synthesis:
+        for s in valid_synthesis:
+            try:
                 filename = str(s)
                 found_synthesis = False
                 cls.logger.info(f"Realizando síntese de {filename}")
@@ -2420,9 +2421,9 @@ class OperationSynthetizer:
                         "Não foram encontrados dados"
                         + f" para a síntese de {str(s)}"
                     )
-        except Exception as e:
-            traceback.print_exc()
-            cls.logger.error(str(e))
-            cls.logger.error(
-                f"Não foi possível realizar a síntese de: {str(s)}"
-            )
+            except Exception as e:
+                # traceback.print_exc()
+                cls.logger.error(str(e))
+                cls.logger.error(
+                    f"Não foi possível realizar a síntese de: {str(s)}"
+                )
