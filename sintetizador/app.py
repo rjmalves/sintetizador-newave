@@ -192,16 +192,16 @@ def limpeza():
 
 @click.command("completa")
 @click.option(
-    "-sistema", multiple=True, help="variável do sistema para síntese"
+    "--sistema", multiple=True, help="variável do sistema para síntese"
 )
 @click.option(
-    "-execucao", multiple=True, help="variável da execução para síntese"
+    "--execucao", multiple=True, help="variável da execução para síntese"
 )
 @click.option(
-    "-operacao", multiple=True, help="variável da operação para síntese"
+    "--operacao", multiple=True, help="variável da operação para síntese"
 )
 @click.option(
-    "-politica", multiple=True, help="variável da política para síntese"
+    "--politica", multiple=True, help="variável da política para síntese"
 )
 @click.option(
     "--formato", default="PARQUET", help="formato para escrita da síntese"
