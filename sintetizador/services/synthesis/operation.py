@@ -881,11 +881,8 @@ class OperationSynthetizer:
         datas = df["data"].unique().tolist()
         datas.sort()
         n_datas = len(datas)
-        n_anos = int(n_datas / 12)
         n_series = int(df.shape[0] / n_datas)
-        df["serie"] = np.tile(
-            np.repeat(np.arange(1, n_series + 1), 12), n_anos
-        )
+        df["serie"] = np.tile(np.arange(1, n_series + 1), n_datas)
         # Atribui estagio e dataFim de forma posicional
         estagios = list(range(1, n_datas + 1))
         estagios_df = np.repeat(estagios, n_series)
@@ -907,12 +904,11 @@ class OperationSynthetizer:
         datas = df["data"].unique().tolist()
         datas.sort()
         n_datas = len(datas)
-        n_anos = int(n_datas / 12)
         patamares = df["patamar"].unique().tolist()
         n_patamares = len(patamares)
         n_series = int(df.shape[0] / (n_datas * n_patamares))
         df["serie"] = np.tile(
-            np.repeat(np.arange(1, n_series + 1), 12 * n_patamares), n_anos
+            np.repeat(np.arange(1, n_series + 1), n_patamares), n_datas
         )
         # Atribui estagio e dataFim de forma posicional
         estagios = list(range(1, n_datas + 1))
