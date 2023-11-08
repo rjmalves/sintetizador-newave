@@ -61,9 +61,9 @@ def test_get_newavetim(test_settings):
     assert isinstance(newavetim.tempos_etapas, pd.DataFrame)
 
 
-def test_get_eolicacadastro(test_settings):
+def test_get_eolica(test_settings):
     repo = factory("FS", DECK_TEST_DIR)
-    eol = repo.get_eolicacadastro()
+    eol = repo.get_eolica()
     assert isinstance(eol.pee_cad(), list)
 
 

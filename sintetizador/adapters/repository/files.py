@@ -13,7 +13,7 @@ from inewave.newave.dger import Dger
 from inewave.newave.confhd import Confhd
 from inewave.newave.conft import Conft
 from inewave.newave.clast import Clast
-from inewave.newave.eolicacadastro import EolicaCadastro
+from inewave.libs.eolica import Eolica
 from inewave.newave.ree import Ree
 from inewave.newave.sistema import Sistema
 from inewave.newave.pmo import Pmo
@@ -192,7 +192,7 @@ class AbstractFilesRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_eolicacadastro(self) -> Optional[EolicaCadastro]:
+    def get_eolica(self) -> Optional[Eolica]:
         raise NotImplementedError
 
     @abstractmethod
@@ -282,7 +282,7 @@ class RawFilesRepository(AbstractFilesRepository):
         self.__confhd: Optional[Confhd] = None
         self.__conft: Optional[Conft] = None
         self.__clast: Optional[Clast] = None
-        self.__eolicacadastro: Optional[EolicaCadastro] = None
+        self.__eolica: Optional[Eolica] = None
         self.__nwlistcf: Optional[Nwlistcfrel] = None
         self.__estados: Optional[Estados] = None
         self.__energiaf: Dict[int, Energiaf] = {}
@@ -1251,17 +1251,15 @@ class RawFilesRepository(AbstractFilesRepository):
                 pass
         return self.__newavetim
 
-    def get_eolicacadastro(self) -> Optional[EolicaCadastro]:
-        if self.__eolicacadastro is None:
+    def get_eolica(self) -> Optional[Eolica]:
+        if self.__eolica is None:
             df_indices = self.indices
             if df_indices is not None:
                 arq: str = df_indices.at[
                     "PARQUE-EOLICO-EQUIVALENTE-CADASTRO", "arquivo"
                 ]
-                self.__eolicacadastro = EolicaCadastro.read(
-                    join(self.__tmppath, arq)
-                )
-        return self.__eolicacadastro
+                self.__eolica = Eolica.read(join(self.__tmppath, arq))
+        return self.__eolica
 
     def get_nwlistop(
         self,

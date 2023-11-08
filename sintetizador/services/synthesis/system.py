@@ -4,7 +4,7 @@ import numpy as np  # type: ignore
 import logging
 from inewave.config import MESES_DF
 from inewave.newave import Dger, Ree, Confhd, Conft, Sistema
-from inewave.newave.modelos.eolicacadastro import RegistroPEECadastro
+from inewave.libs.modelos.eolica import RegistroPEECadastro
 from datetime import datetime
 from dateutil.relativedelta import relativedelta  # type: ignore
 
@@ -344,7 +344,7 @@ class SystemSynthetizer:
 
     @classmethod
     def __resolve_PEE(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        eolica = uow.files.get_eolicacadastro()
+        eolica = uow.files.get_eolica()
         if eolica is None:
             raise RuntimeError(
                 "Erro no processamento do eolica-cadastro.csv para"

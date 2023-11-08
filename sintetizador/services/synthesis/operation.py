@@ -2101,8 +2101,8 @@ class OperationSynthetizer:
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         with uow:
-            eolica_cadastro = uow.files.get_eolicacadastro()
-            if eolica_cadastro is None:
+            eolica = uow.files.get_eolica()
+            if eolica is None:
                 if cls.logger is not None:
                     cls.logger.error(
                         "Erro no processamento do eolica-cadastro.csv para"
@@ -2111,7 +2111,7 @@ class OperationSynthetizer:
                 raise RuntimeError()
             uees_idx = []
             uees_name = []
-            regs = eolica_cadastro.pee_cad()
+            regs = eolica.pee_cad()
             df = pd.DataFrame()
             if regs is None:
                 return df
