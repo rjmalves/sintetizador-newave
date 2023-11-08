@@ -110,6 +110,7 @@ from inewave.nwlistop.dvazmax import Dvazmax
 from inewave.nwlistop.depminuh import Depminuh
 from inewave.nwlistop.dfphauh import Dfphauh
 from inewave.nwlistop.pivarm import Pivarm
+from inewave.nwlistop.pivarmincr import Pivarmincr
 from inewave.nwlistop.desvuh import Desvuh
 from inewave.nwlistop.vdesviouh import Vdesviouh
 from inewave.nwlistop.hmont import Hmont
@@ -326,6 +327,13 @@ class RawFilesRepository(AbstractFilesRepository):
                 TemporalResolution.ESTAGIO,
             ): lambda dir, uhe=1: Pivarm.read(
                 join(dir, f"pivarm{str(uhe).zfill(3)}.out")
+            ).valores,
+            (
+                Variable.VALOR_AGUA_INCREMENTAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, uhe=1: Pivarmincr.read(
+                join(dir, f"pivarmincr{str(uhe).zfill(3)}.out")
             ).valores,
             (
                 Variable.CUSTO_GERACAO_TERMICA,

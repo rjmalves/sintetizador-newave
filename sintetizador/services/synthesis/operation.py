@@ -40,6 +40,7 @@ class OperationSynthetizer:
         "CMO_SBM_PAT",
         "VAGUA_REE_EST",
         "VAGUA_UHE_EST",
+        "VAGUAI_UHE_EST",
         "CTER_SBM_EST",
         "CTER_SIN_EST",
         "COP_SIN_EST",

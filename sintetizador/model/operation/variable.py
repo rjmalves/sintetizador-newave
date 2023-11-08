@@ -3,7 +3,7 @@ from enum import Enum
 
 class Variable(Enum):
     CUSTO_MARGINAL_OPERACAO = "CMO"
-    VALOR_AGUA = "VAGUA"
+    VALOR_AGUA_INCREMENTAL = "VAGUAI"
     CUSTO_GERACAO_TERMICA = "CTER"
     CUSTO_DEFICIT = "CDEF"
     CUSTO_OPERACAO = "COP"
