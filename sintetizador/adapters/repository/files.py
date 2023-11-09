@@ -43,6 +43,8 @@ from inewave.nwlistop.eaf import Eaf
 from inewave.nwlistop.eafm import Eafm
 from inewave.nwlistop.intercambio import Intercambio
 from inewave.nwlistop.deficit import Def
+from inewave.nwlistop.exces import Exces
+from inewave.nwlistop.excessin import Excessin
 from inewave.nwlistop.cdef import Cdef
 from inewave.nwlistop.cdefsin import Cdefsin
 from inewave.nwlistop.mercl import Mercl
@@ -945,6 +947,39 @@ class RawFilesRepository(AbstractFilesRepository):
                 TemporalResolution.PATAMAR,
             ): lambda dir, _: self.__extrai_patamares_df(
                 Def.read(join(dir, "defsinp001.out")).valores
+            ),
+            (
+                Variable.EXCESSO,
+                SpatialResolution.SUBMERCADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, submercado=1: self.__extrai_patamares_df(
+                Exces.read(
+                    join(dir, f"exces{str(submercado).zfill(3)}.out")
+                ).valores,
+                ["TOTAL"],
+            ),
+            (
+                Variable.EXCESSO,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, _: self.__extrai_patamares_df(
+                Excessin.read(join(dir, "excessin.out")).valores, ["TOTAL"]
+            ),
+            (
+                Variable.EXCESSO,
+                SpatialResolution.SUBMERCADO,
+                TemporalResolution.PATAMAR,
+            ): lambda dir, submercado=1: self.__extrai_patamares_df(
+                Exces.read(
+                    join(dir, f"exces{str(submercado).zfill(3)}.out")
+                ).valores
+            ),
+            (
+                Variable.EXCESSO,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+                TemporalResolution.PATAMAR,
+            ): lambda dir, _: self.__extrai_patamares_df(
+                Excessin.read(join(dir, "excessin.out")).valores
             ),
             (
                 Variable.INTERCAMBIO,
