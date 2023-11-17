@@ -1331,11 +1331,9 @@ class OperationSynthetizer:
                 uow,
             )
         )
-        if cache is None:
-            cls.CACHED_SYNTHESIS[synt_vol] = df_completo.copy()
-
         df_completo.loc[:, "valor"] *= FATOR_HM3_M3S
-        cls.CACHED_SYNTHESIS[synthesis] = df_completo.copy()
+        if cache is None:
+            cls.CACHED_SYNTHESIS[synthesis] = df_completo.copy()
 
         return df_completo
 
@@ -1347,25 +1345,23 @@ class OperationSynthetizer:
             Variable.VOLUME_AFLUENTE: Variable.VAZAO_AFLUENTE,
             Variable.VOLUME_INCREMENTAL: Variable.VAZAO_INCREMENTAL,
         }
-        synt_vol = OperationSynthesis(
+        synt_vaz = OperationSynthesis(
             variable_map[synthesis.variable],
             synthesis.spatial_resolution,
             synthesis.temporal_resolution,
         )
-        cache = cls.CACHED_SYNTHESIS.get(synt_vol)
+        cache = cls.CACHED_SYNTHESIS.get(synt_vaz)
         df_completo = (
             cache
             if cache is not None
             else cls.__resolve_UHE(
-                synt_vol,
+                synt_vaz,
                 uow,
             )
         )
-        if cache is None:
-            cls.CACHED_SYNTHESIS[synt_vol] = df_completo.copy()
-
         df_completo.loc[:, "valor"] /= FATOR_HM3_M3S
-        cls.CACHED_SYNTHESIS[synthesis] = df_completo.copy()
+        if cache is None:
+            cls.CACHED_SYNTHESIS[synthesis] = df_completo.copy()
 
         return df_completo
 
