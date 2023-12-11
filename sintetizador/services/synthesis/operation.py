@@ -1216,12 +1216,6 @@ class OperationSynthetizer:
         patamares = df["patamar"].unique().tolist()
         n_patamares = len(patamares)
         n_series = int(df.shape[0] / (n_datas * n_patamares * n_classes))
-        df["serie"] = np.tile(
-            np.tile(
-                np.repeat(np.arange(1, n_series + 1), 12 * n_patamares), n_anos
-            ),
-            n_classes,
-        )
         # Atribui estagio e dataFim de forma posicional
         estagios = list(range(1, n_datas + 1))
         estagios_df = np.tile(
