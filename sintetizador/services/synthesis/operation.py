@@ -1212,7 +1212,6 @@ class OperationSynthetizer:
         datas = df["data"].unique().tolist()
         datas.sort()
         n_datas = len(datas)
-        n_anos = int(n_datas / 12)
         patamares = df["patamar"].unique().tolist()
         n_patamares = len(patamares)
         n_series = int(df.shape[0] / (n_datas * n_patamares * n_classes))
