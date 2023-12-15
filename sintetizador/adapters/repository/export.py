@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Type
 import pandas as pd  # type: ignore
+import pyarrow.parquet as pq
 import pathlib
 
 
@@ -22,8 +23,12 @@ class ParquetExportRepository(AbstractExportRepository):
         return pathlib.Path(self.__path)
 
     def synthetize_df(self, df: pd.DataFrame, filename: str) -> bool:
-        df.to_parquet(
-            self.path.joinpath(filename + ".parquet.gzip"), compression="gzip"
+        pq.write_table(
+            df,
+            self.path.joinpath(filename + ".parquet.gzip"),
+            compression="gzip",
+            flavor="spark",
+            coerce_timestamps="ms",
         )
         return True
 
