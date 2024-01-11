@@ -176,6 +176,10 @@ A variável informa a grandeza que é modelada e fornecida como saída da opera�
      - `DEF`
    * - Energia Natural Afluente Absoluta (MWmes)
      - `ENAA`
+   * - Energia Natural Afluente Absoluta em Fio d'Água  (MWmes)
+     - `ENAAF`
+   * - Energia Natural Afluente Absoluta em Reservatórios  (MWmes)
+     - `ENAAR`
    * - Energia Armazenada Inicial (MWmes)
      - `EARMI`
    * - Energia Armazenada Inicial (%)
@@ -202,8 +206,22 @@ A variável informa a grandeza que é modelada e fornecida como saída da opera�
      - `EVERFT`
    * - Energia Vertida Não-Turbinável em Fio d'Água (MWmes)
      - `EVERFNT`
+   * - Energia Desviada em Fio d'Água (MWmes)
+     - `EDESF`
+   * - Energia Desviada em Reservatórios (MWmes)
+     - `EDESR`
+   * - Energia Evaporada (MWmes)
+     - `EEVAP`
+   * - Energia de Defluência Mínima (MWmes)
+     - `EVMIN`
+   * - Energia de Enchimento de Volume Morto (MWmes)
+     - `EVMOR`
    * - Geração Hidráulica (MWmes)
      - `GHID`
+   * - Geração Hidráulica em Fio d'Água (MWmes)
+     - `GHIDF`
+   * - Geração Hidráulica em Reservatórios (MWmes)
+     - `GHIDR`
    * - Geração Térmica (MWmes)
      - `GTER`
    * - Geração Eólica (MWmes)
