@@ -1348,7 +1348,7 @@ class OperationSynthetizer:
         )
         cache = cls.CACHED_SYNTHESIS.get(synt_vol)
         df_completo = (
-            cache
+            cache.copy()
             if cache is not None
             else cls.__resolve_UHE(
                 synt_vol,
@@ -1376,7 +1376,7 @@ class OperationSynthetizer:
         )
         cache = cls.CACHED_SYNTHESIS.get(synt_vaz)
         df_completo = (
-            cache
+            cache.copy()
             if cache is not None
             else cls.__resolve_UHE(
                 synt_vaz,
@@ -1876,7 +1876,7 @@ class OperationSynthetizer:
         )
         cache = cls.CACHED_SYNTHESIS.get(synt_pat)
         df_completo = (
-            cache
+            cache.copy()
             if cache is not None
             else cls.__resolve_UHE_normal(synt_pat, uow)
         )
