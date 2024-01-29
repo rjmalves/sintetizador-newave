@@ -1160,23 +1160,55 @@ class RawFilesRepository(AbstractFilesRepository):
                 Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
                 TemporalResolution.PATAMAR,
-            ): lambda dir, ree=1: Vghmin.read(
-                join(dir, f"vghmin{str(ree).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, ree=1: self.__extrai_patamares_df(
+                Vghmin.read(
+                    join(dir, f"vghmin{str(ree).zfill(3)}.out")
+                ).valores,
+            ),
             (
                 Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
                 SpatialResolution.SUBMERCADO,
                 TemporalResolution.PATAMAR,
-            ): lambda dir, submercado=1: Vghminm.read(
-                join(dir, f"vghminm{str(submercado).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, submercado=1: self.__extrai_patamares_df(
+                Vghminm.read(
+                    join(dir, f"vghminm{str(submercado).zfill(3)}.out")
+                ).valores
+            ),
             (
                 Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 TemporalResolution.PATAMAR,
-            ): lambda dir, _: Vghminsin.read(
-                join(dir, "vghminmsin.out")
-            ).valores,
+            ): lambda dir, _: self.__extrai_patamares_df(
+                Vghminsin.read(join(dir, "vghminmsin.out")).valores
+            ),
+            (
+                Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, ree=1: self.__extrai_patamares_df(
+                Vghmin.read(
+                    join(dir, f"vghmin{str(ree).zfill(3)}.out")
+                ).valores,
+                patamares=["TOTAL"],
+            ),
+            (
+                Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
+                SpatialResolution.SUBMERCADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, submercado=1: self.__extrai_patamares_df(
+                Vghminm.read(
+                    join(dir, f"vghminm{str(submercado).zfill(3)}.out")
+                ).valores,
+                patamares=["TOTAL"],
+            ),
+            (
+                Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, _: self.__extrai_patamares_df(
+                Vghminsin.read(join(dir, "vghminmsin.out")).valores,
+                patamares=["TOTAL"],
+            ),
             (
                 Variable.COTA_MONTANTE,
                 SpatialResolution.USINA_HIDROELETRICA,

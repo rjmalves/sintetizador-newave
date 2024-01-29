@@ -330,21 +330,6 @@ class OperationSynthetizer:
             TemporalResolution.ESTAGIO,
         ),
         OperationSynthesis(
-            Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
-            SpatialResolution.RESERVATORIO_EQUIVALENTE,
-            TemporalResolution.PATAMAR,
-        ),
-        OperationSynthesis(
-            Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
-            SpatialResolution.SUBMERCADO,
-            TemporalResolution.PATAMAR,
-        ),
-        OperationSynthesis(
-            Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
-            SpatialResolution.SISTEMA_INTERLIGADO,
-            TemporalResolution.PATAMAR,
-        ),
-        OperationSynthesis(
             Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
             SpatialResolution.SISTEMA_INTERLIGADO,
             TemporalResolution.ESTAGIO,
@@ -1295,9 +1280,6 @@ class OperationSynthetizer:
         )
         cache = cls.CACHED_SYNTHESIS.get(synt_pat)
         resolve_func = {
-            SpatialResolution.RESERVATORIO_EQUIVALENTE: cls.__resolve_REE,
-            SpatialResolution.SUBMERCADO: cls.__resolve_SBM,
-            SpatialResolution.SISTEMA_INTERLIGADO: cls.__resolve_SIN,
             SpatialResolution.USINA_HIDROELETRICA: cls.__resolve_UHE,
             SpatialResolution.USINA_TERMELETRICA: cls.__stub_GTER_UTE_patamar,
         }[synthesis.spatial_resolution]
@@ -1959,6 +1941,7 @@ class OperationSynthetizer:
             synthesis.variable
             in [
                 Variable.GERACAO_HIDRAULICA,
+                Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
                 Variable.VOLUME_TURBINADO,
                 Variable.VOLUME_VERTIDO,
                 Variable.VOLUME_DESVIADO,
@@ -2329,14 +2312,6 @@ class OperationSynthetizer:
     ) -> Tuple[pd.DataFrame, bool]:
         if s.variable == Variable.ENERGIA_VERTIDA:
             df = cls.__stub_EVER(s, uow)
-            return df, True
-        elif all(
-            [
-                s.variable == Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
-                s.temporal_resolution == TemporalResolution.ESTAGIO,
-            ]
-        ):
-            df = cls.__stub_agrega_estagio_variaveis_por_patamar(s, uow)
             return df, True
         elif all(
             [
