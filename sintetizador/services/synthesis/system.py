@@ -283,8 +283,10 @@ class SystemSynthetizer:
             pd.DataFrame,
             "submercados",
         )
-        df = sistema[["Num. Subsistema", "Nome"]]
-        df = df.rename(columns={"Num. Subsistema": "id", "Nome": "nome"})
+        df = sistema[["codigo_submercado", "nome_submercado"]]
+        df = df.rename(
+            columns={"codigo_submercado": "id", "nome_submercado": "nome"}
+        )
         return df
 
     @classmethod
@@ -295,12 +297,12 @@ class SystemSynthetizer:
                 "Erro no processamento do ree.dat para" + " síntese do sistema"
             )
         rees = cls._validate_data(arq_ree.rees, pd.DataFrame, "REEs")
-        df = rees[["Número", "Nome", "Submercado"]]
+        df = rees[["codigo", "nome", "submercado"]]
         df = df.rename(
             columns={
-                "Número": "id",
-                "Submercado": "idSubmercado",
-                "Nome": "nome",
+                "codigo": "id",
+                "submercado": "idSubmercado",
+                "nome": "nome",
             }
         )
         return df[["id", "idSubmercado", "nome"]]
@@ -310,12 +312,12 @@ class SystemSynthetizer:
         arq_conft = cls._get_conft(uow)
         conft = cls._validate_data(arq_conft.usinas, pd.DataFrame, "UTEs")
 
-        df = conft[["Número", "Nome", "Subsistema"]]
+        df = conft[["codigo_usina", "nome_usina", "submercado"]]
         df = df.rename(
             columns={
-                "Número": "id",
-                "Subsistema": "idSubmercado",
-                "Nome": "nome",
+                "codigo_usina": "id",
+                "submercado": "idSubmercado",
+                "nome_usina": "nome",
             }
         )
         return df[["id", "idSubmercado", "nome"]]
@@ -330,14 +332,22 @@ class SystemSynthetizer:
             )
         confhd = cls._validate_data(arq_confhd.usinas, pd.DataFrame, "UHEs")
 
-        df = confhd[["Número", "Nome", "Posto", "REE", "Volume Inicial"]]
+        df = confhd[
+            [
+                "codigo_usina",
+                "nome_usina",
+                "posto",
+                "ree",
+                "volume_inicial_percentual",
+            ]
+        ]
         df = df.rename(
             columns={
-                "Número": "id",
-                "REE": "idREE",
-                "Nome": "nome",
-                "Posto": "posto",
-                "Volume Inicial": "volumeInicial",
+                "codigo_usina": "id",
+                "ree": "idREE",
+                "nome_usina": "nome",
+                "posto": "posto",
+                "volume_inicial_percentual": "volumeInicial",
             }
         )
         return df[["id", "idREE", "nome", "posto", "volumeInicial"]]
