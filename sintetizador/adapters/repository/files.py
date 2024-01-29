@@ -90,6 +90,10 @@ from inewave.nwlistop.vagua import Vagua
 from inewave.nwlistop.vevmin import Vevmin
 from inewave.nwlistop.vevminm import Vevminm
 from inewave.nwlistop.vevminsin import Vevminsin
+from inewave.nwlistop.vghminuh import Vghminuh
+from inewave.nwlistop.vghmin import Vghmin
+from inewave.nwlistop.vghminm import Vghminm
+from inewave.nwlistop.vghminsin import Vghminsin
 from inewave.nwlistop.invade import Invade
 from inewave.nwlistop.invadem import Invadem
 
@@ -1144,6 +1148,34 @@ class RawFilesRepository(AbstractFilesRepository):
                 TemporalResolution.PATAMAR,
             ): lambda dir, uhe=1: Vdesviouh.read(
                 join(dir, f"vdesviouh{str(uhe).zfill(3)}.out")
+            ).valores,
+            (
+                Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
+                SpatialResolution.USINA_HIDROELETRICA,
+                TemporalResolution.PATAMAR,
+            ): lambda dir, uhe=1: Vghminuh.read(
+                join(dir, f"vghminuh{str(uhe).zfill(3)}.out")
+            ).valores,
+            (
+                Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+                TemporalResolution.PATAMAR,
+            ): lambda dir, ree=1: Vghmin.read(
+                join(dir, f"vghmin{str(ree).zfill(3)}.out")
+            ).valores,
+            (
+                Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
+                SpatialResolution.SUBMERCADO,
+                TemporalResolution.PATAMAR,
+            ): lambda dir, submercado=1: Vghminm.read(
+                join(dir, f"vghminm{str(submercado).zfill(3)}.out")
+            ).valores,
+            (
+                Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+                TemporalResolution.PATAMAR,
+            ): lambda dir, _: Vghminsin.read(
+                join(dir, "vghminmsin.out")
             ).valores,
             (
                 Variable.COTA_MONTANTE,

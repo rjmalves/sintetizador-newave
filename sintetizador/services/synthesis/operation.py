@@ -116,6 +116,12 @@ class OperationSynthetizer:
         "EEVAP_REE_EST",
         "EEVAP_SBM_EST",
         "EEVAP_SIN_EST",
+        "VGHMIN_REE_PAT",
+        "VGHMIN_SBM_PAT",
+        "VGHMIN_SIN_PAT",
+        "VGHMIN_REE_EST",
+        "VGHMIN_SBM_EST",
+        "VGHMIN_SIN_EST",
         "VTUR_UHE_PAT",
         "VTUR_UHE_EST",
         "VVER_UHE_PAT",
@@ -244,11 +250,13 @@ class OperationSynthetizer:
         "VTURMIN_UHE_PAT",
         "VTURMAX_UHE_PAT",
         "VFPHA_UHE_PAT",
+        "VGHMIN_UHE_PAT",
         "VDEFMIN_UHE_EST",
         "VDEFMAX_UHE_EST",
         "VTURMIN_UHE_EST",
         "VTURMAX_UHE_EST",
         "VFPHA_UHE_EST",
+        "VGHMIN_UHE_EST",
         "VDEFMIN_REE_PAT",
         "VDEFMAX_REE_PAT",
         "VTURMIN_REE_PAT",
@@ -320,6 +328,21 @@ class OperationSynthetizer:
             Variable.ENERGIA_VERTIDA_FIO,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
             TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
+            SpatialResolution.SUBMERCADO,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+            TemporalResolution.PATAMAR,
         ),
         OperationSynthesis(
             Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
@@ -553,6 +576,11 @@ class OperationSynthetizer:
         ),
         OperationSynthesis(
             Variable.VIOLACAO_FPHA,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
             SpatialResolution.USINA_HIDROELETRICA,
             TemporalResolution.PATAMAR,
         ),
@@ -1267,11 +1295,14 @@ class OperationSynthetizer:
         )
         cache = cls.CACHED_SYNTHESIS.get(synt_pat)
         resolve_func = {
+            SpatialResolution.RESERVATORIO_EQUIVALENTE: cls.__resolve_REE,
+            SpatialResolution.SUBMERCADO: cls.__resolve_SBM,
+            SpatialResolution.SISTEMA_INTERLIGADO: cls.__resolve_SIN,
             SpatialResolution.USINA_HIDROELETRICA: cls.__resolve_UHE,
             SpatialResolution.USINA_TERMELETRICA: cls.__stub_GTER_UTE_patamar,
         }[synthesis.spatial_resolution]
         df_completo = (
-            cache
+            cache.copy()
             if cache is not None
             else resolve_func(
                 synt_pat,
@@ -1317,7 +1348,7 @@ class OperationSynthetizer:
         )
         cache = cls.CACHED_SYNTHESIS.get(synt_vol)
         df_completo = (
-            cache
+            cache.copy()
             if cache is not None
             else cls.__resolve_UHE(
                 synt_vol,
@@ -1345,7 +1376,7 @@ class OperationSynthetizer:
         )
         cache = cls.CACHED_SYNTHESIS.get(synt_vaz)
         df_completo = (
-            cache
+            cache.copy()
             if cache is not None
             else cls.__resolve_UHE(
                 synt_vaz,
@@ -1845,7 +1876,7 @@ class OperationSynthetizer:
         )
         cache = cls.CACHED_SYNTHESIS.get(synt_pat)
         df_completo = (
-            cache
+            cache.copy()
             if cache is not None
             else cls.__resolve_UHE_normal(synt_pat, uow)
         )
@@ -2298,6 +2329,14 @@ class OperationSynthetizer:
     ) -> Tuple[pd.DataFrame, bool]:
         if s.variable == Variable.ENERGIA_VERTIDA:
             df = cls.__stub_EVER(s, uow)
+            return df, True
+        elif all(
+            [
+                s.variable == Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
+                s.temporal_resolution == TemporalResolution.ESTAGIO,
+            ]
+        ):
+            df = cls.__stub_agrega_estagio_variaveis_por_patamar(s, uow)
             return df, True
         elif all(
             [
