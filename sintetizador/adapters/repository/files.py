@@ -11,6 +11,7 @@ from inewave.newave.arquivos import Arquivos
 from inewave.newave.patamar import Patamar
 from inewave.newave.dger import Dger
 from inewave.newave.confhd import Confhd
+from inewave.newave.modif import Modif
 from inewave.newave.conft import Conft
 from inewave.newave.clast import Clast
 from inewave.libs.eolica import Eolica
@@ -170,6 +171,10 @@ class AbstractFilesRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def get_modif(self) -> Optional[Modif]:
+        raise NotImplementedError
+
+    @abstractmethod
     def get_conft(self) -> Optional[Conft]:
         raise NotImplementedError
 
@@ -286,6 +291,7 @@ class RawFilesRepository(AbstractFilesRepository):
         self.__newavetim: Optional[Newavetim] = None
         self.__ree: Optional[Ree] = None
         self.__confhd: Optional[Confhd] = None
+        self.__modif: Optional[Modif] = None
         self.__conft: Optional[Conft] = None
         self.__clast: Optional[Clast] = None
         self.__eolica: Optional[Eolica] = None
@@ -1303,6 +1309,14 @@ class RawFilesRepository(AbstractFilesRepository):
                     join(self.__tmppath, self.arquivos.confhd)
                 )
         return self.__confhd
+
+    def get_modif(self) -> Optional[Modif]:
+        if self.__modif is None:
+            if self.arquivos.modif is not None:
+                self.__modif = Modif.read(
+                    join(self.__tmppath, self.arquivos.modif)
+                )
+        return self.__modif
 
     def get_conft(self) -> Optional[Conft]:
         if self.__conft is None:
