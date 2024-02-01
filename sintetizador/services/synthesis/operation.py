@@ -13,11 +13,10 @@ from sintetizador.model.settings import Settings
 from sintetizador.services.unitofwork import AbstractUnitOfWork
 from sintetizador.model.operation.variable import Variable
 from sintetizador.model.operation.spatialresolution import SpatialResolution
-from sintetizador.model.operation.temporalresolution import TemporalResolution
-from sintetizador.model.operation.operationsynthesis import OperationSynthesis2
+from sintetizador.model.operation.operationsynthesis import OperationSynthesis
 
 
-FATOR_HM3_M3S = 1.0 / 2.63
+FATOR_HM3_M3S_MES = 1.0 / 2.63
 
 
 class OperationSynthetizer:
@@ -32,682 +31,1008 @@ class OperationSynthetizer:
         "pee",
         "usina",
         "patamar",
+        "duracaoPatamar",
         "serie",
     ]
 
+    STAGE_DURATION_HOURS = 730
+
     DEFAULT_OPERATION_SYNTHESIS_ARGS: List[str] = [
-        "CMO_SBM_EST",
-        "CMO_SBM_PAT",
-        "VAGUA_REE_EST",
-        "VAGUA_UHE_EST",
-        "VAGUAI_UHE_EST",
-        "CTER_SBM_EST",
-        "CTER_SIN_EST",
-        "COP_SIN_EST",
-        "ENAA_REE_EST",
-        "ENAA_SBM_EST",
-        "ENAA_SIN_EST",
-        "ENAAR_REE_EST",
-        "ENAAR_SBM_EST",
-        "ENAAR_SIN_EST",
-        "ENAAF_REE_EST",
-        "ENAAF_SBM_EST",
-        "ENAAF_SIN_EST",
-        "EARPI_REE_EST",
-        "EARPI_SBM_EST",
-        "EARPI_SIN_EST",
-        "EARPF_REE_EST",
-        "EARPF_SBM_EST",
-        "EARPF_SIN_EST",
-        "EARMI_REE_EST",
-        "EARMI_SBM_EST",
-        "EARMI_SIN_EST",
-        "EARMF_REE_EST",
-        "EARMF_SBM_EST",
-        "EARMF_SIN_EST",
-        "GHIDR_REE_EST",
-        "GHIDR_SBM_EST",
-        "GHIDR_SIN_EST",
-        "GHID_REE_EST",
-        "GHID_SBM_EST",
-        "GHID_SIN_EST",
-        "GHIDF_REE_EST",
-        "GHIDF_SBM_EST",
-        "GHIDF_SIN_EST",
-        "GTER_SBM_EST",
-        "GTER_SIN_EST",
-        "GHIDR_REE_PAT",
-        "GHIDR_SBM_PAT",
-        "GHIDR_SIN_PAT",
-        "GHID_REE_PAT",
-        "GHID_SBM_PAT",
-        "GHID_SIN_PAT",
-        "GHIDF_REE_PAT",
-        "GHIDF_SBM_PAT",
-        "GHIDF_SIN_PAT",
-        "GTER_UTE_PAT",
-        "GTER_UTE_EST",
-        "GTER_SBM_PAT",
-        "GTER_SIN_PAT",
-        "EVER_REE_EST",
-        "EVER_SBM_EST",
-        "EVER_SIN_EST",
-        "EVERR_REE_EST",
-        "EVERR_SBM_EST",
-        "EVERR_SIN_EST",
-        "EVERF_REE_EST",
-        "EVERF_SBM_EST",
-        "EVERF_SIN_EST",
-        "EVERFT_REE_EST",
-        "EVERFT_SBM_EST",
-        "EVERFT_SIN_EST",
-        "EDESR_REE_EST",
-        "EDESR_SBM_EST",
-        "EDESR_SIN_EST",
-        "EDESF_REE_EST",
-        "EDESF_SBM_EST",
-        "EDESF_SIN_EST",
-        "EVMIN_REE_EST",
-        "EVMIN_SBM_EST",
-        "EVMIN_SIN_EST",
-        "EVMOR_REE_EST",
-        "EVMOR_SBM_EST",
-        "EVMOR_SIN_EST",
-        "EEVAP_REE_EST",
-        "EEVAP_SBM_EST",
-        "EEVAP_SIN_EST",
-        "VGHMIN_REE_PAT",
-        "VGHMIN_SBM_PAT",
-        "VGHMIN_SIN_PAT",
-        "VGHMIN_REE_EST",
-        "VGHMIN_SBM_EST",
-        "VGHMIN_SIN_EST",
-        "VTUR_UHE_PAT",
-        "VTUR_UHE_EST",
-        "VVER_UHE_PAT",
-        "VVER_UHE_EST",
-        "QTUR_UHE_PAT",
-        "QTUR_UHE_EST",
-        "QVER_UHE_PAT",
-        "QVER_UHE_EST",
-        "QAFL_UHE_EST",
-        "QINC_UHE_EST",
-        "VAFL_UHE_EST",
-        "VINC_UHE_EST",
-        "QDEF_UHE_PAT",
-        "QDEF_UHE_EST",
-        "VDEF_UHE_PAT",
-        "VDEF_UHE_EST",
-        "VRET_UHE_EST",
-        "VDES_UHE_PAT",
-        "VDES_UHE_EST",
-        "QRET_UHE_EST",
-        "QDES_UHE_PAT",
-        "QDES_UHE_EST",
-        "VTUR_REE_PAT",
-        "VTUR_REE_EST",
-        "VVER_REE_PAT",
-        "VVER_REE_EST",
-        "QTUR_REE_PAT",
-        "QTUR_REE_EST",
-        "QVER_REE_PAT",
-        "QVER_REE_EST",
-        "QAFL_REE_EST",
-        "QINC_REE_EST",
-        "VAFL_REE_EST",
-        "VINC_REE_EST",
-        "QDEF_REE_PAT",
-        "QDEF_REE_EST",
-        "VDEF_REE_PAT",
-        "VDEF_REE_EST",
-        "VRET_REE_EST",
-        "VDES_REE_PAT",
-        "VDES_REE_EST",
-        "QRET_REE_EST",
-        "QDES_REE_PAT",
-        "QDES_REE_EST",
-        "VTUR_SBM_PAT",
-        "VTUR_SBM_EST",
-        "VVER_SBM_PAT",
-        "VVER_SBM_EST",
-        "QTUR_SBM_PAT",
-        "QTUR_SBM_EST",
-        "QVER_SBM_PAT",
-        "QVER_SBM_EST",
-        "QAFL_SBM_EST",
-        "QINC_SBM_EST",
-        "VAFL_SBM_EST",
-        "VINC_SBM_EST",
-        "QDEF_SBM_PAT",
-        "QDEF_SBM_EST",
-        "VDEF_SBM_PAT",
-        "VDEF_SBM_EST",
-        "VRET_SBM_EST",
-        "VDES_SBM_PAT",
-        "VDES_SBM_EST",
-        "QRET_SBM_EST",
-        "QDES_SBM_PAT",
-        "QDES_SBM_EST",
-        "VTUR_SIN_PAT",
-        "VTUR_SIN_EST",
-        "VVER_SIN_PAT",
-        "VVER_SIN_EST",
-        "QTUR_SIN_PAT",
-        "QTUR_SIN_EST",
-        "QVER_SIN_PAT",
-        "QVER_SIN_EST",
-        "QAFL_SIN_EST",
-        "QINC_SIN_EST",
-        "VAFL_SIN_EST",
-        "VINC_SIN_EST",
-        "QDEF_SIN_PAT",
-        "QDEF_SIN_EST",
-        "VDEF_SIN_PAT",
-        "VDEF_SIN_EST",
-        "VRET_SIN_EST",
-        "VDES_SIN_PAT",
-        "VDES_SIN_EST",
-        "QRET_SIN_EST",
-        "QDES_SIN_PAT",
-        "QDES_SIN_EST",
-        "VARMI_UHE_EST",
-        "VARMI_REE_EST",
-        "VARMI_SBM_EST",
-        "VARMI_SIN_EST",
-        "VARMF_UHE_EST",
-        "VARMF_REE_EST",
-        "VARMF_SBM_EST",
-        "VARMF_SIN_EST",
-        "VARPI_UHE_EST",
-        "VARPF_UHE_EST",
-        "GHID_UHE_PAT",
-        "GHID_UHE_EST",
-        "VENTO_PEE_EST",
-        "GEOL_PEE_EST",
-        "GEOL_SBM_EST",
-        "GEOL_SIN_EST",
-        "GEOL_PEE_PAT",
-        "GEOL_SBM_PAT",
-        "GEOL_SIN_PAT",
-        "INT_SBP_EST",
-        "INT_SBP_PAT",
-        "DEF_SBM_EST",
-        "DEF_SBM_PAT",
-        "DEF_SIN_EST",
-        "DEF_SIN_PAT",
-        "EXC_SBM_EST",
-        "EXC_SBM_PAT",
-        "EXC_SIN_EST",
-        "EXC_SIN_PAT",
-        "CDEF_SBM_EST",
-        "CDEF_SIN_EST",
-        "MERL_SBM_EST",
-        "MERL_SIN_EST",
-        "VEOL_SBM_PAT",
-        "VEOL_SBM_EST",
-        "VDEFMIN_UHE_PAT",
-        "VDEFMAX_UHE_PAT",
-        "VTURMIN_UHE_PAT",
-        "VTURMAX_UHE_PAT",
-        "VFPHA_UHE_PAT",
-        "VGHMIN_UHE_PAT",
-        "VDEFMIN_UHE_EST",
-        "VDEFMAX_UHE_EST",
-        "VTURMIN_UHE_EST",
-        "VTURMAX_UHE_EST",
-        "VFPHA_UHE_EST",
-        "VGHMIN_UHE_EST",
-        "VDEFMIN_REE_PAT",
-        "VDEFMAX_REE_PAT",
-        "VTURMIN_REE_PAT",
-        "VTURMAX_REE_PAT",
-        "VFPHA_REE_PAT",
-        "VDEFMIN_REE_EST",
-        "VDEFMAX_REE_EST",
-        "VTURMIN_REE_EST",
-        "VTURMAX_REE_EST",
-        "VEVMIN_REE_EST",
-        "VFPHA_REE_EST",
-        "VDEFMIN_SBM_PAT",
-        "VDEFMAX_SBM_PAT",
-        "VTURMIN_SBM_PAT",
-        "VTURMAX_SBM_PAT",
-        "VFPHA_SBM_PAT",
-        "VDEFMIN_SBM_EST",
-        "VDEFMAX_SBM_EST",
-        "VTURMIN_SBM_EST",
-        "VTURMAX_SBM_EST",
-        "VEVMIN_SBM_EST",
-        "VFPHA_SBM_EST",
-        "VDEFMIN_SIN_PAT",
-        "VDEFMAX_SIN_PAT",
-        "VTURMIN_SIN_PAT",
-        "VTURMAX_SIN_PAT",
-        "VFPHA_SIN_PAT",
-        "VDEFMIN_SIN_EST",
-        "VDEFMAX_SIN_EST",
-        "VTURMIN_SIN_EST",
-        "VTURMAX_SIN_EST",
-        "VEVMIN_SIN_EST",
-        "VFPHA_SIN_EST",
-        "VVMINOP_REE_EST",
-        "VVMINOP_SBM_EST",
-        "VVMINOP_SIN_EST",
-        "HMON_UHE_EST",
-        "HJUS_UHE_PAT",
-        "HLIQ_UHE_PAT",
+        "CMO_SBM",
+        "VAGUA_REE",
+        "VAGUA_UHE",
+        "VAGUAI_UHE",
+        "CTER_SBM",
+        "CTER_SIN",
+        "COP_SIN",
+        "ENAA_REE",
+        "ENAA_SBM",
+        "ENAA_SIN",
+        "ENAAR_REE",
+        "ENAAR_SBM",
+        "ENAAR_SIN",
+        "ENAAF_REE",
+        "ENAAF_SBM",
+        "ENAAF_SIN",
+        "EARPI_REE",
+        "EARPI_SBM",
+        "EARPI_SIN",
+        "EARPF_REE",
+        "EARPF_SBM",
+        "EARPF_SIN",
+        "EARMI_REE",
+        "EARMI_SBM",
+        "EARMI_SIN",
+        "EARMF_REE",
+        "EARMF_SBM",
+        "EARMF_SIN",
+        "GHIDR_REE",
+        "GHIDR_SBM",
+        "GHIDR_SIN",
+        "GHID_REE",
+        "GHID_SBM",
+        "GHID_SIN",
+        "GHIDF_REE",
+        "GHIDF_SBM",
+        "GHIDF_SIN",
+        "GTER_SBM",
+        "GTER_SIN",
+        "GTER_UTE",
+        "EVER_REE",
+        "EVER_SBM",
+        "EVER_SIN",
+        "EVERR_REE",
+        "EVERR_SBM",
+        "EVERR_SIN",
+        "EVERF_REE",
+        "EVERF_SBM",
+        "EVERF_SIN",
+        "EVERFT_REE",
+        "EVERFT_SBM",
+        "EVERFT_SIN",
+        "EDESR_REE",
+        "EDESR_SBM",
+        "EDESR_SIN",
+        "EDESF_REE",
+        "EDESF_SBM",
+        "EDESF_SIN",
+        "EVMIN_REE",
+        "EVMIN_SBM",
+        "EVMIN_SIN",
+        "EVMOR_REE",
+        "EVMOR_SBM",
+        "EVMOR_SIN",
+        "EEVAP_REE",
+        "EEVAP_SBM",
+        "EEVAP_SIN",
+        "VGHMIN_REE",
+        "VGHMIN_SBM",
+        "VGHMIN_SIN",
+        "VTUR_UHE",
+        "VVER_UHE",
+        "QTUR_UHE",
+        "QVER_UHE",
+        "QAFL_UHE",
+        "QINC_UHE",
+        "VAFL_UHE",
+        "VINC_UHE",
+        "QDEF_UHE",
+        "VDEF_UHE",
+        "VRET_UHE",
+        "VDES_UHE",
+        "QRET_UHE",
+        "QDES_UHE",
+        "VTUR_REE",
+        "VVER_REE",
+        "QTUR_REE",
+        "QVER_REE",
+        "QAFL_REE",
+        "QINC_REE",
+        "VAFL_REE",
+        "VINC_REE",
+        "QDEF_REE",
+        "VDEF_REE",
+        "VRET_REE",
+        "VDES_REE",
+        "QRET_REE",
+        "QDES_REE",
+        "VTUR_SBM",
+        "VVER_SBM",
+        "QTUR_SBM",
+        "QVER_SBM",
+        "QAFL_SBM",
+        "QINC_SBM",
+        "VAFL_SBM",
+        "VINC_SBM",
+        "QDEF_SBM",
+        "VDEF_SBM",
+        "VRET_SBM",
+        "VDES_SBM",
+        "QRET_SBM",
+        "QDES_SBM",
+        "VTUR_SIN",
+        "VVER_SIN",
+        "QTUR_SIN",
+        "QVER_SIN",
+        "QAFL_SIN",
+        "QINC_SIN",
+        "VAFL_SIN",
+        "VINC_SIN",
+        "QDEF_SIN",
+        "VDEF_SIN",
+        "VRET_SIN",
+        "VDES_SIN",
+        "QRET_SIN",
+        "QDES_SIN",
+        "VARMI_UHE",
+        "VARMI_REE",
+        "VARMI_SBM",
+        "VARMI_SIN",
+        "VARMF_UHE",
+        "VARMF_REE",
+        "VARMF_SBM",
+        "VARMF_SIN",
+        "VARPI_UHE",
+        "VARPF_UHE",
+        "GHID_UHE",
+        "VENTO_PEE",
+        "GEOL_PEE",
+        "GEOL_SBM",
+        "GEOL_SIN",
+        "INT_SBP",
+        "DEF_SBM",
+        "DEF_SIN",
+        "EXC_SBM",
+        "EXC_SIN",
+        "CDEF_SBM",
+        "CDEF_SIN",
+        "MERL_SBM",
+        "MERL_SIN",
+        "VEOL_SBM",
+        "VDEFMIN_UHE",
+        "VDEFMAX_UHE",
+        "VTURMIN_UHE",
+        "VTURMAX_UHE",
+        "VFPHA_UHE",
+        "VGHMIN_UHE",
+        "VDEFMIN_REE",
+        "VDEFMAX_REE",
+        "VTURMIN_REE",
+        "VTURMAX_REE",
+        "VEVMIN_REE",
+        "VFPHA_REE",
+        "VDEFMIN_SBM",
+        "VDEFMAX_SBM",
+        "VTURMIN_SBM",
+        "VTURMAX_SBM",
+        "VEVMIN_SBM",
+        "VFPHA_SBM",
+        "VDEFMIN_SIN",
+        "VDEFMAX_SIN",
+        "VTURMIN_SIN",
+        "VTURMAX_SIN",
+        "VEVMIN_SIN",
+        "VFPHA_SIN",
+        "VVMINOP_REE",
+        "VVMINOP_SBM",
+        "VVMINOP_SIN",
+        "HMON_UHE",
+        "HJUS_UHE",
+        "HLIQ_UHE",
     ]
 
-    # SYNTHESIS_TO_CACHE: List[OperationSynthesis] = [
-    #     OperationSynthesis(
-    #         Variable.ENERGIA_VERTIDA_RESERV,
-    #         SpatialResolution.SISTEMA_INTERLIGADO,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.ENERGIA_VERTIDA_RESERV,
-    #         SpatialResolution.SUBMERCADO,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.ENERGIA_VERTIDA_RESERV,
-    #         SpatialResolution.RESERVATORIO_EQUIVALENTE,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.ENERGIA_VERTIDA_FIO,
-    #         SpatialResolution.SISTEMA_INTERLIGADO,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.ENERGIA_VERTIDA_FIO,
-    #         SpatialResolution.SUBMERCADO,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.ENERGIA_VERTIDA_FIO,
-    #         SpatialResolution.RESERVATORIO_EQUIVALENTE,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
-    #         SpatialResolution.SISTEMA_INTERLIGADO,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
-    #         SpatialResolution.SUBMERCADO,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
-    #         SpatialResolution.RESERVATORIO_EQUIVALENTE,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
-    #         SpatialResolution.SISTEMA_INTERLIGADO,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
-    #         SpatialResolution.SUBMERCADO,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
-    #         SpatialResolution.RESERVATORIO_EQUIVALENTE,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.ENERGIA_VERTIDA_RESERV,
-    #         SpatialResolution.SISTEMA_INTERLIGADO,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.ENERGIA_VERTIDA_RESERV,
-    #         SpatialResolution.SUBMERCADO,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.ENERGIA_VERTIDA_RESERV,
-    #         SpatialResolution.RESERVATORIO_EQUIVALENTE,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.ENERGIA_VERTIDA_FIO,
-    #         SpatialResolution.SISTEMA_INTERLIGADO,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.ENERGIA_VERTIDA_FIO,
-    #         SpatialResolution.SUBMERCADO,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.ENERGIA_VERTIDA_FIO,
-    #         SpatialResolution.RESERVATORIO_EQUIVALENTE,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VOLUME_AFLUENTE,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VOLUME_INCREMENTAL,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VOLUME_TURBINADO,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VOLUME_VERTIDO,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VOLUME_DESVIADO,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VOLUME_AFLUENTE,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VOLUME_INCREMENTAL,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VOLUME_TURBINADO,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VOLUME_VERTIDO,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VOLUME_RETIRADO,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VOLUME_DESVIADO,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VAZAO_AFLUENTE,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VAZAO_INCREMENTAL,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VAZAO_TURBINADA,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VAZAO_VERTIDA,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VAZAO_DESVIADA,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VAZAO_AFLUENTE,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VAZAO_INCREMENTAL,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VAZAO_TURBINADA,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VAZAO_VERTIDA,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VAZAO_RETIRADA,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VAZAO_DESVIADA,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
-    #         SpatialResolution.RESERVATORIO_EQUIVALENTE,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
-    #         SpatialResolution.SUBMERCADO,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_DEFLUENCIA_MINIMA,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_TURBINAMENTO_MINIMO,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_FPHA,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_DEFLUENCIA_MINIMA,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_TURBINAMENTO_MINIMO,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_FPHA,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
-    #         SpatialResolution.RESERVATORIO_EQUIVALENTE,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_DEFLUENCIA_MINIMA,
-    #         SpatialResolution.RESERVATORIO_EQUIVALENTE,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
-    #         SpatialResolution.RESERVATORIO_EQUIVALENTE,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_TURBINAMENTO_MINIMO,
-    #         SpatialResolution.RESERVATORIO_EQUIVALENTE,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_FPHA,
-    #         SpatialResolution.RESERVATORIO_EQUIVALENTE,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
-    #         SpatialResolution.RESERVATORIO_EQUIVALENTE,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_DEFLUENCIA_MINIMA,
-    #         SpatialResolution.RESERVATORIO_EQUIVALENTE,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
-    #         SpatialResolution.RESERVATORIO_EQUIVALENTE,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_TURBINAMENTO_MINIMO,
-    #         SpatialResolution.RESERVATORIO_EQUIVALENTE,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_FPHA,
-    #         SpatialResolution.RESERVATORIO_EQUIVALENTE,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
-    #         SpatialResolution.SUBMERCADO,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_DEFLUENCIA_MINIMA,
-    #         SpatialResolution.SUBMERCADO,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
-    #         SpatialResolution.SUBMERCADO,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_TURBINAMENTO_MINIMO,
-    #         SpatialResolution.SUBMERCADO,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_FPHA,
-    #         SpatialResolution.SUBMERCADO,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
-    #         SpatialResolution.SUBMERCADO,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_DEFLUENCIA_MINIMA,
-    #         SpatialResolution.SUBMERCADO,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
-    #         SpatialResolution.SUBMERCADO,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_TURBINAMENTO_MINIMO,
-    #         SpatialResolution.SUBMERCADO,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_FPHA,
-    #         SpatialResolution.SUBMERCADO,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VIOLACAO_VMINOP,
-    #         SpatialResolution.SUBMERCADO,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.GERACAO_TERMICA,
-    #         SpatialResolution.USINA_TERMELETRICA,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VAZAO_AFLUENTE,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VAZAO_INCREMENTAL,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.ESTAGIO,
-    #     ),
-    #     OperationSynthesis(
-    #         Variable.VAZAO_DESVIADA,
-    #         SpatialResolution.USINA_HIDROELETRICA,
-    #         TemporalResolution.PATAMAR,
-    #     ),
-    # ]
+    CACHED_SYNTHESIS: Dict[OperationSynthesis, pd.DataFrame] = {}
 
-    SYNTHESIS_TO_CACHE: List[OperationSynthesis2] = []
+    PREREQ_SYNTHESIS: Dict[OperationSynthesis, List[OperationSynthesis]] = {
+        OperationSynthesis(
+            Variable.ENERGIA_VERTIDA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.ENERGIA_VERTIDA_RESERV,
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            ),
+            OperationSynthesis(
+                Variable.ENERGIA_VERTIDA_FIO,
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.ENERGIA_VERTIDA,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.ENERGIA_VERTIDA_RESERV,
+                SpatialResolution.SUBMERCADO,
+            ),
+            OperationSynthesis(
+                Variable.ENERGIA_VERTIDA_FIO,
+                SpatialResolution.SUBMERCADO,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.ENERGIA_VERTIDA,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.ENERGIA_VERTIDA_RESERV,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+            ),
+            OperationSynthesis(
+                Variable.ENERGIA_VERTIDA_FIO,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VIOLACAO_VMINOP, SpatialResolution.SISTEMA_INTERLIGADO
+        ): [
+            OperationSynthesis(
+                Variable.VIOLACAO_VMINOP, SpatialResolution.SUBMERCADO
+            )
+        ],
+        OperationSynthesis(
+            Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+            )
+        ],
+        OperationSynthesis(
+            Variable.ENERGIA_ARMAZENADA_PERCENTUAL_INICIAL,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.ENERGIA_ARMAZENADA_PERCENTUAL_FINAL,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+            )
+        ],
+        OperationSynthesis(
+            Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
+                SpatialResolution.SUBMERCADO,
+            )
+        ],
+        OperationSynthesis(
+            Variable.ENERGIA_ARMAZENADA_PERCENTUAL_INICIAL,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.ENERGIA_ARMAZENADA_PERCENTUAL_FINAL,
+                SpatialResolution.SUBMERCADO,
+            )
+        ],
+        OperationSynthesis(
+            Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            )
+        ],
+        OperationSynthesis(
+            Variable.ENERGIA_ARMAZENADA_PERCENTUAL_INICIAL,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.ENERGIA_ARMAZENADA_PERCENTUAL_FINAL,
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            )
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
+            SpatialResolution.USINA_HIDROELETRICA,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            )
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
+            SpatialResolution.USINA_HIDROELETRICA,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            )
+        ],
+        OperationSynthesis(
+            Variable.ENERGIA_DEFLUENCIA_MINIMA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.META_ENERGIA_DEFLUENCIA_MINIMA,
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            ),
+            OperationSynthesis(
+                Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.ENERGIA_DEFLUENCIA_MINIMA,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.META_ENERGIA_DEFLUENCIA_MINIMA,
+                SpatialResolution.SUBMERCADO,
+            ),
+            OperationSynthesis(
+                Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
+                SpatialResolution.SUBMERCADO,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.ENERGIA_DEFLUENCIA_MINIMA,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.META_ENERGIA_DEFLUENCIA_MINIMA,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+            ),
+            OperationSynthesis(
+                Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VAZAO_VERTIDA,
+            SpatialResolution.USINA_HIDROELETRICA,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_VERTIDO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            )
+        ],
+        OperationSynthesis(
+            Variable.VAZAO_TURBINADA,
+            SpatialResolution.USINA_HIDROELETRICA,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_TURBINADO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            )
+        ],
+        OperationSynthesis(
+            Variable.VAZAO_DESVIADA,
+            SpatialResolution.USINA_HIDROELETRICA,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_DESVIADO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            )
+        ],
+        OperationSynthesis(
+            Variable.VAZAO_RETIRADA,
+            SpatialResolution.USINA_HIDROELETRICA,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_RETIRADO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            )
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_AFLUENTE,
+            SpatialResolution.USINA_HIDROELETRICA,
+        ): [
+            OperationSynthesis(
+                Variable.VAZAO_AFLUENTE,
+                SpatialResolution.USINA_HIDROELETRICA,
+            )
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_INCREMENTAL,
+            SpatialResolution.USINA_HIDROELETRICA,
+        ): [
+            OperationSynthesis(
+                Variable.VAZAO_INCREMENTAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            )
+        ],
+        OperationSynthesis(
+            Variable.VAZAO_DEFLUENTE,
+            SpatialResolution.USINA_HIDROELETRICA,
+        ): [
+            OperationSynthesis(
+                Variable.VAZAO_TURBINADA,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+            OperationSynthesis(
+                Variable.VAZAO_VERTIDA,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_DEFLUENTE,
+            SpatialResolution.USINA_HIDROELETRICA,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_TURBINADO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+            OperationSynthesis(
+                Variable.VOLUME_VERTIDO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VIOLACAO_DEFLUENCIA_MINIMA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.VIOLACAO_DEFLUENCIA_MINIMA,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VIOLACAO_DEFLUENCIA_MINIMA,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.VIOLACAO_DEFLUENCIA_MINIMA,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VIOLACAO_DEFLUENCIA_MINIMA,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.VIOLACAO_DEFLUENCIA_MINIMA,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VIOLACAO_TURBINAMENTO_MINIMO,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.VIOLACAO_TURBINAMENTO_MINIMO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VIOLACAO_TURBINAMENTO_MINIMO,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.VIOLACAO_TURBINAMENTO_MINIMO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VIOLACAO_TURBINAMENTO_MINIMO,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.VIOLACAO_TURBINAMENTO_MINIMO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VIOLACAO_FPHA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.VIOLACAO_FPHA,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VIOLACAO_FPHA,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.VIOLACAO_FPHA,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VIOLACAO_FPHA,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.VIOLACAO_FPHA,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_AFLUENTE,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_AFLUENTE,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_AFLUENTE,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_AFLUENTE,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_AFLUENTE,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_AFLUENTE,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_INCREMENTAL,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_INCREMENTAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_INCREMENTAL,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_INCREMENTAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_INCREMENTAL,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_INCREMENTAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_DEFLUENTE,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_DEFLUENTE,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_DEFLUENTE,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_DEFLUENTE,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_DEFLUENTE,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_DEFLUENTE,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_VERTIDO,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_VERTIDO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_VERTIDO,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_VERTIDO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_VERTIDO,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_VERTIDO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_TURBINADO,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_TURBINADO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_TURBINADO,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_TURBINADO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_TURBINADO,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_TURBINADO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_RETIRADO,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_RETIRADO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_RETIRADO,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_RETIRADO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_RETIRADO,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_RETIRADO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_DESVIADO,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_DESVIADO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_DESVIADO,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_DESVIADO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_DESVIADO,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_DESVIADO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VAZAO_AFLUENTE,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.VAZAO_AFLUENTE,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VAZAO_AFLUENTE,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.VAZAO_AFLUENTE,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VAZAO_AFLUENTE,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.VAZAO_AFLUENTE,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VAZAO_INCREMENTAL,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.VAZAO_INCREMENTAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VAZAO_INCREMENTAL,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.VAZAO_INCREMENTAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VAZAO_INCREMENTAL,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.VAZAO_INCREMENTAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VAZAO_DEFLUENTE,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.VAZAO_DEFLUENTE,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VAZAO_DEFLUENTE,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.VAZAO_DEFLUENTE,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VAZAO_DEFLUENTE,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.VAZAO_DEFLUENTE,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VAZAO_VERTIDA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.VAZAO_VERTIDA,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VAZAO_VERTIDA,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.VAZAO_VERTIDA,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VAZAO_VERTIDA,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.VAZAO_VERTIDA,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VAZAO_TURBINADA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.VAZAO_TURBINADA,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VAZAO_TURBINADA,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.VAZAO_TURBINADA,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VAZAO_TURBINADA,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.VAZAO_TURBINADA,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VAZAO_RETIRADA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.VAZAO_RETIRADA,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VAZAO_RETIRADA,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.VAZAO_RETIRADA,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VAZAO_RETIRADA,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.VAZAO_RETIRADA,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VAZAO_DESVIADA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.VAZAO_DESVIADA,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VAZAO_DESVIADA,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.VAZAO_DESVIADA,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VAZAO_DESVIADA,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.VAZAO_DESVIADA,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+    }
 
-    # CACHED_SYNTHESIS: Dict[OperationSynthesis, pd.DataFrame] = {}
-    CACHED_SYNTHESIS: Dict[OperationSynthesis2, pd.DataFrame] = {}
-
-    PREREQ_VARIABLES: Dict[str, List[str]] = {}
-
-    VARIABLES_CALC_PAT_0_SUM: List[Variable] = [
-        Variable.VOLUME_VERTIDO,
-        Variable.VOLUME_TURBINADO,
-    ]
-    VARIABLES_CALC_PAT_0_WEIGHTED_MEAN: List[Variable] = []
+    SYNTHESIS_TO_CACHE: List[OperationSynthesis] = list(
+        set([p for pr in PREREQ_SYNTHESIS.values() for p in pr])
+    )
 
     T = TypeVar("T")
 
@@ -817,9 +1142,9 @@ class OperationSynthetizer:
     #     return valid_args
 
     @classmethod
-    def _default_args(cls) -> List[OperationSynthesis2]:
+    def _default_args(cls) -> List[OperationSynthesis]:
         args = [
-            OperationSynthesis2.factory(a)
+            OperationSynthesis.factory(a)
             for a in cls.DEFAULT_OPERATION_SYNTHESIS_ARGS
         ]
         return [arg for arg in args if arg is not None]
@@ -828,8 +1153,8 @@ class OperationSynthetizer:
     def _process_variable_arguments(
         cls,
         args: List[str],
-    ) -> List[OperationSynthesis2]:
-        args_data = [OperationSynthesis2.factory(c) for c in args]
+    ) -> List[OperationSynthesis]:
+        args_data = [OperationSynthesis.factory(c) for c in args]
         valid_args = [arg for arg in args_data if arg is not None]
         return valid_args
 
@@ -858,10 +1183,8 @@ class OperationSynthetizer:
 
     @classmethod
     def filter_valid_variables(
-        cls, variables: List[OperationSynthesis2], uow: AbstractUnitOfWork
-    ) -> List[OperationSynthesis2]:
-        return variables
-        # TODO - retornar filtro
+        cls, variables: List[OperationSynthesis], uow: AbstractUnitOfWork
+    ) -> List[OperationSynthesis]:
         dger = cls._get_dger(uow)
         rees = cls._validate_data(cls._get_ree(uow).rees, pd.DataFrame, "REE")
         valid_variables: List[OperationSynthesis] = []
@@ -918,44 +1241,58 @@ class OperationSynthetizer:
                 continue
             valid_variables.append(v)
         if cls.logger is not None:
-            cls.logger.info(f"Variáveis: {valid_variables}")
+            cls.logger.info(f"Sinteses: {valid_variables}")
         return valid_variables
 
     @classmethod
-    def _add_prereq_variables(cls, variables: List[str]) -> List[str]:
-        variables_with_prereqs: List[str] = []
-        for v in variables:
-            if v in cls.PREREQ_VARIABLES.keys():
-                variables_with_prereqs += cls.PREREQ_VARIABLES[v]
+    def _add_prereq_synthesis_recursive(
+        cls,
+        current_synthesis: List[OperationSynthesis],
+        todo_synthesis: OperationSynthesis,
+    ):
+        if todo_synthesis in cls.PREREQ_SYNTHESIS.keys():
+            for prereq in cls.PREREQ_SYNTHESIS[todo_synthesis]:
+                cls._add_prereq_synthesis_recursive(current_synthesis, prereq)
+        if todo_synthesis not in current_synthesis:
+            current_synthesis.append(todo_synthesis)
+
+    @classmethod
+    def _add_prereq_synthesis(
+        cls, synthesis: List[OperationSynthesis]
+    ) -> List[OperationSynthesis]:
+        result_synthesis: List[OperationSynthesis] = []
+        for v in synthesis:
+            cls._add_prereq_synthesis_recursive(result_synthesis, v)
+        return result_synthesis
+
+    @classmethod
+    def __obtem_duracoes_patamares(
+        cls, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        arq_patamares = uow.files.get_patamar()
+        if arq_patamares:
+            df_pat = arq_patamares.duracao_mensal_patamares
+            if df_pat is not None:
+                df_pat_0 = df_pat.groupby("data", as_index=False).sum(
+                    numeric_only=True
+                )
+                df_pat_0["patamar"] = 0
+                df_pat = pd.concat([df_pat, df_pat_0], ignore_index=True)
+                df_pat.sort_values(["data", "patamar"], inplace=True)
+                return df_pat
             else:
-                variables_with_prereqs.append(v)
-        return variables_with_prereqs
+                if cls.logger:
+                    cls.logger.error("Erro na leitura dos patamares")
+                raise RuntimeError()
+        else:
+            if cls.logger:
+                cls.logger.error("Erro na abertura do arquivo de patamares")
+            raise RuntimeError()
 
     @classmethod
-    def __resolve_EST(cls, df: pd.DataFrame) -> pd.DataFrame:
-        df = df.copy()
-        df.sort_values(["data", "serie"], inplace=True)
-        cols = df.columns.tolist()
-        datas = df["data"].unique().tolist()
-        datas.sort()
-        n_datas = len(datas)
-        n_series = int(df.shape[0] / n_datas)
-        df["serie"] = np.tile(np.arange(1, n_series + 1), n_datas)
-        # Atribui estagio e dataFim de forma posicional
-        estagios = list(range(1, n_datas + 1))
-        estagios_df = np.repeat(estagios, n_series)
-        datasFim = [d + relativedelta(months=1) for d in datas]
-        datasFim_df = np.repeat(datasFim, n_series)
-        df = df.rename(columns={"data": "dataInicio"})
-        df["estagio"] = estagios_df
-        df["dataFim"] = datasFim_df
-        return df[
-            ["estagio", "dataInicio", "dataFim"]
-            + [c for c in cols if c not in ["data", "patamar"]]
-        ]
-
-    @classmethod
-    def __resolve_PAT(cls, df: pd.DataFrame) -> pd.DataFrame:
+    def __resolve_PAT(
+        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
         df = df.copy()
         df.sort_values(["data", "serie", "patamar"], inplace=True)
         cols = df.columns.tolist()
@@ -976,32 +1313,34 @@ class OperationSynthetizer:
         df = df.rename(columns={"data": "dataInicio"})
         df["estagio"] = estagios_df
         df["dataFim"] = datasFim_df
+        # Atribui durações dos patamares de forma posicional
+        df_pat = cls.__obtem_duracoes_patamares(uow)
+        df_pat = df_pat.loc[df_pat["patamar"].isin(patamares)]
+        duracoes_patamares = np.array((), dtype=np.float64)
+        for d in datas:
+            duracoes_data = df_pat.loc[df_pat["data"] == d, "valor"].to_numpy()
+            duracoes_patamares = np.concatenate(
+                (duracoes_patamares, np.tile(duracoes_data, n_series))
+            )
+        df["duracaoPatamar"] = cls.STAGE_DURATION_HOURS * duracoes_patamares
         return df[
-            ["estagio", "dataInicio", "dataFim", "patamar"]
+            ["estagio", "dataInicio", "dataFim", "patamar", "duracaoPatamar"]
             + [c for c in cols if c not in ["patamar", "data"]]
         ]
 
     @classmethod
     def _resolve_temporal_resolution(
-        cls, synthesis: OperationSynthesis2, df: pd.DataFrame
+        cls,
+        df: pd.DataFrame,
+        uow: AbstractUnitOfWork,
     ) -> pd.DataFrame:
         if df is None:
             return None
-        return cls.__resolve_PAT(df)
-        # if df is None:
-        #     return None
-
-        # RESOLUTION_FUNCTION_MAP: Dict[TemporalResolution, Callable] = {
-        #     TemporalResolution.ESTAGIO: cls.__resolve_EST,
-        #     TemporalResolution.PATAMAR: cls.__resolve_PAT,
-        # }
-
-        # solver = RESOLUTION_FUNCTION_MAP[synthesis.temporal_resolution]
-        # return solver(df)
+        return cls.__resolve_PAT(df, uow)
 
     @classmethod
     def __resolve_SIN(
-        cls, synthesis: OperationSynthesis2, uow: AbstractUnitOfWork
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         with uow:
             if cls.logger is not None:
@@ -1012,28 +1351,15 @@ class OperationSynthetizer:
                 "",
             )
             if df is not None:
-                return cls._resolve_temporal_resolution(synthesis, df)
+                return cls._resolve_temporal_resolution(df, uow)
             else:
                 return pd.DataFrame()
-        # with uow:
-        #     if cls.logger is not None:
-        #         cls.logger.info("Processando arquivo do SIN")
-        #     df = uow.files.get_nwlistop(
-        #         synthesis.variable,
-        #         synthesis.spatial_resolution,
-        #         synthesis.temporal_resolution,
-        #         "",
-        #     )
-        #     if df is not None:
-        #         return cls._resolve_temporal_resolution(synthesis, df)
-        #     else:
-        #         return pd.DataFrame()
 
     @classmethod
     def _resolve_SBM_submercado(
         cls,
         uow: AbstractUnitOfWork,
-        synthesis: OperationSynthesis2,
+        synthesis: OperationSynthesis,
         sbm_index: int,
         sbm_name: str,
     ) -> pd.DataFrame:
@@ -1046,12 +1372,12 @@ class OperationSynthetizer:
                 f"Processando arquivo do submercado: {sbm_index} - {sbm_name}"
             )
             df_sbm = cls._resolve_temporal_resolution(
-                synthesis,
                 uow.files.get_nwlistop(
                     synthesis.variable,
                     synthesis.spatial_resolution,
                     submercado=sbm_index,
                 ),
+                uow,
             )
             if df_sbm is None:
                 return None
@@ -1059,33 +1385,10 @@ class OperationSynthetizer:
             df_sbm["submercado"] = sbm_name
             df_sbm = df_sbm[["submercado"] + cols]
             return df_sbm
-        # logger_name = f"{synthesis.variable.value}_{sbm_name}"
-        # logger = Log.configure_process_logger(
-        #     uow.queue, logger_name, sbm_index
-        # )
-        # with uow:
-        #     logger.info(
-        #         f"Processando arquivo do submercado: {sbm_index} - {sbm_name}"
-        #     )
-        #     df_sbm = cls._resolve_temporal_resolution(
-        #         synthesis,
-        #         uow.files.get_nwlistop(
-        #             synthesis.variable,
-        #             synthesis.spatial_resolution,
-        #             synthesis.temporal_resolution,
-        #             submercado=sbm_index,
-        #         ),
-        #     )
-        #     if df_sbm is None:
-        #         return None
-        #     cols = df_sbm.columns.tolist()
-        #     df_sbm["submercado"] = sbm_name
-        #     df_sbm = df_sbm[["submercado"] + cols]
-        #     return df_sbm
 
     @classmethod
     def __resolve_SBM(
-        cls, synthesis: OperationSynthesis2, uow: AbstractUnitOfWork
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         sistema = cls._validate_data(
             cls._get_sistema(uow).custo_deficit,
@@ -1125,7 +1428,7 @@ class OperationSynthetizer:
     def _resolve_SBP_par_submercados(
         cls,
         uow: AbstractUnitOfWork,
-        synthesis: OperationSynthesis2,
+        synthesis: OperationSynthesis,
         sbm1_index: int,
         sbm1_name: str,
         sbm2_index: int,
@@ -1143,12 +1446,12 @@ class OperationSynthetizer:
                 + f" {sbm1_index}[{sbm1_name}] - {sbm2_index}[{sbm2_name}]"
             )
             df_sbp = cls._resolve_temporal_resolution(
-                synthesis,
                 uow.files.get_nwlistop(
                     synthesis.variable,
                     synthesis.spatial_resolution,
                     submercados=(sbm1_index, sbm2_index),
                 ),
+                uow,
             )
             if df_sbp is None:
                 return None
@@ -1157,31 +1460,10 @@ class OperationSynthetizer:
             df_sbp["submercadoPara"] = sbm2_name
             df_sbp = df_sbp[["submercadoDe", "submercadoPara"] + cols]
             return df_sbp
-        # with uow:
-        #     logger.info(
-        #         "Processando arquivo do par de submercados:"
-        #         + f" {sbm1_index}[{sbm1_name}] - {sbm2_index}[{sbm2_name}]"
-        #     )
-        #     df_sbp = cls._resolve_temporal_resolution(
-        #         synthesis,
-        #         uow.files.get_nwlistop(
-        #             synthesis.variable,
-        #             synthesis.spatial_resolution,
-        #             synthesis.temporal_resolution,
-        #             submercados=(sbm1_index, sbm2_index),
-        #         ),
-        #     )
-        #     if df_sbp is None:
-        #         return None
-        #     cols = df_sbp.columns.tolist()
-        #     df_sbp["submercadoDe"] = sbm1_name
-        #     df_sbp["submercadoPara"] = sbm2_name
-        #     df_sbp = df_sbp[["submercadoDe", "submercadoPara"] + cols]
-        #     return df_sbp
 
     @classmethod
     def __resolve_SBP(
-        cls, synthesis: OperationSynthesis2, uow: AbstractUnitOfWork
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         sistema = cls._validate_data(
             cls._get_sistema(uow).custo_deficit,
@@ -1222,7 +1504,7 @@ class OperationSynthetizer:
     def _resolve_REE_ree(
         cls,
         uow: AbstractUnitOfWork,
-        synthesis: OperationSynthesis2,
+        synthesis: OperationSynthesis,
         ree_index: int,
         ree_name: str,
     ) -> pd.DataFrame:
@@ -1235,12 +1517,12 @@ class OperationSynthetizer:
                 f"Processando arquivo do REE: {ree_index} - {ree_name}"
             )
             df_sbm = cls._resolve_temporal_resolution(
-                synthesis,
                 uow.files.get_nwlistop(
                     synthesis.variable,
                     synthesis.spatial_resolution,
                     ree=ree_index,
                 ),
+                uow,
             )
             if df_sbm is None:
                 return None
@@ -1248,33 +1530,10 @@ class OperationSynthetizer:
             df_sbm["ree"] = ree_name
             df_sbm = df_sbm[["ree"] + cols]
             return df_sbm
-        # logger_name = f"{synthesis.variable.value}_{ree_name}"
-        # logger = Log.configure_process_logger(
-        #     uow.queue, logger_name, ree_index
-        # )
-        # with uow:
-        #     logger.info(
-        #         f"Processando arquivo do REE: {ree_index} - {ree_name}"
-        #     )
-        #     df_sbm = cls._resolve_temporal_resolution(
-        #         synthesis,
-        #         uow.files.get_nwlistop(
-        #             synthesis.variable,
-        #             synthesis.spatial_resolution,
-        #             synthesis.temporal_resolution,
-        #             ree=ree_index,
-        #         ),
-        #     )
-        #     if df_sbm is None:
-        #         return None
-        #     cols = df_sbm.columns.tolist()
-        #     df_sbm["ree"] = ree_name
-        #     df_sbm = df_sbm[["ree"] + cols]
-        #     return df_sbm
 
     @classmethod
     def __resolve_REE(
-        cls, synthesis: OperationSynthesis2, uow: AbstractUnitOfWork
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         rees = cls._validate_data(cls._get_ree(uow).rees, pd.DataFrame, "REEs")
         rees_idx = rees["codigo"]
@@ -1304,7 +1563,7 @@ class OperationSynthetizer:
     def _resolve_UHE_usina(
         cls,
         uow: AbstractUnitOfWork,
-        synthesis: OperationSynthesis2,
+        synthesis: OperationSynthesis,
         uhe_index: int,
         uhe_name: str,
     ) -> pd.DataFrame:
@@ -1317,12 +1576,12 @@ class OperationSynthetizer:
                 f"Processando arquivo da UHE: {uhe_index} - {uhe_name}"
             )
             df_uhe = cls._resolve_temporal_resolution(
-                synthesis,
                 uow.files.get_nwlistop(
                     synthesis.variable,
                     synthesis.spatial_resolution,
                     uhe=uhe_index,
                 ),
+                uow,
             )
             if df_uhe is None:
                 return None
@@ -1331,33 +1590,10 @@ class OperationSynthetizer:
             df_uhe["usina"] = uhe_name
             df_uhe = df_uhe[["usina"] + cols]
             return df_uhe
-        # logger_name = f"{synthesis.variable.value}_{uhe_name}"
-        # logger = Log.configure_process_logger(
-        #     uow.queue, logger_name, uhe_index
-        # )
-        # with uow:
-        #     logger.info(
-        #         f"Processando arquivo da UHE: {uhe_index} - {uhe_name}"
-        #     )
-        #     df_uhe = cls._resolve_temporal_resolution(
-        #         synthesis,
-        #         uow.files.get_nwlistop(
-        #             synthesis.variable,
-        #             synthesis.spatial_resolution,
-        #             synthesis.temporal_resolution,
-        #             uhe=uhe_index,
-        #         ),
-        #     )
-        #     if df_uhe is None:
-        #         return None
-        #     cols = df_uhe.columns.tolist()
-        #     df_uhe["usina"] = uhe_name
-        #     df_uhe = df_uhe[["usina"] + cols]
-        #     return df_uhe
 
     @classmethod
     def _resolve_gtert_temporal(
-        cls, df: Optional[pd.DataFrame]
+        cls, df: Optional[pd.DataFrame], uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         if df is None:
             return df
@@ -1383,13 +1619,24 @@ class OperationSynthetizer:
         df["estagio"] = estagios_df
         df["dataFim"] = datasFim_df
         df = df.rename(columns={"data": "dataInicio"})
+        # Atribui duração dos patamares de forma posicional
+        df_pat = cls.__obtem_duracoes_patamares(uow)
+        df_pat = df_pat.loc[df_pat["patamar"].isin(patamares)]
+        duracoes_patamares = np.array((), dtype=np.float64)
+        for d in datas:
+            duracoes_data = df_pat.loc[df_pat["data"] == d, "valor"].to_numpy()
+            duracoes_patamares = np.concatenate(
+                (duracoes_patamares, np.tile(duracoes_data, n_series))
+            )
+        duracoes_patamares = np.tile(duracoes_patamares, n_classes)
+        df["duracaoPatamar"] = cls.STAGE_DURATION_HOURS * duracoes_patamares
         return df
 
     @classmethod
     def _resolve_gtert(
         cls,
         uow: AbstractUnitOfWork,
-        synthesis: OperationSynthesis2,
+        synthesis: OperationSynthesis,
         sbm_index: int,
         sbm_name: str,
     ) -> pd.DataFrame:
@@ -1406,108 +1653,14 @@ class OperationSynthetizer:
                     synthesis.variable,
                     synthesis.spatial_resolution,
                     submercado=sbm_index,
-                )
-            )
-            return df_gtert
-        # with uow:
-        #     logger.info(
-        #         f"Processando arquivo do submercado: {sbm_index} - {sbm_name}"
-        #     )
-        #     df_gtert = cls._resolve_gtert_temporal(
-        #         uow.files.get_nwlistop(
-        #             synthesis.variable,
-        #             synthesis.spatial_resolution,
-        #             synthesis.temporal_resolution,
-        #             submercado=sbm_index,
-        #         )
-        #     )
-        #     return df_gtert
-
-    @classmethod
-    def __stub_agrega_estagio_variaveis_por_patamar(
-        cls, synthesis: OperationSynthesis2, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
-        synt_pat = OperationSynthesis2(
-            synthesis.variable,
-            synthesis.spatial_resolution,
-        )
-        cache = cls.CACHED_SYNTHESIS.get(synt_pat)
-        resolve_func = {
-            SpatialResolution.USINA_HIDROELETRICA: cls.__resolve_UHE,
-            SpatialResolution.USINA_TERMELETRICA: cls.__stub_GTER_UTE_patamar,
-        }[synthesis.spatial_resolution]
-        df_completo = (
-            cache.copy()
-            if cache is not None
-            else resolve_func(
-                synt_pat,
+                ),
                 uow,
             )
-        )
-        if cache is None:
-            cls.CACHED_SYNTHESIS[synt_pat] = df_completo.copy()
-
-        patamares = df_completo["patamar"].unique().tolist()
-        cenarios_patamares: List[np.ndarray] = []
-        p0 = patamares[0]
-        for p in patamares:
-            cenarios_patamares.append(
-                df_completo.loc[
-                    df_completo["patamar"] == p, "valor"
-                ].to_numpy()
-            )
-        df_completo.loc[df_completo["patamar"] == p0, "valor"] = 0.0
-        for c in cenarios_patamares:
-            df_completo.loc[df_completo["patamar"] == p0, "valor"] += c
-        df_completo = df_completo.loc[df_completo["patamar"] == p0, :]
-        df_completo = df_completo.drop(columns="patamar")
-
-        cls.CACHED_SYNTHESIS[synthesis] = df_completo.copy()
-
-        return df_completo
-        # synt_pat = OperationSynthesis(
-        #     synthesis.variable,
-        #     synthesis.spatial_resolution,
-        #     TemporalResolution.PATAMAR,
-        # )
-        # cache = cls.CACHED_SYNTHESIS.get(synt_pat)
-        # resolve_func = {
-        #     SpatialResolution.USINA_HIDROELETRICA: cls.__resolve_UHE,
-        #     SpatialResolution.USINA_TERMELETRICA: cls.__stub_GTER_UTE_patamar,
-        # }[synthesis.spatial_resolution]
-        # df_completo = (
-        #     cache.copy()
-        #     if cache is not None
-        #     else resolve_func(
-        #         synt_pat,
-        #         uow,
-        #     )
-        # )
-        # if cache is None:
-        #     cls.CACHED_SYNTHESIS[synt_pat] = df_completo.copy()
-
-        # patamares = df_completo["patamar"].unique().tolist()
-        # cenarios_patamares: List[np.ndarray] = []
-        # p0 = patamares[0]
-        # for p in patamares:
-        #     cenarios_patamares.append(
-        #         df_completo.loc[
-        #             df_completo["patamar"] == p, "valor"
-        #         ].to_numpy()
-        #     )
-        # df_completo.loc[df_completo["patamar"] == p0, "valor"] = 0.0
-        # for c in cenarios_patamares:
-        #     df_completo.loc[df_completo["patamar"] == p0, "valor"] += c
-        # df_completo = df_completo.loc[df_completo["patamar"] == p0, :]
-        # df_completo = df_completo.drop(columns="patamar")
-
-        # cls.CACHED_SYNTHESIS[synthesis] = df_completo.copy()
-
-        # return df_completo
+            return df_gtert
 
     @classmethod
     def __stub_converte_volume_em_vazao(
-        cls, synthesis: OperationSynthesis2, uow: AbstractUnitOfWork
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         variable_map = {
             Variable.VAZAO_VERTIDA: Variable.VOLUME_VERTIDO,
@@ -1518,26 +1671,20 @@ class OperationSynthetizer:
         synt_vol = OperationSynthesis(
             variable_map[synthesis.variable],
             synthesis.spatial_resolution,
-            synthesis.temporal_resolution,
         )
-        cache = cls.CACHED_SYNTHESIS.get(synt_vol)
-        df_completo = (
-            cache.copy()
-            if cache is not None
-            else cls.__resolve_UHE(
-                synt_vol,
-                uow,
-            )
+        df_completo = cls._get_from_cache(synt_vol)
+        df_completo.loc[:, "valor"] = (
+            df_completo["valor"]
+            * FATOR_HM3_M3S_MES
+            * cls.STAGE_DURATION_HOURS
+            / df_completo["duracaoPatamar"]
         )
-        df_completo.loc[:, "valor"] *= FATOR_HM3_M3S
-        if cache is None:
-            cls.CACHED_SYNTHESIS[synthesis] = df_completo.copy()
 
         return df_completo
 
     @classmethod
     def __stub_converte_vazao_em_volume(
-        cls, synthesis: OperationSynthesis2, uow: AbstractUnitOfWork
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         variable_map = {
             Variable.VOLUME_AFLUENTE: Variable.VAZAO_AFLUENTE,
@@ -1546,63 +1693,30 @@ class OperationSynthetizer:
         synt_vaz = OperationSynthesis(
             variable_map[synthesis.variable],
             synthesis.spatial_resolution,
-            synthesis.temporal_resolution,
         )
-        cache = cls.CACHED_SYNTHESIS.get(synt_vaz)
-        df_completo = (
-            cache.copy()
-            if cache is not None
-            else cls.__resolve_UHE(
-                synt_vaz,
-                uow,
-            )
+        df_completo = cls._get_from_cache(synt_vaz)
+        df_completo.loc[:, "valor"] = (
+            df_completo["valor"]
+            * df_completo["duracaoPatamar"]
+            / (FATOR_HM3_M3S_MES * cls.STAGE_DURATION_HOURS)
         )
-        df_completo.loc[:, "valor"] /= FATOR_HM3_M3S
-        if cache is None:
-            cls.CACHED_SYNTHESIS[synthesis] = df_completo.copy()
-
         return df_completo
 
     @classmethod
     def __stub_QDEF(
-        cls, synthesis: OperationSynthesis2, uow: AbstractUnitOfWork
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         sintese_tur = OperationSynthesis(
             Variable.VAZAO_TURBINADA,
             synthesis.spatial_resolution,
-            synthesis.temporal_resolution,
         )
         sintese_ver = OperationSynthesis(
             Variable.VAZAO_VERTIDA,
             synthesis.spatial_resolution,
-            synthesis.temporal_resolution,
         )
-        cache_tur = cls.CACHED_SYNTHESIS.get(sintese_tur)
-        cache_ver = cls.CACHED_SYNTHESIS.get(sintese_ver)
-        df_tur = (
-            cache_tur
-            if cache_tur is not None
-            else cls.__stub_converte_volume_em_vazao(
-                OperationSynthesis(
-                    Variable.VAZAO_TURBINADA,
-                    synthesis.spatial_resolution,
-                    synthesis.temporal_resolution,
-                ),
-                uow,
-            )
-        )
-        df_ver = (
-            cache_ver
-            if cache_ver is not None
-            else cls.__stub_converte_volume_em_vazao(
-                OperationSynthesis(
-                    Variable.VAZAO_VERTIDA,
-                    synthesis.spatial_resolution,
-                    synthesis.temporal_resolution,
-                ),
-                uow,
-            )
-        )
+        df_tur = cls._get_from_cache(sintese_tur)
+        df_ver = cls._get_from_cache(sintese_ver)
+
         df_ver.loc[:, "valor"] = (
             df_tur["valor"].to_numpy() + df_ver["valor"].to_numpy()
         )
@@ -1610,44 +1724,19 @@ class OperationSynthetizer:
 
     @classmethod
     def __stub_VDEF(
-        cls, synthesis: OperationSynthesis2, uow: AbstractUnitOfWork
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         sintese_tur = OperationSynthesis(
             Variable.VOLUME_TURBINADO,
             synthesis.spatial_resolution,
-            synthesis.temporal_resolution,
         )
         sintese_ver = OperationSynthesis(
             Variable.VOLUME_VERTIDO,
             synthesis.spatial_resolution,
-            synthesis.temporal_resolution,
         )
-        cache_tur = cls.CACHED_SYNTHESIS.get(sintese_tur)
-        cache_ver = cls.CACHED_SYNTHESIS.get(sintese_ver)
-        df_tur = (
-            cache_tur
-            if cache_tur is not None
-            else cls.__stub_converte_volume_em_vazao(
-                OperationSynthesis(
-                    Variable.VOLUME_TURBINADO,
-                    synthesis.spatial_resolution,
-                    synthesis.temporal_resolution,
-                ),
-                uow,
-            )
-        )
-        df_ver = (
-            cache_ver
-            if cache_ver is not None
-            else cls.__stub_converte_volume_em_vazao(
-                OperationSynthesis(
-                    Variable.VOLUME_VERTIDO,
-                    synthesis.spatial_resolution,
-                    synthesis.temporal_resolution,
-                ),
-                uow,
-            )
-        )
+        df_tur = cls._get_from_cache(sintese_tur)
+        df_ver = cls._get_from_cache(sintese_ver)
+
         df_ver.loc[:, "valor"] = (
             df_tur["valor"].to_numpy() + df_ver["valor"].to_numpy()
         )
@@ -1655,54 +1744,27 @@ class OperationSynthetizer:
 
     @classmethod
     def __stub_EVER(
-        cls, synthesis: OperationSynthesis2, uow: AbstractUnitOfWork
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         sintese_reserv = OperationSynthesis(
             Variable.ENERGIA_VERTIDA_RESERV,
             synthesis.spatial_resolution,
-            synthesis.temporal_resolution,
         )
         sintese_fio = OperationSynthesis(
             Variable.ENERGIA_VERTIDA_FIO,
             synthesis.spatial_resolution,
-            synthesis.temporal_resolution,
         )
-        cache_reserv = cls.CACHED_SYNTHESIS.get(sintese_reserv)
-        cache_fio = cls.CACHED_SYNTHESIS.get(sintese_fio)
+        cache_reserv = cls._get_from_cache(sintese_reserv)
+        cache_fio = cls._get_from_cache(sintese_fio)
 
-        df_reserv = (
-            cache_reserv
-            if cache_reserv is not None
-            else cls._resolve_spatial_resolution(
-                OperationSynthesis(
-                    Variable.ENERGIA_VERTIDA_RESERV,
-                    synthesis.spatial_resolution,
-                    synthesis.temporal_resolution,
-                ),
-                uow,
-            )
+        cache_reserv.loc[:, "valor"] = (
+            cache_fio["valor"].to_numpy() + cache_reserv["valor"].to_numpy()
         )
-        df_fio = (
-            cache_fio
-            if cache_fio is not None
-            else cls._resolve_spatial_resolution(
-                OperationSynthesis(
-                    Variable.ENERGIA_VERTIDA_FIO,
-                    synthesis.spatial_resolution,
-                    synthesis.temporal_resolution,
-                ),
-                uow,
-            )
-        )
-
-        df_reserv.loc[:, "valor"] = (
-            df_fio["valor"].to_numpy() + df_reserv["valor"].to_numpy()
-        )
-        return df_reserv
+        return cache_reserv
 
     @classmethod
     def __stub_agrega_variaveis_indiv_REE_SBM_SIN(
-        cls, synthesis: OperationSynthesis2, uow: AbstractUnitOfWork
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         sistema = cls._validate_data(
             cls._get_sistema(uow).custo_deficit,
@@ -1734,24 +1796,8 @@ class OperationSynthetizer:
         s = OperationSynthesis(
             variable=synthesis.variable,
             spatial_resolution=SpatialResolution.USINA_HIDROELETRICA,
-            temporal_resolution=synthesis.temporal_resolution,
         )
-        cache_uhe = cls.CACHED_SYNTHESIS.get(s)
-        if cache_uhe is None:
-            if s.variable == Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL:
-                df_uhe = cls.__stub_resolve_volumes_iniciais_uhe(s, uow)
-            else:
-                df_uhe = cls._resolve_spatial_resolution(s, uow)
-            cls.CACHED_SYNTHESIS[s] = df_uhe
-        else:
-            df_uhe = cache_uhe
-
-        if df_uhe is None:
-            return None
-        if df_uhe.empty:
-            return None
-
-        df_uhe = df_uhe.copy().reset_index(drop=True)
+        df_uhe = cls._get_from_cache(s)
 
         # Extrai a lista de usinas e quantas linhas existem para cada
         usinas = df_uhe["usina"].drop_duplicates()
@@ -1818,32 +1864,28 @@ class OperationSynthetizer:
 
     @classmethod
     def __resolve_stub_vminop_sin(
-        cls, synthesis: OperationSynthesis2, uow: AbstractUnitOfWork
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         sintese_sbm = OperationSynthesis(
             variable=synthesis.variable,
             spatial_resolution=SpatialResolution.SUBMERCADO,
-            temporal_resolution=synthesis.temporal_resolution,
         )
-        cache_vminop = cls.CACHED_SYNTHESIS.get(sintese_sbm)
-        df_vminop = (
-            cache_vminop
-            if cache_vminop is not None
-            else cls.__resolve_SBM(sintese_sbm, uow)
-        )
+        cache_vminop = cls._get_from_cache(sintese_sbm)
         cols_group = [
             c
-            for c in df_vminop.columns
+            for c in cache_vminop.columns
             if c in cls.IDENTIFICATION_COLUMNS and c != "submercado"
         ]
         df_sin = (
-            df_vminop.groupby(cols_group).sum(numeric_only=True).reset_index()
+            cache_vminop.groupby(cols_group)
+            .sum(numeric_only=True)
+            .reset_index()
         )
         return df_sin
 
     @classmethod
     def __stub_resolve_energias_iniciais_ree(
-        cls, synthesis: OperationSynthesis2, uow: AbstractUnitOfWork
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         earmi = Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL
         earmf = Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL
@@ -1856,19 +1898,8 @@ class OperationSynthetizer:
         sintese_final = OperationSynthesis(
             variable=variable_map[synthesis.variable],
             spatial_resolution=synthesis.spatial_resolution,
-            temporal_resolution=synthesis.temporal_resolution,
         )
-        resolve_func = {
-            SpatialResolution.RESERVATORIO_EQUIVALENTE: cls.__resolve_REE,
-            SpatialResolution.SUBMERCADO: cls.__resolve_SBM,
-            SpatialResolution.SISTEMA_INTERLIGADO: cls.__resolve_SIN,
-        }[synthesis.spatial_resolution]
-        cache_earm = cls.CACHED_SYNTHESIS.get(sintese_final)
-        df_final = (
-            cache_earm
-            if cache_earm is not None
-            else resolve_func(sintese_final, uow)
-        )
+        df_final = cls._get_from_cache(sintese_final)
         # Contém as duas colunas: absoluta e percentual
         earmi_pmo = cls._earmi_percentual(synthesis, uow)
         col_earmi_pmo = (
@@ -1915,7 +1946,7 @@ class OperationSynthetizer:
 
     @classmethod
     def __stub_resolve_volumes_iniciais_uhe(
-        cls, synthesis: OperationSynthesis2, uow: AbstractUnitOfWork
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         varmi = Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL
         varmf = Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL
@@ -1928,14 +1959,8 @@ class OperationSynthetizer:
         sintese_final = OperationSynthesis(
             variable=variable_map[synthesis.variable],
             spatial_resolution=synthesis.spatial_resolution,
-            temporal_resolution=synthesis.temporal_resolution,
         )
-        cache_varm = cls.CACHED_SYNTHESIS.get(sintese_final)
-        df_final = (
-            cache_varm
-            if cache_varm is not None
-            else cls.__resolve_UHE(sintese_final, uow)
-        )
+        df_final = cls._get_from_cache(sintese_final)
         with uow:
             arq_pmo = uow.files.get_pmo()
             if arq_pmo is not None:
@@ -1985,37 +2010,18 @@ class OperationSynthetizer:
 
     @classmethod
     def __stub_energia_defluencia_minima(
-        cls, synthesis: OperationSynthesis2, uow: AbstractUnitOfWork
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         sintese_meta = OperationSynthesis(
             Variable.META_ENERGIA_DEFLUENCIA_MINIMA,
             synthesis.spatial_resolution,
-            synthesis.temporal_resolution,
         )
         sintese_violacao = OperationSynthesis(
             Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
             synthesis.spatial_resolution,
-            synthesis.temporal_resolution,
         )
-        cache_meta = cls.CACHED_SYNTHESIS.get(sintese_meta)
-        cache_violacao = cls.CACHED_SYNTHESIS.get(sintese_violacao)
-
-        df_meta = (
-            cache_meta
-            if cache_meta is not None
-            else cls._resolve_spatial_resolution(
-                sintese_meta,
-                uow,
-            )
-        )
-        df_violacao = (
-            cache_violacao
-            if cache_violacao is not None
-            else cls._resolve_spatial_resolution(
-                sintese_violacao,
-                uow,
-            )
-        )
+        df_meta = cls._get_from_cache(sintese_meta)
+        df_violacao = cls._get_from_cache(sintese_violacao)
 
         df_meta.loc[:, "valor"] = (
             df_meta["valor"].to_numpy() - df_violacao["valor"].to_numpy()
@@ -2023,50 +2029,34 @@ class OperationSynthetizer:
         return df_meta
 
     @classmethod
-    def __postprocess_violacoes_UHE_estagio(cls, df_completo: pd.DataFrame):
-        patamares = df_completo["patamar"].unique().tolist()
-        cenarios_patamares: List[np.ndarray] = []
-        p0 = patamares[0]
-        for p in patamares:
-            cenarios_patamares.append(
-                df_completo.loc[
-                    df_completo["patamar"] == p, "valor"
-                ].to_numpy()
-            )
-        df_completo.loc[df_completo["patamar"] == p0, "valor"] = 0.0
-        for c in cenarios_patamares:
-            df_completo.loc[df_completo["patamar"] == p0, "valor"] += c
-        df_completo = df_completo.loc[df_completo["patamar"] == p0, :]
-        return df_completo.drop(columns=["patamar"])
-
-    @classmethod
-    def __stub_violacoes_UHE(
-        cls, synthesis: OperationSynthesis2, uow: AbstractUnitOfWork
-    ):
-        synt_pat = OperationSynthesis(
-            synthesis.variable,
-            spatial_resolution=synthesis.spatial_resolution,
-            temporal_resolution=TemporalResolution.PATAMAR,
+    def __stub_calc_pat_0_weighted_mean(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        df = cls._resolve_spatial_resolution(synthesis, uow)
+        df_pat0 = df.copy()
+        df_pat0["patamar"] = 0
+        df_pat0["valor"] = (
+            df_pat0["valor"] * df_pat0["duracaoPatamar"]
+        ) / cls.STAGE_DURATION_HOURS
+        cols_group = [
+            c
+            for c in df.columns
+            if c
+            not in [
+                "patamar",
+                "duracaoPatamar",
+                "valor",
+            ]
+        ]
+        df_pat0 = df_pat0.groupby(cols_group, as_index=False).sum(
+            numeric_only=True
         )
-        cache = cls.CACHED_SYNTHESIS.get(synt_pat)
-        df_completo = (
-            cache.copy()
-            if cache is not None
-            else cls.__resolve_UHE_normal(synt_pat, uow)
-        )
-        df_completo.loc[:, "valor"] *= FATOR_HM3_M3S
-        if not df_completo.empty:
-            cls.CACHED_SYNTHESIS[synt_pat] = df_completo
-
-        if synthesis.temporal_resolution == TemporalResolution.ESTAGIO:
-            df_completo = cls.__postprocess_violacoes_UHE_estagio(df_completo)
-
-        cls.CACHED_SYNTHESIS[synthesis] = df_completo
-        return df_completo
+        df_pat0 = pd.concat([df, df_pat0], ignore_index=True)
+        return df_pat0.sort_values(cols_group + ["patamar"])
 
     @classmethod
     def __resolve_UHE_normal(
-        cls, synthesis: OperationSynthesis2, uow: AbstractUnitOfWork
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         confhd = cls._validate_data(
             cls._get_confhd(uow).usinas, pd.DataFrame, "UHEs"
@@ -2127,21 +2117,8 @@ class OperationSynthetizer:
 
     @classmethod
     def __resolve_UHE(
-        cls, synthesis: OperationSynthesis2, uow: AbstractUnitOfWork
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-        # if (
-        #     synthesis.variable
-        #     in [
-        #         Variable.GERACAO_HIDRAULICA,
-        #         Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
-        #         Variable.VOLUME_TURBINADO,
-        #         Variable.VOLUME_VERTIDO,
-        #         Variable.VOLUME_DESVIADO,
-        #     ]
-        # ) and (synthesis.temporal_resolution == TemporalResolution.ESTAGIO):
-        #     return cls.__stub_agrega_estagio_variaveis_por_patamar(
-        #         synthesis, uow
-        #     )
         if synthesis.variable in [
             Variable.VAZAO_TURBINADA,
             Variable.VAZAO_VERTIDA,
@@ -2158,20 +2135,12 @@ class OperationSynthetizer:
             return cls.__stub_QDEF(synthesis, uow)
         elif synthesis.variable == Variable.VOLUME_DEFLUENTE:
             return cls.__stub_VDEF(synthesis, uow)
-        elif synthesis.variable in [
-            Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
-            Variable.VIOLACAO_DEFLUENCIA_MINIMA,
-            Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
-            Variable.VIOLACAO_TURBINAMENTO_MINIMO,
-            Variable.VIOLACAO_FPHA,
-        ]:
-            return cls.__stub_violacoes_UHE(synthesis, uow)
         else:
             return cls.__resolve_UHE_normal(synthesis, uow)
 
     @classmethod
     def __resolve_UTE_normal(
-        cls, synthesis: OperationSynthesis2, uow: AbstractUnitOfWork
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         conft = cls._validate_data(
             cls._get_conft(uow).usinas, pd.DataFrame, "UTEs"
@@ -2184,13 +2153,12 @@ class OperationSynthetizer:
                 if cls.logger is not None:
                     cls.logger.info(f"Processando arquivo da UTE: {s} - {n}")
                 df_ute = cls._resolve_temporal_resolution(
-                    synthesis,
                     uow.files.get_nwlistop(
                         synthesis.variable,
                         synthesis.spatial_resolution,
-                        synthesis.temporal_resolution,
                         ute=s,
                     ),
+                    uow,
                 )
                 if df_ute is None:
                     continue
@@ -2205,7 +2173,7 @@ class OperationSynthetizer:
 
     @classmethod
     def __stub_GTER_UTE_patamar(
-        cls, synthesis: OperationSynthesis2, uow: AbstractUnitOfWork
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         sistema = cls._validate_data(
             cls._get_sistema(uow).custo_deficit,
@@ -2225,7 +2193,6 @@ class OperationSynthetizer:
         synthesis = OperationSynthesis(
             variable=synthesis.variable,
             spatial_resolution=synthesis.spatial_resolution,
-            temporal_resolution=TemporalResolution.PATAMAR,
         )
         with Pool(processes=n_procs) as pool:
             if n_procs > 1:
@@ -2267,6 +2234,7 @@ class OperationSynthetizer:
                 "dataInicio",
                 "dataFim",
                 "patamar",
+                "duracaoPatamar",
                 "serie",
                 "valor",
             ]
@@ -2274,30 +2242,16 @@ class OperationSynthetizer:
 
     @classmethod
     def __resolve_UTE(
-        cls, synthesis: OperationSynthesis2, uow: AbstractUnitOfWork
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-        if (
-            synthesis.variable
-            in [
-                Variable.GERACAO_TERMICA,
-            ]
-        ) and (synthesis.temporal_resolution == TemporalResolution.PATAMAR):
+        if synthesis.variable == Variable.GERACAO_TERMICA:
             return cls.__stub_GTER_UTE_patamar(synthesis, uow)
-        elif (
-            synthesis.variable
-            in [
-                Variable.GERACAO_TERMICA,
-            ]
-        ) and (synthesis.temporal_resolution == TemporalResolution.ESTAGIO):
-            return cls.__stub_agrega_estagio_variaveis_por_patamar(
-                synthesis, uow
-            )
         else:
             return cls.__resolve_UTE_normal(synthesis, uow)
 
     @classmethod
     def __resolve_PEE(
-        cls, synthesis: OperationSynthesis2, uow: AbstractUnitOfWork
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         with uow:
             eolica = uow.files.get_eolica()
@@ -2322,13 +2276,12 @@ class OperationSynthetizer:
                 if cls.logger is not None:
                     cls.logger.info(f"Processando arquivo da UEE: {s} - {n}")
                 df_uee = cls._resolve_temporal_resolution(
-                    synthesis,
                     uow.files.get_nwlistop(
                         synthesis.variable,
                         synthesis.spatial_resolution,
-                        synthesis.temporal_resolution,
                         uee=s,
                     ),
+                    uow,
                 )
                 if df_uee is None:
                     continue
@@ -2343,7 +2296,7 @@ class OperationSynthetizer:
 
     @classmethod
     def _resolve_spatial_resolution(
-        cls, synthesis: OperationSynthesis2, uow: AbstractUnitOfWork
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         RESOLUTION_FUNCTION_MAP: Dict[SpatialResolution, Callable] = {
             SpatialResolution.SISTEMA_INTERLIGADO: cls.__resolve_SIN,
@@ -2442,7 +2395,7 @@ class OperationSynthetizer:
 
     @classmethod
     def _earmi_percentual(
-        cls, s: OperationSynthesis2, uow: AbstractUnitOfWork
+        cls, s: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         with uow:
             arq_pmo = uow.files.get_pmo()
@@ -2499,8 +2452,24 @@ class OperationSynthetizer:
         return earmi_pmo
 
     @classmethod
+    def _get_from_cache(cls, s: OperationSynthesis) -> pd.DataFrame:
+        if s in cls.CACHED_SYNTHESIS.keys():
+            if cls.logger:
+                cls.logger.info(f"Lendo do cache - {str(s)}")
+            val = cls.CACHED_SYNTHESIS.get(s)
+            if val is None:
+                if cls.logger:
+                    cls.logger.error(f"Erro na leitura do cache - {str(s)}")
+                raise RuntimeError()
+            return val.copy()
+        else:
+            if cls.logger:
+                cls.logger.error(f"Erro na leitura do cache - {str(s)}")
+            raise RuntimeError()
+
+    @classmethod
     def _resolve_stub(
-        cls, s: OperationSynthesis2, uow: AbstractUnitOfWork
+        cls, s: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> Tuple[pd.DataFrame, bool]:
         if s.variable == Variable.ENERGIA_VERTIDA:
             df = cls.__stub_EVER(s, uow)
@@ -2576,21 +2545,24 @@ class OperationSynthetizer:
         elif s.variable in [Variable.ENERGIA_DEFLUENCIA_MINIMA]:
             df = cls.__stub_energia_defluencia_minima(s, uow)
             return df, True
+        elif s.variable in [Variable.COTA_JUSANTE, Variable.QUEDA_LIQUIDA]:
+            df = cls.__stub_calc_pat_0_weighted_mean(s, uow)
+            return df, True
         else:
             return pd.DataFrame(), False
 
     @classmethod
     def __get_from_cache_if_exists(
-        cls, s: OperationSynthesis2
+        cls, s: OperationSynthesis
     ) -> pd.DataFrame:
         if s in cls.CACHED_SYNTHESIS.keys():
-            return cls.CACHED_SYNTHESIS.get(s)
+            return cls._get_from_cache(s)
         else:
             return pd.DataFrame()
 
     @classmethod
     def __store_in_cache_if_needed(
-        cls, s: OperationSynthesis2, df: pd.DataFrame
+        cls, s: OperationSynthesis, df: pd.DataFrame
     ):
         if s in cls.SYNTHESIS_TO_CACHE:
             cls.CACHED_SYNTHESIS[s] = df.copy()
@@ -2607,15 +2579,14 @@ class OperationSynthetizer:
         valid_synthesis = OperationSynthetizer.filter_valid_variables(
             synthesis_variables, uow
         )
-        synthesis_with_prereqs = OperationSynthetizer._add_prereq_variables(
-            variables
+        synthesis_with_prereqs = OperationSynthetizer._add_prereq_synthesis(
+            valid_synthesis
         )
-
-        for s in valid_synthesis:
+        for s in synthesis_with_prereqs:
             try:
                 filename = str(s)
                 found_synthesis = False
-                cls.logger.info(f"Realizando síntese de {filename}")
+                cls.logger.info(f"Realizando sintese de {filename}")
                 df = cls.__get_from_cache_if_exists(s)
                 if df.empty:
                     df, is_stub = cls._resolve_stub(s, uow)
@@ -2631,12 +2602,11 @@ class OperationSynthetizer:
                             uow.export.synthetize_df(df, filename)
                 if not found_synthesis:
                     cls.logger.warning(
-                        "Não foram encontrados dados"
-                        + f" para a síntese de {str(s)}"
+                        "Nao foram encontrados dados"
+                        + f" para a sintese de {str(s)}"
                     )
             except Exception as e:
-                # traceback.print_exc()
                 cls.logger.error(str(e))
                 cls.logger.error(
-                    f"Não foi possível realizar a síntese de: {str(s)}"
+                    f"Nao foi possível realizar a sintese de: {str(s)}"
                 )
