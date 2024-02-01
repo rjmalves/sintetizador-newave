@@ -1,11 +1,13 @@
 from unittest.mock import patch, MagicMock
 from sintetizador.services.unitofwork import factory
 from sintetizador.services.synthesis.operation import OperationSynthetizer
-from sintetizador.services.synthesis.operation import FATOR_HM3_M3S
+from sintetizador.services.synthesis.operation import FATOR_HM3_M3S_MES
 
 from tests.conftest import DECK_TEST_DIR, q
 
 uow = factory("FS", DECK_TEST_DIR, q)
+
+# TODO - refatorar testes
 
 
 def test_sintese_sin_est(test_settings):
