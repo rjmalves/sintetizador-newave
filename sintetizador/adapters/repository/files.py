@@ -456,7 +456,6 @@ class RawFilesRepository(AbstractFilesRepository):
             ): lambda dir, _: self.__adiciona_coluna_patamar(
                 Earmfsin.read(join(dir, "earmfsin.out")).valores
             ),
-            # ---------------
             (
                 Variable.GERACAO_HIDRAULICA_RESERVATORIO,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
@@ -481,14 +480,14 @@ class RawFilesRepository(AbstractFilesRepository):
                 Variable.GERACAO_HIDRAULICA_FIO,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
                 # TODO - Substituir quando existir na inewave
-            ): lambda dir, ree=1: self.__substitui_coluna_patamar(
+            ): lambda dir, ree=1: self.__adiciona_coluna_patamar(
                 Evert.read(join(dir, f"gfiol{str(ree).zfill(3)}.out")).valores
             ),
             (
                 Variable.GERACAO_HIDRAULICA_FIO,
                 SpatialResolution.SUBMERCADO,
                 # TODO - Substituir quando existir na inewave
-            ): lambda dir, submercado=1: self.__substitui_coluna_patamar(
+            ): lambda dir, submercado=1: self.__adiciona_coluna_patamar(
                 Evertm.read(
                     join(dir, f"gfiolm{str(submercado).zfill(3)}.out")
                 ).valores
@@ -497,7 +496,7 @@ class RawFilesRepository(AbstractFilesRepository):
                 Variable.GERACAO_HIDRAULICA_FIO,
                 SpatialResolution.SISTEMA_INTERLIGADO,
                 # TODO - Substituir quando existir na inewave
-            ): lambda dir, _: self.__substitui_coluna_patamar(
+            ): lambda dir, _: self.__adiciona_coluna_patamar(
                 Evertsin.read(join(dir, "gfiolsin.out")).valores
             ),
             (
@@ -604,7 +603,6 @@ class RawFilesRepository(AbstractFilesRepository):
             ): lambda dir, _: self.__adiciona_coluna_patamar(
                 Verturbsin.read(join(dir, "verturbsin.out")).valores
             ),
-            # ---------
             (
                 Variable.ENERGIA_DESVIO_RESERVATORIO,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
@@ -797,6 +795,14 @@ class RawFilesRepository(AbstractFilesRepository):
                 Geolsin.read(join(dir, "geolsin.out")).valores
             ),
             (
+                Variable.CORTE_GERACAO_EOLICA,
+                SpatialResolution.SUBMERCADO,
+            ): lambda dir, submercado=1: self.__substitui_coluna_patamar(
+                Corteolm.read(
+                    join(dir, f"corteolm{str(submercado).zfill(3)}.out")
+                ).valores,
+            ),
+            (
                 Variable.DEFICIT,
                 SpatialResolution.SUBMERCADO,
             ): lambda dir, submercado=1: self.__substitui_coluna_patamar(
@@ -865,14 +871,6 @@ class RawFilesRepository(AbstractFilesRepository):
                 Merclsin.read(join(dir, "merclsin.out")).valores
             ),
             (
-                Variable.CORTE_GERACAO_EOLICA,
-                SpatialResolution.SUBMERCADO,
-            ): lambda dir, submercado=1: self.__substitui_coluna_patamar(
-                Corteolm.read(
-                    join(dir, f"corteolm{str(submercado).zfill(3)}.out")
-                ).valores,
-            ),
-            (
                 Variable.VIOLACAO_DEFLUENCIA_MINIMA,
                 SpatialResolution.USINA_HIDROELETRICA,
             ): lambda dir, uhe=1: self.__calcula_patamar_medio_soma(
@@ -912,7 +910,6 @@ class RawFilesRepository(AbstractFilesRepository):
                     join(dir, f"dfphauh{str(uhe).zfill(3)}.out")
                 ).valores
             ),
-            # ------------
             (
                 Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
@@ -995,7 +992,7 @@ class RawFilesRepository(AbstractFilesRepository):
                 Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
                 SpatialResolution.SISTEMA_INTERLIGADO,
             ): lambda dir, _: self.__substitui_coluna_patamar(
-                Vghminsin.read(join(dir, "vghminmsin.out")).valores
+                Vghminsin.read(join(dir, "vghminsin.out")).valores
             ),
             (
                 Variable.COTA_MONTANTE,
@@ -1190,8 +1187,7 @@ class RawFilesRepository(AbstractFilesRepository):
             if regra is None:
                 return None
             return regra(self.__tmppath, *args, **kwargs)
-        except Exception as e:
-            print(e)
+        except Exception:
             return None
 
     def get_nwlistcf_cortes(self) -> Optional[Nwlistcfrel]:
