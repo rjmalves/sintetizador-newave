@@ -36,7 +36,7 @@ ARQUIVO AVERSAO RISCO - CVAR: cvar.dat
 DADOS DOS RESER.EQ.ENERGIA  : ree.dat                                 
 ARQUIVO RESTRICOES ELETRICAS: re.dat                                  
 ARQUIVO DE TECNOLOGIAS      : tecno.dat                               
-ARQUIVO DE ABERTURAS        : abertura.dat                            
+DADOS DE ABERTURAS          : abertura.dat                            
 ARQUIVO DE EMISSOES GEE     : gee.dat                                 
 ARQUIVO DE RESTRICAO DE GAS : clasgas.dat                             
                               simfinal.dat                            
