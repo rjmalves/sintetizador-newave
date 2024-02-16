@@ -53,10 +53,23 @@ class CSVExportRepository(AbstractExportRepository):
         return True
 
 
+class TestExportRepository(AbstractExportRepository):
+    def __init__(self, path: str):
+        self.__path = path
+
+    @property
+    def path(self) -> pathlib.Path:
+        return pathlib.Path(self.__path)
+
+    def synthetize_df(self, df: pd.DataFrame, filename: str) -> bool:
+        return df
+
+
 def factory(kind: str, *args, **kwargs) -> AbstractExportRepository:
     mapping: Dict[str, Type[AbstractExportRepository]] = {
         "PARQUET": ParquetExportRepository,
         "CSV": CSVExportRepository,
+        "TEST": TestExportRepository,
     }
     kind = kind.upper()
     if kind not in mapping.keys():

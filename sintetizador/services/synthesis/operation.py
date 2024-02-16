@@ -1124,23 +1124,6 @@ class OperationSynthetizer:
             raise RuntimeError()
         return data
 
-    # @classmethod
-    # def _default_args(cls) -> List[OperationSynthesis]:
-    #     args = [
-    #         OperationSynthesis.factory(a)
-    #         for a in cls.DEFAULT_OPERATION_SYNTHESIS_ARGS
-    #     ]
-    #     return [arg for arg in args if arg is not None]
-
-    # @classmethod
-    # def _process_variable_arguments(
-    #     cls,
-    #     args: List[str],
-    # ) -> List[OperationSynthesis]:
-    #     args_data = [OperationSynthesis.factory(c) for c in args]
-    #     valid_args = [arg for arg in args_data if arg is not None]
-    #     return valid_args
-
     @classmethod
     def _default_args(cls) -> List[OperationSynthesis]:
         args = [
@@ -1290,7 +1273,7 @@ class OperationSynthetizer:
             raise RuntimeError()
 
     @classmethod
-    def __resolve_PAT(
+    def __add_temporal_info(
         cls, df: pd.DataFrame, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         df = df.copy()
@@ -1336,7 +1319,7 @@ class OperationSynthetizer:
     ) -> pd.DataFrame:
         if df is None:
             return None
-        return cls.__resolve_PAT(df, uow)
+        return cls.__add_temporal_info(df, uow)
 
     @classmethod
     def __resolve_SIN(
@@ -2552,9 +2535,7 @@ class OperationSynthetizer:
             return pd.DataFrame(), False
 
     @classmethod
-    def __get_from_cache_if_exists(
-        cls, s: OperationSynthesis
-    ) -> pd.DataFrame:
+    def __get_from_cache_if_exists(cls, s: OperationSynthesis) -> pd.DataFrame:
         if s in cls.CACHED_SYNTHESIS.keys():
             return cls._get_from_cache(s)
         else:
