@@ -123,6 +123,9 @@ from inewave.nwlistop.vdesviouh import Vdesviouh
 from inewave.nwlistop.hmont import Hmont
 from inewave.nwlistop.hjus import Hjus
 from inewave.nwlistop.hliq import Hliq
+from inewave.nwlistop.vevapuh import Vevapuh
+from inewave.nwlistop.dposevap import Dposevap
+from inewave.nwlistop.dnegevap import Dnegevap
 
 from inewave.nwlistcf import Nwlistcfrel
 from inewave.nwlistcf import Estados
@@ -131,7 +134,6 @@ from sintetizador.model.settings import Settings
 from sintetizador.utils.encoding import converte_codificacao
 from sintetizador.model.operation.variable import Variable
 from sintetizador.model.operation.spatialresolution import SpatialResolution
-from sintetizador.model.operation.temporalresolution import TemporalResolution
 
 import platform
 
@@ -211,7 +213,6 @@ class AbstractFilesRepository(ABC):
         self,
         variable: Variable,
         spatial_resolution: SpatialResolution,
-        temporal_resolution: TemporalResolution,
         *args,
         **kwargs,
     ) -> Optional[pd.DataFrame]:
@@ -309,563 +310,469 @@ class RawFilesRepository(AbstractFilesRepository):
         self.__vazoes: Optional[Vazoes] = None
         self.__engnat: Optional[Engnat] = None
         self.__hidr: Optional[Hidr] = None
-        self.__regras: Dict[
-            Tuple[Variable, SpatialResolution, TemporalResolution], Callable
-        ] = {
+        self.__regras: Dict[Tuple[Variable, SpatialResolution], Callable] = {
             (
                 Variable.CUSTO_MARGINAL_OPERACAO,
                 SpatialResolution.SUBMERCADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: Cmargmed.read(
-                join(dir, f"cmarg{str(submercado).zfill(3)}-med.out")
-            ).valores,
-            (
-                Variable.CUSTO_MARGINAL_OPERACAO,
-                SpatialResolution.SUBMERCADO,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, submercado=1: Cmarg.read(
-                join(dir, f"cmarg{str(submercado).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, submercado=1: self.__agrega_dfs_cmo(
+                dir, submercado
+            ),
             (
                 Variable.VALOR_AGUA,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, ree=1: Vagua.read(
-                join(dir, f"vagua{str(ree).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, ree=1: self.__adiciona_coluna_patamar(
+                Vagua.read(join(dir, f"vagua{str(ree).zfill(3)}.out")).valores
+            ),
             (
                 Variable.VALOR_AGUA,
                 SpatialResolution.USINA_HIDROELETRICA,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, uhe=1: Pivarm.read(
-                join(dir, f"pivarm{str(uhe).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, uhe=1: self.__adiciona_coluna_patamar(
+                Pivarm.read(
+                    join(dir, f"pivarm{str(uhe).zfill(3)}.out")
+                ).valores
+            ),
             (
                 Variable.VALOR_AGUA_INCREMENTAL,
                 SpatialResolution.USINA_HIDROELETRICA,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, uhe=1: Pivarmincr.read(
-                join(dir, f"pivarmincr{str(uhe).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, uhe=1: self.__adiciona_coluna_patamar(
+                Pivarmincr.read(
+                    join(dir, f"pivarmincr{str(uhe).zfill(3)}.out")
+                ).valores
+            ),
             (
                 Variable.CUSTO_GERACAO_TERMICA,
                 SpatialResolution.SUBMERCADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: Cterm.read(
-                join(dir, f"cterm{str(submercado).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, submercado=1: self.__adiciona_coluna_patamar(
+                Cterm.read(
+                    join(dir, f"cterm{str(submercado).zfill(3)}.out")
+                ).valores
+            ),
             (
                 Variable.CUSTO_GERACAO_TERMICA,
                 SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, _: Ctermsin.read(join(dir, "ctermsin.out")).valores,
+            ): lambda dir, _: self.__adiciona_coluna_patamar(
+                Ctermsin.read(join(dir, "ctermsin.out")).valores
+            ),
             (
                 Variable.CUSTO_OPERACAO,
                 SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, _: Coper.read(join(dir, "coper.out")).valores,
-            (
-                Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA,
-                SpatialResolution.RESERVATORIO_EQUIVALENTE,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, ree=1: Eafb.read(
-                join(dir, f"eafb{str(ree).zfill(3)}.out")
-            ).valores,
-            (
-                Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA,
-                SpatialResolution.SUBMERCADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: Eafbm.read(
-                join(dir, f"eafbm{str(submercado).zfill(3)}.out")
-            ).valores,
-            (
-                Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA,
-                SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, _: Eafbsin.read(join(dir, "eafbsin.out")).valores,
-            (
-                Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA_RESERVATORIO,
-                SpatialResolution.RESERVATORIO_EQUIVALENTE,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, ree=1: Eaf.read(
-                join(dir, f"eaf{str(ree).zfill(3)}.out")
-            ).valores,
-            (
-                Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA_RESERVATORIO,
-                SpatialResolution.SUBMERCADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: Eafm.read(
-                join(dir, f"eafm{str(submercado).zfill(3)}.out")
-            ).valores,
-            (
-                Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA_RESERVATORIO,
-                SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.ESTAGIO,
-                # TODO - substituir quando existir na inewave
-            ): lambda dir, _: Eafbsin.read(join(dir, "eafmsin.out")).valores,
-            (
-                Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA_FIO,
-                SpatialResolution.RESERVATORIO_EQUIVALENTE,
-                TemporalResolution.ESTAGIO,
-                # TODO - substituir quando existir na inewave
-            ): lambda dir, ree=1: Eaf.read(
-                join(dir, f"efdf{str(ree).zfill(3)}.out")
-            ).valores,
-            (
-                Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA_FIO,
-                SpatialResolution.SUBMERCADO,
-                TemporalResolution.ESTAGIO,
-                # TODO - substituir quando existir na inewave
-            ): lambda dir, submercado=1: Eafm.read(
-                join(dir, f"efdfm{str(submercado).zfill(3)}.out")
-            ).valores,
-            (
-                Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA_FIO,
-                SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.ESTAGIO,
-                # TODO - substituir quando existir na inewave
-            ): lambda dir, _: Eafbsin.read(join(dir, "efdfsin.out")).valores,
-            (
-                Variable.ENERGIA_ARMAZENADA_PERCENTUAL_FINAL,
-                SpatialResolution.RESERVATORIO_EQUIVALENTE,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, ree=1: Earmfp.read(
-                join(dir, f"earmfp{str(ree).zfill(3)}.out")
-            ).valores,
-            (
-                Variable.ENERGIA_ARMAZENADA_PERCENTUAL_FINAL,
-                SpatialResolution.SUBMERCADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: Earmfpm.read(
-                join(dir, f"earmfpm{str(submercado).zfill(3)}.out")
-            ).valores,
-            (
-                Variable.ENERGIA_ARMAZENADA_PERCENTUAL_FINAL,
-                SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, _: Earmfpsin.read(
-                join(dir, "earmfpsin.out")
-            ).valores,
-            (
-                Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
-                SpatialResolution.RESERVATORIO_EQUIVALENTE,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, ree=1: Earmf.read(
-                join(dir, f"earmf{str(ree).zfill(3)}.out")
-            ).valores,
-            (
-                Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
-                SpatialResolution.SUBMERCADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: Earmfm.read(
-                join(dir, f"earmfm{str(submercado).zfill(3)}.out")
-            ).valores,
-            (
-                Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
-                SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, _: Earmfsin.read(join(dir, "earmfsin.out")).valores,
-            (
-                Variable.GERACAO_HIDRAULICA_RESERVATORIO,
-                SpatialResolution.RESERVATORIO_EQUIVALENTE,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, ree=1: self.__extrai_patamares_df(
-                Ghidr.read(join(dir, f"ghidr{str(ree).zfill(3)}.out")).valores,
-                ["TOTAL"],
+            ): lambda dir, _: self.__adiciona_coluna_patamar(
+                Coper.read(join(dir, "coper.out")).valores
             ),
             (
-                Variable.GERACAO_HIDRAULICA_RESERVATORIO,
-                SpatialResolution.SUBMERCADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: self.__extrai_patamares_df(
-                Ghidrm.read(
-                    join(dir, f"ghidrm{str(submercado).zfill(3)}.out")
-                ).valores,
-                ["TOTAL"],
+                Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA,
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            ): lambda dir, ree=1: self.__adiciona_coluna_patamar(
+                Eafb.read(join(dir, f"eafb{str(ree).zfill(3)}.out")).valores
             ),
             (
-                Variable.GERACAO_HIDRAULICA_RESERVATORIO,
+                Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA,
+                SpatialResolution.SUBMERCADO,
+            ): lambda dir, submercado=1: self.__adiciona_coluna_patamar(
+                Eafbm.read(
+                    join(dir, f"eafbm{str(submercado).zfill(3)}.out")
+                ).valores
+            ),
+            (
+                Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA,
                 SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, _: self.__extrai_patamares_df(
-                Ghidrsin.read(join(dir, "ghidrsin.out")).valores, ["TOTAL"]
+            ): lambda dir, _: self.__adiciona_coluna_patamar(
+                Eafbsin.read(join(dir, "eafbsin.out")).valores
+            ),
+            (
+                Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA_RESERVATORIO,
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            ): lambda dir, ree=1: self.__adiciona_coluna_patamar(
+                Eaf.read(join(dir, f"eaf{str(ree).zfill(3)}.out")).valores
+            ),
+            (
+                Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA_RESERVATORIO,
+                SpatialResolution.SUBMERCADO,
+            ): lambda dir, submercado=1: self.__adiciona_coluna_patamar(
+                Eafm.read(
+                    join(dir, f"eafm{str(submercado).zfill(3)}.out")
+                ).valores
+            ),
+            (
+                Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA_RESERVATORIO,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+                # TODO - substituir quando existir na inewave
+            ): lambda dir, _: self.__adiciona_coluna_patamar(
+                Eafbsin.read(join(dir, "eafmsin.out")).valores
+            ),
+            (
+                Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA_FIO,
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+                # TODO - substituir quando existir na inewave
+            ): lambda dir, ree=1: self.__adiciona_coluna_patamar(
+                Eaf.read(join(dir, f"efdf{str(ree).zfill(3)}.out")).valores
+            ),
+            (
+                Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA_FIO,
+                SpatialResolution.SUBMERCADO,
+                # TODO - substituir quando existir na inewave
+            ): lambda dir, submercado=1: self.__adiciona_coluna_patamar(
+                Eafm.read(
+                    join(dir, f"efdfm{str(submercado).zfill(3)}.out")
+                ).valores
+            ),
+            (
+                Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA_FIO,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+                # TODO - substituir quando existir na inewave
+            ): lambda dir, _: self.__adiciona_coluna_patamar(
+                Eafbsin.read(join(dir, "efdfsin.out")).valores
+            ),
+            (
+                Variable.ENERGIA_ARMAZENADA_PERCENTUAL_FINAL,
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            ): lambda dir, ree=1: self.__adiciona_coluna_patamar(
+                Earmfp.read(
+                    join(dir, f"earmfp{str(ree).zfill(3)}.out")
+                ).valores
+            ),
+            (
+                Variable.ENERGIA_ARMAZENADA_PERCENTUAL_FINAL,
+                SpatialResolution.SUBMERCADO,
+            ): lambda dir, submercado=1: self.__adiciona_coluna_patamar(
+                Earmfpm.read(
+                    join(dir, f"earmfpm{str(submercado).zfill(3)}.out")
+                ).valores
+            ),
+            (
+                Variable.ENERGIA_ARMAZENADA_PERCENTUAL_FINAL,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+            ): lambda dir, _: self.__adiciona_coluna_patamar(
+                Earmfpsin.read(join(dir, "earmfpsin.out")).valores
+            ),
+            (
+                Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            ): lambda dir, ree=1: self.__adiciona_coluna_patamar(
+                Earmf.read(join(dir, f"earmf{str(ree).zfill(3)}.out")).valores
+            ),
+            (
+                Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
+                SpatialResolution.SUBMERCADO,
+            ): lambda dir, submercado=1: self.__adiciona_coluna_patamar(
+                Earmfm.read(
+                    join(dir, f"earmfm{str(submercado).zfill(3)}.out")
+                ).valores
+            ),
+            (
+                Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+            ): lambda dir, _: self.__adiciona_coluna_patamar(
+                Earmfsin.read(join(dir, "earmfsin.out")).valores
             ),
             (
                 Variable.GERACAO_HIDRAULICA_RESERVATORIO,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, ree=1: self.__extrai_patamares_df(
+            ): lambda dir, ree=1: self.__substitui_coluna_patamar(
                 Ghidr.read(join(dir, f"ghidr{str(ree).zfill(3)}.out")).valores,
             ),
             (
                 Variable.GERACAO_HIDRAULICA_RESERVATORIO,
                 SpatialResolution.SUBMERCADO,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, submercado=1: self.__extrai_patamares_df(
+            ): lambda dir, submercado=1: self.__substitui_coluna_patamar(
                 Ghidrm.read(
                     join(dir, f"ghidrm{str(submercado).zfill(3)}.out")
-                ).valores,
+                ).valores
             ),
             (
                 Variable.GERACAO_HIDRAULICA_RESERVATORIO,
                 SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, _: self.__extrai_patamares_df(
-                Ghidrsin.read(join(dir, "ghidrsin.out")).valores,
+            ): lambda dir, _: self.__substitui_coluna_patamar(
+                Ghidrsin.read(join(dir, "ghidrsin.out")).valores
             ),
             (
                 Variable.GERACAO_HIDRAULICA_FIO,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
-                TemporalResolution.ESTAGIO,
                 # TODO - Substituir quando existir na inewave
-            ): lambda dir, ree=1: self.__extrai_patamares_df(
-                Evert.read(join(dir, f"gfiol{str(ree).zfill(3)}.out")).valores,
-                ["TOTAL"],
+            ): lambda dir, ree=1: self.__adiciona_coluna_patamar(
+                Evert.read(join(dir, f"gfiol{str(ree).zfill(3)}.out")).valores
             ),
             (
                 Variable.GERACAO_HIDRAULICA_FIO,
                 SpatialResolution.SUBMERCADO,
-                TemporalResolution.ESTAGIO,
                 # TODO - Substituir quando existir na inewave
-            ): lambda dir, submercado=1: self.__extrai_patamares_df(
+            ): lambda dir, submercado=1: self.__adiciona_coluna_patamar(
                 Evertm.read(
                     join(dir, f"gfiolm{str(submercado).zfill(3)}.out")
-                ).valores,
-                ["TOTAL"],
+                ).valores
             ),
             (
                 Variable.GERACAO_HIDRAULICA_FIO,
                 SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.ESTAGIO,
                 # TODO - Substituir quando existir na inewave
-            ): lambda dir, _: self.__extrai_patamares_df(
-                Evertsin.read(join(dir, "gfiolsin.out")).valores, ["TOTAL"]
-            ),
-            (
-                Variable.GERACAO_HIDRAULICA_FIO,
-                SpatialResolution.RESERVATORIO_EQUIVALENTE,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, ree=1: self.__extrai_patamares_df(
-                Ghidr.read(join(dir, f"ghidr{str(ree).zfill(3)}.out")).valores,
-            ),
-            (
-                Variable.GERACAO_HIDRAULICA_FIO,
-                SpatialResolution.SUBMERCADO,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, submercado=1: self.__extrai_patamares_df(
-                Ghidrm.read(
-                    join(dir, f"ghidrm{str(submercado).zfill(3)}.out")
-                ).valores,
-            ),
-            (
-                Variable.GERACAO_HIDRAULICA_FIO,
-                SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, _: self.__extrai_patamares_df(
-                Ghidrsin.read(join(dir, "ghidrsin.out")).valores,
+            ): lambda dir, _: self.__adiciona_coluna_patamar(
+                Evertsin.read(join(dir, "gfiolsin.out")).valores
             ),
             (
                 Variable.GERACAO_HIDRAULICA,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, ree=1: self.__extrai_patamares_df(
-                Ghtot.read(join(dir, f"ghtot{str(ree).zfill(3)}.out")).valores,
-                ["TOTAL"],
+            ): lambda dir, ree=1: self.__substitui_coluna_patamar(
+                Ghtot.read(join(dir, f"ghtot{str(ree).zfill(3)}.out")).valores
             ),
             (
                 Variable.GERACAO_HIDRAULICA,
                 SpatialResolution.SUBMERCADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: self.__extrai_patamares_df(
+            ): lambda dir, submercado=1: self.__substitui_coluna_patamar(
                 Ghtotm.read(
                     join(dir, f"ghtotm{str(submercado).zfill(3)}.out")
-                ).valores,
-                ["TOTAL"],
+                ).valores
             ),
             (
                 Variable.GERACAO_HIDRAULICA,
                 SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, _: self.__extrai_patamares_df(
-                Ghtotsin.read(join(dir, "ghtotsin.out")).valores, ["TOTAL"]
-            ),
-            (
-                Variable.GERACAO_HIDRAULICA,
-                SpatialResolution.RESERVATORIO_EQUIVALENTE,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, ree=1: self.__extrai_patamares_df(
-                Ghtot.read(join(dir, f"ghtot{str(ree).zfill(3)}.out")).valores,
-            ),
-            (
-                Variable.GERACAO_HIDRAULICA,
-                SpatialResolution.SUBMERCADO,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, submercado=1: self.__extrai_patamares_df(
-                Ghtotm.read(
-                    join(dir, f"ghtotm{str(submercado).zfill(3)}.out")
-                ).valores,
-            ),
-            (
-                Variable.GERACAO_HIDRAULICA,
-                SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, _: self.__extrai_patamares_df(
-                Ghtotsin.read(join(dir, "ghtotsin.out")).valores,
+            ): lambda dir, _: self.__substitui_coluna_patamar(
+                Ghtotsin.read(join(dir, "ghtotsin.out")).valores
             ),
             (
                 Variable.GERACAO_TERMICA,
                 SpatialResolution.USINA_TERMELETRICA,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, submercado=1: self.__extrai_patamares_df(
+            ): lambda dir, submercado=1: self.__calcula_patamar_medio_soma_gter_ute(
                 Gtert.read(
                     join(dir, f"gtert{str(submercado).zfill(3)}.out")
-                ).valores,
+                ).valores
             ),
             (
                 Variable.GERACAO_TERMICA,
                 SpatialResolution.SUBMERCADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: self.__extrai_patamares_df(
+            ): lambda dir, submercado=1: self.__substitui_coluna_patamar(
                 Gttot.read(
                     join(dir, f"gttot{str(submercado).zfill(3)}.out")
-                ).valores,
-                ["TOTAL"],
+                ).valores
             ),
             (
                 Variable.GERACAO_TERMICA,
                 SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, _: self.__extrai_patamares_df(
-                Gttotsin.read(join(dir, "gttotsin.out")).valores, ["TOTAL"]
-            ),
-            (
-                Variable.GERACAO_TERMICA,
-                SpatialResolution.SUBMERCADO,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, submercado=1: self.__extrai_patamares_df(
-                Gttot.read(
-                    join(dir, f"gttot{str(submercado).zfill(3)}.out")
-                ).valores,
-            ),
-            (
-                Variable.GERACAO_TERMICA,
-                SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, _: self.__extrai_patamares_df(
-                Gttotsin.read(join(dir, "gttotsin.out")).valores,
+            ): lambda dir, _: self.__substitui_coluna_patamar(
+                Gttotsin.read(join(dir, "gttotsin.out")).valores
             ),
             (
                 Variable.ENERGIA_VERTIDA_RESERV,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, ree=1: Evert.read(
-                join(dir, f"evert{str(ree).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, ree=1: self.__adiciona_coluna_patamar(
+                Evert.read(join(dir, f"evert{str(ree).zfill(3)}.out")).valores
+            ),
             (
                 Variable.ENERGIA_VERTIDA_RESERV,
                 SpatialResolution.SUBMERCADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: Evertm.read(
-                join(dir, f"evertm{str(submercado).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, submercado=1: self.__adiciona_coluna_patamar(
+                Evertm.read(
+                    join(dir, f"evertm{str(submercado).zfill(3)}.out")
+                ).valores
+            ),
             (
                 Variable.ENERGIA_VERTIDA_RESERV,
                 SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, _: Evertsin.read(join(dir, "evertsin.out")).valores,
+            ): lambda dir, _: self.__adiciona_coluna_patamar(
+                Evertsin.read(join(dir, "evertsin.out")).valores
+            ),
             (
                 Variable.ENERGIA_VERTIDA_FIO,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, ree=1: Perdf.read(
-                join(dir, f"perdf{str(ree).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, ree=1: self.__adiciona_coluna_patamar(
+                Perdf.read(join(dir, f"perdf{str(ree).zfill(3)}.out")).valores
+            ),
             (
                 Variable.ENERGIA_VERTIDA_FIO,
                 SpatialResolution.SUBMERCADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: Perdfm.read(
-                join(dir, f"perdfm{str(submercado).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, submercado=1: self.__adiciona_coluna_patamar(
+                Perdfm.read(
+                    join(dir, f"perdfm{str(submercado).zfill(3)}.out")
+                ).valores
+            ),
             (
                 Variable.ENERGIA_VERTIDA_FIO,
                 SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, _: Perdfsin.read(join(dir, "perdfsin.out")).valores,
+            ): lambda dir, _: self.__adiciona_coluna_patamar(
+                Perdfsin.read(join(dir, "perdfsin.out")).valores
+            ),
             (
                 Variable.ENERGIA_VERTIDA_FIO_TURBINAVEL,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, ree=1: Verturb.read(
-                join(dir, f"verturb{str(ree).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, ree=1: self.__adiciona_coluna_patamar(
+                Verturb.read(
+                    join(dir, f"verturb{str(ree).zfill(3)}.out")
+                ).valores
+            ),
             (
                 Variable.ENERGIA_VERTIDA_FIO_TURBINAVEL,
                 SpatialResolution.SUBMERCADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: Verturbm.read(
-                join(dir, f"verturbm{str(submercado).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, submercado=1: self.__adiciona_coluna_patamar(
+                Verturbm.read(
+                    join(dir, f"verturbm{str(submercado).zfill(3)}.out")
+                ).valores
+            ),
             (
                 Variable.ENERGIA_VERTIDA_FIO_TURBINAVEL,
                 SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, _: Verturbsin.read(
-                join(dir, "verturbsin.out")
-            ).valores,
+            ): lambda dir, _: self.__adiciona_coluna_patamar(
+                Verturbsin.read(join(dir, "verturbsin.out")).valores
+            ),
             (
                 Variable.ENERGIA_DESVIO_RESERVATORIO,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, ree=1: Edesvc.read(
-                join(dir, f"edesvc{str(ree).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, ree=1: self.__adiciona_coluna_patamar(
+                Edesvc.read(
+                    join(dir, f"edesvc{str(ree).zfill(3)}.out")
+                ).valores
+            ),
             (
                 Variable.ENERGIA_DESVIO_RESERVATORIO,
                 SpatialResolution.SUBMERCADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: Edesvcm.read(
-                join(dir, f"edesvcm{str(submercado).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, submercado=1: self.__adiciona_coluna_patamar(
+                Edesvcm.read(
+                    join(dir, f"edesvcm{str(submercado).zfill(3)}.out")
+                ).valores
+            ),
             (
                 Variable.ENERGIA_DESVIO_RESERVATORIO,
                 SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, _: Edesvcsin.read(
-                join(dir, "edesvcsin.out")
-            ).valores,
+            ): lambda dir, _: self.__adiciona_coluna_patamar(
+                Edesvcsin.read(join(dir, "edesvcsin.out")).valores
+            ),
             (
                 # TODO - substituir quando existir na inewave
                 Variable.ENERGIA_DESVIO_FIO,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, ree=1: Edesvc.read(
-                join(dir, f"edesvf{str(ree).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, ree=1: self.__adiciona_coluna_patamar(
+                Edesvc.read(
+                    join(dir, f"edesvf{str(ree).zfill(3)}.out")
+                ).valores
+            ),
             (
                 # TODO - substituir quando existir na inewave
                 Variable.ENERGIA_DESVIO_FIO,
                 SpatialResolution.SUBMERCADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: Edesvcm.read(
-                join(dir, f"edesvfm{str(submercado).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, submercado=1: self.__adiciona_coluna_patamar(
+                Edesvcm.read(
+                    join(dir, f"edesvfm{str(submercado).zfill(3)}.out")
+                ).valores
+            ),
             (
                 # TODO - substituir quando existir na inewave
                 Variable.ENERGIA_DESVIO_FIO,
                 SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, _: Edesvcsin.read(
-                join(dir, "edesvfsin.out")
-            ).valores,
+            ): lambda dir, _: self.__adiciona_coluna_patamar(
+                Edesvcsin.read(join(dir, "edesvfsin.out")).valores
+            ),
             (
                 Variable.META_ENERGIA_DEFLUENCIA_MINIMA,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, ree=1: Mevmin.read(
-                join(dir, f"mevmin{str(ree).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, ree=1: self.__adiciona_coluna_patamar(
+                Mevmin.read(
+                    join(dir, f"mevmin{str(ree).zfill(3)}.out")
+                ).valores
+            ),
             (
                 Variable.META_ENERGIA_DEFLUENCIA_MINIMA,
                 SpatialResolution.SUBMERCADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: Mevminm.read(
-                join(dir, f"mevminm{str(submercado).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, submercado=1: self.__adiciona_coluna_patamar(
+                Mevminm.read(
+                    join(dir, f"mevminm{str(submercado).zfill(3)}.out")
+                ).valores
+            ),
             (
                 Variable.META_ENERGIA_DEFLUENCIA_MINIMA,
                 SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, _: Mevminsin.read(
-                join(dir, "mevminsin.out")
-            ).valores,
+            ): lambda dir, _: self.__adiciona_coluna_patamar(
+                Mevminsin.read(join(dir, "mevminsin.out")).valores
+            ),
             (
                 Variable.ENERGIA_VOLUME_MORTO,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, ree=1: Vmort.read(
-                join(dir, f"vmort{str(ree).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, ree=1: self.__adiciona_coluna_patamar(
+                Vmort.read(join(dir, f"vmort{str(ree).zfill(3)}.out")).valores
+            ),
             (
                 Variable.ENERGIA_VOLUME_MORTO,
                 SpatialResolution.SUBMERCADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: Vmortm.read(
-                join(dir, f"vmortm{str(submercado).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, submercado=1: self.__adiciona_coluna_patamar(
+                Vmortm.read(
+                    join(dir, f"vmortm{str(submercado).zfill(3)}.out")
+                ).valores
+            ),
             (
                 Variable.ENERGIA_VOLUME_MORTO,
                 SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, _: Vmortsin.read(join(dir, "vmortsin.out")).valores,
+            ): lambda dir, _: self.__adiciona_coluna_patamar(
+                Vmortsin.read(join(dir, "vmortsin.out")).valores
+            ),
             (
                 Variable.ENERGIA_EVAPORACAO,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, ree=1: Evapo.read(
-                join(dir, f"evapo{str(ree).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, ree=1: self.__adiciona_coluna_patamar(
+                Evapo.read(join(dir, f"evapo{str(ree).zfill(3)}.out")).valores
+            ),
             (
                 Variable.ENERGIA_EVAPORACAO,
                 SpatialResolution.SUBMERCADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: Evapom.read(
-                join(dir, f"evapom{str(submercado).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, submercado=1: self.__adiciona_coluna_patamar(
+                Evapom.read(
+                    join(dir, f"evapom{str(submercado).zfill(3)}.out")
+                ).valores
+            ),
             (
                 Variable.ENERGIA_EVAPORACAO,
                 SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, _: Evaporsin.read(
-                join(dir, "evaporsin.out")
-            ).valores,
+            ): lambda dir, _: self.__adiciona_coluna_patamar(
+                Evaporsin.read(join(dir, "evaporsin.out")).valores
+            ),
             (
                 Variable.VAZAO_AFLUENTE,
                 SpatialResolution.USINA_HIDROELETRICA,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, uhe=1: Qafluh.read(
-                join(dir, f"qafluh{str(uhe).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, uhe=1: self.__adiciona_coluna_patamar(
+                Qafluh.read(
+                    join(dir, f"qafluh{str(uhe).zfill(3)}.out")
+                ).valores
+            ),
             (
                 Variable.VAZAO_INCREMENTAL,
                 SpatialResolution.USINA_HIDROELETRICA,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, uhe=1: Qincruh.read(
-                join(dir, f"qincruh{str(uhe).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, uhe=1: self.__adiciona_coluna_patamar(
+                Qincruh.read(
+                    join(dir, f"qincruh{str(uhe).zfill(3)}.out")
+                ).valores
+            ),
             (
                 Variable.VOLUME_TURBINADO,
                 SpatialResolution.USINA_HIDROELETRICA,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, uhe=1: Vturuh.read(
-                join(dir, f"vturuh{str(uhe).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, uhe=1: self.__calcula_patamar_medio_soma(
+                Vturuh.read(
+                    join(dir, f"vturuh{str(uhe).zfill(3)}.out")
+                ).valores
+            ),
             (
                 Variable.VOLUME_VERTIDO,
                 SpatialResolution.USINA_HIDROELETRICA,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, uhe=1: Vertuh.read(
-                join(dir, f"vertuh{str(uhe).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, uhe=1: self.__calcula_patamar_medio_soma(
+                Vertuh.read(
+                    join(dir, f"vertuh{str(uhe).zfill(3)}.out")
+                ).valores
+            ),
             (
                 Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
                 SpatialResolution.USINA_HIDROELETRICA,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, uhe=1: Varmuh.read(
-                join(dir, f"varmuh{str(uhe).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, uhe=1: self.__adiciona_coluna_patamar(
+                Varmuh.read(
+                    join(dir, f"varmuh{str(uhe).zfill(3)}.out")
+                ).valores
+            ),
             (
                 Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
                 SpatialResolution.USINA_HIDROELETRICA,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, uhe=1: Varmpuh.read(
-                join(dir, f"varmpuh{str(uhe).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, uhe=1: self.__adiciona_coluna_patamar(
+                Varmpuh.read(
+                    join(dir, f"varmpuh{str(uhe).zfill(3)}.out")
+                ).valores
+            ),
             (
                 Variable.GERACAO_HIDRAULICA,
                 SpatialResolution.USINA_HIDROELETRICA,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, uhe=1: self.__extrai_patamares_df(
+            ): lambda dir, uhe=1: self.__calcula_patamar_medio_soma(
                 Ghiduh.read(
                     join(dir, f"ghiduh{str(uhe).zfill(3)}.out")
                 ).valores
@@ -873,129 +780,69 @@ class RawFilesRepository(AbstractFilesRepository):
             (
                 Variable.VELOCIDADE_VENTO,
                 SpatialResolution.PARQUE_EOLICO_EQUIVALENTE,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, uee=1: Vento.read(
-                join(dir, f"vento{str(uee).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, uee=1: self.__adiciona_coluna_patamar(
+                Vento.read(join(dir, f"vento{str(uee).zfill(3)}.out")).valores
+            ),
             (
                 Variable.GERACAO_EOLICA,
                 SpatialResolution.PARQUE_EOLICO_EQUIVALENTE,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, uee=1: self.__extrai_patamares_df(
+            ): lambda dir, uee=1: self.__substitui_coluna_patamar(
                 Geol.read(join(dir, f"geol{str(uee).zfill(3)}.out")).valores,
-                ["TOTAL"],
             ),
             (
                 Variable.GERACAO_EOLICA,
                 SpatialResolution.SUBMERCADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: self.__extrai_patamares_df(
+            ): lambda dir, submercado=1: self.__substitui_coluna_patamar(
                 Geolm.read(
                     join(dir, f"geolm{str(submercado).zfill(3)}.out")
                 ).valores,
-                ["TOTAL"],
             ),
             (
                 Variable.GERACAO_EOLICA,
                 SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, _: self.__extrai_patamares_df(
-                Geolsin.read(join(dir, "geolsin.out")).valores, ["TOTAL"]
-            ),
-            (
-                Variable.GERACAO_EOLICA,
-                SpatialResolution.PARQUE_EOLICO_EQUIVALENTE,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, uee=1: self.__extrai_patamares_df(
-                Geol.read(join(dir, f"geol{str(uee).zfill(3)}.out")).valores
-            ),
-            (
-                Variable.GERACAO_EOLICA,
-                SpatialResolution.SUBMERCADO,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, submercado=1: self.__extrai_patamares_df(
-                Geolm.read(
-                    join(dir, f"geolm{str(submercado).zfill(3)}.out")
-                ).valores
-            ),
-            (
-                Variable.GERACAO_EOLICA,
-                SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, _: self.__extrai_patamares_df(
+            ): lambda dir, _: self.__substitui_coluna_patamar(
                 Geolsin.read(join(dir, "geolsin.out")).valores
             ),
             (
+                Variable.CORTE_GERACAO_EOLICA,
+                SpatialResolution.SUBMERCADO,
+            ): lambda dir, submercado=1: self.__substitui_coluna_patamar(
+                Corteolm.read(
+                    join(dir, f"corteolm{str(submercado).zfill(3)}.out")
+                ).valores,
+            ),
+            (
                 Variable.DEFICIT,
                 SpatialResolution.SUBMERCADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: self.__extrai_patamares_df(
+            ): lambda dir, submercado=1: self.__substitui_coluna_patamar(
                 Def.read(
                     join(dir, f"def{str(submercado).zfill(3)}p001.out")
                 ).valores,
-                ["TOTAL"],
             ),
             (
                 Variable.DEFICIT,
                 SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, _: self.__extrai_patamares_df(
-                Def.read(join(dir, "defsinp001.out")).valores, ["TOTAL"]
-            ),
-            (
-                Variable.DEFICIT,
-                SpatialResolution.SUBMERCADO,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, submercado=1: self.__extrai_patamares_df(
-                Def.read(
-                    join(dir, f"def{str(submercado).zfill(3)}p001.out")
-                ).valores
-            ),
-            (
-                Variable.DEFICIT,
-                SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, _: self.__extrai_patamares_df(
+            ): lambda dir, _: self.__substitui_coluna_patamar(
                 Def.read(join(dir, "defsinp001.out")).valores
             ),
             (
                 Variable.EXCESSO,
                 SpatialResolution.SUBMERCADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: self.__extrai_patamares_df(
+            ): lambda dir, submercado=1: self.__substitui_coluna_patamar(
                 Exces.read(
                     join(dir, f"exces{str(submercado).zfill(3)}.out")
                 ).valores,
-                ["TOTAL"],
             ),
             (
                 Variable.EXCESSO,
                 SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, _: self.__extrai_patamares_df(
-                Excessin.read(join(dir, "excessin.out")).valores, ["TOTAL"]
-            ),
-            (
-                Variable.EXCESSO,
-                SpatialResolution.SUBMERCADO,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, submercado=1: self.__extrai_patamares_df(
-                Exces.read(
-                    join(dir, f"exces{str(submercado).zfill(3)}.out")
-                ).valores
-            ),
-            (
-                Variable.EXCESSO,
-                SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, _: self.__extrai_patamares_df(
+            ): lambda dir, _: self.__substitui_coluna_patamar(
                 Excessin.read(join(dir, "excessin.out")).valores
             ),
             (
                 Variable.INTERCAMBIO,
                 SpatialResolution.PAR_SUBMERCADOS,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, submercados=(1, 2): self.__extrai_patamares_df(
+            ): lambda dir, submercados=(1, 2): self.__substitui_coluna_patamar(
                 Intercambio.read(
                     join(
                         dir,
@@ -1003,69 +850,39 @@ class RawFilesRepository(AbstractFilesRepository):
                         + f"{str(submercados[1]).zfill(3)}.out",
                     )
                 ).valores,
-                ["TOTAL"],
-            ),
-            (
-                Variable.INTERCAMBIO,
-                SpatialResolution.PAR_SUBMERCADOS,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, submercados=(1, 2): self.__extrai_patamares_df(
-                Intercambio.read(
-                    join(
-                        dir,
-                        f"int{str(submercados[0]).zfill(3)}"
-                        + f"{str(submercados[1]).zfill(3)}.out",
-                    ),
-                ).valores
             ),
             (
                 Variable.CUSTO_DEFICIT,
                 SpatialResolution.SUBMERCADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: Cdef.read(
-                join(dir, f"cdef{str(submercado).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, submercado=1: self.__adiciona_coluna_patamar(
+                Cdef.read(
+                    join(dir, f"cdef{str(submercado).zfill(3)}.out")
+                ).valores
+            ),
             (
                 Variable.CUSTO_DEFICIT,
                 SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, _: Cdefsin.read(join(dir, "cdefsin.out")).valores,
+            ): lambda dir, _: self.__adiciona_coluna_patamar(
+                Cdefsin.read(join(dir, "cdefsin.out")).valores
+            ),
             (
                 Variable.MERCADO_LIQUIDO,
                 SpatialResolution.SUBMERCADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: Mercl.read(
-                join(dir, f"mercl{str(submercado).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, submercado=1: self.__adiciona_coluna_patamar(
+                Mercl.read(
+                    join(dir, f"mercl{str(submercado).zfill(3)}.out")
+                ).valores
+            ),
             (
                 Variable.MERCADO_LIQUIDO,
                 SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, _: Merclsin.read(join(dir, "merclsin.out")).valores,
-            (
-                Variable.CORTE_GERACAO_EOLICA,
-                SpatialResolution.SUBMERCADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: self.__extrai_patamares_df(
-                Corteolm.read(
-                    join(dir, f"corteolm{str(submercado).zfill(3)}.out")
-                ).valores,
-                ["TOTAL"],
-            ),
-            (
-                Variable.CORTE_GERACAO_EOLICA,
-                SpatialResolution.SUBMERCADO,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, submercado=1: self.__extrai_patamares_df(
-                Corteolm.read(
-                    join(dir, f"corteolm{str(submercado).zfill(3)}.out")
-                ).valores
+            ): lambda dir, _: self.__adiciona_coluna_patamar(
+                Merclsin.read(join(dir, "merclsin.out")).valores
             ),
             (
                 Variable.VIOLACAO_DEFLUENCIA_MINIMA,
                 SpatialResolution.USINA_HIDROELETRICA,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, uhe=1: self.__extrai_patamares_df(
+            ): lambda dir, uhe=1: self.__calcula_patamar_medio_soma(
                 Depminuh.read(
                     join(dir, f"depminuh{str(uhe).zfill(3)}.out")
                 ).valores
@@ -1073,8 +890,7 @@ class RawFilesRepository(AbstractFilesRepository):
             (
                 Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
                 SpatialResolution.USINA_HIDROELETRICA,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, uhe=1: self.__extrai_patamares_df(
+            ): lambda dir, uhe=1: self.__calcula_patamar_medio_soma(
                 Dvazmax.read(
                     join(dir, f"dvazmax{str(uhe).zfill(3)}.out")
                 ).valores
@@ -1082,8 +898,7 @@ class RawFilesRepository(AbstractFilesRepository):
             (
                 Variable.VIOLACAO_TURBINAMENTO_MINIMO,
                 SpatialResolution.USINA_HIDROELETRICA,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, uhe=1: self.__extrai_patamares_df(
+            ): lambda dir, uhe=1: self.__calcula_patamar_medio_soma(
                 Dtbmin.read(
                     join(dir, f"dtbmin{str(uhe).zfill(3)}.out")
                 ).valores
@@ -1091,8 +906,7 @@ class RawFilesRepository(AbstractFilesRepository):
             (
                 Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
                 SpatialResolution.USINA_HIDROELETRICA,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, uhe=1: self.__extrai_patamares_df(
+            ): lambda dir, uhe=1: self.__calcula_patamar_medio_soma(
                 Dtbmax.read(
                     join(dir, f"dtbmax{str(uhe).zfill(3)}.out")
                 ).valores
@@ -1100,8 +914,7 @@ class RawFilesRepository(AbstractFilesRepository):
             (
                 Variable.VIOLACAO_FPHA,
                 SpatialResolution.USINA_HIDROELETRICA,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, uhe=1: self.__extrai_patamares_df(
+            ): lambda dir, uhe=1: self.__calcula_patamar_medio_soma(
                 Dfphauh.read(
                     join(dir, f"dfphauh{str(uhe).zfill(3)}.out")
                 ).valores
@@ -1109,64 +922,69 @@ class RawFilesRepository(AbstractFilesRepository):
             (
                 Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, ree=1: Vevmin.read(
-                join(dir, f"vevmin{str(ree).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, ree=1: self.__adiciona_coluna_patamar(
+                Vevmin.read(
+                    join(dir, f"vevmin{str(ree).zfill(3)}.out")
+                ).valores
+            ),
             (
                 Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
                 SpatialResolution.SUBMERCADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: Vevminm.read(
-                join(dir, f"vevminm{str(submercado).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, submercado=1: self.__adiciona_coluna_patamar(
+                Vevminm.read(
+                    join(dir, f"vevminm{str(submercado).zfill(3)}.out")
+                ).valores
+            ),
             (
                 Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
                 SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, _: Vevminsin.read(
-                join(dir, "vevminsin.out")
-            ).valores,
+            ): lambda dir, _: self.__adiciona_coluna_patamar(
+                Vevminsin.read(join(dir, "vevminsin.out")).valores
+            ),
             (
                 Variable.VIOLACAO_VMINOP,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, ree=1: Invade.read(
-                join(dir, f"invade{str(ree).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, ree=1: self.__adiciona_coluna_patamar(
+                Invade.read(
+                    join(dir, f"invade{str(ree).zfill(3)}.out")
+                ).valores
+            ),
             (
                 Variable.VIOLACAO_VMINOP,
                 SpatialResolution.SUBMERCADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: Invadem.read(
-                join(dir, f"invadem{str(submercado).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, submercado=1: self.__adiciona_coluna_patamar(
+                Invadem.read(
+                    join(dir, f"invadem{str(submercado).zfill(3)}.out")
+                ).valores
+            ),
             (
                 Variable.VOLUME_RETIRADO,
                 SpatialResolution.USINA_HIDROELETRICA,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, uhe=1: Desvuh.read(
-                join(dir, f"desvuh{str(uhe).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, uhe=1: self.__adiciona_coluna_patamar(
+                Desvuh.read(
+                    join(dir, f"desvuh{str(uhe).zfill(3)}.out")
+                ).valores
+            ),
             (
                 Variable.VOLUME_DESVIADO,
                 SpatialResolution.USINA_HIDROELETRICA,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, uhe=1: Vdesviouh.read(
-                join(dir, f"vdesviouh{str(uhe).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, uhe=1: self.__calcula_patamar_medio_soma(
+                Vdesviouh.read(
+                    join(dir, f"vdesviouh{str(uhe).zfill(3)}.out")
+                ).valores
+            ),
             (
                 Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
                 SpatialResolution.USINA_HIDROELETRICA,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, uhe=1: Vghminuh.read(
-                join(dir, f"vghminuh{str(uhe).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, uhe=1: self.__calcula_patamar_medio_soma(
+                Vghminuh.read(
+                    join(dir, f"vghminuh{str(uhe).zfill(3)}.out")
+                ).valores
+            ),
             (
                 Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, ree=1: self.__extrai_patamares_df(
+            ): lambda dir, ree=1: self.__substitui_coluna_patamar(
                 Vghmin.read(
                     join(dir, f"vghmin{str(ree).zfill(3)}.out")
                 ).valores,
@@ -1174,8 +992,7 @@ class RawFilesRepository(AbstractFilesRepository):
             (
                 Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
                 SpatialResolution.SUBMERCADO,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, submercado=1: self.__extrai_patamares_df(
+            ): lambda dir, submercado=1: self.__substitui_coluna_patamar(
                 Vghminm.read(
                     join(dir, f"vghminm{str(submercado).zfill(3)}.out")
                 ).valores
@@ -1183,74 +1000,99 @@ class RawFilesRepository(AbstractFilesRepository):
             (
                 Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
                 SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, _: self.__extrai_patamares_df(
-                Vghminsin.read(join(dir, "vghminmsin.out")).valores
-            ),
-            (
-                Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
-                SpatialResolution.RESERVATORIO_EQUIVALENTE,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, ree=1: self.__extrai_patamares_df(
-                Vghmin.read(
-                    join(dir, f"vghmin{str(ree).zfill(3)}.out")
-                ).valores,
-                patamares=["TOTAL"],
-            ),
-            (
-                Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
-                SpatialResolution.SUBMERCADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, submercado=1: self.__extrai_patamares_df(
-                Vghminm.read(
-                    join(dir, f"vghminm{str(submercado).zfill(3)}.out")
-                ).valores,
-                patamares=["TOTAL"],
-            ),
-            (
-                Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
-                SpatialResolution.SISTEMA_INTERLIGADO,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, _: self.__extrai_patamares_df(
-                Vghminsin.read(join(dir, "vghminmsin.out")).valores,
-                patamares=["TOTAL"],
+            ): lambda dir, _: self.__substitui_coluna_patamar(
+                Vghminsin.read(join(dir, "vghminsin.out")).valores
             ),
             (
                 Variable.COTA_MONTANTE,
                 SpatialResolution.USINA_HIDROELETRICA,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, uhe=1: Hmont.read(
-                join(dir, f"hmont{str(uhe).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, uhe=1: self.__adiciona_coluna_patamar(
+                Hmont.read(join(dir, f"hmont{str(uhe).zfill(3)}.out")).valores
+            ),
             (
                 Variable.COTA_JUSANTE,
                 SpatialResolution.USINA_HIDROELETRICA,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, uhe=1: Hjus.read(
-                join(dir, f"hjus{str(uhe).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, uhe=1: self.__substitui_coluna_patamar(
+                Hjus.read(join(dir, f"hjus{str(uhe).zfill(3)}.out")).valores
+            ),
             (
                 Variable.QUEDA_LIQUIDA,
                 SpatialResolution.USINA_HIDROELETRICA,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, uhe=1: Hliq.read(
-                join(dir, f"hliq{str(uhe).zfill(3)}.out")
-            ).valores,
+            ): lambda dir, uhe=1: self.__substitui_coluna_patamar(
+                Hliq.read(join(dir, f"hliq{str(uhe).zfill(3)}.out")).valores
+            ),
+            (
+                Variable.VOLUME_EVAPORADO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ): lambda dir, uhe=1: self.__adiciona_coluna_patamar(
+                Vevapuh.read(
+                    join(dir, f"vevapuh{str(uhe).zfill(3)}.out")
+                ).valores
+            ),
+            (
+                Variable.VIOLACAO_POSITIVA_EVAPORACAO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ): lambda dir, uhe=1: self.__adiciona_coluna_patamar(
+                Dposevap.read(
+                    join(dir, f"dpos_evap{str(uhe).zfill(3)}.out")
+                ).valores
+            ),
+            (
+                Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ): lambda dir, uhe=1: self.__adiciona_coluna_patamar(
+                Dnegevap.read(
+                    join(dir, f"dneg_evap{str(uhe).zfill(3)}.out")
+                ).valores.fillna(0.0)
+            ),
         }
 
-    def __extrai_patamares_df(
-        self, df: pd.DataFrame, patamares: Optional[list] = None
+    def __agrega_dfs_cmo(self, dir: str, submercado: int) -> pd.DataFrame:
+        df_med = Cmargmed.read(
+            join(dir, f"cmarg{str(submercado).zfill(3)}-med.out")
+        ).valores
+        df_med["patamar"] = 0
+        return pd.concat(
+            [
+                df_med,
+                Cmarg.read(
+                    join(dir, f"cmarg{str(submercado).zfill(3)}.out")
+                ).valores,
+            ],
+            ignore_index=True,
+        )
+
+    def __adiciona_coluna_patamar(self, df: pd.DataFrame) -> pd.DataFrame:
+        df["patamar"] = 0
+        return df
+
+    def __substitui_coluna_patamar(
+        self, df: pd.DataFrame, col: str = "TOTAL"
     ) -> pd.DataFrame:
-        if patamares is None:
-            arq_patamar = self.get_patamar()
-            if arq_patamar is not None:
-                num_pats = self._validate_data(
-                    arq_patamar.numero_patamares, int
-                )
-            else:
-                raise RuntimeError("Numero de patamares não encontrado")
-            patamares = [str(i) for i in range(1, num_pats + 1)]
-        return df.loc[df["patamar"].isin(patamares), :]
+        df.loc[df["patamar"] == col, "patamar"] = "0"
+        return df.astype({"patamar": int})
+
+    def __calcula_patamar_medio_soma(self, df: pd.DataFrame) -> pd.DataFrame:
+        df = df.astype({"patamar": int})
+        df_pat0 = df.copy()
+        df_pat0["patamar"] = 0
+        df_pat0 = df_pat0.groupby(["data", "serie"], as_index=False).sum(
+            numeric_only=True
+        )
+        df_pat0 = pd.concat([df, df_pat0], ignore_index=True)
+        return df_pat0.sort_values(["data", "serie", "patamar"])
+
+    def __calcula_patamar_medio_soma_gter_ute(
+        self, df: pd.DataFrame
+    ) -> pd.DataFrame:
+        df = df.astype({"patamar": int})
+        df_pat0 = df.copy()
+        df_pat0["patamar"] = 0
+        df_pat0 = df_pat0.groupby(
+            ["classe", "data", "serie"], as_index=False
+        ).sum(numeric_only=True)
+        df_pat0 = pd.concat([df, df_pat0], ignore_index=True)
+        return df_pat0.sort_values(["classe", "data", "serie", "patamar"])
 
     @property
     def caso(self) -> Caso:
@@ -1378,14 +1220,11 @@ class RawFilesRepository(AbstractFilesRepository):
         self,
         variable: Variable,
         spatial_resolution: SpatialResolution,
-        temporal_resolution: TemporalResolution,
         *args,
         **kwargs,
     ) -> Optional[pd.DataFrame]:
         try:
-            regra = self.__regras.get(
-                (variable, spatial_resolution, temporal_resolution)
-            )
+            regra = self.__regras.get((variable, spatial_resolution))
             if regra is None:
                 return None
             return regra(self.__tmppath, *args, **kwargs)
