@@ -219,6 +219,14 @@ class OperationSynthetizer:
         "HMON_UHE",
         "HJUS_UHE",
         "HLIQ_UHE",
+        "VEVP_UHE",
+        "VEVP_REE",
+        "VEVP_SBM",
+        "VEVP_SIN",
+        "VEVAP_UHE",
+        "VEVAP_REE",
+        "VEVAP_SBM",
+        "VEVAP_SIN",
     ]
 
     CACHED_SYNTHESIS: Dict[OperationSynthesis, pd.DataFrame] = {}
@@ -1028,6 +1036,100 @@ class OperationSynthetizer:
                 SpatialResolution.USINA_HIDROELETRICA,
             ),
         ],
+        OperationSynthesis(
+            Variable.VIOLACAO_EVAPORACAO,
+            SpatialResolution.USINA_HIDROELETRICA,
+        ): [
+            OperationSynthesis(
+                Variable.VIOLACAO_POSITIVA_EVAPORACAO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+            OperationSynthesis(
+                Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VIOLACAO_EVAPORACAO,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.VIOLACAO_EVAPORACAO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VIOLACAO_EVAPORACAO,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.VIOLACAO_EVAPORACAO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VIOLACAO_EVAPORACAO,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.VIOLACAO_EVAPORACAO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VIOLACAO_POSITIVA_EVAPORACAO,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.VIOLACAO_POSITIVA_EVAPORACAO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VIOLACAO_POSITIVA_EVAPORACAO,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.VIOLACAO_POSITIVA_EVAPORACAO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VIOLACAO_POSITIVA_EVAPORACAO,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.VIOLACAO_POSITIVA_EVAPORACAO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
     }
 
     SYNTHESIS_TO_CACHE: List[OperationSynthesis] = list(
@@ -1726,6 +1828,26 @@ class OperationSynthetizer:
         return df_ver
 
     @classmethod
+    def __stub_VEVAP(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        sintese_pos = OperationSynthesis(
+            Variable.VIOLACAO_POSITIVA_EVAPORACAO,
+            synthesis.spatial_resolution,
+        )
+        sintese_neg = OperationSynthesis(
+            Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
+            synthesis.spatial_resolution,
+        )
+        df_pos = cls._get_from_cache(sintese_pos)
+        df_neg = cls._get_from_cache(sintese_neg)
+
+        df_pos.loc[:, "valor"] = (
+            df_neg["valor"].to_numpy() + df_pos["valor"].to_numpy()
+        )
+        return df_pos
+
+    @classmethod
     def __stub_EVER(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
@@ -2118,6 +2240,8 @@ class OperationSynthetizer:
             return cls.__stub_QDEF(synthesis, uow)
         elif synthesis.variable == Variable.VOLUME_DEFLUENTE:
             return cls.__stub_VDEF(synthesis, uow)
+        elif synthesis.variable == Variable.VIOLACAO_EVAPORACAO:
+            return cls.__stub_VEVAP(synthesis, uow)
         else:
             return cls.__resolve_UHE_normal(synthesis, uow)
 
@@ -2519,6 +2643,10 @@ class OperationSynthetizer:
                     Variable.VAZAO_TURBINADA,
                     Variable.VAZAO_RETIRADA,
                     Variable.VAZAO_DESVIADA,
+                    Variable.VOLUME_EVAPORADO,
+                    Variable.VIOLACAO_EVAPORACAO,
+                    Variable.VIOLACAO_POSITIVA_EVAPORACAO,
+                    Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
                 ],
                 s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
             ]

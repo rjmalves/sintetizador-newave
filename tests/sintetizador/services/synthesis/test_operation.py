@@ -101,6 +101,9 @@ from inewave.nwlistop import (
     Hmont,
     Hjus,
     Hliq,
+    Vevapuh,
+    Dposevap,
+    Dnegevap,
 )
 
 from tests.conftest import DECK_TEST_DIR, q
@@ -835,6 +838,35 @@ def test_sintese_vdef_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_tur,
+        dataInicio=datetime(2023, 1, 1),
+        cenario=1,
+        usina=["FURNAS"],
+        patamar=[0],
+    )
+
+
+# VEVAP para UHE (somar VPOSEVAP com VNEGEVAP)
+
+
+def test_sintese_vevap_uhe(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["VEVAP_UHE"], uow)
+    m.assert_called()
+    df = m.mock_calls[0].args[0]
+    df_arq_pos = Dposevap.read(
+        join(DECK_TEST_DIR, "dpos_evap006.out")
+    ).valores.fillna(0.0)
+    df_arq_neg = Dnegevap.read(
+        join(DECK_TEST_DIR, "dneg_evap006.out")
+    ).valores.fillna(0.0)
+    df_arq_pos["valor"] += df_arq_neg["valor"].to_numpy()
+    __compara_sintese_nwlistop(
+        df,
+        df_arq_pos,
         dataInicio=datetime(2023, 1, 1),
         cenario=1,
         usina=["FURNAS"],
@@ -2663,4 +2695,66 @@ def test_sintese_hliq_uhe(test_settings):
         cenario=1,
         usina=["FURNAS"],
         patamar=[1],
+    )
+
+
+def test_sintese_vevp_uhe(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["VEVP_UHE"], uow)
+    m.assert_called_once()
+    df = m.mock_calls[0].args[0]
+    df_arq = Vevapuh.read(join(DECK_TEST_DIR, "vevapuh006.out")).valores
+    __compara_sintese_nwlistop(
+        df,
+        df_arq,
+        dataInicio=datetime(2023, 1, 1),
+        cenario=1,
+        usina=["FURNAS"],
+        patamar=[0],
+    )
+
+
+def test_sintese_vposevap_uhe(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["VPOSEVAP_UHE"], uow)
+    m.assert_called_once()
+    df = m.mock_calls[0].args[0]
+    df_arq = Dposevap.read(join(DECK_TEST_DIR, "dpos_evap006.out")).valores
+    __compara_sintese_nwlistop(
+        df,
+        df_arq,
+        dataInicio=datetime(2023, 1, 1),
+        cenario=1,
+        usina=["FURNAS"],
+        patamar=[0],
+    )
+
+
+def test_sintese_vnegevap_uhe(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["VNEGEVAP_UHE"], uow)
+    m.assert_called_once()
+    df = m.mock_calls[0].args[0]
+    df_arq = Dnegevap.read(
+        join(DECK_TEST_DIR, "dneg_evap006.out")
+    ).valores.fillna(0.0)
+    __compara_sintese_nwlistop(
+        df,
+        df_arq,
+        dataInicio=datetime(2023, 1, 1),
+        cenario=1,
+        usina=["FURNAS"],
+        patamar=[0],
     )

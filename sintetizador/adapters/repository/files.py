@@ -122,6 +122,9 @@ from inewave.nwlistop.vdesviouh import Vdesviouh
 from inewave.nwlistop.hmont import Hmont
 from inewave.nwlistop.hjus import Hjus
 from inewave.nwlistop.hliq import Hliq
+from inewave.nwlistop.vevapuh import Vevapuh
+from inewave.nwlistop.dposevap import Dposevap
+from inewave.nwlistop.dnegevap import Dnegevap
 
 from inewave.nwlistcf import Nwlistcfrel
 from inewave.nwlistcf import Estados
@@ -1011,6 +1014,30 @@ class RawFilesRepository(AbstractFilesRepository):
                 SpatialResolution.USINA_HIDROELETRICA,
             ): lambda dir, uhe=1: self.__substitui_coluna_patamar(
                 Hliq.read(join(dir, f"hliq{str(uhe).zfill(3)}.out")).valores
+            ),
+            (
+                Variable.VOLUME_EVAPORADO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ): lambda dir, uhe=1: self.__adiciona_coluna_patamar(
+                Vevapuh.read(
+                    join(dir, f"vevapuh{str(uhe).zfill(3)}.out")
+                ).valores
+            ),
+            (
+                Variable.VIOLACAO_POSITIVA_EVAPORACAO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ): lambda dir, uhe=1: self.__adiciona_coluna_patamar(
+                Dposevap.read(
+                    join(dir, f"dpos_evap{str(uhe).zfill(3)}.out")
+                ).valores
+            ),
+            (
+                Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ): lambda dir, uhe=1: self.__adiciona_coluna_patamar(
+                Dnegevap.read(
+                    join(dir, f"dneg_evap{str(uhe).zfill(3)}.out")
+                ).valores.fillna(0.0)
             ),
         }
 
