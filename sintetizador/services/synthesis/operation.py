@@ -1516,7 +1516,7 @@ class OperationSynthetizer:
                 uow,
             )
         )
-        dff_neg = (
+        df_neg = (
             cache_neg
             if cache_neg is not None
             else cls.__resolve_UHE(
@@ -1524,10 +1524,10 @@ class OperationSynthetizer:
                 uow,
             )
         )
-        dff_neg.loc[:, "valor"] = (
-            df_pos["valor"].to_numpy() + dff_neg["valor"].to_numpy()
+        df_neg.loc[:, "valor"] = (
+            df_pos["valor"].to_numpy() + df_neg["valor"].to_numpy()
         )
-        return dff_neg
+        return df_neg
 
     @classmethod
     def __stub_EVER(
@@ -2042,8 +2042,6 @@ class OperationSynthetizer:
             Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
             Variable.VIOLACAO_TURBINAMENTO_MINIMO,
             Variable.VIOLACAO_FPHA,
-            Variable.VIOLACAO_POSITIVA_EVAPORACAO,
-            Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
         ]:
             return cls.__stub_violacoes_UHE(synthesis, uow)
         else:
