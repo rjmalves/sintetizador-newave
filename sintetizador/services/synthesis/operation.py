@@ -296,6 +296,22 @@ class OperationSynthetizer:
         "HMON_UHE_EST",
         "HJUS_UHE_PAT",
         "HLIQ_UHE_PAT",
+        "VEVP_UHE_EST",
+        "VEVP_REE_EST",
+        "VEVP_SBM_EST",
+        "VEVP_SIN_EST",
+        "VPOSEVAP_UHE_EST",
+        "VPOSEVAP_REE_EST",
+        "VPOSEVAP_SBM_EST",
+        "VPOSEVAP_SIN_EST",
+        "VNEGEVAP_UHE_EST",
+        "VNEGEVAP_REE_EST",
+        "VNEGEVAP_SBM_EST",
+        "VNEGEVAP_SIN_EST",
+        "VEVAP_UHE_EST",
+        "VEVAP_REE_EST",
+        "VEVAP_SBM_EST",
+        "VEVAP_SIN_EST",
     ]
 
     SYNTHESIS_TO_CACHE: List[OperationSynthesis] = [
@@ -693,6 +709,21 @@ class OperationSynthetizer:
             Variable.VAZAO_DESVIADA,
             SpatialResolution.USINA_HIDROELETRICA,
             TemporalResolution.PATAMAR,
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_EVAPORADO,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_POSITIVA_EVAPORACAO,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.ESTAGIO,
+        ),
+        OperationSynthesis(
+            Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
+            SpatialResolution.USINA_HIDROELETRICA,
+            TemporalResolution.ESTAGIO,
         ),
     ]
 
@@ -1435,7 +1466,7 @@ class OperationSynthetizer:
         df_tur = (
             cache_tur
             if cache_tur is not None
-            else cls.__stub_converte_volume_em_vazao(
+            else cls.__resolve_UHE(
                 OperationSynthesis(
                     Variable.VOLUME_TURBINADO,
                     synthesis.spatial_resolution,
@@ -1447,7 +1478,7 @@ class OperationSynthetizer:
         df_ver = (
             cache_ver
             if cache_ver is not None
-            else cls.__stub_converte_volume_em_vazao(
+            else cls.__resolve_UHE(
                 OperationSynthesis(
                     Variable.VOLUME_VERTIDO,
                     synthesis.spatial_resolution,
@@ -1460,6 +1491,43 @@ class OperationSynthetizer:
             df_tur["valor"].to_numpy() + df_ver["valor"].to_numpy()
         )
         return df_ver
+
+    @classmethod
+    def __stub_VEVAP(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        sintese_pos = OperationSynthesis(
+            Variable.VIOLACAO_POSITIVA_EVAPORACAO,
+            synthesis.spatial_resolution,
+            synthesis.temporal_resolution,
+        )
+        sintese_neg = OperationSynthesis(
+            Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
+            synthesis.spatial_resolution,
+            synthesis.temporal_resolution,
+        )
+        cache_pos = cls.CACHED_SYNTHESIS.get(sintese_pos)
+        cache_neg = cls.CACHED_SYNTHESIS.get(sintese_neg)
+        df_pos = (
+            cache_pos
+            if cache_pos is not None
+            else cls.__resolve_UHE(
+                sintese_pos,
+                uow,
+            )
+        )
+        dff_neg = (
+            cache_neg
+            if cache_neg is not None
+            else cls.__resolve_UHE(
+                sintese_neg,
+                uow,
+            )
+        )
+        dff_neg.loc[:, "valor"] = (
+            df_pos["valor"].to_numpy() + dff_neg["valor"].to_numpy()
+        )
+        return dff_neg
 
     @classmethod
     def __stub_EVER(
@@ -1966,12 +2034,16 @@ class OperationSynthetizer:
             return cls.__stub_QDEF(synthesis, uow)
         elif synthesis.variable == Variable.VOLUME_DEFLUENTE:
             return cls.__stub_VDEF(synthesis, uow)
+        elif synthesis.variable == Variable.VIOLACAO_EVAPORACAO:
+            return cls.__stub_VEVAP(synthesis, uow)
         elif synthesis.variable in [
             Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
             Variable.VIOLACAO_DEFLUENCIA_MINIMA,
             Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
             Variable.VIOLACAO_TURBINAMENTO_MINIMO,
             Variable.VIOLACAO_FPHA,
+            Variable.VIOLACAO_POSITIVA_EVAPORACAO,
+            Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
         ]:
             return cls.__stub_violacoes_UHE(synthesis, uow)
         else:
@@ -2375,6 +2447,10 @@ class OperationSynthetizer:
                     Variable.VAZAO_TURBINADA,
                     Variable.VAZAO_RETIRADA,
                     Variable.VAZAO_DESVIADA,
+                    Variable.VOLUME_EVAPORADO,
+                    Variable.VIOLACAO_POSITIVA_EVAPORACAO,
+                    Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
+                    Variable.VIOLACAO_EVAPORACAO,
                 ],
                 s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
             ]

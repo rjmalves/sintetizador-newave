@@ -122,6 +122,9 @@ from inewave.nwlistop.vdesviouh import Vdesviouh
 from inewave.nwlistop.hmont import Hmont
 from inewave.nwlistop.hjus import Hjus
 from inewave.nwlistop.hliq import Hliq
+from inewave.nwlistop.vevapuh import Vevapuh
+from inewave.nwlistop.dposevap import Dposevap
+from inewave.nwlistop.dnegevap import Dnegevap
 
 from inewave.nwlistcf import Nwlistcfrel
 from inewave.nwlistcf import Estados
@@ -1230,6 +1233,27 @@ class RawFilesRepository(AbstractFilesRepository):
             ): lambda dir, uhe=1: Hliq.read(
                 join(dir, f"hliq{str(uhe).zfill(3)}.out")
             ).valores,
+            (
+                Variable.VOLUME_EVAPORADO,
+                SpatialResolution.USINA_HIDROELETRICA,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, uhe=1: Vevapuh.read(
+                join(dir, f"vevapuh{str(uhe).zfill(3)}.out")
+            ).valores,
+            (
+                Variable.VIOLACAO_POSITIVA_EVAPORACAO,
+                SpatialResolution.USINA_HIDROELETRICA,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, uhe=1: Dposevap.read(
+                join(dir, f"dpos_evap{str(uhe).zfill(3)}.out")
+            ).valores,
+            (
+                Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
+                SpatialResolution.USINA_HIDROELETRICA,
+                TemporalResolution.ESTAGIO,
+            ): lambda dir, uhe=1: Dnegevap.read(
+                join(dir, f"dneg_evap{str(uhe).zfill(3)}.out")
+            ).valores.fillna(0.0),
         }
 
     def __extrai_patamares_df(
