@@ -10,6 +10,7 @@ from dateutil.relativedelta import relativedelta  # type: ignore
 from inewave.newave import Dger, Ree, Confhd, Conft, Sistema, Clast
 from sintetizador.utils.log import Log
 from sintetizador.model.settings import Settings
+from sintetizador.services.bounds import OperationVariableBounds
 from sintetizador.services.unitofwork import AbstractUnitOfWork
 from sintetizador.model.operation.variable import Variable
 from sintetizador.model.operation.spatialresolution import SpatialResolution
@@ -2677,6 +2678,21 @@ class OperationSynthetizer:
             cls.CACHED_SYNTHESIS[s] = df.copy()
 
     @classmethod
+    def _resolve_bounds(
+        cls, s: OperationSynthesis, df: pd.DataFrame, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        return OperationVariableBounds.resolve_bounds(s, df, uow)
+
+    @classmethod
+    def _resolve_synthesis(
+        cls, s: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        df = cls._resolve_spatial_resolution(s, uow)
+        if df is not None:
+            df = cls._resolve_bounds(s, df, uow)
+        return df
+
+    @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
         cls.logger = logging.getLogger("main")
         if len(variables) == 0:
@@ -2700,7 +2716,7 @@ class OperationSynthetizer:
                 if df.empty:
                     df, is_stub = cls._resolve_stub(s, uow)
                     if not is_stub:
-                        df = cls._resolve_spatial_resolution(s, uow)
+                        df = cls._resolve_synthesis(s, uow)
                         cls.__store_in_cache_if_needed(s, df)
                 if df is not None:
                     if not df.empty:
