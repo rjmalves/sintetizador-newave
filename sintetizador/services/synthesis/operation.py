@@ -1930,7 +1930,7 @@ class OperationSynthetizer:
             if cache is not None
             else cls.__resolve_UHE_normal(synt_pat, uow)
         )
-        df_completo.loc[:, "valor"] *= FATOR_HM3_M3S
+
         if not df_completo.empty:
             cls.CACHED_SYNTHESIS[synt_pat] = df_completo
 

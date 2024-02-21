@@ -250,17 +250,17 @@ A variável informa a grandeza que é modelada e fornecida como saída da opera�
      - `QTUR`
    * - Vazão Vertida (m3/s)
      - `QVER`
-   * - Violação de Defluência Máxima (m3/s)
+   * - Violação de Defluência Máxima (hm3)
      - `VDEFMAX`
-   * - Violação de Defluência Mínima (m3/s)
+   * - Violação de Defluência Mínima (hm3)
      - `VDEFMIN`
-   * - Violação de Energia de Vazão Mínima (m3/s)
+   * - Violação de Energia de Vazão Mínima (MWmes)
      - `VEVMIN`
    * - Violação de FPHA (MWmes)
      - `VFPHA`
-   * - Violação de Turbinamento Máximo (m3/s)
+   * - Violação de Turbinamento Máximo (hm3)
      - `VTURMAX`
-   * - Violação de Turbinamento Mínimo (m3/s)
+   * - Violação de Turbinamento Mínimo (hm3)
      - `VTURMIN`
    * - Violação de Volume Mínimo Operativo (MWmes)
      - `VVMINOP`
