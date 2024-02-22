@@ -783,64 +783,64 @@ def __compara_sintese_nwlistop(
 # # QDEF e VDEF para UHE (somar TUR com VER)
 
 
-# def test_sintese_qdef_uhe(test_settings):
+def test_sintese_qdef_uhe(test_settings):
 
-#     def __calcula_patamar_medio_soma(df: pd.DataFrame) -> pd.DataFrame:
-#         df_pat0 = df.copy()
-#         df_pat0 = df_pat0.groupby(["data", "serie"], as_index=False).sum(
-#             numeric_only=True
-#         )
-#         df_pat0["patamar"] = "TOTAL"
-#         df_pat0 = pd.concat([df, df_pat0], ignore_index=True)
-#         return df_pat0.sort_values(["data", "serie", "patamar"])
+    def __calcula_patamar_medio_soma(df: pd.DataFrame) -> pd.DataFrame:
+        df_pat0 = df.copy()
+        df_pat0 = df_pat0.groupby(["data", "serie"], as_index=False).sum(
+            numeric_only=True
+        )
+        df_pat0["patamar"] = "TOTAL"
+        df_pat0 = pd.concat([df, df_pat0], ignore_index=True)
+        return df_pat0.sort_values(["data", "serie", "patamar"])
 
-#     m = MagicMock(lambda df, filename: df)
-#     with patch(
-#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
-#         new=m,
-#     ):
-#         OperationSynthetizer.synthetize(["QDEF_UHE"], uow)
-#     m.assert_called()
-#     df = m.mock_calls[-1].args[0]
-#     df_tur = __calcula_patamar_medio_soma(
-#         Vturuh.read(join(DECK_TEST_DIR, "vturuh006.out")).valores
-#     )
-#     df_ver = __calcula_patamar_medio_soma(
-#         Vertuh.read(join(DECK_TEST_DIR, "vertuh006.out")).valores
-#     )
-#     df_tur["valor"] += df_ver["valor"].to_numpy()
-#     # Conversão simples para conferência apenas do pat. 0 (média do estágio)
-#     df_tur["valor"] *= FATOR_HM3_M3S_MES
-#     __compara_sintese_nwlistop(
-#         df,
-#         df_tur,
-#         dataInicio=datetime(2023, 1, 1),
-#         cenario=1,
-#         usina=["FURNAS"],
-#         patamar=[0],
-#     )
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["QDEF_UHE"], uow)
+    m.assert_called()
+    df = m.mock_calls[-1].args[0]
+    df_tur = __calcula_patamar_medio_soma(
+        Vturuh.read(join(DECK_TEST_DIR, "vturuh006.out")).valores
+    )
+    df_ver = __calcula_patamar_medio_soma(
+        Vertuh.read(join(DECK_TEST_DIR, "vertuh006.out")).valores
+    )
+    df_tur["valor"] += df_ver["valor"].to_numpy()
+    # Conversão simples para conferência apenas do pat. 0 (média do estágio)
+    df_tur["valor"] *= FATOR_HM3_M3S_MES
+    __compara_sintese_nwlistop(
+        df,
+        df_tur,
+        dataInicio=datetime(2023, 1, 1),
+        cenario=1,
+        usina=["FURNAS"],
+        patamar=[0],
+    )
 
 
-# def test_sintese_vdef_uhe(test_settings):
-#     m = MagicMock(lambda df, filename: df)
-#     with patch(
-#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
-#         new=m,
-#     ):
-#         OperationSynthetizer.synthetize(["VDEF_UHE"], uow)
-#     m.assert_called()
-#     df = m.mock_calls[-1].args[0]
-#     df_tur = Vturuh.read(join(DECK_TEST_DIR, "vturuh006.out")).valores
-#     df_ver = Vertuh.read(join(DECK_TEST_DIR, "vertuh006.out")).valores
-#     df_tur["valor"] += df_ver["valor"].to_numpy()
-#     __compara_sintese_nwlistop(
-#         df,
-#         df_tur,
-#         dataInicio=datetime(2023, 1, 1),
-#         cenario=1,
-#         usina=["FURNAS"],
-#         patamar=[0],
-#     )
+def test_sintese_vdef_uhe(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["VDEF_UHE"], uow)
+    m.assert_called()
+    df = m.mock_calls[-1].args[0]
+    df_tur = Vturuh.read(join(DECK_TEST_DIR, "vturuh006.out")).valores
+    df_ver = Vertuh.read(join(DECK_TEST_DIR, "vertuh006.out")).valores
+    df_tur["valor"] += df_ver["valor"].to_numpy()
+    __compara_sintese_nwlistop(
+        df,
+        df_tur,
+        dataInicio=datetime(2023, 1, 1),
+        cenario=1,
+        usina=["FURNAS"],
+        patamar=[0],
+    )
 
 
 # # VEVAP para UHE (somar VPOSEVAP com VNEGEVAP)
@@ -2087,7 +2087,11 @@ def test_sintese_varmf_uhe(test_settings):
         OperationSynthetizer.synthetize(["VARMF_UHE"], uow)
     m.assert_called_once()
     df = m.mock_calls[0].args[0]
-    df.to_csv("teste.csv")
+    # Somente para VARM: subtrai volume mínimo para comparação com nwlistop,
+    # que imprime somente volume útil.
+    with uow:
+        df_hidr = uow.files.get_hidr().cadastro
+    df["valor"] -= df_hidr.at[1, "volume_minimo"]
     df_arq = Varmuh.read(join(DECK_TEST_DIR, "varmuh001.out")).valores
     __compara_sintese_nwlistop(
         df,
@@ -2099,24 +2103,24 @@ def test_sintese_varmf_uhe(test_settings):
     )
 
 
-# def test_sintese_varpf_uhe(test_settings):
-#     m = MagicMock(lambda df, filename: df)
-#     with patch(
-#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
-#         new=m,
-#     ):
-#         OperationSynthetizer.synthetize(["VARPF_UHE"], uow)
-#     m.assert_called_once()
-#     df = m.mock_calls[0].args[0]
-#     df_arq = Varmpuh.read(join(DECK_TEST_DIR, "varmpuh001.out")).valores
-#     __compara_sintese_nwlistop(
-#         df,
-#         df_arq,
-#         dataInicio=datetime(2023, 1, 1),
-#         cenario=1,
-#         patamar=[0],
-#         usina=["CAMARGOS"],
-#     )
+def test_sintese_varpf_uhe(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["VARPF_UHE"], uow)
+    m.assert_called_once()
+    df = m.mock_calls[0].args[0]
+    df_arq = Varmpuh.read(join(DECK_TEST_DIR, "varmpuh001.out")).valores
+    __compara_sintese_nwlistop(
+        df,
+        df_arq,
+        dataInicio=datetime(2023, 1, 1),
+        cenario=1,
+        patamar=[0],
+        usina=["CAMARGOS"],
+    )
 
 
 # def test_sintese_ghid_uhe(test_settings):
