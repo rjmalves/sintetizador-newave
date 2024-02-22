@@ -2087,8 +2087,7 @@ def test_sintese_varmf_uhe(test_settings):
         OperationSynthetizer.synthetize(["VARMF_UHE"], uow)
     m.assert_called_once()
     df = m.mock_calls[0].args[0]
-    print("\n")
-    print(df)
+    df.to_csv("teste.csv")
     df_arq = Varmuh.read(join(DECK_TEST_DIR, "varmuh001.out")).valores
     __compara_sintese_nwlistop(
         df,
