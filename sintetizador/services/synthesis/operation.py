@@ -1419,7 +1419,7 @@ class OperationSynthetizer:
         cache_tur = cls.CACHED_SYNTHESIS.get(sintese_tur)
         cache_ver = cls.CACHED_SYNTHESIS.get(sintese_ver)
         df_tur = (
-            cache_tur
+            cache_tur.copy()
             if cache_tur is not None
             else cls.__stub_converte_volume_em_vazao(
                 OperationSynthesis(
@@ -1431,7 +1431,7 @@ class OperationSynthetizer:
             )
         )
         df_ver = (
-            cache_ver
+            cache_ver.copy()
             if cache_ver is not None
             else cls.__stub_converte_volume_em_vazao(
                 OperationSynthesis(
@@ -1464,7 +1464,7 @@ class OperationSynthetizer:
         cache_tur = cls.CACHED_SYNTHESIS.get(sintese_tur)
         cache_ver = cls.CACHED_SYNTHESIS.get(sintese_ver)
         df_tur = (
-            cache_tur
+            cache_tur.copy()
             if cache_tur is not None
             else cls.__resolve_UHE(
                 OperationSynthesis(
@@ -1476,7 +1476,7 @@ class OperationSynthetizer:
             )
         )
         df_ver = (
-            cache_ver
+            cache_ver.copy()
             if cache_ver is not None
             else cls.__resolve_UHE(
                 OperationSynthesis(
@@ -1509,7 +1509,7 @@ class OperationSynthetizer:
         cache_pos = cls.CACHED_SYNTHESIS.get(sintese_pos)
         cache_neg = cls.CACHED_SYNTHESIS.get(sintese_neg)
         df_pos = (
-            cache_pos
+            cache_pos.copy()
             if cache_pos is not None
             else cls.__resolve_UHE(
                 sintese_pos,
@@ -1517,7 +1517,7 @@ class OperationSynthetizer:
             )
         )
         df_neg = (
-            cache_neg
+            cache_neg.copy()
             if cache_neg is not None
             else cls.__resolve_UHE(
                 sintese_neg,
@@ -1547,7 +1547,7 @@ class OperationSynthetizer:
         cache_fio = cls.CACHED_SYNTHESIS.get(sintese_fio)
 
         df_reserv = (
-            cache_reserv
+            cache_reserv.copy()
             if cache_reserv is not None
             else cls._resolve_spatial_resolution(
                 OperationSynthesis(
@@ -1559,7 +1559,7 @@ class OperationSynthetizer:
             )
         )
         df_fio = (
-            cache_fio
+            cache_fio.copy()
             if cache_fio is not None
             else cls._resolve_spatial_resolution(
                 OperationSynthesis(
@@ -1620,7 +1620,7 @@ class OperationSynthetizer:
                 df_uhe = cls._resolve_spatial_resolution(s, uow)
             cls.CACHED_SYNTHESIS[s] = df_uhe
         else:
-            df_uhe = cache_uhe
+            df_uhe = cache_uhe.copy()
 
         if df_uhe is None:
             return None
@@ -1703,7 +1703,7 @@ class OperationSynthetizer:
         )
         cache_vminop = cls.CACHED_SYNTHESIS.get(sintese_sbm)
         df_vminop = (
-            cache_vminop
+            cache_vminop.copy()
             if cache_vminop is not None
             else cls.__resolve_SBM(sintese_sbm, uow)
         )
@@ -1741,7 +1741,7 @@ class OperationSynthetizer:
         }[synthesis.spatial_resolution]
         cache_earm = cls.CACHED_SYNTHESIS.get(sintese_final)
         df_final = (
-            cache_earm
+            cache_earm.copy()
             if cache_earm is not None
             else resolve_func(sintese_final, uow)
         )
@@ -1808,7 +1808,7 @@ class OperationSynthetizer:
         )
         cache_varm = cls.CACHED_SYNTHESIS.get(sintese_final)
         df_final = (
-            cache_varm
+            cache_varm.copy()
             if cache_varm is not None
             else cls.__resolve_UHE(sintese_final, uow)
         )
@@ -1877,7 +1877,7 @@ class OperationSynthetizer:
         cache_violacao = cls.CACHED_SYNTHESIS.get(sintese_violacao)
 
         df_meta = (
-            cache_meta
+            cache_meta.copy()
             if cache_meta is not None
             else cls._resolve_spatial_resolution(
                 sintese_meta,
@@ -1885,7 +1885,7 @@ class OperationSynthetizer:
             )
         )
         df_violacao = (
-            cache_violacao
+            cache_violacao.copy()
             if cache_violacao is not None
             else cls._resolve_spatial_resolution(
                 sintese_violacao,
