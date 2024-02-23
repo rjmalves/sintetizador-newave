@@ -606,7 +606,7 @@ class ScenarioSynthetizer:
         if cls.logger is not None:
             cls.logger.info("Calculando séries de MLT para QINC - REE")
         return cls._agrega_serie_mlt_uhe(
-            Variable.VAZAO_INCREMENTAL, "nome", uow
+            Variable.VAZAO_INCREMENTAL, "nome_ree", uow
         )
 
     @classmethod
@@ -665,9 +665,9 @@ class ScenarioSynthetizer:
             ): cls._resolve_qinc_mlt_sin,
         }
         if cls.CACHED_MLT_VALUES.get((variable, spatial_resolution)) is None:
-            cls.CACHED_MLT_VALUES[
-                (variable, spatial_resolution)
-            ] = CACHING_FUNCTION_MAP[(variable, spatial_resolution)](uow)
+            cls.CACHED_MLT_VALUES[(variable, spatial_resolution)] = (
+                CACHING_FUNCTION_MAP[(variable, spatial_resolution)](uow)
+            )
         return cls.CACHED_MLT_VALUES.get(
             (variable, spatial_resolution), pd.DataFrame()
         )
