@@ -39,11 +39,27 @@ class OperationVariableBounds:
         OperationSynthesis(
             Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
-        ): lambda df, uow: OperationVariableBounds._earm_ree_bounds(df, uow),
+        ): lambda df, uow: OperationVariableBounds._earm_earp_ree_bounds(
+            df, uow, unidade_sintese="mwmes"
+        ),
         OperationSynthesis(
             Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
-        ): lambda df, uow: OperationVariableBounds._earm_ree_bounds(df, uow),
+        ): lambda df, uow: OperationVariableBounds._earm_earp_ree_bounds(
+            df, uow, unidade_sintese="mwmes"
+        ),
+        OperationSynthesis(
+            Variable.ENERGIA_ARMAZENADA_PERCENTUAL_INICIAL,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): lambda df, uow: OperationVariableBounds._earm_earp_ree_bounds(
+            df, uow, unidade_sintese="'%'"
+        ),
+        OperationSynthesis(
+            Variable.ENERGIA_ARMAZENADA_PERCENTUAL_FINAL,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): lambda df, uow: OperationVariableBounds._earm_earp_ree_bounds(
+            df, uow, unidade_sintese="'%'"
+        ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
             SpatialResolution.USINA_HIDROELETRICA,
@@ -105,18 +121,42 @@ class OperationVariableBounds:
         return data
 
     @classmethod
-    def _earm_ree_bounds(
+    def _earm_earp_ree_bounds(
+        cls, df: pd.DataFrame, uow: AbstractUnitOfWork, unidade_sintese: str
+    ) -> pd.DataFrame:
+        """
+        Adiciona ao DataFrame da síntese os limites inferior e superior
+        para as variáveis de Energia Armazenada Absoluta (EARM) e Energia
+        Armazenada Percentual (EARP) para cada REE.
+        """
+        # Obtem rees do DF na ordem em que aparecem
+        rees_df = df["ree"].unique().tolist()
+        # TODO - continuar
+        codigos_rees: List[int] = []
+        limites_inferiores = np.zeros_like(rees_df, dtype=np.float64)
+        limites_superiores = np.zeros_like(rees_df, dtype=np.float64)
+
+    @classmethod
+    def _earm_sbm_bounds(
         cls, df: pd.DataFrame, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         """
         Adiciona ao DataFrame da síntese os limites inferior e superior
-        para a variável de Energia Armazenada Absoluta (EARM) para cada REE.
+        para a variável de Energia Armazenada Absoluta (EARM) para cada SBM.
         """
-        # Obtem rees do DF na ordem em que aparecem
-        rees_df = df["ree"].unique().tolist()
-        codigos_rees: List[int] = []
-        limites_inferiores = np.zeros_like(rees_df, dtype=np.float64)
-        limites_superiores = np.zeros_like(rees_df, dtype=np.float64)
+        # TODO - faz um agrupamento por SBM e calcula os limites
+        pass
+
+    @classmethod
+    def _earm_sin_bounds(
+        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        """
+        Adiciona ao DataFrame da síntese os limites inferior e superior
+        para a variável de Energia Armazenada Absoluta (EARM) para o SIN.
+        """
+        # TODO - faz um agrupamento total e calcula os limites
+        pass
 
     @classmethod
     def _codigos_usinas(
