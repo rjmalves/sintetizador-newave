@@ -6,9 +6,8 @@ from sintetizador.model.operation.variable import Variable
 from sintetizador.model.operation.spatialresolution import SpatialResolution
 from sintetizador.model.operation.operationsynthesis import OperationSynthesis
 from sintetizador.services.unitofwork import AbstractUnitOfWork
-from time import time
 
-from inewave.newave import Hidr, Modif
+from inewave.newave import Hidr, Modif, Pmo, Sistema, Ree, Curva
 from inewave.newave.modelos.modif import (
     VOLMIN,
     VOLMAX,
@@ -58,6 +57,54 @@ class OperationVariableBounds:
             Variable.ENERGIA_ARMAZENADA_PERCENTUAL_FINAL,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
         ): lambda df, uow: OperationVariableBounds._earm_earp_ree_bounds(
+            df, uow, unidade_sintese="'%'"
+        ),
+        OperationSynthesis(
+            Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
+            SpatialResolution.SUBMERCADO,
+        ): lambda df, uow: OperationVariableBounds._earm_earp_sbm_bounds(
+            df, uow, unidade_sintese="mwmes"
+        ),
+        OperationSynthesis(
+            Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
+            SpatialResolution.SUBMERCADO,
+        ): lambda df, uow: OperationVariableBounds._earm_earp_sbm_bounds(
+            df, uow, unidade_sintese="mwmes"
+        ),
+        OperationSynthesis(
+            Variable.ENERGIA_ARMAZENADA_PERCENTUAL_INICIAL,
+            SpatialResolution.SUBMERCADO,
+        ): lambda df, uow: OperationVariableBounds._earm_earp_sbm_bounds(
+            df, uow, unidade_sintese="'%'"
+        ),
+        OperationSynthesis(
+            Variable.ENERGIA_ARMAZENADA_PERCENTUAL_FINAL,
+            SpatialResolution.SUBMERCADO,
+        ): lambda df, uow: OperationVariableBounds._earm_earp_sbm_bounds(
+            df, uow, unidade_sintese="'%'"
+        ),
+        OperationSynthesis(
+            Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): lambda df, uow: OperationVariableBounds._earm_earp_sin_bounds(
+            df, uow, unidade_sintese="mwmes"
+        ),
+        OperationSynthesis(
+            Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): lambda df, uow: OperationVariableBounds._earm_earp_sin_bounds(
+            df, uow, unidade_sintese="mwmes"
+        ),
+        OperationSynthesis(
+            Variable.ENERGIA_ARMAZENADA_PERCENTUAL_INICIAL,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): lambda df, uow: OperationVariableBounds._earm_earp_sin_bounds(
+            df, uow, unidade_sintese="'%'"
+        ),
+        OperationSynthesis(
+            Variable.ENERGIA_ARMAZENADA_PERCENTUAL_FINAL,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): lambda df, uow: OperationVariableBounds._earm_earp_sin_bounds(
             df, uow, unidade_sintese="'%'"
         ),
         OperationSynthesis(
@@ -115,10 +162,257 @@ class OperationVariableBounds:
             return modif
 
     @classmethod
+    def _get_ree(cls, uow: AbstractUnitOfWork) -> Ree:
+        with uow:
+            ree = uow.files.get_ree()
+            if ree is None:
+                raise RuntimeError("Erro na leitura do arquivo ree.dat")
+            return ree
+
+    @classmethod
+    def _get_sistema(cls, uow: AbstractUnitOfWork) -> Sistema:
+        with uow:
+            sistema = uow.files.get_sistema()
+            if sistema is None:
+                raise RuntimeError("Erro na leitura do arquivo sistema.dat")
+            return sistema
+
+    @classmethod
+    def _get_curva(cls, uow: AbstractUnitOfWork) -> Curva:
+        with uow:
+            ree = uow.files.get_curva()
+            if ree is None:
+                raise RuntimeError("Erro na leitura do arquivo curva.dat")
+            return ree
+
+    @classmethod
+    def _get_pmo(cls, uow: AbstractUnitOfWork) -> Pmo:
+        with uow:
+            pmo = uow.files.get_pmo()
+            if pmo is None:
+                raise RuntimeError("Erro na leitura do arquivo pmo.dat")
+            return pmo
+
+    @classmethod
     def _validate_data(cls, data, type: Type[T]) -> T:
         if not isinstance(data, type):
             raise RuntimeError("Erro na validação dos dados.")
         return data
+
+    @classmethod
+    def _codigos_rees(
+        cls,
+        df: pd.DataFrame,
+        df_rees: pd.DataFrame,
+        n_estagios: int,
+        n_patamares: int,
+    ) -> np.ndarray:
+        """
+        Retorna os códigos únicos das usinas, na ordem em que aparecem
+        no DataFrame da síntese em processamento.
+        """
+        rees_df = df["ree"].unique().tolist()
+        codigos_rees = []
+        for u in rees_df:
+            codigos_rees.append(df_rees.loc[df_rees["nome"] == u].index[0])
+        return np.repeat(codigos_rees, n_estagios * n_patamares)
+
+    @classmethod
+    def _adiciona_data_configuracoes(
+        cls, df: pd.DataFrame, arq_pmo: Pmo
+    ) -> pd.DataFrame:
+        """
+        Adiciona a informação da data associada a cada configuração
+        em um DataFrame que contenha a configuração.
+        """
+        df_configs = cls._validate_data(
+            arq_pmo.configuracoes_qualquer_modificacao, pd.DataFrame
+        )
+        # Adiciona informação da data de cada configuração e reordena
+        # pela ordem que aparece no dataframe da síntese
+        df["data"] = df["configuracao"].apply(
+            lambda c: df_configs.loc[df_configs["valor"] == c, "data"].iloc[0]
+        )
+        return df
+
+    @classmethod
+    def _ordena_rees(
+        cls, df: pd.DataFrame, rees_df: List[str]
+    ) -> pd.DataFrame:
+        """
+        Ordena o DataFrame fornecido pela ordem em que os REEs aparecem no
+        DataFrame da síntese.
+        """
+        df["nome_ree"] = pd.Categorical(
+            df["nome_ree"], categories=rees_df, ordered=True
+        )
+        df = df.sort_values(["nome_ree", "data"])
+        return df
+
+    @classmethod
+    def _adiciona_codigos_rees(
+        cls, df: pd.DataFrame, col: str, arq_ree: Ree
+    ) -> pd.DataFrame:
+        """
+        Adiciona a informação do código de cada REE em um DataFrame que
+        contenha os nomes.
+        """
+        df_rees = cls._validate_data(arq_ree.rees, pd.DataFrame)
+        # Adiciona informação do código de cada REE
+        df["codigo_ree"] = df[col].apply(
+            lambda r: df_rees.loc[df_rees["nome"] == r, "codigo"].iloc[0]
+        )
+        return df
+
+    @classmethod
+    def _adiciona_nomes_rees(
+        cls, df: pd.DataFrame, col: str, arq_ree: Ree
+    ) -> pd.DataFrame:
+        """
+        Adiciona a informação do nome de cada REE em um DataFrame que
+        contenha os códigos.
+        """
+        df_rees = cls._validate_data(arq_ree.rees, pd.DataFrame)
+        # Adiciona informação do nome de cada REE
+        df["nome_ree"] = df[col].apply(
+            lambda r: df_rees.loc[df_rees["codigo"] == r, "nome"].iloc[0]
+        )
+        return df
+
+    @classmethod
+    def _adiciona_nome_submercados(
+        cls, df: pd.DataFrame, col: str, arq_ree: Ree, arq_sistema: Sistema
+    ) -> pd.DataFrame:
+        """
+        Adiciona a informação do nome de cada submercado em um DataFrame que
+        contenha a informação do nome de cada REE.
+        """
+        df_rees = cls._validate_data(arq_ree.rees, pd.DataFrame)
+        df_sbms = cls._validate_data(arq_sistema.custo_deficit, pd.DataFrame)
+        # Adiciona informação do nome do submercado de cada REE
+        df["nome_submercado"] = df[col].apply(
+            lambda r: df_sbms.loc[
+                df_sbms["codigo_submercado"]
+                == df_rees.loc[df_rees["nome"] == r, "submercado"].iloc[0],
+                "nome_submercado",
+            ].iloc[0]
+        )
+        return df
+
+    @classmethod
+    def _ordena_submercados(
+        cls, df: pd.DataFrame, sbms_df: List[str]
+    ) -> pd.DataFrame:
+        """
+        Ordena o DataFrame fornecido pela ordem em que os Submercados aparecem
+        no DataFrame da síntese.
+        """
+        df["nome_submercado"] = pd.Categorical(
+            df["nome_submercado"], categories=sbms_df, ordered=True
+        )
+        df = df.sort_values(["nome_submercado", "data"])
+        return df
+
+    @classmethod
+    def _limites_superiores_ear_pmo(
+        cls,
+        cols_agrupar: List[str],
+        uow: AbstractUnitOfWork,
+    ) -> pd.DataFrame:
+        """
+        Obtém os limites superiores de energia armazenada a partir do arquivo
+        `pmo.dat` e agrupa segundo uma lista de colunas fornecida.
+        """
+        # Lê os limites superiores do pmo.dat
+        arq_pmo = cls._get_pmo(uow)
+        df_earmax = cls._validate_data(
+            arq_pmo.energia_armazenada_maxima, pd.DataFrame
+        )
+        # Adiciona informações do submercado de cada REE
+        arq_ree = cls._get_ree(uow)
+        arq_sistema = cls._get_sistema(uow)
+        df_earmax = cls._adiciona_data_configuracoes(df_earmax, arq_pmo)
+        df_earmax = cls._adiciona_codigos_rees(df_earmax, "nome_ree", arq_ree)
+        df_earmax = cls._adiciona_nome_submercados(
+            df_earmax, "nome_ree", arq_ree, arq_sistema
+        )
+        return df_earmax.groupby(cols_agrupar, as_index=False).sum(
+            numeric_only=True
+        )
+
+    @classmethod
+    def _limites_inferiores_ear_curva(
+        cls,
+        cols_agrupar: List[str],
+        uow: AbstractUnitOfWork,
+    ) -> pd.DataFrame:
+        """
+        Obtém os limites inferiores de energia armazenada a partir do arquivo
+        `curva.dat`, converte para valores absolutos em MWmes e agrupa
+        segundo uma lista de colunas fornecida.
+        """
+        # Obtem outros dados necessários
+        arq_ree = cls._get_ree(uow)
+        arq_sistema = cls._get_sistema(uow)
+        # Obtem os limites máximos do pmo.dat
+        arq_pmo = cls._get_pmo(uow)
+        df_earmax = cls._validate_data(
+            arq_pmo.energia_armazenada_maxima, pd.DataFrame
+        )
+        # Adiciona informações do submercado de cada REE
+        arq_ree = cls._get_ree(uow)
+        arq_sistema = cls._get_sistema(uow)
+        df_earmax = cls._adiciona_data_configuracoes(df_earmax, arq_pmo)
+        df_earmax = cls._adiciona_codigos_rees(df_earmax, "nome_ree", arq_ree)
+        # Lê os limites inferiores do curva.dat
+        arq_curva = cls._get_curva(uow)
+        df_curva = cls._validate_data(arq_curva.curva_seguranca, pd.DataFrame)
+        df_curva = cls._adiciona_nomes_rees(df_curva, "codigo_ree", arq_ree)
+        df_curva = cls._adiciona_nome_submercados(
+            df_curva, "nome_ree", arq_ree, arq_sistema
+        )
+        # Adiciona os earmax de cada ree no curva e calcula
+        # o limite inferior absoluto
+        df_curva["earmax"] = df_curva.apply(
+            lambda linha: df_earmax.loc[
+                (df_earmax["codigo_ree"] == linha["codigo_ree"])
+                & (df_earmax["data"] == linha["data"]),
+                "valor_MWmes",
+            ].iloc[0],
+            axis=1,
+        )
+        df_curva["valor"] = df_curva["valor"] * df_curva["earmax"] / 100.0
+        # Agrupa segundo as colunas desejadas e retorna
+        return df_curva.groupby(cols_agrupar, as_index=False).sum(
+            numeric_only=True
+        )
+
+    @classmethod
+    def _completa_entidades_faltantes_curva(
+        cls,
+        df_curva: pd.DataFrame,
+        entidades: List[str],
+        col: str,
+        df_earmax: pd.DataFrame,
+    ) -> pd.DataFrame:
+        """
+        Completa o DataFrame fornecido com as entidades que faltam para
+        que todas as existentes nos dados de síntese possuam um valor válido
+        de limite inferior.
+        """
+        # Obtem os submercados que não possuem curva e complementa com 0.0
+        entidades_curva = df_curva[col].unique().tolist()
+        entidades_sem_curva = list(set(entidades).difference(entidades_curva))
+        dfs_limites_inferiores = [df_curva]
+        for r in entidades_sem_curva:
+            df_r = df_curva.loc[df_curva[col] == entidades_curva[0]].copy()
+            df_r[col] = r
+            df_r["valor"] = 0.0
+            df_r["earmax"] = df_earmax.loc[
+                df_earmax[col] == r, "valor_MWmes"
+            ].to_numpy()
+            dfs_limites_inferiores.append(df_r)
+        return pd.concat(dfs_limites_inferiores, ignore_index=True)
 
     @classmethod
     def _earm_earp_ree_bounds(
@@ -129,34 +423,128 @@ class OperationVariableBounds:
         para as variáveis de Energia Armazenada Absoluta (EARM) e Energia
         Armazenada Percentual (EARP) para cada REE.
         """
-        # Obtem rees do DF na ordem em que aparecem
+        # Obtem REEs do DF na ordem em que aparecem
+        datas_inicio = df["dataInicio"].unique().tolist()
         rees_df = df["ree"].unique().tolist()
-        # TODO - continuar
-        codigos_rees: List[int] = []
-        limites_inferiores = np.zeros_like(rees_df, dtype=np.float64)
-        limites_superiores = np.zeros_like(rees_df, dtype=np.float64)
+        n_rees = len(rees_df)
+        n_estagios = len(datas_inicio)
+        n_cenarios = len(df["serie"].unique())
+        n_patamares = len(df["patamar"].unique())
+
+        cols_agrupar = ["nome_ree", "data"]
+        df_earmax_ree = cls._limites_superiores_ear_pmo(cols_agrupar, uow)
+        df_earmax_ree = cls._ordena_rees(df_earmax_ree, rees_df)
+
+        df_curva_ree = cls._limites_inferiores_ear_curva(cols_agrupar, uow)
+        df_limite_inferior = cls._completa_entidades_faltantes_curva(
+            df_curva_ree, rees_df, "nome_ree", df_earmax_ree
+        )
+        # Reordena pela ordem que aparece no dataframe da síntese
+        df_limite_inferior = cls._ordena_rees(df_limite_inferior, rees_df)
+
+        # Converte para a unidade desejada
+        limites_superiores = df_earmax_ree["valor_MWmes"].to_numpy()
+        limites_inferiores = df_limite_inferior["valor"].to_numpy()
+        if unidade_sintese == "'%'":
+            limites_inferiores = (
+                limites_inferiores / limites_superiores * 100.0
+            )
+            limites_superiores = 100.0 * np.ones_like(limites_inferiores)
+        # Expande os valores pelo número de cenários
+        limites_inferiores_cenarios = cls._expande_dados_para_cenarios(
+            limites_inferiores, n_rees, n_estagios, n_cenarios, n_patamares
+        )
+        limites_superiores_cenarios = cls._expande_dados_para_cenarios(
+            limites_superiores, n_rees, n_estagios, n_cenarios, n_patamares
+        )
+        df["limiteInferior"] = np.round(limites_inferiores_cenarios, 2)
+        df["limiteSuperior"] = np.round(limites_superiores_cenarios, 2)
+        return df
 
     @classmethod
-    def _earm_sbm_bounds(
-        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
+    def _earm_earp_sbm_bounds(
+        cls, df: pd.DataFrame, uow: AbstractUnitOfWork, unidade_sintese: str
     ) -> pd.DataFrame:
         """
         Adiciona ao DataFrame da síntese os limites inferior e superior
         para a variável de Energia Armazenada Absoluta (EARM) para cada SBM.
         """
-        # TODO - faz um agrupamento por SBM e calcula os limites
-        pass
+        # Obtem SBMs do DF na ordem em que aparecem
+        datas_inicio = df["dataInicio"].unique().tolist()
+        sbms_df = df["submercado"].unique().tolist()
+        n_sbms = len(sbms_df)
+        n_estagios = len(datas_inicio)
+        n_cenarios = len(df["serie"].unique())
+        n_patamares = len(df["patamar"].unique())
+
+        cols_agrupar = ["nome_submercado", "data"]
+        df_earmax_sbm = cls._limites_superiores_ear_pmo(cols_agrupar, uow)
+        df_earmax_sbm = cls._ordena_submercados(df_earmax_sbm, sbms_df)
+
+        df_curva_sbm = cls._limites_inferiores_ear_curva(cols_agrupar, uow)
+        df_limite_inferior = cls._completa_entidades_faltantes_curva(
+            df_curva_sbm, sbms_df, "nome_submercado", df_earmax_sbm
+        )
+        # Reordena pela ordem que aparece no dataframe da síntese
+        df_limite_inferior = cls._ordena_submercados(
+            df_limite_inferior, sbms_df
+        )
+
+        # Converte para a unidade desejada
+        limites_superiores = df_earmax_sbm["valor_MWmes"].to_numpy()
+        limites_inferiores = df_limite_inferior["valor"].to_numpy()
+        if unidade_sintese == "'%'":
+            limites_inferiores = (
+                limites_inferiores / limites_superiores * 100.0
+            )
+            limites_superiores = 100.0 * np.ones_like(limites_inferiores)
+        # Expande os valores pelo número de cenários
+        limites_inferiores_cenarios = cls._expande_dados_para_cenarios(
+            limites_inferiores, n_sbms, n_estagios, n_cenarios, n_patamares
+        )
+        limites_superiores_cenarios = cls._expande_dados_para_cenarios(
+            limites_superiores, n_sbms, n_estagios, n_cenarios, n_patamares
+        )
+        df["limiteInferior"] = np.round(limites_inferiores_cenarios, 2)
+        df["limiteSuperior"] = np.round(limites_superiores_cenarios, 2)
+        return df
 
     @classmethod
-    def _earm_sin_bounds(
-        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
+    def _earm_earp_sin_bounds(
+        cls, df: pd.DataFrame, uow: AbstractUnitOfWork, unidade_sintese: str
     ) -> pd.DataFrame:
         """
         Adiciona ao DataFrame da síntese os limites inferior e superior
-        para a variável de Energia Armazenada Absoluta (EARM) para o SIN.
+        para as variáveis de Energia Armazenada Absoluta (EARM) e Energia
+        Armazeada Percetual (EARP) para o SIN.
         """
-        # TODO - faz um agrupamento total e calcula os limites
-        pass
+        # Obtem REEs do DF na ordem em que aparecem
+        datas_inicio = df["dataInicio"].unique().tolist()
+        n_estagios = len(datas_inicio)
+        n_cenarios = len(df["serie"].unique())
+        n_patamares = len(df["patamar"].unique())
+
+        cols_agrupar = ["data"]
+        df_earmax_sin = cls._limites_superiores_ear_pmo(cols_agrupar, uow)
+        df_curva_sin = cls._limites_inferiores_ear_curva(cols_agrupar, uow)
+        # Converte para a unidade desejada
+        limites_superiores = df_earmax_sin["valor_MWmes"].to_numpy()
+        limites_inferiores = df_curva_sin["valor"].to_numpy()
+        if unidade_sintese == "'%'":
+            limites_inferiores = (
+                limites_inferiores / limites_superiores * 100.0
+            )
+            limites_superiores = 100.0 * np.ones_like(limites_inferiores)
+        # Expande os valores pelo número de cenários
+        limites_inferiores_cenarios = cls._expande_dados_para_cenarios(
+            limites_inferiores, 1, n_estagios, n_cenarios, n_patamares
+        )
+        limites_superiores_cenarios = cls._expande_dados_para_cenarios(
+            limites_superiores, 1, n_estagios, n_cenarios, n_patamares
+        )
+        df["limiteInferior"] = np.round(limites_inferiores_cenarios, 2)
+        df["limiteSuperior"] = np.round(limites_superiores_cenarios, 2)
+        return df
 
     @classmethod
     def _codigos_usinas(

@@ -16,6 +16,7 @@ from inewave.newave.conft import Conft
 from inewave.newave.clast import Clast
 from inewave.libs.eolica import Eolica
 from inewave.newave.ree import Ree
+from inewave.newave.curva import Curva
 from inewave.newave.sistema import Sistema
 from inewave.newave.pmo import Pmo
 from inewave.newave.newavetim import Newavetim
@@ -189,6 +190,10 @@ class AbstractFilesRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def get_curva(self) -> Optional[Curva]:
+        raise NotImplementedError
+
+    @abstractmethod
     def get_sistema(self) -> Optional[Sistema]:
         raise NotImplementedError
 
@@ -290,6 +295,7 @@ class RawFilesRepository(AbstractFilesRepository):
         self.__sistema: Optional[Sistema] = None
         self.__pmo: Optional[Pmo] = None
         self.__newavetim: Optional[Newavetim] = None
+        self.__curva: Optional[Curva] = None
         self.__ree: Optional[Ree] = None
         self.__confhd: Optional[Confhd] = None
         self.__modif: Optional[Modif] = None
@@ -1181,6 +1187,12 @@ class RawFilesRepository(AbstractFilesRepository):
             if self.arquivos.ree is not None:
                 self.__ree = Ree.read(join(self.__tmppath, self.arquivos.ree))
         return self.__ree
+    
+    def get_curva(self) -> Optional[Ree]:
+        if self.__curva is None:
+            if self.arquivos.curva is not None:
+                self.__curva = Curva.read(join(self.__tmppath, self.arquivos.curva))
+        return self.__curva
 
     def get_sistema(self) -> Optional[Sistema]:
         if self.__sistema is None:
