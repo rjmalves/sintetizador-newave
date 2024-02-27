@@ -29,6 +29,21 @@ class OperationVariableBounds:
     processo de síntese da operação.
     """
 
+    IDENTIFICATION_COLUMNS = [
+        "dataInicio",
+        "dataFim",
+        "estagio",
+        "submercado",
+        "submercadoDe",
+        "submercadoPara",
+        "ree",
+        "pee",
+        "usina",
+        "patamar",
+        "duracaoPatamar",
+        "serie",
+    ]
+
     STAGE_DURATION_HOURS = 730.0
     HM3_M3S_FACTOR = 1 / 2.36
 
@@ -114,10 +129,46 @@ class OperationVariableBounds:
             df, uow, unidade_sintese="'h'"
         ),
         OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
+            df, col_grp="ree"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
+            SpatialResolution.SUBMERCADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
+            df, col_grp="submercado"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
+            df, col_grp="sin"
+        ),
+        OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
             SpatialResolution.USINA_HIDROELETRICA,
         ): lambda df, uow: OperationVariableBounds._varm_varp_uhe_bounds(
             df, uow, unidade_sintese="'h'"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
+            df, col_grp="ree"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+            SpatialResolution.SUBMERCADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
+            df, col_grp="submercado"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
+            df, col_grp="sin"
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
@@ -869,8 +920,41 @@ class OperationVariableBounds:
         return dados_cadastrais_cenarios
 
     @classmethod
+    def _agrega_variaveis_uhe(
+        cls, df: pd.DataFrame, col_grp: Optional[str] = None
+    ) -> pd.DataFrame:
+
+        cols_grp_validas = ["usina", "ree", "submercado", "sin"]
+
+        if col_grp is None:
+            return df
+
+        if col_grp == "sin":
+            df["group"] = 1
+        elif col_grp in cols_grp_validas:
+            df["group"] = df[col_grp]
+        else:
+            raise RuntimeError(f"Coluna de agrupamento inválida: {col_grp}")
+
+        cols_group = ["group"] + [
+            c
+            for c in df.columns
+            if c in cls.IDENTIFICATION_COLUMNS and c not in cols_grp_validas
+        ]
+        df = df.astype({"serie": int})
+        df_group = df.groupby(cols_group).sum(numeric_only=True).reset_index()
+        if col_grp:
+            df_group = df_group.rename(columns={"group": col_grp})
+        else:
+            df_group = df_group.drop(columns=["group"])
+        return df_group
+
+    @classmethod
     def _varm_varp_uhe_bounds(
-        cls, df: pd.DataFrame, uow: AbstractUnitOfWork, unidade_sintese: str
+        cls,
+        df: pd.DataFrame,
+        uow: AbstractUnitOfWork,
+        unidade_sintese: str,
     ) -> pd.DataFrame:
         """
         Adiciona ao DataFrame da síntese os limites inferior e superior
@@ -975,10 +1059,12 @@ class OperationVariableBounds:
         # Adiciona ao df e retorna
         df["limiteInferior"] = np.round(limites_inferiores_cenarios, 2)
         df["limiteSuperior"] = np.round(limites_superiores_cenarios, 2)
+        df["valor"] = np.round(df["valor"], 2)
         # Específico do VARM: soma o limite inferior cadastral, pois o representado
         # nos arquivos de saída é em volume útil (hm3).
         if unidade_sintese == "'h'":
             df["valor"] += limites_inferiores_cenarios
+
         return df
 
     @classmethod
@@ -1039,6 +1125,19 @@ class OperationVariableBounds:
         df["limiteInferior"] = np.round(limites_inferiores_cenarios, 2)
         df["limiteSuperior"] = float("inf")
         return df
+
+    # TODO - sempre fazer as contas em unidades "agregáveis"
+    # e só converter pra vazão / percentual no final.
+    # Logo, tem que converter o que vier em vazão para volume
+    # (qinc e qafl)
+
+    # TODO - qtur e vtur UHE
+
+    # TODO qdef, vdef, qtur, vtur REE, SBM e SIN
+
+    # TODO gter UTE, SBM e SIN
+
+    # TODO ghid UHE, REE, SBM e SIN
 
     @classmethod
     def resolve_bounds(

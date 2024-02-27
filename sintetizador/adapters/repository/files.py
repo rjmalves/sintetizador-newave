@@ -1187,11 +1187,13 @@ class RawFilesRepository(AbstractFilesRepository):
             if self.arquivos.ree is not None:
                 self.__ree = Ree.read(join(self.__tmppath, self.arquivos.ree))
         return self.__ree
-    
-    def get_curva(self) -> Optional[Ree]:
+
+    def get_curva(self) -> Optional[Curva]:
         if self.__curva is None:
             if self.arquivos.curva is not None:
-                self.__curva = Curva.read(join(self.__tmppath, self.arquivos.curva))
+                self.__curva = Curva.read(
+                    join(self.__tmppath, self.arquivos.curva)
+                )
         return self.__curva
 
     def get_sistema(self) -> Optional[Sistema]:
