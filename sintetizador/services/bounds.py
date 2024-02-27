@@ -18,6 +18,8 @@ from inewave.newave.modelos.modif import (
     VAZMAXT,
     TURBMINT,
     TURBMAXT,
+    NUMCNJ,
+    NUMMAQ,
 )
 from cfinterface.components.register import Register
 
@@ -45,7 +47,7 @@ class OperationVariableBounds:
     ]
 
     STAGE_DURATION_HOURS = 730.0
-    HM3_M3S_FACTOR = 1 / 2.36
+    HM3_M3S_FACTOR = 1 / 2.63
 
     T = TypeVar("T")
 
@@ -181,6 +183,18 @@ class OperationVariableBounds:
             SpatialResolution.USINA_HIDROELETRICA,
         ): lambda df, uow: OperationVariableBounds._varm_varp_uhe_bounds(
             df, uow, unidade_sintese="'%'"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_TURBINADO,
+            SpatialResolution.USINA_HIDROELETRICA,
+        ): lambda df, uow: OperationVariableBounds._qtur_vtur_uhe_bounds(
+            df, uow, unidade_sintese="hm3"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_TURBINADA,
+            SpatialResolution.USINA_HIDROELETRICA,
+        ): lambda df, uow: OperationVariableBounds._qtur_vtur_uhe_bounds(
+            df, uow, unidade_sintese="m3/s"
         ),
         OperationSynthesis(
             Variable.VOLUME_DEFLUENTE,
@@ -598,6 +612,24 @@ class OperationVariableBounds:
         return df
 
     @classmethod
+    def _codigos_usinas_unicas(
+        cls,
+        df: pd.DataFrame,
+        df_hidr: pd.DataFrame,
+    ) -> np.ndarray:
+        """
+        Retorna os códigos únicos das usinas, na ordem em que aparecem
+        no DataFrame da síntese em processamento.
+        """
+        usinas_df = df["usina"].unique().tolist()
+        codigos_usinas = []
+        for u in usinas_df:
+            codigos_usinas.append(
+                df_hidr.loc[df_hidr["nome_usina"] == u].index[0]
+            )
+        return np.array(codigos_usinas)
+
+    @classmethod
     def _codigos_usinas(
         cls,
         df: pd.DataFrame,
@@ -747,7 +779,7 @@ class OperationVariableBounds:
                 limite_superior,
                 valor_cadastro,
             )
-        elif unidade_cadastro == "'h'" and unidade_sintese == "%":
+        elif unidade_cadastro == "'h'" and unidade_sintese == "'%'":
             return cls._converte_volume_hm3_percentual(
                 limite_inferior,
                 limite_superior,
@@ -969,44 +1001,83 @@ class OperationVariableBounds:
         # Lê hidr.dat
         arq_hidr = cls._get_hidr(uow)
         df_hidr = cls._validate_data(arq_hidr.cadastro, pd.DataFrame)
+        # Lê modif.dat
+        arq_modif = cls._get_modif(uow)
+
         # Obtem usinas do df na ordem em que aparecem e durações dos patamares
-        codigos_usinas = cls._codigos_usinas(
-            df, df_hidr, n_estagios, n_patamares
+        codigos_usinas = cls._codigos_usinas_unicas(df, df_hidr)
+
+        def _modificacoes_cadastro_uhes(
+            df_hidr: pd.DataFrame,
+            arq_modif: Modif,
+            codigos_usinas: np.ndarray,
+        ) -> pd.DataFrame:
+            """
+            Realiza a extração de modificações cadastrais de volumes de usinas
+            hidrelétricas a partir do arquivo modif.dat, atualizando os cadastros
+            conforme as declarações de modificações são encontradas.
+            """
+            for u in codigos_usinas:
+                modificacoes_usina = arq_modif.modificacoes_usina(u)
+                if modificacoes_usina is not None:
+                    regs_volmin = [
+                        r for r in modificacoes_usina if isinstance(r, VOLMIN)
+                    ]
+                    if len(regs_volmin) > 0:
+                        reg_volmin = regs_volmin[-1]
+                        if reg_volmin.unidade == "'%'":
+                            reg_volmin.volume = (
+                                cls._converte_volume_percentual_hm3(
+                                    df_hidr.at[u, "volume_minimo"],
+                                    df_hidr.at[u, "volume_maximo"],
+                                    reg_volmin.volume,
+                                )
+                            )
+                        df_hidr.at[u, "volume_minimo"] = reg_volmin.volume
+                    regs_volmax = [
+                        r for r in modificacoes_usina if isinstance(r, VOLMAX)
+                    ]
+                    if len(regs_volmax) > 0:
+                        reg_volmax = regs_volmax[-1]
+                        if reg_volmax.unidade == "'%'":
+                            reg_volmax.volume = (
+                                cls._converte_volume_percentual_hm3(
+                                    df_hidr.at[u, "volume_minimo"],
+                                    df_hidr.at[u, "volume_maximo"],
+                                    reg_volmax.volume,
+                                )
+                            )
+                        df_hidr.at[u, "volume_maximo"] = reg_volmax.volume
+            return df_hidr
+
+        # Modifica o hidr.dat considerando apenas as UHEs do caso
+        df_hidr = _modificacoes_cadastro_uhes(
+            df_hidr, arq_modif, codigos_usinas
         )
+
         # Inicializa limites com valores do hidr.dat
         limites_inferiores = cls._dado_cadastral_hidr_uhes(
             df_hidr, codigos_usinas, "volume_minimo"
         )
-        unidades_limites_inferiores = np.array(
-            ["'h'"] * len(limites_inferiores)
-        )
         limites_superiores = cls._dado_cadastral_hidr_uhes(
             df_hidr, codigos_usinas, "volume_maximo"
         )
-        unidades_limites_superiores = np.array(
+
+        # Repete para todos os estagios e patamares
+        codigos_usinas = np.repeat(codigos_usinas, n_estagios * n_patamares)
+        limites_inferiores = np.repeat(
+            limites_inferiores, n_estagios * n_patamares
+        )
+        unidades_limites_inferiores = np.array(
             ["'h'"] * len(limites_inferiores)
         )
-        # Lê modif.dat
-        arq_modif = cls._get_modif(uow)
-        # Atualiza limites com valores dos VOLMIN e VOLMAX do modif.dat
-        limites_inferiores, unidades_limites_inferiores = (
-            cls._modificacoes_cadastro_uhes(
-                limites_inferiores,
-                unidades_limites_inferiores,
-                arq_modif,
-                VOLMIN,
-                codigos_usinas,
-            )
+        limites_superiores = np.repeat(
+            limites_superiores, n_estagios * n_patamares
         )
-        limites_superiores, unidades_limites_superiores = (
-            cls._modificacoes_cadastro_uhes(
-                limites_superiores,
-                unidades_limites_superiores,
-                arq_modif,
-                VOLMAX,
-                codigos_usinas,
-            )
+        unidades_limites_superiores = np.array(
+            ["'h'"] * len(limites_superiores)
         )
+
         # Atualiza limites com valores de VMINT e VMAXT do modif.dat
         limites_inferiores, unidades_limites_inferiores = (
             cls._modificacoes_cadastro_temporais_uhes(
@@ -1084,26 +1155,62 @@ class OperationVariableBounds:
         # Lê hidr.dat
         arq_hidr = cls._get_hidr(uow)
         df_hidr = cls._validate_data(arq_hidr.cadastro, pd.DataFrame)
+        # Lê modif.dat
+        arq_modif = cls._get_modif(uow)
+
         # Obtem usinas do df na ordem em que aparecem e durações dos patamares
-        codigos_usinas = cls._codigos_usinas(
-            df, df_hidr, n_estagios, n_patamares
+        codigos_usinas = cls._codigos_usinas_unicas(df, df_hidr)
+
+        def _modificacoes_cadastro_uhes(
+            df_hidr: pd.DataFrame,
+            arq_modif: Modif,
+            codigos_usinas: np.ndarray,
+        ) -> pd.DataFrame:
+            """
+            Realiza a extração de modificações cadastrais de volumes de usinas
+            hidrelétricas a partir do arquivo modif.dat, atualizando os cadastros
+            conforme as declarações de modificações são encontradas.
+            """
+            for u in codigos_usinas:
+                modificacoes_usina = arq_modif.modificacoes_usina(u)
+                if modificacoes_usina is not None:
+                    regs_vazmin = [
+                        r for r in modificacoes_usina if isinstance(r, VAZMIN)
+                    ]
+                    if len(regs_vazmin) > 0:
+                        reg_vazmin = regs_vazmin[-1]
+                        df_hidr.at[u, "vazao_minima_historica"] = (
+                            reg_vazmin.vazao
+                        )
+            return df_hidr
+
+        # Modifica o hidr.dat considerando apenas as UHEs do caso
+        df_hidr = _modificacoes_cadastro_uhes(
+            df_hidr, arq_modif, codigos_usinas
         )
-        # Inicializa limites com valores do hidr.dat
+        # Inicializa limites com valores do hidr.dat modificado
         limites_inferiores = cls._dado_cadastral_hidr_uhes(
             df_hidr, codigos_usinas, "vazao_minima_historica"
         )
-        unidades = np.array(["m3/s"] * len(limites_inferiores))
-        # Lê modif.dat
-        arq_modif = cls._get_modif(uow)
-        # Atualiza limites com valores dos VAZMIN do modif.dat
-        limites_inferiores, unidades = cls._modificacoes_cadastro_uhes(
-            limites_inferiores, unidades, arq_modif, VAZMIN, codigos_usinas
+
+        # Repete para todos os estagios e patamares
+        codigos_usinas = np.repeat(codigos_usinas, n_estagios * n_patamares)
+        limites_inferiores = np.repeat(
+            limites_inferiores, n_estagios * n_patamares
         )
+        unidades_limites_inferiores = np.array(
+            ["m3/s"] * len(limites_inferiores)
+        )
+        limites_superiores = np.ones_like(limites_inferiores) * float("inf")
+        unidades_limites_superiores = np.array(
+            ["m3/s"] * len(limites_superiores)
+        )
+
         # Atualiza limites com valores de VAZMINT do modif.dat
-        limites_inferiores, unidades = (
+        limites_inferiores, unidades_limites_inferiores = (
             cls._modificacoes_cadastro_temporais_uhes(
                 limites_inferiores,
-                unidades,
+                unidades_limites_inferiores,
                 datas_inicio,
                 n_estagios,
                 n_patamares,
@@ -1112,32 +1219,218 @@ class OperationVariableBounds:
                 codigos_usinas,
             )
         )
+        # Atualiza limites com valores de VAZMAXT do modif.dat
+        limites_superiores, unidades_limites_superiores = (
+            cls._modificacoes_cadastro_temporais_uhes(
+                limites_superiores,
+                unidades_limites_superiores,
+                datas_inicio,
+                n_estagios,
+                n_patamares,
+                arq_modif,
+                VAZMAXT,
+                codigos_usinas,
+            )
+        )
         # Converte limites para a unidade de síntese
         limites_inferiores = cls._converte_unidades_cadastro_unidades_sintese(
-            df, limites_inferiores, unidades, unidade_sintese
+            df,
+            limites_inferiores,
+            unidades_limites_inferiores,
+            unidade_sintese,
+        )
+        limites_superiores = cls._converte_unidades_cadastro_unidades_sintese(
+            df,
+            limites_superiores,
+            unidades_limites_superiores,
+            unidade_sintese,
         )
         # Constroi limites para cada estágio e cenario
+        limites_inferiores_cenarios = cls._expande_dados_para_cenarios(
+            limites_inferiores, n_usinas, n_estagios, n_cenarios, n_patamares
+        )
+        limites_superiores_cenarios = cls._expande_dados_para_cenarios(
+            limites_superiores, n_usinas, n_estagios, n_cenarios, n_patamares
+        )
+        # Adiciona ao df e retorna
+        df["valor"] = np.round(df["valor"], 2)
+        df["limiteInferior"] = np.round(limites_inferiores_cenarios, 2)
+        df["limiteSuperior"] = np.round(limites_superiores_cenarios, 2)
+        return df
+
+    @classmethod
+    def _qtur_vtur_uhe_bounds(
+        cls, df: pd.DataFrame, uow: AbstractUnitOfWork, unidade_sintese: str
+    ) -> pd.DataFrame:
+        """
+        Adiciona ao DataFrame da síntese os limites inferior e superior
+        para as variáveis de Volume Turbinado (VTUR) e Vazão Turbinada (QTUR)
+        para cada UHE.
+
+        TODO - considerar exph.dat para limites de turbinamento com
+        entradas de máquinas no meio do horizonte.
+
+        """
+        datas_inicio = df["dataInicio"].unique().tolist()
+        n_usinas = len(df["usina"].unique())
+        n_estagios = len(datas_inicio)
+        n_cenarios = len(df["serie"].unique())
+        n_patamares = len(df["patamar"].unique())
+        # Lê hidr.dat
+        arq_hidr = cls._get_hidr(uow)
+        df_hidr = cls._validate_data(arq_hidr.cadastro, pd.DataFrame)
+        # Lê modif.dat
+        arq_modif = cls._get_modif(uow)
+
+        def _modificacoes_cadastro_uhes(
+            df_hidr: pd.DataFrame,
+            arq_modif: Modif,
+            codigos_usinas: np.ndarray,
+        ) -> pd.DataFrame:
+            """
+            Realiza a extração de modificações cadastrais de volumes de usinas
+            hidrelétricas a partir do arquivo modif.dat, atualizando os cadastros
+            conforme as declarações de modificações são encontradas.
+            """
+            for u in codigos_usinas:
+                modificacoes_usina = arq_modif.modificacoes_usina(u)
+                if modificacoes_usina is not None:
+                    regs_numcnj = [
+                        r for r in modificacoes_usina if isinstance(r, NUMCNJ)
+                    ]
+                    if len(regs_numcnj) > 0:
+                        reg_numcnj = regs_numcnj[-1]
+                        df_hidr.at[u, "numero_conjuntos_maquinas"] = (
+                            reg_numcnj.numero
+                        )
+                    regs_nummaq = [
+                        r for r in modificacoes_usina if isinstance(r, NUMMAQ)
+                    ]
+                    for reg_nummaq in regs_nummaq:
+                        df_hidr.at[
+                            u, f"maquinas_conjunto_{reg_nummaq.conjunto}"
+                        ] = reg_nummaq.numero_maquinas
+
+            return df_hidr
+
+        # Obtem usinas do df na ordem em que aparecem e durações dos patamares
+        codigos_usinas = cls._codigos_usinas_unicas(df, df_hidr)
+
+        # Modifica o hidr.dat considerando apenas as UHEs do caso
+        df_hidr = _modificacoes_cadastro_uhes(
+            df_hidr, arq_modif, codigos_usinas
+        )
+
+        def calcula_engolimento_uhe(
+            codigo_usina: int, df_hidr: pd.DataFrame
+        ) -> float:
+            n_conjuntos = df_hidr.at[codigo_usina, "numero_conjuntos_maquinas"]
+            colunas_cadastro_maquinas = [
+                f"maquinas_conjunto_{i}" for i in range(1, n_conjuntos + 1)
+            ]
+            colunas_cadastro_engolimento = [
+                f"vazao_nominal_conjunto_{i}"
+                for i in range(1, n_conjuntos + 1)
+            ]
+            numero_maquinas = (
+                df_hidr.loc[codigo_usina, colunas_cadastro_maquinas]
+                .to_numpy()
+                .flatten()
+            )
+            vazoes_maquinas = (
+                df_hidr.loc[codigo_usina, colunas_cadastro_engolimento]
+                .to_numpy()
+                .flatten()
+            )
+            return np.sum(numero_maquinas * vazoes_maquinas)
+
+        # Inicializa limites com valores do hidr.dat modificado
+        limites_superiores = np.array(
+            [calcula_engolimento_uhe(c, df_hidr) for c in codigos_usinas]
+        )
+
+        # Repete para todos os estagios e patamares
+        codigos_usinas = np.repeat(codigos_usinas, n_estagios * n_patamares)
+        limites_superiores = np.repeat(
+            limites_superiores, n_estagios * n_patamares
+        )
+        unidades_limites_superiores = np.array(
+            ["m3/s"] * len(limites_superiores)
+        )
+        limites_inferiores = np.zeros_like(limites_superiores)
+        unidades_limites_inferiores = np.array(
+            ["m3/s"] * len(limites_inferiores)
+        )
+
+        # Atualiza limites superiores com valores de TURBMMAXT do modif.dat
+        limites_superiores, unidades_limites_superiores = (
+            cls._modificacoes_cadastro_temporais_uhes(
+                limites_superiores,
+                unidades_limites_superiores,
+                datas_inicio,
+                n_estagios,
+                n_patamares,
+                arq_modif,
+                TURBMAXT,
+                codigos_usinas,
+            )
+        )
+        # Atualiza limites inferiores com valores de TURBMINT do modif.dat
+        limites_inferiores, unidades_limites_inferiores = (
+            cls._modificacoes_cadastro_temporais_uhes(
+                limites_inferiores,
+                unidades_limites_inferiores,
+                datas_inicio,
+                n_estagios,
+                n_patamares,
+                arq_modif,
+                TURBMINT,
+                codigos_usinas,
+            )
+        )
+        # Converte limites para a unidade de síntese
+        limites_superiores = cls._converte_unidades_cadastro_unidades_sintese(
+            df,
+            limites_superiores,
+            unidades_limites_superiores,
+            unidade_sintese,
+        )
+        limites_inferiores = cls._converte_unidades_cadastro_unidades_sintese(
+            df,
+            limites_inferiores,
+            unidades_limites_inferiores,
+            unidade_sintese,
+        )
+        # Constroi limites para cada estágio e cenario
+        limites_superiores_cenarios = cls._expande_dados_para_cenarios(
+            limites_superiores, n_usinas, n_estagios, n_cenarios, n_patamares
+        )
         limites_inferiores_cenarios = cls._expande_dados_para_cenarios(
             limites_inferiores, n_usinas, n_estagios, n_cenarios, n_patamares
         )
         # Adiciona ao df e retorna
         df["valor"] = np.round(df["valor"], 2)
         df["limiteInferior"] = np.round(limites_inferiores_cenarios, 2)
-        df["limiteSuperior"] = float("inf")
+        df["limiteSuperior"] = np.round(limites_superiores_cenarios, 2)
         return df
 
     # TODO - sempre fazer as contas em unidades "agregáveis"
     # e só converter pra vazão / percentual no final.
     # Logo, tem que converter o que vier em vazão para volume
-    # (qinc e qafl)
-
-    # TODO - qtur e vtur UHE
+    # (qinc e qafl).
+    # Essa conversão pode ser feita no OperationSynthetizer, que pode já
+    # passar uma síntese de vazão, porém com um DataFrame de valores de volume
+    # (conferir se isso funcionaria para as funções já existentes)
 
     # TODO qdef, vdef, qtur, vtur REE, SBM e SIN
 
     # TODO gter UTE, SBM e SIN
 
-    # TODO ghid UHE, REE, SBM e SIN
+    # TODO ghid UHE, REE, SBM e SIN - como obter limites para geração hidráulica?
+    # pode congelar as demais variáveis e usar a FPHA para obter limites de geração
+    # variando somente o turbinamento.. é justo? Conferir se mais coisas
+    # podem estar envolvidas e limitar o quanto a usina poderia gerar naquele ponto
+    # de operação (efeito do polinjus...) 
 
     @classmethod
     def resolve_bounds(

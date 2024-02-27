@@ -2697,13 +2697,23 @@ class OperationSynthetizer:
             df, is_stub = df, True
         elif all(
             [
+                # TODO - como a agregação é feita no bounds.py,
+                # é necessário sempre passar uma variável que seja
+                # agregável. Logo, as vazões vão ser sempre
+                # obtidas passando a variável equivalente de
+                # volume.
+                # TODO - descontinuar variáveis de violação que sejam
+                # possíveis de serem obtidas a partir dos limites
+                # inferior e superior de outras.
+                # TODO - volumes armazenados percentuais podem ser
+                # agregados se passando os absolutos e deixando
+                # a conversão para o bounds.py
                 s.variable
                 in [
                     Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
                     Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
                     Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
                     Variable.VIOLACAO_TURBINAMENTO_MINIMO,
-                    Variable.VIOLACAO_FPHA,
                     Variable.VOLUME_AFLUENTE,
                     Variable.VOLUME_INCREMENTAL,
                     Variable.VOLUME_DEFLUENTE,
@@ -2720,6 +2730,7 @@ class OperationSynthetizer:
                     Variable.VAZAO_DESVIADA,
                     Variable.VOLUME_EVAPORADO,
                     Variable.VIOLACAO_EVAPORACAO,
+                    Variable.VIOLACAO_FPHA,
                     Variable.VIOLACAO_POSITIVA_EVAPORACAO,
                     Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
                 ],
