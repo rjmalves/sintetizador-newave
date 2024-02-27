@@ -179,10 +179,142 @@ class OperationVariableBounds:
             df, uow, unidade_sintese="'%'"
         ),
         OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_absoluto_percentual(
+            df, col_grp="ree"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
+            SpatialResolution.SUBMERCADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_absoluto_percentual(
+            df, col_grp="submercado"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_absoluto_percentual(
+            df, col_grp="sin"
+        ),
+        OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
             SpatialResolution.USINA_HIDROELETRICA,
         ): lambda df, uow: OperationVariableBounds._varm_varp_uhe_bounds(
             df, uow, unidade_sintese="'%'"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_absoluto_percentual(
+            df, col_grp="ree"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
+            SpatialResolution.SUBMERCADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_absoluto_percentual(
+            df, col_grp="submercado"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_absoluto_percentual(
+            df, col_grp="sin"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_AFLUENTE,
+            SpatialResolution.USINA_HIDROELETRICA,
+        ): lambda df, uow: OperationVariableBounds._qafl_vafl_uhe_bounds(
+            df, uow, unidade_sintese="hm3"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_AFLUENTE,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
+            df, col_grp="ree"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_AFLUENTE,
+            SpatialResolution.SUBMERCADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
+            df, col_grp="submercado"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_AFLUENTE,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
+            df, col_grp="sin"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_AFLUENTE,
+            SpatialResolution.USINA_HIDROELETRICA,
+        ): lambda df, uow: OperationVariableBounds._qafl_vafl_uhe_bounds(
+            df, uow, unidade_sintese="m3/s"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_AFLUENTE,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
+            df, col_grp="ree"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_AFLUENTE,
+            SpatialResolution.SUBMERCADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
+            df, col_grp="submercado"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_AFLUENTE,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
+            df, col_grp="sin"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_INCREMENTAL,
+            SpatialResolution.USINA_HIDROELETRICA,
+        ): lambda df, uow: OperationVariableBounds._qinc_vinc_uhe_bounds(
+            df, uow, unidade_sintese="hm3"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_INCREMENTAL,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
+            df, col_grp="ree"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_INCREMENTAL,
+            SpatialResolution.SUBMERCADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
+            df, col_grp="submercado"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_INCREMENTAL,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
+            df, col_grp="sin"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_INCREMENTAL,
+            SpatialResolution.USINA_HIDROELETRICA,
+        ): lambda df, uow: OperationVariableBounds._qinc_vinc_uhe_bounds(
+            df, uow, unidade_sintese="m3/s"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_INCREMENTAL,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
+            df, col_grp="ree"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_INCREMENTAL,
+            SpatialResolution.SUBMERCADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
+            df, col_grp="submercado"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_INCREMENTAL,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
+            df, col_grp="sin"
         ),
         OperationSynthesis(
             Variable.VOLUME_TURBINADO,
@@ -191,10 +323,94 @@ class OperationVariableBounds:
             df, uow, unidade_sintese="hm3"
         ),
         OperationSynthesis(
+            Variable.VOLUME_TURBINADO,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
+            df, col_grp="ree"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_TURBINADO,
+            SpatialResolution.SUBMERCADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
+            df, col_grp="submercado"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_TURBINADO,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
+            df, col_grp="sin"
+        ),
+        OperationSynthesis(
             Variable.VAZAO_TURBINADA,
             SpatialResolution.USINA_HIDROELETRICA,
         ): lambda df, uow: OperationVariableBounds._qtur_vtur_uhe_bounds(
             df, uow, unidade_sintese="m3/s"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_TURBINADA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
+            df, col_grp="ree"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_TURBINADA,
+            SpatialResolution.SUBMERCADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
+            df, col_grp="submercado"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_TURBINADA,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
+            df, col_grp="sin"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_VERTIDO,
+            SpatialResolution.USINA_HIDROELETRICA,
+        ): lambda df, uow: OperationVariableBounds._qver_vver_uhe_bounds(
+            df, uow, unidade_sintese="hm3"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_VERTIDO,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
+            df, col_grp="ree"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_VERTIDO,
+            SpatialResolution.SUBMERCADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
+            df, col_grp="submercado"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_VERTIDO,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
+            df, col_grp="sin"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_VERTIDA,
+            SpatialResolution.USINA_HIDROELETRICA,
+        ): lambda df, uow: OperationVariableBounds._qver_vver_uhe_bounds(
+            df, uow, unidade_sintese="m3/s"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_VERTIDA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
+            df, col_grp="ree"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_VERTIDA,
+            SpatialResolution.SUBMERCADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
+            df, col_grp="submercado"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_VERTIDA,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
+            df, col_grp="sin"
         ),
         OperationSynthesis(
             Variable.VOLUME_DEFLUENTE,
@@ -203,10 +419,142 @@ class OperationVariableBounds:
             df, uow, unidade_sintese="hm3"
         ),
         OperationSynthesis(
+            Variable.VOLUME_DEFLUENTE,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
+            df, col_grp="ree"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_DEFLUENTE,
+            SpatialResolution.SUBMERCADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
+            df, col_grp="submercado"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_DEFLUENTE,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
+            df, col_grp="sin"
+        ),
+        OperationSynthesis(
             Variable.VAZAO_DEFLUENTE,
             SpatialResolution.USINA_HIDROELETRICA,
         ): lambda df, uow: OperationVariableBounds._qdef_vdef_uhe_bounds(
             df, uow, unidade_sintese="m3/s"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_DEFLUENTE,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
+            df, col_grp="ree"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_DEFLUENTE,
+            SpatialResolution.SUBMERCADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
+            df, col_grp="submercado"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_DEFLUENTE,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
+            df, col_grp="sin"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_RETIRADO,
+            SpatialResolution.USINA_HIDROELETRICA,
+        ): lambda df, uow: OperationVariableBounds._qret_vret_uhe_bounds(
+            df, uow, unidade_sintese="hm3"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_RETIRADO,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
+            df, col_grp="ree"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_RETIRADO,
+            SpatialResolution.SUBMERCADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
+            df, col_grp="submercado"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_RETIRADO,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
+            df, col_grp="sin"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_RETIRADA,
+            SpatialResolution.USINA_HIDROELETRICA,
+        ): lambda df, uow: OperationVariableBounds._qret_vret_uhe_bounds(
+            df, uow, unidade_sintese="m3/s"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_RETIRADA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
+            df, col_grp="ree"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_RETIRADA,
+            SpatialResolution.SUBMERCADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
+            df, col_grp="submercado"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_RETIRADA,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
+            df, col_grp="sin"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_DESVIADO,
+            SpatialResolution.USINA_HIDROELETRICA,
+        ): lambda df, uow: OperationVariableBounds._qdes_vdes_uhe_bounds(
+            df, uow, unidade_sintese="hm3"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_DESVIADO,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
+            df, col_grp="ree"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_DESVIADO,
+            SpatialResolution.SUBMERCADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
+            df, col_grp="submercado"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_DESVIADO,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
+            df, col_grp="sin"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_DESVIADA,
+            SpatialResolution.USINA_HIDROELETRICA,
+        ): lambda df, uow: OperationVariableBounds._qdes_vdes_uhe_bounds(
+            df, uow, unidade_sintese="m3/s"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_DESVIADA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
+            df, col_grp="ree"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_DESVIADA,
+            SpatialResolution.SUBMERCADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
+            df, col_grp="submercado"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_DESVIADA,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
+            df, col_grp="sin"
         ),
     }
 
@@ -701,11 +1049,12 @@ class OperationVariableBounds:
         Realiza a conversão de um volume fornecido em hm3 para
         um volume em percentual, considerando os limites inferior e superior.
         """
-        return (
+        vol_c = (
             (volume_modif - volume_minimo_atual)
             * 100
             / (volume_maximo_atual - volume_minimo_atual)
         )
+        return vol_c if not np.isnan(vol_c) else 0.0
 
     @classmethod
     def _converte_volume_vazao(
@@ -805,7 +1154,7 @@ class OperationVariableBounds:
         unidade_sintese: str,
         *args,
         **kwargs,
-    ):
+    ) -> np.ndarray:
         duracoes_patamares_horas = cls._duracoes_patamares_estagios(df)
         limites_inferiores = kwargs.get("limites_inferiores", None)
         limites_superiores = kwargs.get("limites_superiores", None)
@@ -909,6 +1258,8 @@ class OperationVariableBounds:
         expandidos para um valor por usina e estágio e são atualizados
         conforme as declarações de modificações são encontradas.
         """
+        dados_cadastrais_modificados = dados_cadastrais.copy()
+        unidades_modificadas = unidades.copy()
         for i, u in enumerate(codigos_usinas):
             modificacoes_usina = arq_modif.modificacoes_usina(u)
             i_i = i * n_estagios * n_patamares
@@ -922,9 +1273,9 @@ class OperationVariableBounds:
                 for reg in registros_usina:
                     idx_data = datas.index(reg.data_inicio)
                     valor, unidade = cls._extrai_dados_modif_uhe(reg)
-                    dados_cadastrais[i_i + idx_data : i_f] = valor
-                    unidades[i_i + idx_data : i_f] = unidade
-        return dados_cadastrais, unidades
+                    dados_cadastrais_modificados[i_i + idx_data : i_f] = valor
+                    unidades_modificadas[i_i + idx_data : i_f] = unidade
+        return dados_cadastrais_modificados, unidades_modificadas
 
     @classmethod
     def _expande_dados_para_cenarios(
@@ -955,7 +1306,12 @@ class OperationVariableBounds:
     def _agrega_variaveis_uhe(
         cls, df: pd.DataFrame, col_grp: Optional[str] = None
     ) -> pd.DataFrame:
-
+        """
+        Realiza a agregação de variáveis fornecidas a nível de UHE
+        para uma síntese de REEs, SBMs ou para o SIN. A agregação
+        tem como requisito que as variáveis fornecidas sejam em unidades
+        cuja agregação seja possível apenas pela soma.
+        """
         cols_grp_validas = ["usina", "ree", "submercado", "sin"]
 
         if col_grp is None:
@@ -979,6 +1335,102 @@ class OperationVariableBounds:
             df_group = df_group.rename(columns={"group": col_grp})
         else:
             df_group = df_group.drop(columns=["group"])
+        return df_group
+
+    @classmethod
+    def _agrega_variaveis_uhe_volume_vazao(
+        cls, df: pd.DataFrame, col_grp: Optional[str] = None
+    ) -> pd.DataFrame:
+        """
+        Realiza a agregação de variáveis fornecidas a nível de UHE
+        para uma síntese de REEs, SBMs ou para o SIN, convertendo
+        a unidade de volume para vazão.
+
+        É usada em casos em que osdados são fornecidos em unidade
+        de volume, mas a síntese desejada é em unidade de vazão.
+        """
+        cols_grp_validas = ["usina", "ree", "submercado", "sin"]
+
+        if col_grp is None:
+            return df
+
+        if col_grp == "sin":
+            df["group"] = 1
+        elif col_grp in cols_grp_validas:
+            df["group"] = df[col_grp]
+        else:
+            raise RuntimeError(f"Coluna de agrupamento inválida: {col_grp}")
+
+        cols_group = ["group"] + [
+            c
+            for c in df.columns
+            if c in cls.IDENTIFICATION_COLUMNS and c not in cols_grp_validas
+        ]
+        df = df.astype({"serie": int})
+        df_group = df.groupby(cols_group).sum(numeric_only=True).reset_index()
+        if col_grp:
+            df_group = df_group.rename(columns={"group": col_grp})
+        else:
+            df_group = df_group.drop(columns=["group"])
+
+        # Converte volume para vazão
+        for c in ["valor", "limiteInferior", "limiteSuperior"]:
+            df_group[c] = (
+                df_group[c]
+                * (cls.STAGE_DURATION_HOURS * cls.HM3_M3S_FACTOR)
+                / df_group["duracaoPatamar"]
+            )
+
+        return df_group
+
+    @classmethod
+    def _agrega_variaveis_uhe_volume_absoluto_percentual(
+        cls, df: pd.DataFrame, col_grp: Optional[str] = None
+    ) -> pd.DataFrame:
+        """
+        Realiza a agregação de variáveis fornecidas a nível de UHE
+        para uma síntese de REEs, SBMs ou para o SIN, convertendo
+        a unidade de volume de absoluto para percentual do útil.
+
+        É usada em casos em que os dados são fornecidos em unidade
+        de volume total (hm3), mas a síntese desejada é em percentual.
+        """
+        cols_grp_validas = ["usina", "ree", "submercado", "sin"]
+
+        if col_grp is None:
+            return df
+
+        if col_grp == "sin":
+            df["group"] = 1
+        elif col_grp in cols_grp_validas:
+            df["group"] = df[col_grp]
+        else:
+            raise RuntimeError(f"Coluna de agrupamento inválida: {col_grp}")
+
+        cols_group = ["group"] + [
+            c
+            for c in df.columns
+            if c in cls.IDENTIFICATION_COLUMNS and c not in cols_grp_validas
+        ]
+        df = df.astype({"serie": int})
+        df_group = df.groupby(cols_group).sum(numeric_only=True).reset_index()
+        if col_grp:
+            df_group = df_group.rename(columns={"group": col_grp})
+        else:
+            df_group = df_group.drop(columns=["group"])
+
+        # Obter dados cadastrais para cada UHE, desconsiderando modif.dat
+
+        # Converte volume de absoluto para percentual
+        df_group["valor"] -= df_group["limiteInferior"]
+        df_group["valor_util"] = (
+            df_group["limiteSuperior"] - df_group["limiteInferior"]
+        )
+        df_group["valor"] = 100 * df_group["valor"] / df_group["valor_util"]
+        df_group["valor"] = df_group["valor"].fillna(0.0)
+        df_group["limiteInferior"] = 0.0
+        df_group["limiteSuperior"] = 100.0
+
         return df_group
 
     @classmethod
@@ -1056,33 +1508,36 @@ class OperationVariableBounds:
         )
 
         # Inicializa limites com valores do hidr.dat
-        limites_inferiores = cls._dado_cadastral_hidr_uhes(
+        limites_inferiores_cadastrais = cls._dado_cadastral_hidr_uhes(
             df_hidr, codigos_usinas, "volume_minimo"
         )
-        limites_superiores = cls._dado_cadastral_hidr_uhes(
+        limites_superiores_cadastrais = cls._dado_cadastral_hidr_uhes(
             df_hidr, codigos_usinas, "volume_maximo"
         )
 
         # Repete para todos os estagios e patamares
-        codigos_usinas = np.repeat(codigos_usinas, n_estagios * n_patamares)
-        limites_inferiores = np.repeat(
-            limites_inferiores, n_estagios * n_patamares
+        limites_inferiores_cadastrais = np.repeat(
+            limites_inferiores_cadastrais, n_estagios * n_patamares
         )
-        unidades_limites_inferiores = np.array(
-            ["'h'"] * len(limites_inferiores)
+        unidades_limites_inferiores_cadastrais = np.array(
+            ["'h'"] * len(limites_inferiores_cadastrais)
         )
-        limites_superiores = np.repeat(
-            limites_superiores, n_estagios * n_patamares
+        limites_superiores_cadastrais = np.repeat(
+            limites_superiores_cadastrais, n_estagios * n_patamares
         )
-        unidades_limites_superiores = np.array(
-            ["'h'"] * len(limites_superiores)
+        unidades_limites_superiores_cadastrais = np.array(
+            ["'h'"] * len(limites_superiores_cadastrais)
         )
 
-        # Atualiza limites com valores de VMINT e VMAXT do modif.dat
+        # Atualiza limites com valores de VMINT e VMAXT do modif.dat,
+        # só no caso de ser VARM. Caso seja VARP, uma usina com certo
+        # VMAXT especificando volume de espera de 5% deve necessariamente
+        # ter seu limite superior em 95%, pois o % do Volume Util
+        # é sempre calculado em relação ao dado cadastral.
         limites_inferiores, unidades_limites_inferiores = (
             cls._modificacoes_cadastro_temporais_uhes(
-                limites_inferiores,
-                unidades_limites_inferiores,
+                limites_inferiores_cadastrais,
+                unidades_limites_inferiores_cadastrais,
                 datas_inicio,
                 n_estagios,
                 n_patamares,
@@ -1093,8 +1548,8 @@ class OperationVariableBounds:
         )
         limites_superiores, unidades_limites_superiores = (
             cls._modificacoes_cadastro_temporais_uhes(
-                limites_superiores,
-                unidades_limites_superiores,
+                limites_superiores_cadastrais,
+                unidades_limites_superiores_cadastrais,
                 datas_inicio,
                 n_estagios,
                 n_patamares,
@@ -1103,23 +1558,25 @@ class OperationVariableBounds:
                 codigos_usinas,
             )
         )
+
         # Converte limites para a unidade de síntese
         limites_inferiores = cls._converte_unidades_cadastro_unidades_sintese(
             df,
             limites_inferiores,
             unidades_limites_inferiores,
             unidade_sintese,
-            limites_inferiores=limites_inferiores,
-            limites_superiores=limites_superiores,
+            limites_inferiores=limites_inferiores_cadastrais,
+            limites_superiores=limites_superiores_cadastrais,
         )
         limites_superiores = cls._converte_unidades_cadastro_unidades_sintese(
             df,
             limites_superiores,
             unidades_limites_superiores,
             unidade_sintese,
-            limites_inferiores=limites_inferiores,
-            limites_superiores=limites_superiores,
+            limites_inferiores=limites_inferiores_cadastrais,
+            limites_superiores=limites_superiores_cadastrais,
         )
+
         # Constroi limites para cada estágio e cenario
         limites_inferiores_cenarios = cls._expande_dados_para_cenarios(
             limites_inferiores, n_usinas, n_estagios, n_cenarios, n_patamares
@@ -1194,7 +1651,6 @@ class OperationVariableBounds:
         )
 
         # Repete para todos os estagios e patamares
-        codigos_usinas = np.repeat(codigos_usinas, n_estagios * n_patamares)
         limites_inferiores = np.repeat(
             limites_inferiores, n_estagios * n_patamares
         )
@@ -1350,7 +1806,6 @@ class OperationVariableBounds:
         )
 
         # Repete para todos os estagios e patamares
-        codigos_usinas = np.repeat(codigos_usinas, n_estagios * n_patamares)
         limites_superiores = np.repeat(
             limites_superiores, n_estagios * n_patamares
         )
@@ -1414,15 +1869,182 @@ class OperationVariableBounds:
         df["limiteSuperior"] = np.round(limites_superiores_cenarios, 2)
         return df
 
-    # TODO - sempre fazer as contas em unidades "agregáveis"
-    # e só converter pra vazão / percentual no final.
-    # Logo, tem que converter o que vier em vazão para volume
-    # (qinc e qafl).
-    # Essa conversão pode ser feita no OperationSynthetizer, que pode já
-    # passar uma síntese de vazão, porém com um DataFrame de valores de volume
-    # (conferir se isso funcionaria para as funções já existentes)
+    @classmethod
+    def _qver_vver_uhe_bounds(
+        cls, df: pd.DataFrame, uow: AbstractUnitOfWork, unidade_sintese: str
+    ) -> pd.DataFrame:
+        """
+        Adiciona ao DataFrame da síntese os limites inferior e superior
+        para as variáveis de Volume Vertido (VVER) e Vazão Vertida (QVER)
+        para cada UHE.
+        """
+        df["valor"] = np.round(df["valor"], 2)
+        df["limiteInferior"] = 0.0
+        df["limiteSuperior"] = float("inf")
+        return df
 
-    # TODO qdef, vdef, qtur, vtur REE, SBM e SIN
+    @classmethod
+    def _qafl_vafl_uhe_bounds(
+        cls, df: pd.DataFrame, uow: AbstractUnitOfWork, unidade_sintese: str
+    ) -> pd.DataFrame:
+        """
+        Adiciona ao DataFrame da síntese os limites inferior e superior
+        para as variáveis de Volume Afluente (VAFL) e Vazão Afluente (QAFL)
+        para cada UHE.
+        """
+        df["valor"] = np.round(df["valor"], 2)
+        df["limiteInferior"] = 0.0
+        df["limiteSuperior"] = float("inf")
+        return df
+
+    @classmethod
+    def _qinc_vinc_uhe_bounds(
+        cls, df: pd.DataFrame, uow: AbstractUnitOfWork, unidade_sintese: str
+    ) -> pd.DataFrame:
+        """
+        Adiciona ao DataFrame da síntese os limites inferior e superior
+        para as variáveis de Volume Incremental (VINC) e Vazão Incremental (QINC)
+        para cada UHE.
+        """
+        df["valor"] = np.round(df["valor"], 2)
+        df["limiteInferior"] = -float("inf")
+        df["limiteSuperior"] = float("inf")
+        return df
+
+    @classmethod
+    def _qret_vret_uhe_bounds(
+        cls, df: pd.DataFrame, uow: AbstractUnitOfWork, unidade_sintese: str
+    ) -> pd.DataFrame:
+        """
+        Adiciona ao DataFrame da síntese os limites inferior e superior
+        para as variáveis de Volume Retirado (VRET) e Vazão Retirada (QRET)
+        para cada UHE.
+        """
+        df["valor"] = np.round(df["valor"], 2)
+        df["limiteInferior"] = -float("inf")
+        df["limiteSuperior"] = float("inf")
+        return df
+
+    @classmethod
+    def _qdes_vdes_uhe_bounds(
+        cls, df: pd.DataFrame, uow: AbstractUnitOfWork, unidade_sintese: str
+    ) -> pd.DataFrame:
+        """
+        Adiciona ao DataFrame da síntese os limites inferior e superior
+        para as variáveis de Volume Desviado (VDES) e Vazão Desviada (QDES)
+        para cada UHE.
+        """
+
+        # TODO - adaptar o código de defluente para desviada
+        datas_inicio = df["dataInicio"].unique().tolist()
+        n_usinas = len(df["usina"].unique())
+        n_estagios = len(datas_inicio)
+        n_cenarios = len(df["serie"].unique())
+        n_patamares = len(df["patamar"].unique())
+        # Lê hidr.dat
+        arq_hidr = cls._get_hidr(uow)
+        df_hidr = cls._validate_data(arq_hidr.cadastro, pd.DataFrame)
+        # Lê modif.dat
+        arq_modif = cls._get_modif(uow)
+
+        # Obtem usinas do df na ordem em que aparecem e durações dos patamares
+        codigos_usinas = cls._codigos_usinas_unicas(df, df_hidr)
+
+        def _modificacoes_cadastro_uhes(
+            df_hidr: pd.DataFrame,
+            arq_modif: Modif,
+            codigos_usinas: np.ndarray,
+        ) -> pd.DataFrame:
+            """
+            Realiza a extração de modificações cadastrais de volumes de usinas
+            hidrelétricas a partir do arquivo modif.dat, atualizando os cadastros
+            conforme as declarações de modificações são encontradas.
+            """
+            for u in codigos_usinas:
+                modificacoes_usina = arq_modif.modificacoes_usina(u)
+                if modificacoes_usina is not None:
+                    regs_vazmin = [
+                        r for r in modificacoes_usina if isinstance(r, VAZMIN)
+                    ]
+                    if len(regs_vazmin) > 0:
+                        reg_vazmin = regs_vazmin[-1]
+                        df_hidr.at[u, "vazao_minima_historica"] = (
+                            reg_vazmin.vazao
+                        )
+            return df_hidr
+
+        # Modifica o hidr.dat considerando apenas as UHEs do caso
+        df_hidr = _modificacoes_cadastro_uhes(
+            df_hidr, arq_modif, codigos_usinas
+        )
+        # Inicializa limites com valores do hidr.dat modificado
+        limites_inferiores = cls._dado_cadastral_hidr_uhes(
+            df_hidr, codigos_usinas, "vazao_minima_historica"
+        )
+
+        # Repete para todos os estagios e patamares
+        limites_inferiores = np.repeat(
+            limites_inferiores, n_estagios * n_patamares
+        )
+        unidades_limites_inferiores = np.array(
+            ["m3/s"] * len(limites_inferiores)
+        )
+        limites_superiores = np.ones_like(limites_inferiores) * float("inf")
+        unidades_limites_superiores = np.array(
+            ["m3/s"] * len(limites_superiores)
+        )
+
+        # Atualiza limites com valores de VAZMINT do modif.dat
+        limites_inferiores, unidades_limites_inferiores = (
+            cls._modificacoes_cadastro_temporais_uhes(
+                limites_inferiores,
+                unidades_limites_inferiores,
+                datas_inicio,
+                n_estagios,
+                n_patamares,
+                arq_modif,
+                VAZMINT,
+                codigos_usinas,
+            )
+        )
+        # Atualiza limites com valores de VAZMAXT do modif.dat
+        limites_superiores, unidades_limites_superiores = (
+            cls._modificacoes_cadastro_temporais_uhes(
+                limites_superiores,
+                unidades_limites_superiores,
+                datas_inicio,
+                n_estagios,
+                n_patamares,
+                arq_modif,
+                VAZMAXT,
+                codigos_usinas,
+            )
+        )
+        # Converte limites para a unidade de síntese
+        limites_inferiores = cls._converte_unidades_cadastro_unidades_sintese(
+            df,
+            limites_inferiores,
+            unidades_limites_inferiores,
+            unidade_sintese,
+        )
+        limites_superiores = cls._converte_unidades_cadastro_unidades_sintese(
+            df,
+            limites_superiores,
+            unidades_limites_superiores,
+            unidade_sintese,
+        )
+        # Constroi limites para cada estágio e cenario
+        limites_inferiores_cenarios = cls._expande_dados_para_cenarios(
+            limites_inferiores, n_usinas, n_estagios, n_cenarios, n_patamares
+        )
+        limites_superiores_cenarios = cls._expande_dados_para_cenarios(
+            limites_superiores, n_usinas, n_estagios, n_cenarios, n_patamares
+        )
+        # Adiciona ao df e retorna
+        df["valor"] = np.round(df["valor"], 2)
+        df["limiteInferior"] = np.round(limites_inferiores_cenarios, 2)
+        df["limiteSuperior"] = np.round(limites_superiores_cenarios, 2)
+        return df
 
     # TODO gter UTE, SBM e SIN
 
@@ -1430,7 +2052,7 @@ class OperationVariableBounds:
     # pode congelar as demais variáveis e usar a FPHA para obter limites de geração
     # variando somente o turbinamento.. é justo? Conferir se mais coisas
     # podem estar envolvidas e limitar o quanto a usina poderia gerar naquele ponto
-    # de operação (efeito do polinjus...) 
+    # de operação (efeito do polinjus...)
 
     @classmethod
     def resolve_bounds(

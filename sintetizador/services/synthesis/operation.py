@@ -233,6 +233,9 @@ class OperationSynthetizer:
 
     CACHED_SYNTHESIS: Dict[OperationSynthesis, pd.DataFrame] = {}
 
+    # Declaração de dependência entre uma síntese e outras,
+    # para o caso de variáveis que não são explicitamente fornecidas
+    # como saída pelo modelo, e sim calculadas pelo sintetizador.
     PREREQ_SYNTHESIS: Dict[OperationSynthesis, List[OperationSynthesis]] = {
         OperationSynthesis(
             Variable.ENERGIA_VERTIDA,
@@ -349,6 +352,60 @@ class OperationSynthetizer:
         ): [
             OperationSynthesis(
                 Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            )
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            )
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            )
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            )
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            )
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            )
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
                 SpatialResolution.USINA_HIDROELETRICA,
             )
         ],
@@ -1908,9 +1965,13 @@ class OperationSynthetizer:
         return cache_reserv
 
     @classmethod
-    def __stub_agrega_variaveis_indiv_REE_SBM_SIN(
+    def __stub_mapa_variaveis_agregacao_simples_UHE(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
+        """
+        Realiza o mapeamento de síntese de uma variável calculada
+        a partir de uma agregação simples de variáveis de UHE.
+        """
 
         s = OperationSynthesis(
             variable=synthesis.variable,
@@ -1920,40 +1981,66 @@ class OperationSynthetizer:
 
         return df_uhe
 
-        col_grp = {
-            SpatialResolution.RESERVATORIO_EQUIVALENTE: "ree",
-            SpatialResolution.SUBMERCADO: "submercado",
-            SpatialResolution.SISTEMA_INTERLIGADO: None,
-        }[synthesis.spatial_resolution]
-        if col_grp:
-            df_uhe["group"] = df_uhe[col_grp]
-        else:
-            df_uhe["group"] = 1
+    @classmethod
+    def __stub_mapa_variaveis_vazao_UHE(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        """
+        Realiza o mapeamento de uma síntese solicitada para variável
+        em vazão para a variável correspondente em volume, obtendo os
+        dados já processados e armazenados em cache.
 
-        cols_group = ["group"] + [
-            c
-            for c in df_uhe.columns
-            if c in cls.IDENTIFICATION_COLUMNS
-            and c not in ["usina", "ree", "submercado"]
-        ]
-        df_uhe = df_uhe.astype({"serie": int})
-        df_group = (
-            df_uhe.groupby(cols_group).sum(numeric_only=True).reset_index()
-        )
-        group_name = {
-            SpatialResolution.RESERVATORIO_EQUIVALENTE: "ree",
-            SpatialResolution.SUBMERCADO: "submercado",
+        Regra de negócio: o df passado para resolução dos bounds é
+        em unidade de volume e sempre a nível de UHE. As agregações
+        e conversões de unidade são feitas na resolução dos bounds.
+        O OperationSynthesis passado para o bounds é o original.
+        """
+
+        variable_map = {
+            Variable.VAZAO_AFLUENTE: Variable.VOLUME_AFLUENTE,
+            Variable.VAZAO_INCREMENTAL: Variable.VOLUME_INCREMENTAL,
+            Variable.VAZAO_DEFLUENTE: Variable.VOLUME_DEFLUENTE,
+            Variable.VAZAO_VERTIDA: Variable.VOLUME_VERTIDO,
+            Variable.VAZAO_TURBINADA: Variable.VOLUME_TURBINADO,
+            Variable.VAZAO_RETIRADA: Variable.VOLUME_RETIRADO,
+            Variable.VAZAO_DESVIADA: Variable.VOLUME_DESVIADO,
         }
-        if (
-            synthesis.spatial_resolution
-            == SpatialResolution.SISTEMA_INTERLIGADO
-        ):
-            df_group = df_group.drop(columns=["group"])
-        else:
-            df_group = df_group.rename(
-                columns={"group": group_name[synthesis.spatial_resolution]}
-            )
-        return df_group
+
+        s = OperationSynthesis(
+            variable=variable_map[synthesis.variable],
+            spatial_resolution=SpatialResolution.USINA_HIDROELETRICA,
+        )
+        df_uhe = cls._get_from_cache(s)
+
+        return df_uhe
+
+    @classmethod
+    def __stub_mapa_variaveis_volumes_percentuais_UHE(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        """
+        Realiza o mapeamento de uma síntese solicitada para variável
+        em volume percentuais para a em volume absoluto, obtendo os
+        dados já processados e armazenados em cache.
+
+        Regra de negócio: o df passado para resolução dos bounds é
+        em unidade de volume e sempre a nível de UHE. As agregações
+        e conversões de unidade são feitas na resolução dos bounds.
+        O OperationSynthesis passado para o bounds é o original.
+        """
+
+        variable_map = {
+            Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL: Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
+            Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL: Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+        }
+
+        s = OperationSynthesis(
+            variable=variable_map[synthesis.variable],
+            spatial_resolution=SpatialResolution.USINA_HIDROELETRICA,
+        )
+        df_uhe = cls._get_from_cache(s)
+
+        return df_uhe
 
     @classmethod
     def __resolve_stub_vminop_sin(
@@ -2712,8 +2799,6 @@ class OperationSynthetizer:
                 in [
                     Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
                     Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
-                    Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
-                    Variable.VIOLACAO_TURBINAMENTO_MINIMO,
                     Variable.VOLUME_AFLUENTE,
                     Variable.VOLUME_INCREMENTAL,
                     Variable.VOLUME_DEFLUENTE,
@@ -2721,13 +2806,6 @@ class OperationSynthetizer:
                     Variable.VOLUME_TURBINADO,
                     Variable.VOLUME_RETIRADO,
                     Variable.VOLUME_DESVIADO,
-                    Variable.VAZAO_AFLUENTE,
-                    Variable.VAZAO_INCREMENTAL,
-                    Variable.VAZAO_DEFLUENTE,
-                    Variable.VAZAO_VERTIDA,
-                    Variable.VAZAO_TURBINADA,
-                    Variable.VAZAO_RETIRADA,
-                    Variable.VAZAO_DESVIADA,
                     Variable.VOLUME_EVAPORADO,
                     Variable.VIOLACAO_EVAPORACAO,
                     Variable.VIOLACAO_FPHA,
@@ -2737,7 +2815,36 @@ class OperationSynthetizer:
                 s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
             ]
         ):
-            df = cls.__stub_agrega_variaveis_indiv_REE_SBM_SIN(s, uow)
+            df = cls.__stub_mapa_variaveis_agregacao_simples_UHE(s, uow)
+            df, is_stub = df, True
+        elif all(
+            [
+                s.variable
+                in [
+                    Variable.VAZAO_AFLUENTE,
+                    Variable.VAZAO_INCREMENTAL,
+                    Variable.VAZAO_DEFLUENTE,
+                    Variable.VAZAO_VERTIDA,
+                    Variable.VAZAO_TURBINADA,
+                    Variable.VAZAO_RETIRADA,
+                    Variable.VAZAO_DESVIADA,
+                ],
+                s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
+            ]
+        ):
+            df = cls.__stub_mapa_variaveis_vazao_UHE(s, uow)
+            df, is_stub = df, True
+        elif all(
+            [
+                s.variable
+                in [
+                    Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
+                    Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
+                ],
+                s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
+            ]
+        ):
+            df = cls.__stub_mapa_variaveis_volumes_percentuais_UHE(s, uow)
             df, is_stub = df, True
         elif s.variable in [Variable.ENERGIA_DEFLUENCIA_MINIMA]:
             df = cls.__stub_energia_defluencia_minima(s, uow)

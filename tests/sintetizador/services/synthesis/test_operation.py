@@ -357,12 +357,9 @@ def __compara_sintese_nwlistop(
 #     )
 
 
-# # TODO - EARMI, EARPI para REE, SBM e SIN (consulta pmo.dat e valores de EARMF e EARPF)
-
 # # TODO - VARMI, VARMPI para UHE (consulta pmo.dat e valores de VARMF e VARPF)
 
-# # VARMI, VARMF, VDEFMIN, VDEFMAX, VTURMIN, VTURMAX, VFPHA, VAFL, VDEF, VVER, VTUR, VRET, VDES,
-# # QAFL, QINC, QDEF, QVER, QTUR, QRET, QDES para REE, SBM e SIN (soma valores das UHEs)
+# # VFPHA, VRET, VDES, QRET, QDES para REE, SBM e SIN (soma valores das UHEs)
 
 
 # def test_sintese_varmf_ree(test_settings):
@@ -468,6 +465,788 @@ def __compara_sintese_nwlistop(
 #         # que imprime volume total.
 #         df_sin["valor"] += df_hidr.at[uhe, "volume_minimo"]
 
+#     __compara_sintese_nwlistop(
+#         df,
+#         df_sin,
+#         dataInicio=datetime(2023, 1, 1),
+#         cenario=1,
+#         patamar=[0],
+#     )
+
+
+# def test_sintese_vafl_ree(test_settings):
+#     m = MagicMock(lambda df, filename: df)
+#     with patch(
+#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+#         new=m,
+#     ):
+#         OperationSynthetizer.synthetize(["VAFL_REE"], uow)
+#     m.assert_called()
+#     df = m.mock_calls[-1].args[0]
+#     df_ree = None
+#     df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+#     codigos_uhes = df_uhes.loc[df_uhes["ree"] == 2, "codigo_usina"].unique()
+#     for uhe in codigos_uhes:
+#         df_uhe = Qafluh.read(
+#             join(DECK_TEST_DIR, f"qafluh{str(uhe).zfill(3)}.out")
+#         ).valores
+#         if df_ree is None:
+#             df_ree = df_uhe
+#         else:
+#             df_ree["valor"] += df_uhe["valor"].to_numpy()
+#     # Conversão simples para conferência apenas do pat. 0
+#     df_ree["valor"] /= FATOR_HM3_M3S_MES
+#     __compara_sintese_nwlistop(
+#         df,
+#         df_ree,
+#         dataInicio=datetime(2023, 1, 1),
+#         cenario=1,
+#         ree=["SUL"],
+#         patamar=[0],
+#     )
+
+
+# def test_sintese_vafl_sbm(test_settings):
+#     m = MagicMock(lambda df, filename: df)
+#     with patch(
+#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+#         new=m,
+#     ):
+#         OperationSynthetizer.synthetize(["VAFL_SBM"], uow)
+#     m.assert_called()
+#     df = m.mock_calls[-1].args[0]
+#     df_sbm = None
+#     df_rees = Ree.read(join(DECK_TEST_DIR, "ree.dat")).rees
+#     rees_sbm = df_rees.loc[df_rees["submercado"] == 2, "codigo"].unique()
+#     df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+#     codigos_uhes = df_uhes.loc[
+#         df_uhes["ree"].isin(rees_sbm), "codigo_usina"
+#     ].unique()
+
+#     for uhe in codigos_uhes:
+#         df_uhe = Qafluh.read(
+#             join(DECK_TEST_DIR, f"qafluh{str(uhe).zfill(3)}.out")
+#         ).valores
+#         if df_sbm is None:
+#             df_sbm = df_uhe
+#         else:
+#             df_sbm["valor"] += df_uhe["valor"].to_numpy()
+#     # Conversão simples para conferência apenas do pat. 0
+#     df_sbm["valor"] /= FATOR_HM3_M3S_MES
+#     __compara_sintese_nwlistop(
+#         df,
+#         df_sbm,
+#         dataInicio=datetime(2023, 1, 1),
+#         cenario=1,
+#         submercado=["SUL"],
+#         patamar=[0],
+#     )
+
+
+# def test_sintese_vafl_sin(test_settings):
+#     m = MagicMock(lambda df, filename: df)
+#     with patch(
+#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+#         new=m,
+#     ):
+#         OperationSynthetizer.synthetize(["VAFL_SIN"], uow)
+#     m.assert_called()
+#     df = m.mock_calls[-1].args[0]
+#     df_sin = None
+#     df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+#     codigos_uhes = df_uhes["codigo_usina"].unique()
+#     for uhe in codigos_uhes:
+#         df_uhe = Qafluh.read(
+#             join(DECK_TEST_DIR, f"qafluh{str(uhe).zfill(3)}.out")
+#         ).valores
+#         if df_sin is None:
+#             df_sin = df_uhe
+#         else:
+#             df_sin["valor"] += df_uhe["valor"].to_numpy()
+#     # Conversão simples para conferência apenas do pat. 0
+#     df_sin["valor"] /= FATOR_HM3_M3S_MES
+#     __compara_sintese_nwlistop(
+#         df,
+#         df_sin,
+#         dataInicio=datetime(2023, 1, 1),
+#         cenario=1,
+#         patamar=[0],
+#     )
+
+
+# def test_sintese_qafl_ree(test_settings):
+#     m = MagicMock(lambda df, filename: df)
+#     with patch(
+#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+#         new=m,
+#     ):
+#         OperationSynthetizer.synthetize(["QAFL_REE"], uow)
+#     m.assert_called()
+#     df = m.mock_calls[-1].args[0]
+#     df_ree = None
+#     df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+#     codigos_uhes = df_uhes.loc[df_uhes["ree"] == 2, "codigo_usina"].unique()
+#     for uhe in codigos_uhes:
+#         df_uhe = Qafluh.read(
+#             join(DECK_TEST_DIR, f"qafluh{str(uhe).zfill(3)}.out")
+#         ).valores
+#         if df_ree is None:
+#             df_ree = df_uhe
+#         else:
+#             df_ree["valor"] += df_uhe["valor"].to_numpy()
+#     __compara_sintese_nwlistop(
+#         df,
+#         df_ree,
+#         dataInicio=datetime(2023, 1, 1),
+#         cenario=1,
+#         ree=["SUL"],
+#         patamar=[0],
+#     )
+
+
+# def test_sintese_qafl_sbm(test_settings):
+#     m = MagicMock(lambda df, filename: df)
+#     with patch(
+#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+#         new=m,
+#     ):
+#         OperationSynthetizer.synthetize(["QAFL_SBM"], uow)
+#     m.assert_called()
+#     df = m.mock_calls[-1].args[0]
+#     df_sbm = None
+#     df_rees = Ree.read(join(DECK_TEST_DIR, "ree.dat")).rees
+#     rees_sbm = df_rees.loc[df_rees["submercado"] == 2, "codigo"].unique()
+#     df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+#     codigos_uhes = df_uhes.loc[
+#         df_uhes["ree"].isin(rees_sbm), "codigo_usina"
+#     ].unique()
+
+#     for uhe in codigos_uhes:
+#         df_uhe = Qafluh.read(
+#             join(DECK_TEST_DIR, f"qafluh{str(uhe).zfill(3)}.out")
+#         ).valores
+#         if df_sbm is None:
+#             df_sbm = df_uhe
+#         else:
+#             df_sbm["valor"] += df_uhe["valor"].to_numpy()
+#     __compara_sintese_nwlistop(
+#         df,
+#         df_sbm,
+#         dataInicio=datetime(2023, 1, 1),
+#         cenario=1,
+#         submercado=["SUL"],
+#         patamar=[0],
+#     )
+
+
+# def test_sintese_qafl_sin(test_settings):
+#     m = MagicMock(lambda df, filename: df)
+#     with patch(
+#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+#         new=m,
+#     ):
+#         OperationSynthetizer.synthetize(["QAFL_SIN"], uow)
+#     m.assert_called()
+#     df = m.mock_calls[-1].args[0]
+#     df_sin = None
+#     df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+#     codigos_uhes = df_uhes["codigo_usina"].unique()
+#     for uhe in codigos_uhes:
+#         df_uhe = Qafluh.read(
+#             join(DECK_TEST_DIR, f"qafluh{str(uhe).zfill(3)}.out")
+#         ).valores
+#         if df_sin is None:
+#             df_sin = df_uhe
+#         else:
+#             df_sin["valor"] += df_uhe["valor"].to_numpy()
+#     __compara_sintese_nwlistop(
+#         df,
+#         df_sin,
+#         dataInicio=datetime(2023, 1, 1),
+#         cenario=1,
+#         patamar=[0],
+#     )
+
+
+# def test_sintese_vinc_ree(test_settings):
+#     m = MagicMock(lambda df, filename: df)
+#     with patch(
+#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+#         new=m,
+#     ):
+#         OperationSynthetizer.synthetize(["VINC_REE"], uow)
+#     m.assert_called()
+#     df = m.mock_calls[-1].args[0]
+#     df_ree = None
+#     df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+#     codigos_uhes = df_uhes.loc[df_uhes["ree"] == 2, "codigo_usina"].unique()
+#     for uhe in codigos_uhes:
+#         df_uhe = Qincruh.read(
+#             join(DECK_TEST_DIR, f"qincruh{str(uhe).zfill(3)}.out")
+#         ).valores
+#         if df_ree is None:
+#             df_ree = df_uhe
+#         else:
+#             df_ree["valor"] += df_uhe["valor"].to_numpy()
+#     # Conversão simples para conferência apenas do pat. 0
+#     df_ree["valor"] /= FATOR_HM3_M3S_MES
+#     __compara_sintese_nwlistop(
+#         df,
+#         df_ree,
+#         dataInicio=datetime(2023, 1, 1),
+#         cenario=1,
+#         ree=["SUL"],
+#         patamar=[0],
+#     )
+
+
+# def test_sintese_vinc_sbm(test_settings):
+#     m = MagicMock(lambda df, filename: df)
+#     with patch(
+#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+#         new=m,
+#     ):
+#         OperationSynthetizer.synthetize(["VINC_SBM"], uow)
+#     m.assert_called()
+#     df = m.mock_calls[-1].args[0]
+#     df_sbm = None
+#     df_rees = Ree.read(join(DECK_TEST_DIR, "ree.dat")).rees
+#     rees_sbm = df_rees.loc[df_rees["submercado"] == 2, "codigo"].unique()
+#     df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+#     codigos_uhes = df_uhes.loc[
+#         df_uhes["ree"].isin(rees_sbm), "codigo_usina"
+#     ].unique()
+
+#     for uhe in codigos_uhes:
+#         df_uhe = Qincruh.read(
+#             join(DECK_TEST_DIR, f"qincruh{str(uhe).zfill(3)}.out")
+#         ).valores
+#         if df_sbm is None:
+#             df_sbm = df_uhe
+#         else:
+#             df_sbm["valor"] += df_uhe["valor"].to_numpy()
+#     # Conversão simples para conferência apenas do pat. 0
+#     df_sbm["valor"] /= FATOR_HM3_M3S_MES
+#     __compara_sintese_nwlistop(
+#         df,
+#         df_sbm,
+#         dataInicio=datetime(2023, 1, 1),
+#         cenario=1,
+#         submercado=["SUL"],
+#         patamar=[0],
+#     )
+
+
+# def test_sintese_vinc_sin(test_settings):
+#     m = MagicMock(lambda df, filename: df)
+#     with patch(
+#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+#         new=m,
+#     ):
+#         OperationSynthetizer.synthetize(["VINC_SIN"], uow)
+#     m.assert_called()
+#     df = m.mock_calls[-1].args[0]
+#     df_sin = None
+#     df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+#     codigos_uhes = df_uhes["codigo_usina"].unique()
+#     for uhe in codigos_uhes:
+#         df_uhe = Qincruh.read(
+#             join(DECK_TEST_DIR, f"qincruh{str(uhe).zfill(3)}.out")
+#         ).valores
+#         if df_sin is None:
+#             df_sin = df_uhe
+#         else:
+#             df_sin["valor"] += df_uhe["valor"].to_numpy()
+#     # Conversão simples para conferência apenas do pat. 0
+#     df_sin["valor"] /= FATOR_HM3_M3S_MES
+#     __compara_sintese_nwlistop(
+#         df,
+#         df_sin,
+#         dataInicio=datetime(2023, 1, 1),
+#         cenario=1,
+#         patamar=[0],
+#     )
+
+
+# def test_sintese_qinc_ree(test_settings):
+#     m = MagicMock(lambda df, filename: df)
+#     with patch(
+#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+#         new=m,
+#     ):
+#         OperationSynthetizer.synthetize(["QINC_REE"], uow)
+#     m.assert_called()
+#     df = m.mock_calls[-1].args[0]
+#     df_ree = None
+#     df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+#     codigos_uhes = df_uhes.loc[df_uhes["ree"] == 2, "codigo_usina"].unique()
+#     for uhe in codigos_uhes:
+#         df_uhe = Qincruh.read(
+#             join(DECK_TEST_DIR, f"qincruh{str(uhe).zfill(3)}.out")
+#         ).valores
+#         if df_ree is None:
+#             df_ree = df_uhe
+#         else:
+#             df_ree["valor"] += df_uhe["valor"].to_numpy()
+#     __compara_sintese_nwlistop(
+#         df,
+#         df_ree,
+#         dataInicio=datetime(2023, 1, 1),
+#         cenario=1,
+#         ree=["SUL"],
+#         patamar=[0],
+#     )
+
+
+# def test_sintese_qinc_sbm(test_settings):
+#     m = MagicMock(lambda df, filename: df)
+#     with patch(
+#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+#         new=m,
+#     ):
+#         OperationSynthetizer.synthetize(["QINC_SBM"], uow)
+#     m.assert_called()
+#     df = m.mock_calls[-1].args[0]
+#     df_sbm = None
+#     df_rees = Ree.read(join(DECK_TEST_DIR, "ree.dat")).rees
+#     rees_sbm = df_rees.loc[df_rees["submercado"] == 2, "codigo"].unique()
+#     df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+#     codigos_uhes = df_uhes.loc[
+#         df_uhes["ree"].isin(rees_sbm), "codigo_usina"
+#     ].unique()
+
+#     for uhe in codigos_uhes:
+#         df_uhe = Qincruh.read(
+#             join(DECK_TEST_DIR, f"qincruh{str(uhe).zfill(3)}.out")
+#         ).valores
+#         if df_sbm is None:
+#             df_sbm = df_uhe
+#         else:
+#             df_sbm["valor"] += df_uhe["valor"].to_numpy()
+#     __compara_sintese_nwlistop(
+#         df,
+#         df_sbm,
+#         dataInicio=datetime(2023, 1, 1),
+#         cenario=1,
+#         submercado=["SUL"],
+#         patamar=[0],
+#     )
+
+
+# def test_sintese_qinc_sin(test_settings):
+#     m = MagicMock(lambda df, filename: df)
+#     with patch(
+#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+#         new=m,
+#     ):
+#         OperationSynthetizer.synthetize(["QINC_SIN"], uow)
+#     m.assert_called()
+#     df = m.mock_calls[-1].args[0]
+#     df_sin = None
+#     df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+#     codigos_uhes = df_uhes["codigo_usina"].unique()
+#     for uhe in codigos_uhes:
+#         df_uhe = Qincruh.read(
+#             join(DECK_TEST_DIR, f"qincruh{str(uhe).zfill(3)}.out")
+#         ).valores
+#         if df_sin is None:
+#             df_sin = df_uhe
+#         else:
+#             df_sin["valor"] += df_uhe["valor"].to_numpy()
+#     __compara_sintese_nwlistop(
+#         df,
+#         df_sin,
+#         dataInicio=datetime(2023, 1, 1),
+#         cenario=1,
+#         patamar=[0],
+#     )
+
+
+# def test_sintese_vtur_ree(test_settings):
+#     m = MagicMock(lambda df, filename: df)
+#     with patch(
+#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+#         new=m,
+#     ):
+#         OperationSynthetizer.synthetize(["VTUR_REE"], uow)
+#     m.assert_called()
+#     df = m.mock_calls[-1].args[0]
+#     df_ree = None
+#     df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+#     codigos_uhes = df_uhes.loc[df_uhes["ree"] == 2, "codigo_usina"].unique()
+#     for uhe in codigos_uhes:
+#         df_uhe = Vturuh.read(
+#             join(DECK_TEST_DIR, f"vturuh{str(uhe).zfill(3)}.out")
+#         ).valores
+#         if df_ree is None:
+#             df_ree = df_uhe
+#         else:
+#             df_ree["valor"] += df_uhe["valor"].to_numpy()
+
+#     __compara_sintese_nwlistop(
+#         df,
+#         df_ree,
+#         dataInicio=datetime(2023, 1, 1),
+#         cenario=1,
+#         ree=["SUL"],
+#         patamar=[0],
+#     )
+
+
+# def test_sintese_vtur_sbm(test_settings):
+#     m = MagicMock(lambda df, filename: df)
+#     with patch(
+#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+#         new=m,
+#     ):
+#         OperationSynthetizer.synthetize(["VTUR_SBM"], uow)
+#     m.assert_called()
+#     df = m.mock_calls[-1].args[0]
+#     df_sbm = None
+#     df_rees = Ree.read(join(DECK_TEST_DIR, "ree.dat")).rees
+#     rees_sbm = df_rees.loc[df_rees["submercado"] == 2, "codigo"].unique()
+#     df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+#     codigos_uhes = df_uhes.loc[
+#         df_uhes["ree"].isin(rees_sbm), "codigo_usina"
+#     ].unique()
+
+#     for uhe in codigos_uhes:
+#         df_uhe = Vturuh.read(
+#             join(DECK_TEST_DIR, f"vturuh{str(uhe).zfill(3)}.out")
+#         ).valores
+#         if df_sbm is None:
+#             df_sbm = df_uhe
+#         else:
+#             df_sbm["valor"] += df_uhe["valor"].to_numpy()
+
+#     __compara_sintese_nwlistop(
+#         df,
+#         df_sbm,
+#         dataInicio=datetime(2023, 1, 1),
+#         cenario=1,
+#         submercado=["SUL"],
+#         patamar=[0],
+#     )
+
+
+# def test_sintese_vtur_sin(test_settings):
+#     m = MagicMock(lambda df, filename: df)
+#     with patch(
+#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+#         new=m,
+#     ):
+#         OperationSynthetizer.synthetize(["VTUR_SIN"], uow)
+#     m.assert_called()
+#     df = m.mock_calls[-1].args[0]
+#     df_sin = None
+#     df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+#     codigos_uhes = df_uhes["codigo_usina"].unique()
+#     for uhe in codigos_uhes:
+#         df_uhe = Vturuh.read(
+#             join(DECK_TEST_DIR, f"vturuh{str(uhe).zfill(3)}.out")
+#         ).valores
+#         if df_sin is None:
+#             df_sin = df_uhe
+#         else:
+#             df_sin["valor"] += df_uhe["valor"].to_numpy()
+
+#     __compara_sintese_nwlistop(
+#         df,
+#         df_sin,
+#         dataInicio=datetime(2023, 1, 1),
+#         cenario=1,
+#         patamar=[0],
+#     )
+
+
+# def test_sintese_qtur_ree(test_settings):
+#     m = MagicMock(lambda df, filename: df)
+#     with patch(
+#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+#         new=m,
+#     ):
+#         OperationSynthetizer.synthetize(["QTUR_REE"], uow)
+#     m.assert_called()
+#     df = m.mock_calls[-1].args[0]
+#     df_ree = None
+#     df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+#     codigos_uhes = df_uhes.loc[df_uhes["ree"] == 2, "codigo_usina"].unique()
+#     for uhe in codigos_uhes:
+#         df_uhe = Vturuh.read(
+#             join(DECK_TEST_DIR, f"vturuh{str(uhe).zfill(3)}.out")
+#         ).valores
+#         if df_ree is None:
+#             df_ree = df_uhe
+#         else:
+#             df_ree["valor"] += df_uhe["valor"].to_numpy()
+#     # Conversão simples para conferência apenas do pat. 0
+#     df_ree["valor"] *= FATOR_HM3_M3S_MES
+#     __compara_sintese_nwlistop(
+#         df,
+#         df_ree,
+#         dataInicio=datetime(2023, 1, 1),
+#         cenario=1,
+#         ree=["SUL"],
+#         patamar=[0],
+#     )
+
+
+# def test_sintese_qtur_sbm(test_settings):
+#     m = MagicMock(lambda df, filename: df)
+#     with patch(
+#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+#         new=m,
+#     ):
+#         OperationSynthetizer.synthetize(["QTUR_SBM"], uow)
+#     m.assert_called()
+#     df = m.mock_calls[-1].args[0]
+#     df_sbm = None
+#     df_rees = Ree.read(join(DECK_TEST_DIR, "ree.dat")).rees
+#     rees_sbm = df_rees.loc[df_rees["submercado"] == 2, "codigo"].unique()
+#     df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+#     codigos_uhes = df_uhes.loc[
+#         df_uhes["ree"].isin(rees_sbm), "codigo_usina"
+#     ].unique()
+
+#     for uhe in codigos_uhes:
+#         df_uhe = Vturuh.read(
+#             join(DECK_TEST_DIR, f"vturuh{str(uhe).zfill(3)}.out")
+#         ).valores
+#         if df_sbm is None:
+#             df_sbm = df_uhe
+#         else:
+#             df_sbm["valor"] += df_uhe["valor"].to_numpy()
+#     # Conversão simples para conferência apenas do pat. 0
+#     df_sbm["valor"] *= FATOR_HM3_M3S_MES
+#     __compara_sintese_nwlistop(
+#         df,
+#         df_sbm,
+#         dataInicio=datetime(2023, 1, 1),
+#         cenario=1,
+#         submercado=["SUL"],
+#         patamar=[0],
+#     )
+
+
+# def test_sintese_qtur_sin(test_settings):
+#     m = MagicMock(lambda df, filename: df)
+#     with patch(
+#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+#         new=m,
+#     ):
+#         OperationSynthetizer.synthetize(["QTUR_SIN"], uow)
+#     m.assert_called()
+#     df = m.mock_calls[-1].args[0]
+#     df_sin = None
+#     df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+#     codigos_uhes = df_uhes["codigo_usina"].unique()
+#     for uhe in codigos_uhes:
+#         df_uhe = Vturuh.read(
+#             join(DECK_TEST_DIR, f"vturuh{str(uhe).zfill(3)}.out")
+#         ).valores
+#         if df_sin is None:
+#             df_sin = df_uhe
+#         else:
+#             df_sin["valor"] += df_uhe["valor"].to_numpy()
+#     # Conversão simples para conferência apenas do pat. 0
+#     df_sin["valor"] *= FATOR_HM3_M3S_MES
+#     __compara_sintese_nwlistop(
+#         df,
+#         df_sin,
+#         dataInicio=datetime(2023, 1, 1),
+#         cenario=1,
+#         patamar=[0],
+#     )
+
+
+# def test_sintese_vver_ree(test_settings):
+#     m = MagicMock(lambda df, filename: df)
+#     with patch(
+#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+#         new=m,
+#     ):
+#         OperationSynthetizer.synthetize(["VVER_REE"], uow)
+#     m.assert_called()
+#     df = m.mock_calls[-1].args[0]
+#     df_ree = None
+#     df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+#     codigos_uhes = df_uhes.loc[df_uhes["ree"] == 2, "codigo_usina"].unique()
+#     for uhe in codigos_uhes:
+#         df_uhe = Vertuh.read(
+#             join(DECK_TEST_DIR, f"vertuh{str(uhe).zfill(3)}.out")
+#         ).valores
+#         if df_ree is None:
+#             df_ree = df_uhe
+#         else:
+#             df_ree["valor"] += df_uhe["valor"].to_numpy()
+
+#     __compara_sintese_nwlistop(
+#         df,
+#         df_ree,
+#         dataInicio=datetime(2023, 1, 1),
+#         cenario=1,
+#         ree=["SUL"],
+#         patamar=[0],
+#     )
+
+
+# def test_sintese_vver_sbm(test_settings):
+#     m = MagicMock(lambda df, filename: df)
+#     with patch(
+#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+#         new=m,
+#     ):
+#         OperationSynthetizer.synthetize(["VVER_SBM"], uow)
+#     m.assert_called()
+#     df = m.mock_calls[-1].args[0]
+#     df_sbm = None
+#     df_rees = Ree.read(join(DECK_TEST_DIR, "ree.dat")).rees
+#     rees_sbm = df_rees.loc[df_rees["submercado"] == 2, "codigo"].unique()
+#     df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+#     codigos_uhes = df_uhes.loc[
+#         df_uhes["ree"].isin(rees_sbm), "codigo_usina"
+#     ].unique()
+
+#     for uhe in codigos_uhes:
+#         df_uhe = Vertuh.read(
+#             join(DECK_TEST_DIR, f"vertuh{str(uhe).zfill(3)}.out")
+#         ).valores
+#         if df_sbm is None:
+#             df_sbm = df_uhe
+#         else:
+#             df_sbm["valor"] += df_uhe["valor"].to_numpy()
+
+#     __compara_sintese_nwlistop(
+#         df,
+#         df_sbm,
+#         dataInicio=datetime(2023, 1, 1),
+#         cenario=1,
+#         submercado=["SUL"],
+#         patamar=[0],
+#     )
+
+
+# def test_sintese_vver_sin(test_settings):
+#     m = MagicMock(lambda df, filename: df)
+#     with patch(
+#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+#         new=m,
+#     ):
+#         OperationSynthetizer.synthetize(["VVER_SIN"], uow)
+#     m.assert_called()
+#     df = m.mock_calls[-1].args[0]
+#     df_sin = None
+#     df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+#     codigos_uhes = df_uhes["codigo_usina"].unique()
+#     for uhe in codigos_uhes:
+#         df_uhe = Vertuh.read(
+#             join(DECK_TEST_DIR, f"vertuh{str(uhe).zfill(3)}.out")
+#         ).valores
+#         if df_sin is None:
+#             df_sin = df_uhe
+#         else:
+#             df_sin["valor"] += df_uhe["valor"].to_numpy()
+
+#     __compara_sintese_nwlistop(
+#         df,
+#         df_sin,
+#         dataInicio=datetime(2023, 1, 1),
+#         cenario=1,
+#         patamar=[0],
+#     )
+
+
+# def test_sintese_qver_ree(test_settings):
+#     m = MagicMock(lambda df, filename: df)
+#     with patch(
+#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+#         new=m,
+#     ):
+#         OperationSynthetizer.synthetize(["QVER_REE"], uow)
+#     m.assert_called()
+#     df = m.mock_calls[-1].args[0]
+#     df_ree = None
+#     df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+#     codigos_uhes = df_uhes.loc[df_uhes["ree"] == 2, "codigo_usina"].unique()
+#     for uhe in codigos_uhes:
+#         df_uhe = Vertuh.read(
+#             join(DECK_TEST_DIR, f"vertuh{str(uhe).zfill(3)}.out")
+#         ).valores
+#         if df_ree is None:
+#             df_ree = df_uhe
+#         else:
+#             df_ree["valor"] += df_uhe["valor"].to_numpy()
+#     # Conversão simples para conferência apenas do pat. 0
+#     df_ree["valor"] *= FATOR_HM3_M3S_MES
+#     __compara_sintese_nwlistop(
+#         df,
+#         df_ree,
+#         dataInicio=datetime(2023, 1, 1),
+#         cenario=1,
+#         ree=["SUL"],
+#         patamar=[0],
+#     )
+
+
+# def test_sintese_qver_sbm(test_settings):
+#     m = MagicMock(lambda df, filename: df)
+#     with patch(
+#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+#         new=m,
+#     ):
+#         OperationSynthetizer.synthetize(["QVER_SBM"], uow)
+#     m.assert_called()
+#     df = m.mock_calls[-1].args[0]
+#     df_sbm = None
+#     df_rees = Ree.read(join(DECK_TEST_DIR, "ree.dat")).rees
+#     rees_sbm = df_rees.loc[df_rees["submercado"] == 2, "codigo"].unique()
+#     df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+#     codigos_uhes = df_uhes.loc[
+#         df_uhes["ree"].isin(rees_sbm), "codigo_usina"
+#     ].unique()
+
+#     for uhe in codigos_uhes:
+#         df_uhe = Vertuh.read(
+#             join(DECK_TEST_DIR, f"vertuh{str(uhe).zfill(3)}.out")
+#         ).valores
+#         if df_sbm is None:
+#             df_sbm = df_uhe
+#         else:
+#             df_sbm["valor"] += df_uhe["valor"].to_numpy()
+#     # Conversão simples para conferência apenas do pat. 0
+#     df_sbm["valor"] *= FATOR_HM3_M3S_MES
+#     __compara_sintese_nwlistop(
+#         df,
+#         df_sbm,
+#         dataInicio=datetime(2023, 1, 1),
+#         cenario=1,
+#         submercado=["SUL"],
+#         patamar=[0],
+#     )
+
+
+# def test_sintese_qver_sin(test_settings):
+#     m = MagicMock(lambda df, filename: df)
+#     with patch(
+#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+#         new=m,
+#     ):
+#         OperationSynthetizer.synthetize(["QVER_SIN"], uow)
+#     m.assert_called()
+#     df = m.mock_calls[-1].args[0]
+#     df_sin = None
+#     df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+#     codigos_uhes = df_uhes["codigo_usina"].unique()
+#     for uhe in codigos_uhes:
+#         df_uhe = Vertuh.read(
+#             join(DECK_TEST_DIR, f"vertuh{str(uhe).zfill(3)}.out")
+#         ).valores
+#         if df_sin is None:
+#             df_sin = df_uhe
+#         else:
+#             df_sin["valor"] += df_uhe["valor"].to_numpy()
+#     # Conversão simples para conferência apenas do pat. 0
+#     df_sin["valor"] *= FATOR_HM3_M3S_MES
 #     __compara_sintese_nwlistop(
 #         df,
 #         df_sin,
@@ -801,42 +1580,43 @@ def __compara_sintese_nwlistop(
 # # QDEF e VDEF para UHE (somar TUR com VER)
 
 
-# def test_sintese_qdef_uhe(test_settings):
+def test_sintese_qdef_uhe(test_settings):
 
-#     def __calcula_patamar_medio_soma(df: pd.DataFrame) -> pd.DataFrame:
-#         df_pat0 = df.copy()
-#         df_pat0 = df_pat0.groupby(["data", "serie"], as_index=False).sum(
-#             numeric_only=True
-#         )
-#         df_pat0["patamar"] = "TOTAL"
-#         df_pat0 = pd.concat([df, df_pat0], ignore_index=True)
-#         return df_pat0.sort_values(["data", "serie", "patamar"])
+    def __calcula_patamar_medio_soma(df: pd.DataFrame) -> pd.DataFrame:
+        df_pat0 = df.copy()
+        df_pat0 = df_pat0.groupby(["data", "serie"], as_index=False).sum(
+            numeric_only=True
+        )
+        df_pat0["patamar"] = "TOTAL"
+        df_pat0 = pd.concat([df, df_pat0], ignore_index=True)
+        return df_pat0.sort_values(["data", "serie", "patamar"])
 
-#     m = MagicMock(lambda df, filename: df)
-#     with patch(
-#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
-#         new=m,
-#     ):
-#         OperationSynthetizer.synthetize(["QDEF_UHE"], uow)
-#     m.assert_called()
-#     df = m.mock_calls[-1].args[0]
-#     df_tur = __calcula_patamar_medio_soma(
-#         Vturuh.read(join(DECK_TEST_DIR, "vturuh006.out")).valores
-#     )
-#     df_ver = __calcula_patamar_medio_soma(
-#         Vertuh.read(join(DECK_TEST_DIR, "vertuh006.out")).valores
-#     )
-#     df_tur["valor"] += df_ver["valor"].to_numpy()
-#     # Conversão simples para conferência apenas do pat. 0 (média do estágio)
-#     df_tur["valor"] *= FATOR_HM3_M3S_MES
-#     __compara_sintese_nwlistop(
-#         df,
-#         df_tur,
-#         dataInicio=datetime(2023, 1, 1),
-#         cenario=1,
-#         usina=["FURNAS"],
-#         patamar=[0],
-#     )
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["QDEF_UHE"], uow)
+    m.assert_called()
+    df = m.mock_calls[-1].args[0]
+    df.to_csv("teste.csv")
+    df_tur = __calcula_patamar_medio_soma(
+        Vturuh.read(join(DECK_TEST_DIR, "vturuh006.out")).valores
+    )
+    df_ver = __calcula_patamar_medio_soma(
+        Vertuh.read(join(DECK_TEST_DIR, "vertuh006.out")).valores
+    )
+    df_tur["valor"] += df_ver["valor"].to_numpy()
+    # Conversão simples para conferência apenas do pat. 0 (média do estágio)
+    df_tur["valor"] *= FATOR_HM3_M3S_MES
+    __compara_sintese_nwlistop(
+        df,
+        df_tur,
+        dataInicio=datetime(2023, 1, 1),
+        cenario=1,
+        usina=["FURNAS"],
+        patamar=[0],
+    )
 
 
 # def test_sintese_vdef_uhe(test_settings):
@@ -2121,24 +2901,24 @@ def __compara_sintese_nwlistop(
 #     )
 
 
-def test_sintese_varpf_uhe(test_settings):
-    m = MagicMock(lambda df, filename: df)
-    with patch(
-        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
-        new=m,
-    ):
-        OperationSynthetizer.synthetize(["VARPF_UHE"], uow)
-    m.assert_called_once()
-    df = m.mock_calls[0].args[0]
-    df_arq = Varmpuh.read(join(DECK_TEST_DIR, "varmpuh001.out")).valores
-    __compara_sintese_nwlistop(
-        df,
-        df_arq,
-        dataInicio=datetime(2023, 1, 1),
-        cenario=1,
-        patamar=[0],
-        usina=["CAMARGOS"],
-    )
+# def test_sintese_varpf_uhe(test_settings):
+#     m = MagicMock(lambda df, filename: df)
+#     with patch(
+#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+#         new=m,
+#     ):
+#         OperationSynthetizer.synthetize(["VARPF_UHE"], uow)
+#     m.assert_called_once()
+#     df = m.mock_calls[0].args[0]
+#     df_arq = Varmpuh.read(join(DECK_TEST_DIR, "varmpuh001.out")).valores
+#     __compara_sintese_nwlistop(
+#         df,
+#         df_arq,
+#         dataInicio=datetime(2023, 1, 1),
+#         cenario=1,
+#         patamar=[0],
+#         usina=["CAMARGOS"],
+#     )
 
 
 # def test_sintese_ghid_uhe(test_settings):
