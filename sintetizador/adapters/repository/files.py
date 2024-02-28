@@ -134,7 +134,6 @@ from sintetizador.utils.encoding import converte_codificacao
 from sintetizador.model.operation.variable import Variable
 from sintetizador.model.operation.spatialresolution import SpatialResolution
 from sintetizador.model.operation.temporalresolution import TemporalResolution
-
 import platform
 
 if platform.system() == "Windows":
@@ -1503,6 +1502,11 @@ class RawFilesRepository(AbstractFilesRepository):
                     n_estagios,
                     n_estagios_th,
                 )
+            else:
+                raise RuntimeError(
+                    caminho_arq.split("/")[-1] + " não encontrado para síntese dos cenários"
+                )
+                    
         return self.__energiaf.get(iteracao)
 
     def get_vazaof(self, iteracao: int) -> Optional[Vazaof]:
@@ -1547,7 +1551,10 @@ class RawFilesRepository(AbstractFilesRepository):
                     n_estagios,
                     n_estagios_th,
                 )
-
+            else:
+                raise RuntimeError(
+                    caminho_arq.split("/")[-1] + " não encontrado para síntese dos cenários"
+                )
         return self.__vazaof.get(iteracao)
 
     def get_energiab(self, iteracao: int) -> Optional[Energiab]:
@@ -1581,7 +1588,10 @@ class RawFilesRepository(AbstractFilesRepository):
                     n_rees,
                     n_estagios,
                 )
-
+            else:
+                raise RuntimeError(
+                    caminho_arq.split("/")[-1] + " não encontrado para síntese dos cenários"
+                )
         return self.__energiab.get(iteracao)
 
     def get_vazaob(self, iteracao: int) -> Optional[Vazaob]:
@@ -1621,7 +1631,10 @@ class RawFilesRepository(AbstractFilesRepository):
                     n_uhes,
                     n_estagios_hib,
                 )
-
+            else:
+                raise RuntimeError(
+                    caminho_arq.split("/")[-1] + " não encontrado para síntese dos cenários"
+                )
         return self.__vazaob.get(iteracao)
 
     def get_enavazf(self, iteracao: int) -> Optional[Enavazf]:
@@ -1662,7 +1675,10 @@ class RawFilesRepository(AbstractFilesRepository):
                     n_estagios,
                     n_estagios_th,
                 )
-
+            else:
+                raise RuntimeError(
+                    caminho_arq.split("/")[-1] + " não encontrado para síntese dos cenários"
+                )
         return self.__enavazf.get(iteracao)
 
     def get_enavazb(self, iteracao: int) -> Optional[Enavazb]:
@@ -1699,7 +1715,10 @@ class RawFilesRepository(AbstractFilesRepository):
                     n_rees,
                     n_estagios,
                 )
-
+            else:
+                raise RuntimeError(
+                    caminho_arq.split("/")[-1] + " não encontrado para síntese dos cenários"
+                )
         return self.__enavazb.get(iteracao)
 
     def get_energias(self) -> Optional[Energias]:
@@ -1746,7 +1765,10 @@ class RawFilesRepository(AbstractFilesRepository):
                     n_estagios,
                     n_estagios_th,
                 )
-
+            else:
+                raise RuntimeError(
+                    caminho_arq.split("/")[-1] + " não encontrado para síntese dos cenários"
+                )
         return self.__energias
 
     def get_enavazs(self) -> Optional[Enavazf]:
@@ -1795,6 +1817,10 @@ class RawFilesRepository(AbstractFilesRepository):
                     n_estagios,
                     n_estagios_th,
                 )
+            else:
+                raise RuntimeError(
+                    caminho_arq.split("/")[-1] + " não encontrado para síntese dos cenários"
+                )
         return self.__enavazs
 
     def get_vazaos(self) -> Optional[Vazaos]:
@@ -1841,6 +1867,10 @@ class RawFilesRepository(AbstractFilesRepository):
                     n_uhes,
                     n_estagios,
                     n_estagios_th,
+                )
+            else:
+                raise RuntimeError(
+                    caminho_arq.split("/")[-1] + " não encontrado para síntese dos cenários"
                 )
         return self.__vazaos
 
