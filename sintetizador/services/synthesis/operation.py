@@ -2783,18 +2783,11 @@ class OperationSynthetizer:
             df = cls.__stub_resolve_volumes_iniciais_uhe(s, uow)
             df, is_stub = df, True
         elif all(
+            # TODO - eliminar todas as sínteses de violações que
+            # não sejam de slacks propositais das metodologias,
+            # que tornam o problema RCR.
+            # Mapeadas: fpha, evap, deficit, excesso, ...
             [
-                # TODO - como a agregação é feita no bounds.py,
-                # é necessário sempre passar uma variável que seja
-                # agregável. Logo, as vazões vão ser sempre
-                # obtidas passando a variável equivalente de
-                # volume.
-                # TODO - descontinuar variáveis de violação que sejam
-                # possíveis de serem obtidas a partir dos limites
-                # inferior e superior de outras.
-                # TODO - volumes armazenados percentuais podem ser
-                # agregados se passando os absolutos e deixando
-                # a conversão para o bounds.py
                 s.variable
                 in [
                     Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,

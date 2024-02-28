@@ -1936,115 +1936,19 @@ class OperationVariableBounds:
         """
 
         # TODO - adaptar o código de defluente para desviada
-        datas_inicio = df["dataInicio"].unique().tolist()
-        n_usinas = len(df["usina"].unique())
-        n_estagios = len(datas_inicio)
-        n_cenarios = len(df["serie"].unique())
-        n_patamares = len(df["patamar"].unique())
-        # Lê hidr.dat
-        arq_hidr = cls._get_hidr(uow)
-        df_hidr = cls._validate_data(arq_hidr.cadastro, pd.DataFrame)
-        # Lê modif.dat
-        arq_modif = cls._get_modif(uow)
-
-        # Obtem usinas do df na ordem em que aparecem e durações dos patamares
-        codigos_usinas = cls._codigos_usinas_unicas(df, df_hidr)
-
-        def _modificacoes_cadastro_uhes(
-            df_hidr: pd.DataFrame,
-            arq_modif: Modif,
-            codigos_usinas: np.ndarray,
-        ) -> pd.DataFrame:
-            """
-            Realiza a extração de modificações cadastrais de volumes de usinas
-            hidrelétricas a partir do arquivo modif.dat, atualizando os cadastros
-            conforme as declarações de modificações são encontradas.
-            """
-            for u in codigos_usinas:
-                modificacoes_usina = arq_modif.modificacoes_usina(u)
-                if modificacoes_usina is not None:
-                    regs_vazmin = [
-                        r for r in modificacoes_usina if isinstance(r, VAZMIN)
-                    ]
-                    if len(regs_vazmin) > 0:
-                        reg_vazmin = regs_vazmin[-1]
-                        df_hidr.at[u, "vazao_minima_historica"] = (
-                            reg_vazmin.vazao
-                        )
-            return df_hidr
-
-        # Modifica o hidr.dat considerando apenas as UHEs do caso
-        df_hidr = _modificacoes_cadastro_uhes(
-            df_hidr, arq_modif, codigos_usinas
-        )
-        # Inicializa limites com valores do hidr.dat modificado
-        limites_inferiores = cls._dado_cadastral_hidr_uhes(
-            df_hidr, codigos_usinas, "vazao_minima_historica"
-        )
-
-        # Repete para todos os estagios e patamares
-        limites_inferiores = np.repeat(
-            limites_inferiores, n_estagios * n_patamares
-        )
-        unidades_limites_inferiores = np.array(
-            ["m3/s"] * len(limites_inferiores)
-        )
-        limites_superiores = np.ones_like(limites_inferiores) * float("inf")
-        unidades_limites_superiores = np.array(
-            ["m3/s"] * len(limites_superiores)
-        )
-
-        # Atualiza limites com valores de VAZMINT do modif.dat
-        limites_inferiores, unidades_limites_inferiores = (
-            cls._modificacoes_cadastro_temporais_uhes(
-                limites_inferiores,
-                unidades_limites_inferiores,
-                datas_inicio,
-                n_estagios,
-                n_patamares,
-                arq_modif,
-                VAZMINT,
-                codigos_usinas,
-            )
-        )
-        # Atualiza limites com valores de VAZMAXT do modif.dat
-        limites_superiores, unidades_limites_superiores = (
-            cls._modificacoes_cadastro_temporais_uhes(
-                limites_superiores,
-                unidades_limites_superiores,
-                datas_inicio,
-                n_estagios,
-                n_patamares,
-                arq_modif,
-                VAZMAXT,
-                codigos_usinas,
-            )
-        )
-        # Converte limites para a unidade de síntese
-        limites_inferiores = cls._converte_unidades_cadastro_unidades_sintese(
-            df,
-            limites_inferiores,
-            unidades_limites_inferiores,
-            unidade_sintese,
-        )
-        limites_superiores = cls._converte_unidades_cadastro_unidades_sintese(
-            df,
-            limites_superiores,
-            unidades_limites_superiores,
-            unidade_sintese,
-        )
-        # Constroi limites para cada estágio e cenario
-        limites_inferiores_cenarios = cls._expande_dados_para_cenarios(
-            limites_inferiores, n_usinas, n_estagios, n_cenarios, n_patamares
-        )
-        limites_superiores_cenarios = cls._expande_dados_para_cenarios(
-            limites_superiores, n_usinas, n_estagios, n_cenarios, n_patamares
-        )
-        # Adiciona ao df e retorna
-        df["valor"] = np.round(df["valor"], 2)
-        df["limiteInferior"] = np.round(limites_inferiores_cenarios, 2)
-        df["limiteSuperior"] = np.round(limites_superiores_cenarios, 2)
+        # talvez valha a pena refatorar a síntese de vazao desviada
+        # para que contenha um par de UHEs?
+        # Ou continuamos com a abordagem de ter uma QDES por usina
+        # e seu valor sendo o líquido? Parece dar problemas a longo prazo..
+        df["limiteInferior"] = 0.0
+        df["limiteSuperior"] = 0.0
         return df
+
+    # TODO intercambios - obter limites olhando arquivo patamar.dat e
+    # sistema.dat. existe eco em algum arquivo de saída?
+    # Também tem que pensar em alguma lógica para plotar os limites
+    # de intercâmbio considerando os agrupamentos? Ou criar uma nova síntese
+    # de agrupamentos de intercâmbio?
 
     # TODO gter UTE, SBM e SIN
 
