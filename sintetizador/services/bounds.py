@@ -7,7 +7,7 @@ from sintetizador.model.operation.spatialresolution import SpatialResolution
 from sintetizador.model.operation.operationsynthesis import OperationSynthesis
 from sintetizador.services.unitofwork import AbstractUnitOfWork
 
-from inewave.newave import Hidr, Modif, Pmo, Sistema, Ree, Curva
+from inewave.newave import Hidr, Modif, Pmo, Sistema, Ree, Curva, Patamar
 from inewave.newave.modelos.modif import (
     VOLMIN,
     VOLMAX,
@@ -556,6 +556,10 @@ class OperationVariableBounds:
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
             df, col_grp="sin"
         ),
+        OperationSynthesis(
+            Variable.INTERCAMBIO,
+            SpatialResolution.PAR_SUBMERCADOS,
+        ): lambda df, uow: OperationVariableBounds._int_sbp_bounds(df, uow),
     }
 
     @classmethod
@@ -589,6 +593,14 @@ class OperationVariableBounds:
             if sistema is None:
                 raise RuntimeError("Erro na leitura do arquivo sistema.dat")
             return sistema
+
+    @classmethod
+    def _get_patamar(cls, uow: AbstractUnitOfWork) -> Patamar:
+        with uow:
+            patamar = uow.files.get_patamar()
+            if patamar is None:
+                raise RuntimeError("Erro na leitura do arquivo patamar.dat")
+            return patamar
 
     @classmethod
     def _get_curva(cls, uow: AbstractUnitOfWork) -> Curva:
@@ -1934,15 +1946,158 @@ class OperationVariableBounds:
         para as variáveis de Volume Desviado (VDES) e Vazão Desviada (QDES)
         para cada UHE.
         """
-
-        # TODO - adaptar o código de defluente para desviada
-        # talvez valha a pena refatorar a síntese de vazao desviada
-        # para que contenha um par de UHEs?
-        # Ou continuamos com a abordagem de ter uma QDES por usina
-        # e seu valor sendo o líquido? Parece dar problemas a longo prazo..
+        # TODO - Procurar limite superior no modif.dat
         df["limiteInferior"] = 0.0
-        df["limiteSuperior"] = 0.0
+        df["limiteSuperior"] = float("inf")
         return df
+
+    @classmethod
+    def _int_sbp_bounds(
+        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        """
+        Adiciona ao DataFrame da síntese os limites inferior e superior
+        para a variável de Intercâmbio (INT) por par de submercados.
+        """
+        # Lê e converte os limites de intercâmbio para MWmes,
+        # pois os arquivos de entrada são em MWmed com P.U e
+        # o nwlistop fornece a saída em MWmes.
+        datas_inicio = df["dataInicio"].unique().tolist()
+        n_estagios = len(datas_inicio)
+        n_cenarios = len(df["serie"].unique())
+        n_patamares = len(df["patamar"].unique())
+        # Lê sistema.dat
+        arq_sistema = cls._get_sistema(uow)
+        df_submercados = cls._validate_data(
+            arq_sistema.custo_deficit, pd.DataFrame
+        )
+        df_limites = cls._validate_data(
+            arq_sistema.limites_intercambio, pd.DataFrame
+        )
+        # Considera o flag de sentido de intercâmbio
+        filtro = df_limites["sentido"] == 1
+        (
+            df_limites.loc[filtro, "submercado_de"],
+            df_limites.loc[filtro, "submercado_para"],
+        ) = (
+            df_limites.loc[filtro, "submercado_para"],
+            df_limites.loc[filtro, "submercado_de"],
+        )
+        df_limites = df_limites.drop(columns=["sentido"])
+        # Lê patamar.dat
+        arq_patamar = cls._get_patamar(uow)
+        df_pu = cls._validate_data(
+            arq_patamar.intercambio_patamares, pd.DataFrame
+        )
+        df_duracoes = cls._validate_data(
+            arq_patamar.duracao_mensal_patamares, pd.DataFrame
+        )
+        # Cria um patamar 0 fictício com 1 p.u. nos dados
+        # lidos do patamar.dat
+        df_pat0 = df_pu.loc[df_pu["patamar"] == 1].copy()
+        df_pat0["patamar"] = 0
+        df_pat0["valor"] = 1.0
+        df_pu = pd.concat([df_pu, df_pat0], ignore_index=True)
+        df_pu = df_pu.sort_values(
+            ["submercado_de", "submercado_para", "data", "patamar"]
+        )
+        df_pat0 = df_duracoes.loc[df_duracoes["patamar"] == 1].copy()
+        df_pat0["patamar"] = 0
+        df_pat0["valor"] = 1.0
+        df_duracoes = pd.concat([df_duracoes, df_pat0], ignore_index=True)
+        df_duracoes = df_duracoes.sort_values(["data", "patamar"])
+
+        # Obtem limites por patamar em MWmed
+        df_limites_pat = df_pu.copy()
+        df_limites_pat["valor"] = df_limites_pat.apply(
+            lambda linha: df_limites.loc[
+                (df_limites["submercado_de"] == linha["submercado_de"])
+                & (df_limites["submercado_para"] == linha["submercado_para"])
+                & (df_limites["data"] == linha["data"]),
+                "valor",
+            ].iloc[0]
+            * linha["valor"],
+            axis=1,
+        )
+
+        # Converte para MWmes
+        df_duracoes = df_duracoes.sort_values(["data", "patamar"])
+        n_pares_limites = df_limites_pat.drop_duplicates(
+            ["submercado_de", "submercado_para"]
+        ).shape[0]
+        df_limites_pat["valor"] *= np.tile(
+            df_duracoes["valor"].to_numpy(), n_pares_limites
+        )
+
+        # Substitui códigos dos submercados pelos nomes
+        df_limites_pat = df_limites_pat.astype(
+            {"submercado_de": str, "submercado_para": str}
+        )
+        df_submercados = df_submercados.drop_duplicates(
+            ["nome_submercado", "codigo_submercado"]
+        )
+        mapa_nomes_submercados = {
+            str(codigo): nome
+            for codigo, nome in zip(
+                df_submercados["codigo_submercado"],
+                df_submercados["nome_submercado"],
+            )
+        }
+        for col in ["submercado_de", "submercado_para"]:
+            codigos = df_limites_pat[col].unique()
+            for cod in codigos:
+                df_limites_pat.loc[df_limites_pat[col] == cod, col] = (
+                    mapa_nomes_submercados[cod]
+                )
+
+        # Filtra os pares de submercados de limites dentre os
+        # que existem no df
+        df["par_sbm"] = df["submercadoDe"] + "-" + df["submercadoPara"]
+        df_limites_pat["par_sbm"] = (
+            df_limites_pat["submercado_de"]
+            + "-"
+            + df_limites_pat["submercado_para"]
+        )
+        df_limites_pat["par_sbm_r"] = (
+            df_limites_pat["submercado_para"]
+            + "-"
+            + df_limites_pat["submercado_de"]
+        )
+
+        pares_sbm_df = df["par_sbm"].unique().tolist()
+        pares_sbm_limites_r = df_limites_pat["par_sbm_r"].unique().tolist()
+        pares_sbm_limites = df_limites_pat["par_sbm"].unique().tolist()
+
+        # Inicializa limites com valores default
+        df["limiteInferior"] = -float("inf")
+        df["limiteSuperior"] = float("inf")
+        # Aplica os limites, considerando o par de submercados
+        # e o sentido reverso como sinal negativo
+        for p in pares_sbm_df:
+            if p in pares_sbm_limites_r:
+                lims = -cls._expande_dados_para_cenarios(
+                    df_limites_pat.loc[
+                        df_limites_pat["par_sbm_r"] == p, "valor"
+                    ].to_numpy(),
+                    1,
+                    n_estagios,
+                    n_cenarios,
+                    n_patamares,
+                )
+                df.loc[df["par_sbm"] == p, "limiteInferior"] = lims
+            if p in pares_sbm_limites:
+                lims = cls._expande_dados_para_cenarios(
+                    df_limites_pat.loc[
+                        df_limites_pat["par_sbm"] == p, "valor"
+                    ].to_numpy(),
+                    1,
+                    n_estagios,
+                    n_cenarios,
+                    n_patamares,
+                )
+                df.loc[df["par_sbm"] == p, "limiteSuperior"] = lims
+
+        return df.drop(columns=["par_sbm"])
 
     # TODO intercambios - obter limites olhando arquivo patamar.dat e
     # sistema.dat. existe eco em algum arquivo de saída?

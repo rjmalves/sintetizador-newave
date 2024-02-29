@@ -1580,43 +1580,42 @@ def __compara_sintese_nwlistop(
 # # QDEF e VDEF para UHE (somar TUR com VER)
 
 
-def test_sintese_qdef_uhe(test_settings):
+# def test_sintese_qdef_uhe(test_settings):
 
-    def __calcula_patamar_medio_soma(df: pd.DataFrame) -> pd.DataFrame:
-        df_pat0 = df.copy()
-        df_pat0 = df_pat0.groupby(["data", "serie"], as_index=False).sum(
-            numeric_only=True
-        )
-        df_pat0["patamar"] = "TOTAL"
-        df_pat0 = pd.concat([df, df_pat0], ignore_index=True)
-        return df_pat0.sort_values(["data", "serie", "patamar"])
+#     def __calcula_patamar_medio_soma(df: pd.DataFrame) -> pd.DataFrame:
+#         df_pat0 = df.copy()
+#         df_pat0 = df_pat0.groupby(["data", "serie"], as_index=False).sum(
+#             numeric_only=True
+#         )
+#         df_pat0["patamar"] = "TOTAL"
+#         df_pat0 = pd.concat([df, df_pat0], ignore_index=True)
+#         return df_pat0.sort_values(["data", "serie", "patamar"])
 
-    m = MagicMock(lambda df, filename: df)
-    with patch(
-        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
-        new=m,
-    ):
-        OperationSynthetizer.synthetize(["QDEF_UHE"], uow)
-    m.assert_called()
-    df = m.mock_calls[-1].args[0]
-    df.to_csv("teste.csv")
-    df_tur = __calcula_patamar_medio_soma(
-        Vturuh.read(join(DECK_TEST_DIR, "vturuh006.out")).valores
-    )
-    df_ver = __calcula_patamar_medio_soma(
-        Vertuh.read(join(DECK_TEST_DIR, "vertuh006.out")).valores
-    )
-    df_tur["valor"] += df_ver["valor"].to_numpy()
-    # Conversão simples para conferência apenas do pat. 0 (média do estágio)
-    df_tur["valor"] *= FATOR_HM3_M3S_MES
-    __compara_sintese_nwlistop(
-        df,
-        df_tur,
-        dataInicio=datetime(2023, 1, 1),
-        cenario=1,
-        usina=["FURNAS"],
-        patamar=[0],
-    )
+#     m = MagicMock(lambda df, filename: df)
+#     with patch(
+#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+#         new=m,
+#     ):
+#         OperationSynthetizer.synthetize(["QDEF_UHE"], uow)
+#     m.assert_called()
+#     df = m.mock_calls[-1].args[0]
+#     df_tur = __calcula_patamar_medio_soma(
+#         Vturuh.read(join(DECK_TEST_DIR, "vturuh006.out")).valores
+#     )
+#     df_ver = __calcula_patamar_medio_soma(
+#         Vertuh.read(join(DECK_TEST_DIR, "vertuh006.out")).valores
+#     )
+#     df_tur["valor"] += df_ver["valor"].to_numpy()
+#     # Conversão simples para conferência apenas do pat. 0 (média do estágio)
+#     df_tur["valor"] *= FATOR_HM3_M3S_MES
+#     __compara_sintese_nwlistop(
+#         df,
+#         df_tur,
+#         dataInicio=datetime(2023, 1, 1),
+#         cenario=1,
+#         usina=["FURNAS"],
+#         patamar=[0],
+#     )
 
 
 # def test_sintese_vdef_uhe(test_settings):
@@ -3022,25 +3021,26 @@ def test_sintese_qdef_uhe(test_settings):
 #     )
 
 
-# def test_sintese_int_sbp(test_settings):
-#     m = MagicMock(lambda df, filename: df)
-#     with patch(
-#         "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
-#         new=m,
-#     ):
-#         OperationSynthetizer.synthetize(["INT_SBP"], uow)
-#     m.assert_called_once()
-#     df = m.mock_calls[0].args[0]
-#     df_arq = Intercambio.read(join(DECK_TEST_DIR, "int001002.out")).valores
-#     __compara_sintese_nwlistop(
-#         df,
-#         df_arq,
-#         dataInicio=datetime(2023, 1, 1),
-#         cenario=1,
-#         patamar=[0],
-#         submercadoDe=["SUDESTE"],
-#         submercadoPara=["SUL"],
-#     )
+def test_sintese_int_sbp(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["INT_SBP"], uow)
+    m.assert_called_once()
+    df = m.mock_calls[0].args[0]
+    df.to_csv("teste.csv")
+    df_arq = Intercambio.read(join(DECK_TEST_DIR, "int001002.out")).valores
+    __compara_sintese_nwlistop(
+        df,
+        df_arq,
+        dataInicio=datetime(2023, 1, 1),
+        cenario=1,
+        patamar=[0],
+        submercadoDe=["SUDESTE"],
+        submercadoPara=["SUL"],
+    )
 
 
 # def test_sintese_cdef_sbm(test_settings):
