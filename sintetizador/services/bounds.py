@@ -7,7 +7,17 @@ from sintetizador.model.operation.spatialresolution import SpatialResolution
 from sintetizador.model.operation.operationsynthesis import OperationSynthesis
 from sintetizador.services.unitofwork import AbstractUnitOfWork
 
-from inewave.newave import Hidr, Modif, Pmo, Sistema, Ree, Curva, Patamar
+from inewave.newave import (
+    Hidr,
+    Modif,
+    Pmo,
+    Sistema,
+    Ree,
+    Curva,
+    Patamar,
+    Conft,
+    Confhd,
+)
 from inewave.newave.modelos.modif import (
     VOLMIN,
     VOLMAX,
@@ -560,6 +570,24 @@ class OperationVariableBounds:
             Variable.INTERCAMBIO,
             SpatialResolution.PAR_SUBMERCADOS,
         ): lambda df, uow: OperationVariableBounds._int_sbp_bounds(df, uow),
+        OperationSynthesis(
+            Variable.GERACAO_TERMICA,
+            SpatialResolution.USINA_TERMELETRICA,
+        ): lambda df, uow: OperationVariableBounds._gter_bounds(
+            df, uow, "usina"
+        ),
+        OperationSynthesis(
+            Variable.GERACAO_TERMICA,
+            SpatialResolution.SUBMERCADO,
+        ): lambda df, uow: OperationVariableBounds._gter_bounds(
+            df, uow, "submercado"
+        ),
+        OperationSynthesis(
+            Variable.GERACAO_TERMICA,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): lambda df, uow: OperationVariableBounds._gter_bounds(
+            df, uow, "sin"
+        ),
     }
 
     @classmethod
@@ -605,10 +633,26 @@ class OperationVariableBounds:
     @classmethod
     def _get_curva(cls, uow: AbstractUnitOfWork) -> Curva:
         with uow:
-            ree = uow.files.get_curva()
-            if ree is None:
+            curva = uow.files.get_curva()
+            if curva is None:
                 raise RuntimeError("Erro na leitura do arquivo curva.dat")
-            return ree
+            return curva
+
+    @classmethod
+    def _get_confhd(cls, uow: AbstractUnitOfWork) -> Confhd:
+        with uow:
+            confhd = uow.files.get_confhd()
+            if confhd is None:
+                raise RuntimeError("Erro na leitura do arquivo confhd.dat")
+            return confhd
+
+    @classmethod
+    def _get_conft(cls, uow: AbstractUnitOfWork) -> Conft:
+        with uow:
+            conft = uow.files.get_conft()
+            if conft is None:
+                raise RuntimeError("Erro na leitura do arquivo conft.dat")
+            return conft
 
     @classmethod
     def _get_pmo(cls, uow: AbstractUnitOfWork) -> Pmo:
@@ -1952,29 +1996,14 @@ class OperationVariableBounds:
         return df
 
     @classmethod
-    def _int_sbp_bounds(
-        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
+    def _considera_flag_sentido_limite_intercambio(
+        cls, df_limites: pd.DataFrame
     ) -> pd.DataFrame:
         """
-        Adiciona ao DataFrame da síntese os limites inferior e superior
-        para a variável de Intercâmbio (INT) por par de submercados.
+        Inverte as colunas submercado_de e submercado_para a
+        partir do valor da coluna sentido, aplicada apenas para
+        o DataFrame de limites de intercâmbio do sistema.dat.
         """
-        # Lê e converte os limites de intercâmbio para MWmes,
-        # pois os arquivos de entrada são em MWmed com P.U e
-        # o nwlistop fornece a saída em MWmes.
-        datas_inicio = df["dataInicio"].unique().tolist()
-        n_estagios = len(datas_inicio)
-        n_cenarios = len(df["serie"].unique())
-        n_patamares = len(df["patamar"].unique())
-        # Lê sistema.dat
-        arq_sistema = cls._get_sistema(uow)
-        df_submercados = cls._validate_data(
-            arq_sistema.custo_deficit, pd.DataFrame
-        )
-        df_limites = cls._validate_data(
-            arq_sistema.limites_intercambio, pd.DataFrame
-        )
-        # Considera o flag de sentido de intercâmbio
         filtro = df_limites["sentido"] == 1
         (
             df_limites.loc[filtro, "submercado_de"],
@@ -1983,37 +2012,47 @@ class OperationVariableBounds:
             df_limites.loc[filtro, "submercado_para"],
             df_limites.loc[filtro, "submercado_de"],
         )
-        df_limites = df_limites.drop(columns=["sentido"])
-        # Lê patamar.dat
-        arq_patamar = cls._get_patamar(uow)
-        df_pu = cls._validate_data(
-            arq_patamar.intercambio_patamares, pd.DataFrame
-        )
-        df_duracoes = cls._validate_data(
-            arq_patamar.duracao_mensal_patamares, pd.DataFrame
-        )
-        # Cria um patamar 0 fictício com 1 p.u. nos dados
-        # lidos do patamar.dat
-        df_pat0 = df_pu.loc[df_pu["patamar"] == 1].copy()
-        df_pat0["patamar"] = 0
-        df_pat0["valor"] = 1.0
-        df_pu = pd.concat([df_pu, df_pat0], ignore_index=True)
-        df_pu = df_pu.sort_values(
-            ["submercado_de", "submercado_para", "data", "patamar"]
-        )
-        df_pat0 = df_duracoes.loc[df_duracoes["patamar"] == 1].copy()
-        df_pat0["patamar"] = 0
-        df_pat0["valor"] = 1.0
-        df_duracoes = pd.concat([df_duracoes, df_pat0], ignore_index=True)
-        df_duracoes = df_duracoes.sort_values(["data", "patamar"])
+        return df_limites.drop(columns=["sentido"])
 
+    @classmethod
+    def _cria_pat0_ficticio(cls, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Cria um patamar 0 fictício com 1 p.u. nos dados lidos do
+        patamar.dat.
+        """
+        df_pat0 = df.loc[df["patamar"] == 1].copy()
+        df_pat0["patamar"] = 0
+        df_pat0["valor"] = 1.0
+        df = pd.concat([df, df_pat0], ignore_index=True)
+        cols_ordenacao = [c for c in df.columns if c != "valor"]
+        return df.sort_values(cols_ordenacao)
+
+    @classmethod
+    def _converte_limites_intercambio_MWmes(
+        cls,
+        df_limites_patamar_pu: pd.DataFrame,
+        df_limites_estagios_mwmed: pd.DataFrame,
+        df_duracoes: pd.DataFrame,
+        df_submercados: pd.DataFrame,
+    ) -> pd.DataFrame:
+        """
+        Obtem limites de intercâmbio em MWmes a partir de limites
+        em MWmed e P.U. e das durações de cada patamar. Estes limites
+        são compatíveis com o visto no nwlistop.
+        """
         # Obtem limites por patamar em MWmed
-        df_limites_pat = df_pu.copy()
+        df_limites_pat = df_limites_patamar_pu.copy()
         df_limites_pat["valor"] = df_limites_pat.apply(
-            lambda linha: df_limites.loc[
-                (df_limites["submercado_de"] == linha["submercado_de"])
-                & (df_limites["submercado_para"] == linha["submercado_para"])
-                & (df_limites["data"] == linha["data"]),
+            lambda linha: df_limites_estagios_mwmed.loc[
+                (
+                    df_limites_estagios_mwmed["submercado_de"]
+                    == linha["submercado_de"]
+                )
+                & (
+                    df_limites_estagios_mwmed["submercado_para"]
+                    == linha["submercado_para"]
+                )
+                & (df_limites_estagios_mwmed["data"] == linha["data"]),
                 "valor",
             ].iloc[0]
             * linha["valor"],
@@ -2028,7 +2067,6 @@ class OperationVariableBounds:
         df_limites_pat["valor"] *= np.tile(
             df_duracoes["valor"].to_numpy(), n_pares_limites
         )
-
         # Substitui códigos dos submercados pelos nomes
         df_limites_pat = df_limites_pat.astype(
             {"submercado_de": str, "submercado_para": str}
@@ -2049,7 +2087,23 @@ class OperationVariableBounds:
                 df_limites_pat.loc[df_limites_pat[col] == cod, col] = (
                     mapa_nomes_submercados[cod]
                 )
+        return df_limites_pat
 
+    @classmethod
+    def _aplica_limites_intercambio_mwmes(
+        cls, df: pd.DataFrame, df_limites_pat: pd.DataFrame
+    ) -> pd.DataFrame:
+        """
+        Cria as colunas de limites de intercâmbio em MWmes no DataFrame
+        da síntese que foi recebido.
+        Os limites inferior e superior são aplicados de acordo com o
+        par de submercados e o sentido do intercâmbio, sendo um deles
+        sempre <= 0.
+        """
+        datas_inicio = df["dataInicio"].unique().tolist()
+        n_estagios = len(datas_inicio)
+        n_cenarios = len(df["serie"].unique())
+        n_patamares = len(df["patamar"].unique())
         # Filtra os pares de submercados de limites dentre os
         # que existem no df
         df["par_sbm"] = df["submercadoDe"] + "-" + df["submercadoPara"]
@@ -2097,15 +2151,235 @@ class OperationVariableBounds:
                 )
                 df.loc[df["par_sbm"] == p, "limiteSuperior"] = lims
 
+        df["limiteInferior"] = np.round(df["limiteInferior"], 1)
+        df["limiteSuperior"] = np.round(df["limiteSuperior"], 1)
+
         return df.drop(columns=["par_sbm"])
 
-    # TODO intercambios - obter limites olhando arquivo patamar.dat e
-    # sistema.dat. existe eco em algum arquivo de saída?
-    # Também tem que pensar em alguma lógica para plotar os limites
+    @classmethod
+    def _int_sbp_bounds(
+        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        """
+        Adiciona ao DataFrame da síntese os limites inferior e superior
+        para a variável de Intercâmbio (INT) por par de submercados.
+        """
+        # Lê e converte os limites de intercâmbio para MWmes,
+        # pois os arquivos de entrada são em MWmed com P.U e
+        # o nwlistop fornece a saída em MWmes.
+
+        # Lê sistema.dat
+        arq_sistema = cls._get_sistema(uow)
+        df_submercados = cls._validate_data(
+            arq_sistema.custo_deficit, pd.DataFrame
+        )
+        df_limites = cls._validate_data(
+            arq_sistema.limites_intercambio, pd.DataFrame
+        )
+        # Lê patamar.dat
+        arq_patamar = cls._get_patamar(uow)
+        df_pu = cls._validate_data(
+            arq_patamar.intercambio_patamares, pd.DataFrame
+        )
+        df_duracoes = cls._validate_data(
+            arq_patamar.duracao_mensal_patamares, pd.DataFrame
+        )
+        # Formata os dados lidos
+        df_limites = cls._considera_flag_sentido_limite_intercambio(df_limites)
+        df_pu = cls._cria_pat0_ficticio(df_pu)
+        df_duracoes = cls._cria_pat0_ficticio(df_duracoes)
+
+        df_limites_pat = cls._converte_limites_intercambio_MWmes(
+            df_pu, df_limites, df_duracoes, df_submercados
+        )
+        return cls._aplica_limites_intercambio_mwmes(df, df_limites_pat)
+
+    @classmethod
+    def _adiciona_submercado_limites_gter(
+        cls, df: pd.DataFrame, arq_conft: Conft, arq_sistema: Sistema
+    ) -> pd.DataFrame:
+        df_usinas = cls._validate_data(arq_conft.usinas, pd.DataFrame)
+        df_submercados = cls._validate_data(
+            arq_sistema.custo_deficit, pd.DataFrame
+        )
+        # Adiciona informação do submercado de cada UTE
+        df["submercado"] = df["codigo_usina"].apply(
+            lambda c: df_usinas.loc[
+                df_usinas["codigo_usina"] == c, "submercado"
+            ].iloc[0]
+        )
+        df["submercado"] = df["submercado"].apply(
+            lambda c: df_submercados.loc[
+                df_submercados["codigo_submercado"] == c, "nome_submercado"
+            ].iloc[0]
+        )
+        df = df.rename(columns={"nome_usina": "usina"})
+        return df.drop(columns=["codigo_usina"])
+
+    @classmethod
+    def _agrega_variaveis_limites_ute(
+        cls,
+        df: pd.DataFrame,
+        col_grp: Optional[str] = None,
+        ordem_sintese: Optional[list] = None,
+    ) -> pd.DataFrame:
+        """
+        Realiza a agregação de limites de geração de usinas
+        térmicas.
+        """
+        cols_grp_validas = ["usina", "ree", "submercado", "sin"]
+
+        if col_grp is None:
+            return df
+
+        if col_grp == "sin":
+            df["group"] = 1
+        elif col_grp in cols_grp_validas:
+            df["group"] = df[col_grp]
+        else:
+            raise RuntimeError(f"Coluna de agrupamento inválida: {col_grp}")
+
+        cols_group = ["group", "data"]
+        df_group = df.groupby(cols_group).sum(numeric_only=True).reset_index()
+
+        if ordem_sintese:
+            df_group["group"] = pd.Categorical(
+                df_group["group"], categories=ordem_sintese, ordered=True
+            )
+        df_group = df_group.sort_values(["group", "data"])
+
+        df_group["group"] = df_group["group"].astype(str)
+
+        if col_grp:
+            df_group = df_group.rename(columns={"group": col_grp})
+        else:
+            df_group = df_group.drop(columns=["group"])
+        return df_group
+
+    @classmethod
+    def _expande_dados_cenarios_gter(
+        cls,
+        df: pd.DataFrame,
+        df_gtmin: pd.DataFrame,
+        df_gtmax: pd.DataFrame,
+        col_grp: str,
+        ordem_sintese: list,
+    ) -> pd.DataFrame:
+        """
+        Expande os dados da síntese de geração térmica
+        para o número de cenários e patamares existentes.
+
+        É um wrapper para a chamada da _expande_dados_para_cenarios
+        pois existe o comportamento particular dos limites de geração
+        serem fornecidos apenas em MWmed por estágio, e por
+        questões de desempenho este são repetidos
+        (n_patamares * n_cenarios) vezes como se existisse apenas 1
+        patamar e a conversão para MWmes é feita posterioremente.
+        """
+        datas_inicio = df["dataInicio"].unique().tolist()
+        n_estagios = len(datas_inicio)
+        n_cenarios = len(df["serie"].unique())
+        n_patamares = len(df["patamar"].unique())
+        if col_grp != "sin":
+            for u in ordem_sintese:
+                lim_inf = cls._expande_dados_para_cenarios(
+                    df_gtmin.loc[
+                        df_gtmin[col_grp] == u, "valor_MWmed"
+                    ].to_numpy(),
+                    1,
+                    n_estagios,
+                    n_cenarios * n_patamares,
+                    1,
+                )
+                df.loc[df[col_grp] == u, "limiteInferior"] = lim_inf
+                lim_sup = cls._expande_dados_para_cenarios(
+                    df_gtmax.loc[
+                        df_gtmax[col_grp] == u, "valor_MWmed"
+                    ].to_numpy(),
+                    1,
+                    n_estagios,
+                    n_cenarios * n_patamares,
+                    1,
+                )
+                df.loc[df[col_grp] == u, "limiteSuperior"] = lim_sup
+        else:
+            lim_inf = cls._expande_dados_para_cenarios(
+                df_gtmin["valor_MWmed"].to_numpy(),
+                1,
+                n_estagios,
+                n_cenarios * n_patamares,
+                1,
+            )
+            df["limiteInferior"] = lim_inf
+            lim_sup = cls._expande_dados_para_cenarios(
+                df_gtmax["valor_MWmed"].to_numpy(),
+                1,
+                n_estagios,
+                n_cenarios * n_patamares,
+                1,
+            )
+            df["limiteSuperior"] = lim_sup
+        return df
+
+    @classmethod
+    def _gter_bounds(
+        cls, df: pd.DataFrame, uow: AbstractUnitOfWork, col_grp: str
+    ) -> pd.DataFrame:
+        """
+        Realiza o cálculo dos limites de geração térmica para cada
+        UTE, SBM e SIN, considerando os limites por usina fornecidos
+        no pmo.dat.
+
+        Regra de negócio: os limites de geração térmica são fornecidos
+        sempre no pmo.dat apenas por usina térmica, e não por agrupamento.
+        Desta forma, o DataFrame de síntese fornecido será já agregado
+        de acordo com a síntese desejada, mas os limites deverão ser
+        agregados de acordo.
+        """
+        # Lê os limites em MWmed do pmo.dat
+        arq_pmo = cls._get_pmo(uow)
+        df_gtmin = cls._validate_data(
+            arq_pmo.geracao_minima_usinas_termicas, pd.DataFrame
+        )
+        df_gtmax = cls._validate_data(
+            arq_pmo.geracao_maxima_usinas_termicas, pd.DataFrame
+        )
+        # Adiciona informações do submercado de cada UTE
+        arq_conft = cls._get_conft(uow)
+        arq_sistema = cls._get_sistema(uow)
+        df_gtmin = cls._adiciona_submercado_limites_gter(
+            df_gtmin, arq_conft, arq_sistema
+        )
+        df_gtmax = cls._adiciona_submercado_limites_gter(
+            df_gtmax, arq_conft, arq_sistema
+        )
+        # Agrupa os limites, se necessário
+        ordem_sintese = (
+            df[col_grp].unique().tolist() if col_grp != "sin" else None
+        )
+        df_gtmin = cls._agrega_variaveis_limites_ute(
+            df_gtmin, col_grp, ordem_sintese
+        )
+        df_gtmax = cls._agrega_variaveis_limites_ute(
+            df_gtmax, col_grp, ordem_sintese
+        )
+        # Repete os limites para todos os estágios e cenarios
+        df = cls._expande_dados_cenarios_gter(
+            df, df_gtmin, df_gtmax, col_grp, ordem_sintese
+        )
+
+        # Converte os limites para MWmes
+        df["limiteInferior"] *= df["duracaoPatamar"] / cls.STAGE_DURATION_HOURS
+        df["limiteSuperior"] *= df["duracaoPatamar"] / cls.STAGE_DURATION_HOURS
+
+        df["limiteInferior"] = np.round(df["limiteInferior"], 1)
+        df["limiteSuperior"] = np.round(df["limiteSuperior"], 1)
+
+        return df
+
+    # TODO intercambios - também tem que pensar em alguma lógica para plotar os limites
     # de intercâmbio considerando os agrupamentos? Ou criar uma nova síntese
     # de agrupamentos de intercâmbio?
-
-    # TODO gter UTE, SBM e SIN
 
     # TODO ghid UHE, REE, SBM e SIN - como obter limites para geração hidráulica?
     # pode congelar as demais variáveis e usar a FPHA para obter limites de geração
