@@ -140,8 +140,6 @@ def __compara_sintese_nwlistop(
                     df_nwlistop[col].isin(val)
                 )
 
-    print(df_sintese.loc[filtros_sintese, "valor"].to_numpy())
-    print(df_nwlistop.loc[filtros_nwlistop, "valor"].to_numpy())
     assert np.allclose(
         df_sintese.loc[filtros_sintese, "valor"].to_numpy(),
         df_nwlistop.loc[filtros_nwlistop, "valor"].to_numpy(),
@@ -2887,6 +2885,7 @@ def test_sintese_varmf_uhe(test_settings):
         OperationSynthetizer.synthetize(["VARMF_UHE"], uow)
     m.assert_called_once()
     df = m.mock_calls[0].args[0]
+    df.to_csv("teste.csv")
     # Somente para VARM: subtrai volume mínimo para comparação com nwlistop,
     # que imprime somente volume útil.
     with uow:
