@@ -132,3 +132,4 @@ dmypy.json
 **.parquet.gzip
 test_case/
 test.py
+.vscode/
