@@ -914,6 +914,10 @@ class OperationSynthetizer:
                 Variable.VAZAO_AFLUENTE,
                 SpatialResolution.USINA_HIDROELETRICA,
             ),
+            OperationSynthesis(
+                Variable.VOLUME_AFLUENTE,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
         ],
         OperationSynthesis(
             Variable.VAZAO_AFLUENTE,
@@ -923,6 +927,10 @@ class OperationSynthetizer:
                 Variable.VAZAO_AFLUENTE,
                 SpatialResolution.USINA_HIDROELETRICA,
             ),
+            OperationSynthesis(
+                Variable.VOLUME_AFLUENTE,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
         ],
         OperationSynthesis(
             Variable.VAZAO_AFLUENTE,
@@ -930,6 +938,10 @@ class OperationSynthetizer:
         ): [
             OperationSynthesis(
                 Variable.VAZAO_AFLUENTE,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+            OperationSynthesis(
+                Variable.VOLUME_AFLUENTE,
                 SpatialResolution.USINA_HIDROELETRICA,
             ),
         ],

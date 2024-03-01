@@ -10,7 +10,7 @@
    65 DO ATLAN_CSA      1     EE     65
   183 DO_ATLANTICO      1     EE    183
   137 GNA I             1     EE    137
-  238 GNA P. ACU 3      1     NE    238
+  238 GNA II            1     NE    238
   155 GOIANIA II        1     EE    155
    63 IBIRITE           1     EE     63
    54 JUIZ DE FORA      1     EE     54
@@ -32,13 +32,10 @@
   249 PORSUD I          1     EE    249
   250 PORSUD II         1     EE    250
   251 POVOACAO 1        1     EE    251
-  230 PREDILECTA        1     EE    230
-    9 R.SILVEIRA        1     EE      9
    62 SEROPEDICA        1     EE     62
     4 ST.CRUZ 34        1     EE      4
    86 ST.CRUZ NOVA      1     EE     86
   146 STA VITORIA       1     EE    146
-  393 T. NORTE 1        1     EE    393
   194 T. NORTE 2        1     EE    194
    90 TERMOMACAE        1     EE     90
    47 TERMORIO          1     EE     47
@@ -85,8 +82,8 @@
   259 PORTOCEM I        3     NE    259
   151 POTIGUAR          3     EE    151
   161 POTIGUAR III      3     EE    161
-  223 PROSPERI III      3     NE    223
-  241 PROSPERID II      3     NE    241
+  223 PROSPERI III      3     EE    223
+  241 PROSPERID II      3     EE    241
   147 PROSPERIDADE      3     EE    147
   170 SUAPE II          3     EE    170
   221 SYKUE I           3     EE    221
@@ -108,6 +105,7 @@
   324 CANTA             4     NE    324
    73 GERAMAR I         4     EE     73
    70 GERAMAR II        4     EE     70
+  325 HF S JOAQUIM      4     NE    325
   326 JAGUATIRI II      4     NE    326
   204 JARAQUI           4     EE    204
   327 M.CRISTO SUC      4     NE    327

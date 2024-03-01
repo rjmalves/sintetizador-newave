@@ -8,6 +8,7 @@ from sintetizador.model.operation.operationsynthesis import OperationSynthesis
 from sintetizador.services.unitofwork import AbstractUnitOfWork
 
 from inewave.newave import (
+    Dger,
     Hidr,
     Modif,
     Pmo,
@@ -663,6 +664,14 @@ class OperationVariableBounds:
             return pmo
 
     @classmethod
+    def _get_dger(cls, uow: AbstractUnitOfWork) -> Dger:
+        with uow:
+            dger = uow.files.get_dger()
+            if dger is None:
+                raise RuntimeError("Erro na leitura do arquivo dger.dat")
+            return dger
+
+    @classmethod
     def _validate_data(cls, data, type: Type[T]) -> T:
         if not isinstance(data, type):
             raise RuntimeError("Erro na validação dos dados.")
@@ -687,15 +696,29 @@ class OperationVariableBounds:
         return np.repeat(codigos_rees, n_estagios * n_patamares)
 
     @classmethod
+    def _filtra_datas_df(
+        cls, df: pd.DataFrame, col: str, inicio: datetime, fim: datetime
+    ) -> pd.DataFrame:
+        """
+        Filtra um DataFrame por um intervalo de datas, segundo uma coluna.
+        """
+        return df.loc[df[col].between(inicio, fim)]
+
+    @classmethod
     def _adiciona_data_configuracoes(
-        cls, df: pd.DataFrame, arq_pmo: Pmo
+        cls, df: pd.DataFrame, arq_pmo: Pmo, arq_dger: Dger
     ) -> pd.DataFrame:
         """
         Adiciona a informação da data associada a cada configuração
         em um DataFrame que contenha a configuração.
         """
+        data_inicio, data_fim = cls._datas_inicio_fim_estudo(arq_dger)
+
         df_configs = cls._validate_data(
             arq_pmo.configuracoes_qualquer_modificacao, pd.DataFrame
+        )
+        df_configs = cls._filtra_datas_df(
+            df_configs, "data", data_inicio, data_fim
         )
         # Adiciona informação da data de cada configuração e reordena
         # pela ordem que aparece no dataframe da síntese
@@ -783,6 +806,29 @@ class OperationVariableBounds:
         return df
 
     @classmethod
+    def _datas_inicio_fim_estudo(
+        cls, arq_dger: Dger
+    ) -> Tuple[datetime, datetime]:
+        """
+        Obtem as datas do primeiro e último estágios do período
+        de estudo do modelo, considerando anos do pós-estudo utilizados para
+        simulacao final.
+        """
+        mes_inicio_estudo = cls._validate_data(arq_dger.mes_inicio_estudo, int)
+        ano_inicio_estudo = cls._validate_data(arq_dger.ano_inicio_estudo, int)
+        mes_fim_estudo = 12
+        n_anos_estudo = cls._validate_data(arq_dger.num_anos_estudo, int)
+        n_anos_pos_estudo = cls._validate_data(
+            arq_dger.num_anos_pos_sim_final, int
+        )
+        ano_fim_estudo = (
+            ano_inicio_estudo + n_anos_estudo + n_anos_pos_estudo - 1
+        )
+        data_inicio_estudo = datetime(ano_inicio_estudo, mes_inicio_estudo, 1)
+        data_fim_estudo = datetime(ano_fim_estudo, mes_fim_estudo, 1)
+        return data_inicio_estudo, data_fim_estudo
+
+    @classmethod
     def _limites_superiores_ear_pmo(
         cls,
         cols_agrupar: List[str],
@@ -792,6 +838,7 @@ class OperationVariableBounds:
         Obtém os limites superiores de energia armazenada a partir do arquivo
         `pmo.dat` e agrupa segundo uma lista de colunas fornecida.
         """
+        arq_dger = cls._get_dger(uow)
         # Lê os limites superiores do pmo.dat
         arq_pmo = cls._get_pmo(uow)
         df_earmax = cls._validate_data(
@@ -800,7 +847,10 @@ class OperationVariableBounds:
         # Adiciona informações do submercado de cada REE
         arq_ree = cls._get_ree(uow)
         arq_sistema = cls._get_sistema(uow)
-        df_earmax = cls._adiciona_data_configuracoes(df_earmax, arq_pmo)
+        df_earmax = cls._adiciona_data_configuracoes(
+            df_earmax, arq_pmo, arq_dger
+        )
+        df_earmax = cls._completa_entradas_meses_pre_estudo(df_earmax, "data")
         df_earmax = cls._adiciona_codigos_rees(df_earmax, "nome_ree", arq_ree)
         df_earmax = cls._adiciona_nome_submercados(
             df_earmax, "nome_ree", arq_ree, arq_sistema
@@ -808,6 +858,30 @@ class OperationVariableBounds:
         return df_earmax.groupby(cols_agrupar, as_index=False).sum(
             numeric_only=True
         )
+
+    @classmethod
+    def _completa_entradas_meses_pre_estudo(
+        cls, df: pd.DataFrame, col: str
+    ) -> pd.DataFrame:
+        """
+        Completa o DataFrame fornecido com valores do primeiro mês do estudo,
+        para todos os meses do primeiro ano que antecedem o período de estudo.
+        """
+        # Obtem os meses do estudo
+        datas_estudo: List[datetime] = df[col].unique().tolist()
+        primeiro_estagio = min(datas_estudo)
+        mes_inicio = primeiro_estagio.month
+        if mes_inicio == 1:
+            return df
+
+        # Repete o valores pro primeiro estágio, começando de janeiro
+        dfs_pre: List[pd.DataFrame] = []
+        for m in range(1, mes_inicio):
+            df_m = df.loc[df[col] == primeiro_estagio].copy()
+            df_m[col] = datetime(primeiro_estagio.year, m, 1)
+            dfs_pre.append(df_m)
+        df = pd.concat(dfs_pre + [df], ignore_index=True)
+        return df
 
     @classmethod
     def _limites_inferiores_ear_curva(
@@ -820,6 +894,7 @@ class OperationVariableBounds:
         `curva.dat`, converte para valores absolutos em MWmes e agrupa
         segundo uma lista de colunas fornecida.
         """
+        arq_dger = cls._get_dger(uow)
         # Obtem outros dados necessários
         arq_ree = cls._get_ree(uow)
         arq_sistema = cls._get_sistema(uow)
@@ -831,11 +906,19 @@ class OperationVariableBounds:
         # Adiciona informações do submercado de cada REE
         arq_ree = cls._get_ree(uow)
         arq_sistema = cls._get_sistema(uow)
-        df_earmax = cls._adiciona_data_configuracoes(df_earmax, arq_pmo)
+        df_earmax = cls._adiciona_data_configuracoes(
+            df_earmax, arq_pmo, arq_dger
+        )
         df_earmax = cls._adiciona_codigos_rees(df_earmax, "nome_ree", arq_ree)
+        df_earmax = cls._completa_entradas_meses_pre_estudo(df_earmax, "data")
         # Lê os limites inferiores do curva.dat
         arq_curva = cls._get_curva(uow)
         df_curva = cls._validate_data(arq_curva.curva_seguranca, pd.DataFrame)
+        data_inicio, data_fim = cls._datas_inicio_fim_estudo(arq_dger)
+        df_curva = cls._filtra_datas_df(
+            df_curva, "data", data_inicio, data_fim
+        )
+        df_curva = cls._completa_entradas_meses_pre_estudo(df_curva, "data")
         df_curva = cls._adiciona_nomes_rees(df_curva, "codigo_ree", arq_ree)
         df_curva = cls._adiciona_nome_submercados(
             df_curva, "nome_ree", arq_ree, arq_sistema
@@ -1387,10 +1470,10 @@ class OperationVariableBounds:
         ]
         df = df.astype({"serie": int})
         df_group = df.groupby(cols_group).sum(numeric_only=True).reset_index()
-        if col_grp:
-            df_group = df_group.rename(columns={"group": col_grp})
-        else:
+        if col_grp == "sin" or col_grp is None:
             df_group = df_group.drop(columns=["group"])
+        else:
+            df_group = df_group.rename(columns={"group": col_grp})
         return df_group
 
     @classmethod
@@ -1424,10 +1507,10 @@ class OperationVariableBounds:
         ]
         df = df.astype({"serie": int})
         df_group = df.groupby(cols_group).sum(numeric_only=True).reset_index()
-        if col_grp:
-            df_group = df_group.rename(columns={"group": col_grp})
-        else:
+        if col_grp == "sin" or col_grp is None:
             df_group = df_group.drop(columns=["group"])
+        else:
+            df_group = df_group.rename(columns={"group": col_grp})
 
         # Converte volume para vazão
         for c in ["valor", "limiteInferior", "limiteSuperior"]:
@@ -1822,6 +1905,7 @@ class OperationVariableBounds:
                         df_hidr.at[
                             u, f"maquinas_conjunto_{reg_nummaq.conjunto}"
                         ] = reg_nummaq.numero_maquinas
+                    df_hidr = df_hidr.copy()
 
             return df_hidr
 
