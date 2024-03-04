@@ -3,13 +3,15 @@ import pandas as pd  # type: ignore
 import numpy as np
 import logging
 
-# import traceback
+
+import traceback
 from multiprocessing import Pool
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta  # type: ignore
 from inewave.newave import Dger, Ree, Confhd, Conft, Sistema, Clast
 from sintetizador.utils.log import Log
 from sintetizador.model.settings import Settings
+from sintetizador.services.bounds import OperationVariableBounds
 from sintetizador.services.unitofwork import AbstractUnitOfWork
 from sintetizador.model.operation.variable import Variable
 from sintetizador.model.operation.spatialresolution import SpatialResolution
@@ -231,6 +233,9 @@ class OperationSynthetizer:
 
     CACHED_SYNTHESIS: Dict[OperationSynthesis, pd.DataFrame] = {}
 
+    # Declaração de dependência entre uma síntese e outras,
+    # para o caso de variáveis que não são explicitamente fornecidas
+    # como saída pelo modelo, e sim calculadas pelo sintetizador.
     PREREQ_SYNTHESIS: Dict[OperationSynthesis, List[OperationSynthesis]] = {
         OperationSynthesis(
             Variable.ENERGIA_VERTIDA,
@@ -347,6 +352,60 @@ class OperationSynthetizer:
         ): [
             OperationSynthesis(
                 Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            )
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            )
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            )
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            )
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            )
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            )
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
                 SpatialResolution.USINA_HIDROELETRICA,
             )
         ],
@@ -855,6 +914,10 @@ class OperationSynthetizer:
                 Variable.VAZAO_AFLUENTE,
                 SpatialResolution.USINA_HIDROELETRICA,
             ),
+            OperationSynthesis(
+                Variable.VOLUME_AFLUENTE,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
         ],
         OperationSynthesis(
             Variable.VAZAO_AFLUENTE,
@@ -864,6 +927,10 @@ class OperationSynthetizer:
                 Variable.VAZAO_AFLUENTE,
                 SpatialResolution.USINA_HIDROELETRICA,
             ),
+            OperationSynthesis(
+                Variable.VOLUME_AFLUENTE,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
         ],
         OperationSynthesis(
             Variable.VAZAO_AFLUENTE,
@@ -871,6 +938,10 @@ class OperationSynthetizer:
         ): [
             OperationSynthesis(
                 Variable.VAZAO_AFLUENTE,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+            OperationSynthesis(
+                Variable.VOLUME_AFLUENTE,
                 SpatialResolution.USINA_HIDROELETRICA,
             ),
         ],
@@ -1642,7 +1713,45 @@ class OperationSynthetizer:
         if len(dfs_validos) > 0:
             df_completo = pd.concat(dfs_validos, ignore_index=True)
 
+        df_completo = cls._add_submercado_rees(df_completo, uow)
+
         return df_completo
+
+    @classmethod
+    def _add_submercado_rees(
+        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        """
+        Adiciona a informação do SBM a uma síntese feita para REEs.
+        """
+        if "submercado" in df.columns:
+            return df
+        else:
+            cols = df.columns.tolist()
+            rees = cls._validate_data(
+                cls._get_ree(uow).rees, pd.DataFrame, "REEs"
+            ).set_index("nome")
+            sistema = cls._validate_data(
+                cls._get_sistema(uow).custo_deficit, pd.DataFrame, "SBMs"
+            )
+            sistema = sistema.drop_duplicates(
+                ["codigo_submercado", "nome_submercado"]
+            ).set_index("codigo_submercado")
+            # Obtem os nomes dos SBMs na mesma ordem em que aparecem os REEs
+            rees_df = np.array(df["ree"].unique().tolist())
+            codigos_sbms_df = [rees.at[r, "submercado"] for r in rees_df]
+            nomes_sbms_df = [
+                sistema.at[c, "nome_submercado"] for c in codigos_sbms_df
+            ]
+            # Aplica de modo posicional por desempenho
+            n_patamares = len(df["patamar"].unique())
+            n_estagios = len(df["estagio"].unique())
+            n_series = len(df["serie"].unique())
+            df["submercado"] = np.repeat(
+                nomes_sbms_df, n_series * n_estagios * n_patamares
+            )
+            # Reordena as colunas e retorna
+            return df[["ree", "submercado"] + [c for c in cols if c != "ree"]]
 
     @classmethod
     def _resolve_UHE_usina(
@@ -1868,104 +1977,82 @@ class OperationSynthetizer:
         return cache_reserv
 
     @classmethod
-    def __stub_agrega_variaveis_indiv_REE_SBM_SIN(
+    def __stub_mapa_variaveis_agregacao_simples_UHE(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-        sistema = cls._validate_data(
-            cls._get_sistema(uow).custo_deficit,
-            pd.DataFrame,
-            "submercados",
-        )
-        confhd = cls._validate_data(
-            cls._get_confhd(uow).usinas, pd.DataFrame, "UHEs"
-        )
-        rees = cls._validate_data(cls._get_ree(uow).rees, pd.DataFrame, "REEs")
+        """
+        Realiza o mapeamento de síntese de uma variável calculada
+        a partir de uma agregação simples de variáveis de UHE.
+        """
 
-        rees_usinas = confhd["ree"].unique().tolist()
-        nomes_rees = {
-            r: str(rees.loc[rees["codigo"] == r, "nome"].tolist()[0])
-            for r in rees_usinas
-        }
-        rees_submercados = {
-            r: str(
-                sistema.loc[
-                    sistema["codigo_submercado"]
-                    == int(
-                        rees.loc[rees["codigo"] == r, "submercado"].iloc[0]
-                    ),
-                    "nome_submercado",
-                ].tolist()[0]
-            )
-            for r in rees_usinas
-        }
         s = OperationSynthesis(
             variable=synthesis.variable,
             spatial_resolution=SpatialResolution.USINA_HIDROELETRICA,
         )
         df_uhe = cls._get_from_cache(s)
 
-        # Extrai a lista de usinas e quantas linhas existem para cada
-        usinas = df_uhe["usina"].drop_duplicates()
-        if usinas.shape[0] > 1:
-            n_linhas_usina = usinas.index[1] - usinas.index[0]
-        else:
-            n_linhas_usina = df_uhe.shape[0]
-        df_usina_group = pd.DataFrame(data={"usina": usinas.tolist()})
+        return df_uhe
 
-        df_usina_group["group"] = df_usina_group.apply(
-            lambda linha: int(
-                confhd.loc[confhd["nome_usina"] == linha["usina"], "ree"].iloc[
-                    0
-                ]
-            ),
-            axis=1,
-        )
-        if (
-            synthesis.spatial_resolution
-            == SpatialResolution.RESERVATORIO_EQUIVALENTE
-        ):
-            df_usina_group["group"] = df_usina_group.apply(
-                lambda linha: nomes_rees[linha["group"]], axis=1
-            )
-        elif synthesis.spatial_resolution == SpatialResolution.SUBMERCADO:
-            df_usina_group["group"] = df_usina_group.apply(
-                lambda linha: rees_submercados[linha["group"]], axis=1
-            )
-        elif (
-            synthesis.spatial_resolution
-            == SpatialResolution.SISTEMA_INTERLIGADO
-        ):
-            df_usina_group["group"] = 1
+    @classmethod
+    def __stub_mapa_variaveis_vazao_UHE(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        """
+        Realiza o mapeamento de uma síntese solicitada para variável
+        em vazão para a variável correspondente em volume, obtendo os
+        dados já processados e armazenados em cache.
 
-        cols_group = ["group"] + [
-            c
-            for c in df_uhe.columns
-            if c in cls.IDENTIFICATION_COLUMNS and c != "usina"
-        ]
-        # Replica o grupo pelo número de linhas de cada usina e cria a coluna no df final
-        df_uhe["group"] = np.repeat(
-            df_usina_group["group"].to_numpy(), n_linhas_usina
-        )
+        Regra de negócio: o df passado para resolução dos bounds é
+        em unidade de volume e sempre a nível de UHE. As agregações
+        e conversões de unidade são feitas na resolução dos bounds.
+        O OperationSynthesis passado para o bounds é o original.
+        """
 
-        df_uhe = df_uhe.astype({"serie": int})
-        df_group = (
-            df_uhe.groupby(cols_group).sum(numeric_only=True).reset_index()
-        )
-
-        group_name = {
-            SpatialResolution.RESERVATORIO_EQUIVALENTE: "ree",
-            SpatialResolution.SUBMERCADO: "submercado",
+        variable_map = {
+            Variable.VAZAO_AFLUENTE: Variable.VOLUME_AFLUENTE,
+            Variable.VAZAO_INCREMENTAL: Variable.VOLUME_INCREMENTAL,
+            Variable.VAZAO_DEFLUENTE: Variable.VOLUME_DEFLUENTE,
+            Variable.VAZAO_VERTIDA: Variable.VOLUME_VERTIDO,
+            Variable.VAZAO_TURBINADA: Variable.VOLUME_TURBINADO,
+            Variable.VAZAO_RETIRADA: Variable.VOLUME_RETIRADO,
+            Variable.VAZAO_DESVIADA: Variable.VOLUME_DESVIADO,
         }
-        if (
-            synthesis.spatial_resolution
-            == SpatialResolution.SISTEMA_INTERLIGADO
-        ):
-            df_group = df_group.drop(columns=["group"])
-        else:
-            df_group = df_group.rename(
-                columns={"group": group_name[synthesis.spatial_resolution]}
-            )
-        return df_group
+
+        s = OperationSynthesis(
+            variable=variable_map[synthesis.variable],
+            spatial_resolution=SpatialResolution.USINA_HIDROELETRICA,
+        )
+        df_uhe = cls._get_from_cache(s)
+
+        return df_uhe
+
+    @classmethod
+    def __stub_mapa_variaveis_volumes_percentuais_UHE(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        """
+        Realiza o mapeamento de uma síntese solicitada para variável
+        em volume percentuais para a em volume absoluto, obtendo os
+        dados já processados e armazenados em cache.
+
+        Regra de negócio: o df passado para resolução dos bounds é
+        em unidade de volume e sempre a nível de UHE. As agregações
+        e conversões de unidade são feitas na resolução dos bounds.
+        O OperationSynthesis passado para o bounds é o original.
+        """
+
+        variable_map = {
+            Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL: Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
+            Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL: Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+        }
+
+        s = OperationSynthesis(
+            variable=variable_map[synthesis.variable],
+            spatial_resolution=SpatialResolution.USINA_HIDROELETRICA,
+        )
+        df_uhe = cls._get_from_cache(s)
+
+        return df_uhe
 
     @classmethod
     def __resolve_stub_vminop_sin(
@@ -2230,20 +2317,69 @@ class OperationSynthetizer:
             Variable.VAZAO_RETIRADA,
             Variable.VAZAO_DESVIADA,
         ]:
-            return cls.__stub_converte_volume_em_vazao(synthesis, uow)
+            df = cls.__stub_converte_volume_em_vazao(synthesis, uow)
         elif synthesis.variable in [
             Variable.VOLUME_AFLUENTE,
             Variable.VOLUME_INCREMENTAL,
         ]:
-            return cls.__stub_converte_vazao_em_volume(synthesis, uow)
+            df = cls.__stub_converte_vazao_em_volume(synthesis, uow)
         elif synthesis.variable == Variable.VAZAO_DEFLUENTE:
-            return cls.__stub_QDEF(synthesis, uow)
+            df = cls.__stub_QDEF(synthesis, uow)
         elif synthesis.variable == Variable.VOLUME_DEFLUENTE:
-            return cls.__stub_VDEF(synthesis, uow)
+            df = cls.__stub_VDEF(synthesis, uow)
         elif synthesis.variable == Variable.VIOLACAO_EVAPORACAO:
-            return cls.__stub_VEVAP(synthesis, uow)
+            df = cls.__stub_VEVAP(synthesis, uow)
         else:
-            return cls.__resolve_UHE_normal(synthesis, uow)
+            df = cls.__resolve_UHE_normal(synthesis, uow)
+
+        df = cls._add_ree_submercado_uhes(df, uow)
+        return df
+
+    @classmethod
+    def _add_ree_submercado_uhes(
+        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        """
+        Adiciona a informação do REE e SBM a uma síntese feita para UHEs.
+        """
+        if "ree" in df.columns and "submercado" in df.columns:
+            return df
+        else:
+            cols = df.columns.tolist()
+            confhd = cls._validate_data(
+                cls._get_confhd(uow).usinas, pd.DataFrame, "UHEs"
+            ).set_index("nome_usina")
+            rees = cls._validate_data(
+                cls._get_ree(uow).rees, pd.DataFrame, "REEs"
+            ).set_index("codigo")
+            sistema = cls._validate_data(
+                cls._get_sistema(uow).custo_deficit, pd.DataFrame, "SBMs"
+            )
+            sistema = sistema.drop_duplicates(
+                ["codigo_submercado", "nome_submercado"]
+            ).set_index("codigo_submercado")
+            # Obtem os nomes dos REEs e SBMs na mesma ordem em que aparecem as UHEs
+            uhes_df = np.array(df["usina"].unique().tolist())
+            rees_df = [rees.at[confhd.at[u, "ree"], "nome"] for u in uhes_df]
+            codigos_sbms_df = [
+                rees.at[confhd.at[u, "ree"], "submercado"] for u in uhes_df
+            ]
+            nomes_sbms_df = [
+                sistema.at[c, "nome_submercado"] for c in codigos_sbms_df
+            ]
+            # Aplica de modo posicional por desempenho
+            n_patamares = len(df["patamar"].unique())
+            n_estagios = len(df["estagio"].unique())
+            n_series = len(df["serie"].unique())
+            df["ree"] = np.repeat(rees_df, n_series * n_estagios * n_patamares)
+            df["submercado"] = np.repeat(
+                nomes_sbms_df, n_series * n_estagios * n_patamares
+            )
+            # Reordena as colunas e retorna
+            return df[
+                ["usina", "ree", "submercado"]
+                + [c for c in cols if c != "usina"]
+            ]
 
     @classmethod
     def __resolve_UTE_normal(
@@ -2352,9 +2488,49 @@ class OperationSynthetizer:
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         if synthesis.variable == Variable.GERACAO_TERMICA:
-            return cls.__stub_GTER_UTE_patamar(synthesis, uow)
+            df = cls.__stub_GTER_UTE_patamar(synthesis, uow)
         else:
-            return cls.__resolve_UTE_normal(synthesis, uow)
+            df = cls.__resolve_UTE_normal(synthesis, uow)
+
+        return cls._add_submercado_utes(df, uow)
+
+    @classmethod
+    def _add_submercado_utes(
+        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        """
+        Adiciona a informação do SBM a uma síntese feita para UTEs.
+        """
+        if "submercado" in df.columns:
+            return df
+        else:
+            cols = df.columns.tolist()
+            utes = cls._validate_data(
+                cls._get_conft(uow).usinas, pd.DataFrame, "UTEs"
+            ).set_index("nome_usina")
+            sistema = cls._validate_data(
+                cls._get_sistema(uow).custo_deficit, pd.DataFrame, "SBMs"
+            )
+            sistema = sistema.drop_duplicates(
+                ["codigo_submercado", "nome_submercado"]
+            ).set_index("codigo_submercado")
+            # Obtem os nomes dos SBMs na mesma ordem em que aparecem as UTEs
+            utes_df = np.array(df["usina"].unique().tolist())
+            codigos_sbms_df = [utes.at[r, "submercado"] for r in utes_df]
+            nomes_sbms_df = [
+                sistema.at[c, "nome_submercado"] for c in codigos_sbms_df
+            ]
+            # Aplica de modo posicional por desempenho
+            n_patamares = len(df["patamar"].unique())
+            n_estagios = len(df["estagio"].unique())
+            n_series = len(df["serie"].unique())
+            df["submercado"] = np.repeat(
+                nomes_sbms_df, n_series * n_estagios * n_patamares
+            )
+            # Reordena as colunas e retorna
+            return df[
+                ["usina", "submercado"] + [c for c in cols if c != "usina"]
+            ]
 
     @classmethod
     def __resolve_PEE(
@@ -2580,7 +2756,7 @@ class OperationSynthetizer:
     ) -> Tuple[pd.DataFrame, bool]:
         if s.variable == Variable.ENERGIA_VERTIDA:
             df = cls.__stub_EVER(s, uow)
-            return df, True
+            df, is_stub = df, True
         elif all(
             [
                 s.variable == Variable.VIOLACAO_VMINOP,
@@ -2588,7 +2764,7 @@ class OperationSynthetizer:
             ]
         ):
             df = cls.__resolve_stub_vminop_sin(s, uow)
-            return df, True
+            df, is_stub = df, True
         elif all(
             [
                 s.variable
@@ -2605,7 +2781,7 @@ class OperationSynthetizer:
             ]
         ):
             df = cls.__stub_resolve_energias_iniciais_ree(s, uow)
-            return df, True
+            df, is_stub = df, True
         elif all(
             [
                 s.variable
@@ -2617,18 +2793,17 @@ class OperationSynthetizer:
             ]
         ):
             df = cls.__stub_resolve_volumes_iniciais_uhe(s, uow)
-            return df, True
+            df, is_stub = df, True
         elif all(
+            # TODO - eliminar todas as sínteses de violações que
+            # não sejam de slacks propositais das metodologias,
+            # que tornam o problema RCR.
+            # Mapeadas: fpha, evap, deficit, excesso, ...
             [
                 s.variable
                 in [
                     Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
                     Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
-                    Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
-                    Variable.VIOLACAO_DEFLUENCIA_MINIMA,
-                    Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
-                    Variable.VIOLACAO_TURBINAMENTO_MINIMO,
-                    Variable.VIOLACAO_FPHA,
                     Variable.VOLUME_AFLUENTE,
                     Variable.VOLUME_INCREMENTAL,
                     Variable.VOLUME_DEFLUENTE,
@@ -2636,6 +2811,21 @@ class OperationSynthetizer:
                     Variable.VOLUME_TURBINADO,
                     Variable.VOLUME_RETIRADO,
                     Variable.VOLUME_DESVIADO,
+                    Variable.VOLUME_EVAPORADO,
+                    Variable.VIOLACAO_EVAPORACAO,
+                    Variable.VIOLACAO_FPHA,
+                    Variable.VIOLACAO_POSITIVA_EVAPORACAO,
+                    Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
+                ],
+                s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
+            ]
+        ):
+            df = cls.__stub_mapa_variaveis_agregacao_simples_UHE(s, uow)
+            df, is_stub = df, True
+        elif all(
+            [
+                s.variable
+                in [
                     Variable.VAZAO_AFLUENTE,
                     Variable.VAZAO_INCREMENTAL,
                     Variable.VAZAO_DEFLUENTE,
@@ -2643,24 +2833,35 @@ class OperationSynthetizer:
                     Variable.VAZAO_TURBINADA,
                     Variable.VAZAO_RETIRADA,
                     Variable.VAZAO_DESVIADA,
-                    Variable.VOLUME_EVAPORADO,
-                    Variable.VIOLACAO_EVAPORACAO,
-                    Variable.VIOLACAO_POSITIVA_EVAPORACAO,
-                    Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
                 ],
                 s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
             ]
         ):
-            df = cls.__stub_agrega_variaveis_indiv_REE_SBM_SIN(s, uow)
-            return df, True
+            df = cls.__stub_mapa_variaveis_vazao_UHE(s, uow)
+            df, is_stub = df, True
+        elif all(
+            [
+                s.variable
+                in [
+                    Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
+                    Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
+                ],
+                s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
+            ]
+        ):
+            df = cls.__stub_mapa_variaveis_volumes_percentuais_UHE(s, uow)
+            df, is_stub = df, True
         elif s.variable in [Variable.ENERGIA_DEFLUENCIA_MINIMA]:
             df = cls.__stub_energia_defluencia_minima(s, uow)
-            return df, True
+            df, is_stub = df, True
         elif s.variable in [Variable.COTA_JUSANTE, Variable.QUEDA_LIQUIDA]:
             df = cls.__stub_calc_pat_0_weighted_mean(s, uow)
-            return df, True
+            df, is_stub = df, True
         else:
-            return pd.DataFrame(), False
+            df, is_stub = pd.DataFrame(), False
+        if is_stub:
+            df = cls._resolve_bounds(s, df, uow)
+        return df, is_stub
 
     @classmethod
     def __get_from_cache_if_exists(cls, s: OperationSynthesis) -> pd.DataFrame:
@@ -2675,6 +2876,21 @@ class OperationSynthetizer:
     ):
         if s in cls.SYNTHESIS_TO_CACHE:
             cls.CACHED_SYNTHESIS[s] = df.copy()
+
+    @classmethod
+    def _resolve_bounds(
+        cls, s: OperationSynthesis, df: pd.DataFrame, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        return OperationVariableBounds.resolve_bounds(s, df, uow)
+
+    @classmethod
+    def _resolve_synthesis(
+        cls, s: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        df = cls._resolve_spatial_resolution(s, uow)
+        if df is not None:
+            df = cls._resolve_bounds(s, df, uow)
+        return df
 
     @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
@@ -2700,7 +2916,7 @@ class OperationSynthetizer:
                 if df.empty:
                     df, is_stub = cls._resolve_stub(s, uow)
                     if not is_stub:
-                        df = cls._resolve_spatial_resolution(s, uow)
+                        df = cls._resolve_synthesis(s, uow)
                         cls.__store_in_cache_if_needed(s, df)
                 if df is not None:
                     if not df.empty:
@@ -2715,6 +2931,7 @@ class OperationSynthetizer:
                         + f" para a sintese de {str(s)}"
                     )
             except Exception as e:
+                traceback.print_exc()
                 cls.logger.error(str(e))
                 cls.logger.error(
                     f"Nao foi possível realizar a sintese de: {str(s)}"

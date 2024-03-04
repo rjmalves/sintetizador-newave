@@ -114,7 +114,7 @@ uow = factory("FS", DECK_TEST_DIR, q)
 def __compara_sintese_nwlistop(
     df_sintese: pd.DataFrame, df_nwlistop: pd.DataFrame, *args, **kwargs
 ):
-    data = kwargs.get("dataInicio", datetime(2023, 1, 1))
+    data = kwargs.get("dataInicio", datetime(2023, 10, 1))
     cenario = kwargs.get("cenario", 1)
     filtros_sintese = (df_sintese["dataInicio"] == data) & (
         df_sintese["cenario"] == str(cenario)
@@ -139,8 +139,12 @@ def __compara_sintese_nwlistop(
                 filtros_nwlistop = filtros_nwlistop & (
                     df_nwlistop[col].isin(val)
                 )
-    print(df_sintese.loc[filtros_sintese])
-    print(df_nwlistop.loc[filtros_nwlistop])
+
+    print(
+        df_sintese.loc[filtros_sintese, "valor"].to_numpy(),
+        df_nwlistop.loc[filtros_nwlistop, "valor"].to_numpy(),
+    )
+
     assert np.allclose(
         df_sintese.loc[filtros_sintese, "valor"].to_numpy(),
         df_nwlistop.loc[filtros_nwlistop, "valor"].to_numpy(),
@@ -178,7 +182,7 @@ def test_calcula_patamar_medio_soma(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         usina=["CAMARGOS"],
@@ -213,7 +217,7 @@ def test_calcula_patamar_medio_soma_gter_ute(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         usina=["ANGRA 1"],
@@ -236,7 +240,7 @@ def test_sintese_cmo_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq_pat,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         submercado=["SUDESTE"],
         patamar=[1, 2, 3],
@@ -245,7 +249,7 @@ def test_sintese_cmo_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq_med,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         submercado=["SUDESTE"],
         patamar=[0],
@@ -274,7 +278,7 @@ def test_sintese_ever_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_evert,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         ree=["PARANA"],
         patamar=[0],
@@ -296,7 +300,7 @@ def test_sintese_ever_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_evert,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         submercado=["SUDESTE"],
         patamar=[0],
@@ -318,7 +322,7 @@ def test_sintese_ever_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_evert,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -352,18 +356,15 @@ def test_sintese_vvminop_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_sin,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
 
 
-# TODO - EARMI, EARPI para REE, SBM e SIN (consulta pmo.dat e valores de EARMF e EARPF)
-
 # TODO - VARMI, VARMPI para UHE (consulta pmo.dat e valores de VARMF e VARPF)
 
-# VARMI, VARMF, VDEFMIN, VDEFMAX, VTURMIN, VTURMAX, VFPHA, VAFL, VDEF, VVER, VTUR, VRET, VDES,
-# QAFL, QINC, QDEF, QVER, QTUR, QRET, QDES para REE, SBM e SIN (soma valores das UHEs)
+# VFPHA, VRET, VDES, QRET, QDES para REE, SBM e SIN (soma valores das UHEs)
 
 
 def test_sintese_varmf_ree(test_settings):
@@ -375,23 +376,32 @@ def test_sintese_varmf_ree(test_settings):
         OperationSynthetizer.synthetize(["VARMF_REE"], uow)
     m.assert_called()
     df = m.mock_calls[-1].args[0]
+    print(df)
     df_ree = None
     df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
-    codigos_uhes = df_uhes.loc[df_uhes["ree"] == 1, "codigo_usina"].unique()
+    codigos_uhes = df_uhes.loc[df_uhes["ree"] == 2, "codigo_usina"].unique()
+    with uow:
+        df_hidr = uow.files.get_hidr().cadastro
     for uhe in codigos_uhes:
         df_uhe = Varmuh.read(
             join(DECK_TEST_DIR, f"varmuh{str(uhe).zfill(3)}.out")
         ).valores
+        if df_uhe is None:
+            continue
         if df_ree is None:
             df_ree = df_uhe
         else:
             df_ree["valor"] += df_uhe["valor"].to_numpy()
+        # Somente para VARM: soma volume mínimo para comparação com síntese,
+        # que imprime volume total.
+        df_ree["valor"] += df_hidr.at[uhe, "volume_minimo"]
+
     __compara_sintese_nwlistop(
         df,
         df_ree,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
-        ree=["SUDESTE"],
+        ree=["SUL"],
         patamar=[0],
     )
 
@@ -405,28 +415,35 @@ def test_sintese_varmf_sbm(test_settings):
         OperationSynthetizer.synthetize(["VARMF_SBM"], uow)
     m.assert_called()
     df = m.mock_calls[-1].args[0]
-    df_sin = None
+    df_sbm = None
     df_rees = Ree.read(join(DECK_TEST_DIR, "ree.dat")).rees
-    rees_sbm = df_rees.loc[df_rees["submercado"] == 1, "codigo"].unique()
+    rees_sbm = df_rees.loc[df_rees["submercado"] == 2, "codigo"].unique()
     df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
     codigos_uhes = df_uhes.loc[
         df_uhes["ree"].isin(rees_sbm), "codigo_usina"
     ].unique()
+    with uow:
+        df_hidr = uow.files.get_hidr().cadastro
     for uhe in codigos_uhes:
         df_uhe = Varmuh.read(
             join(DECK_TEST_DIR, f"varmuh{str(uhe).zfill(3)}.out")
         ).valores
-        if df_sin is None:
-            df_sin = df_uhe
+        if df_uhe is None:
+            continue
+        if df_sbm is None:
+            df_sbm = df_uhe
         else:
-            df_sin["valor"] += df_uhe["valor"].to_numpy()
+            df_sbm["valor"] += df_uhe["valor"].to_numpy()
+        # Somente para VARM: soma volume mínimo para comparação com síntese,
+        # que imprime volume total.
+        df_sbm["valor"] += df_hidr.at[uhe, "volume_minimo"]
 
     __compara_sintese_nwlistop(
         df,
-        df_sin,
-        dataInicio=datetime(2023, 1, 1),
+        df_sbm,
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
-        submercado=["SUDESTE"],
+        submercado=["SUL"],
         patamar=[0],
     )
 
@@ -443,10 +460,532 @@ def test_sintese_varmf_sin(test_settings):
     df_sin = None
     df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
     codigos_uhes = df_uhes["codigo_usina"].unique()
+    with uow:
+        df_hidr = uow.files.get_hidr().cadastro
     for uhe in codigos_uhes:
         df_uhe = Varmuh.read(
             join(DECK_TEST_DIR, f"varmuh{str(uhe).zfill(3)}.out")
         ).valores
+        if df_uhe is None:
+            continue
+        if df_sin is None:
+            df_sin = df_uhe
+        else:
+            df_sin["valor"] += df_uhe["valor"].to_numpy()
+        # Somente para VARM: soma volume mínimo para comparação com síntese,
+        # que imprime volume total.
+        df_sin["valor"] += df_hidr.at[uhe, "volume_minimo"]
+
+    __compara_sintese_nwlistop(
+        df,
+        df_sin,
+        dataInicio=datetime(2023, 10, 1),
+        cenario=1,
+        patamar=[0],
+    )
+
+
+def test_sintese_vafl_ree(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["VAFL_REE"], uow)
+    m.assert_called()
+    df = m.mock_calls[-1].args[0]
+    df_ree = None
+    df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+    codigos_uhes = df_uhes.loc[df_uhes["ree"] == 2, "codigo_usina"].unique()
+    for uhe in codigos_uhes:
+        df_uhe = Qafluh.read(
+            join(DECK_TEST_DIR, f"qafluh{str(uhe).zfill(3)}.out")
+        ).valores
+        if df_uhe is None:
+            continue
+        if df_ree is None:
+            df_ree = df_uhe
+        else:
+            df_ree["valor"] += df_uhe["valor"].to_numpy()
+    # Conversão simples para conferência apenas do pat. 0
+    df_ree["valor"] /= FATOR_HM3_M3S_MES
+    __compara_sintese_nwlistop(
+        df,
+        df_ree,
+        dataInicio=datetime(2023, 10, 1),
+        cenario=1,
+        ree=["SUL"],
+        patamar=[0],
+    )
+
+
+def test_sintese_vafl_sbm(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["VAFL_SBM"], uow)
+    m.assert_called()
+    df = m.mock_calls[-1].args[0]
+    df_sbm = None
+    df_rees = Ree.read(join(DECK_TEST_DIR, "ree.dat")).rees
+    rees_sbm = df_rees.loc[df_rees["submercado"] == 2, "codigo"].unique()
+    df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+    codigos_uhes = df_uhes.loc[
+        df_uhes["ree"].isin(rees_sbm), "codigo_usina"
+    ].unique()
+
+    for uhe in codigos_uhes:
+        df_uhe = Qafluh.read(
+            join(DECK_TEST_DIR, f"qafluh{str(uhe).zfill(3)}.out")
+        ).valores
+        if df_uhe is None:
+            continue
+        if df_sbm is None:
+            df_sbm = df_uhe
+        else:
+            df_sbm["valor"] += df_uhe["valor"].to_numpy()
+    # Conversão simples para conferência apenas do pat. 0
+    df_sbm["valor"] /= FATOR_HM3_M3S_MES
+    __compara_sintese_nwlistop(
+        df,
+        df_sbm,
+        dataInicio=datetime(2023, 10, 1),
+        cenario=1,
+        submercado=["SUL"],
+        patamar=[0],
+    )
+
+
+def test_sintese_vafl_sin(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["VAFL_SIN"], uow)
+    m.assert_called()
+    df = m.mock_calls[-1].args[0]
+    df_sin = None
+    df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+    codigos_uhes = df_uhes["codigo_usina"].unique()
+    for uhe in codigos_uhes:
+        df_uhe = Qafluh.read(
+            join(DECK_TEST_DIR, f"qafluh{str(uhe).zfill(3)}.out")
+        ).valores
+        if df_uhe is None:
+            continue
+        if df_sin is None:
+            df_sin = df_uhe
+        else:
+            df_sin["valor"] += df_uhe["valor"].to_numpy()
+    # Conversão simples para conferência apenas do pat. 0
+    df_sin["valor"] /= FATOR_HM3_M3S_MES
+    __compara_sintese_nwlistop(
+        df,
+        df_sin,
+        dataInicio=datetime(2023, 10, 1),
+        cenario=1,
+        patamar=[0],
+    )
+
+
+def test_sintese_qafl_ree(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["QAFL_REE"], uow)
+    m.assert_called()
+    df = m.mock_calls[-1].args[0]
+    df_ree = None
+    df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+    codigos_uhes = df_uhes.loc[df_uhes["ree"] == 2, "codigo_usina"].unique()
+    for uhe in codigos_uhes:
+        df_uhe = Qafluh.read(
+            join(DECK_TEST_DIR, f"qafluh{str(uhe).zfill(3)}.out")
+        ).valores
+        if df_uhe is None:
+            continue
+        if df_ree is None:
+            df_ree = df_uhe
+        else:
+            df_ree["valor"] += df_uhe["valor"].to_numpy()
+    __compara_sintese_nwlistop(
+        df,
+        df_ree,
+        dataInicio=datetime(2023, 10, 1),
+        cenario=1,
+        ree=["SUL"],
+        patamar=[0],
+    )
+
+
+def test_sintese_qafl_sbm(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["QAFL_SBM"], uow)
+    m.assert_called()
+    df = m.mock_calls[-1].args[0]
+    df_sbm = None
+    df_rees = Ree.read(join(DECK_TEST_DIR, "ree.dat")).rees
+    rees_sbm = df_rees.loc[df_rees["submercado"] == 2, "codigo"].unique()
+    df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+    codigos_uhes = df_uhes.loc[
+        df_uhes["ree"].isin(rees_sbm), "codigo_usina"
+    ].unique()
+
+    for uhe in codigos_uhes:
+        df_uhe = Qafluh.read(
+            join(DECK_TEST_DIR, f"qafluh{str(uhe).zfill(3)}.out")
+        ).valores
+        if df_uhe is None:
+            continue
+        if df_sbm is None:
+            df_sbm = df_uhe
+        else:
+            df_sbm["valor"] += df_uhe["valor"].to_numpy()
+    __compara_sintese_nwlistop(
+        df,
+        df_sbm,
+        dataInicio=datetime(2023, 10, 1),
+        cenario=1,
+        submercado=["SUL"],
+        patamar=[0],
+    )
+
+
+def test_sintese_qafl_sin(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["QAFL_SIN"], uow)
+    m.assert_called()
+    df = m.mock_calls[-1].args[0]
+    df_sin = None
+    df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+    codigos_uhes = df_uhes["codigo_usina"].unique()
+    for uhe in codigos_uhes:
+        df_uhe = Qafluh.read(
+            join(DECK_TEST_DIR, f"qafluh{str(uhe).zfill(3)}.out")
+        ).valores
+        if df_uhe is None:
+            continue
+        if df_sin is None:
+            df_sin = df_uhe
+        else:
+            df_sin["valor"] += df_uhe["valor"].to_numpy()
+    __compara_sintese_nwlistop(
+        df,
+        df_sin,
+        dataInicio=datetime(2023, 10, 1),
+        cenario=1,
+        patamar=[0],
+    )
+
+
+def test_sintese_vinc_ree(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["VINC_REE"], uow)
+    m.assert_called()
+    df = m.mock_calls[-1].args[0]
+    df_ree = None
+    df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+    codigos_uhes = df_uhes.loc[df_uhes["ree"] == 2, "codigo_usina"].unique()
+    for uhe in codigos_uhes:
+        df_uhe = Qincruh.read(
+            join(DECK_TEST_DIR, f"qincruh{str(uhe).zfill(3)}.out")
+        ).valores
+        if df_uhe is None:
+            continue
+        if df_ree is None:
+            df_ree = df_uhe
+        else:
+            df_ree["valor"] += df_uhe["valor"].to_numpy()
+    # Conversão simples para conferência apenas do pat. 0
+    df_ree["valor"] /= FATOR_HM3_M3S_MES
+    __compara_sintese_nwlistop(
+        df,
+        df_ree,
+        dataInicio=datetime(2023, 10, 1),
+        cenario=1,
+        ree=["SUL"],
+        patamar=[0],
+    )
+
+
+def test_sintese_vinc_sbm(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["VINC_SBM"], uow)
+    m.assert_called()
+    df = m.mock_calls[-1].args[0]
+    df_sbm = None
+    df_rees = Ree.read(join(DECK_TEST_DIR, "ree.dat")).rees
+    rees_sbm = df_rees.loc[df_rees["submercado"] == 2, "codigo"].unique()
+    df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+    codigos_uhes = df_uhes.loc[
+        df_uhes["ree"].isin(rees_sbm), "codigo_usina"
+    ].unique()
+
+    for uhe in codigos_uhes:
+        df_uhe = Qincruh.read(
+            join(DECK_TEST_DIR, f"qincruh{str(uhe).zfill(3)}.out")
+        ).valores
+        if df_uhe is None:
+            continue
+        if df_sbm is None:
+            df_sbm = df_uhe
+        else:
+            df_sbm["valor"] += df_uhe["valor"].to_numpy()
+    # Conversão simples para conferência apenas do pat. 0
+    df_sbm["valor"] /= FATOR_HM3_M3S_MES
+    __compara_sintese_nwlistop(
+        df,
+        df_sbm,
+        dataInicio=datetime(2023, 10, 1),
+        cenario=1,
+        submercado=["SUL"],
+        patamar=[0],
+    )
+
+
+def test_sintese_vinc_sin(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["VINC_SIN"], uow)
+    m.assert_called()
+    df = m.mock_calls[-1].args[0]
+    df_sin = None
+    df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+    codigos_uhes = df_uhes["codigo_usina"].unique()
+    for uhe in codigos_uhes:
+        df_uhe = Qincruh.read(
+            join(DECK_TEST_DIR, f"qincruh{str(uhe).zfill(3)}.out")
+        ).valores
+        if df_uhe is None:
+            continue
+        if df_sin is None:
+            df_sin = df_uhe
+        else:
+            df_sin["valor"] += df_uhe["valor"].to_numpy()
+    # Conversão simples para conferência apenas do pat. 0
+    df_sin["valor"] /= FATOR_HM3_M3S_MES
+    __compara_sintese_nwlistop(
+        df,
+        df_sin,
+        dataInicio=datetime(2023, 10, 1),
+        cenario=1,
+        patamar=[0],
+    )
+
+
+def test_sintese_qinc_ree(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["QINC_REE"], uow)
+    m.assert_called()
+    df = m.mock_calls[-1].args[0]
+    df_ree = None
+    df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+    codigos_uhes = df_uhes.loc[df_uhes["ree"] == 2, "codigo_usina"].unique()
+    for uhe in codigos_uhes:
+        df_uhe = Qincruh.read(
+            join(DECK_TEST_DIR, f"qincruh{str(uhe).zfill(3)}.out")
+        ).valores
+        if df_uhe is None:
+            continue
+        if df_ree is None:
+            df_ree = df_uhe
+        else:
+            df_ree["valor"] += df_uhe["valor"].to_numpy()
+    __compara_sintese_nwlistop(
+        df,
+        df_ree,
+        dataInicio=datetime(2023, 10, 1),
+        cenario=1,
+        ree=["SUL"],
+        patamar=[0],
+    )
+
+
+def test_sintese_qinc_sbm(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["QINC_SBM"], uow)
+    m.assert_called()
+    df = m.mock_calls[-1].args[0]
+    df_sbm = None
+    df_rees = Ree.read(join(DECK_TEST_DIR, "ree.dat")).rees
+    rees_sbm = df_rees.loc[df_rees["submercado"] == 2, "codigo"].unique()
+    df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+    codigos_uhes = df_uhes.loc[
+        df_uhes["ree"].isin(rees_sbm), "codigo_usina"
+    ].unique()
+
+    for uhe in codigos_uhes:
+        df_uhe = Qincruh.read(
+            join(DECK_TEST_DIR, f"qincruh{str(uhe).zfill(3)}.out")
+        ).valores
+        if df_uhe is None:
+            continue
+        if df_sbm is None:
+            df_sbm = df_uhe
+        else:
+            df_sbm["valor"] += df_uhe["valor"].to_numpy()
+    __compara_sintese_nwlistop(
+        df,
+        df_sbm,
+        dataInicio=datetime(2023, 10, 1),
+        cenario=1,
+        submercado=["SUL"],
+        patamar=[0],
+    )
+
+
+def test_sintese_qinc_sin(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["QINC_SIN"], uow)
+    m.assert_called()
+    df = m.mock_calls[-1].args[0]
+    df_sin = None
+    df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+    codigos_uhes = df_uhes["codigo_usina"].unique()
+    for uhe in codigos_uhes:
+        df_uhe = Qincruh.read(
+            join(DECK_TEST_DIR, f"qincruh{str(uhe).zfill(3)}.out")
+        ).valores
+        if df_uhe is None:
+            continue
+        if df_sin is None:
+            df_sin = df_uhe
+        else:
+            df_sin["valor"] += df_uhe["valor"].to_numpy()
+    __compara_sintese_nwlistop(
+        df,
+        df_sin,
+        dataInicio=datetime(2023, 10, 1),
+        cenario=1,
+        patamar=[0],
+    )
+
+
+def test_sintese_vtur_ree(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["VTUR_REE"], uow)
+    m.assert_called()
+    df = m.mock_calls[-1].args[0]
+    df_ree = None
+    df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+    codigos_uhes = df_uhes.loc[df_uhes["ree"] == 2, "codigo_usina"].unique()
+    for uhe in codigos_uhes:
+        df_uhe = Vturuh.read(
+            join(DECK_TEST_DIR, f"vturuh{str(uhe).zfill(3)}.out")
+        ).valores
+        if df_uhe is None:
+            continue
+        if df_ree is None:
+            df_ree = df_uhe
+        else:
+            df_ree["valor"] += df_uhe["valor"].to_numpy()
+
+    __compara_sintese_nwlistop(
+        df,
+        df_ree,
+        dataInicio=datetime(2023, 10, 1),
+        cenario=1,
+        ree=["SUL"],
+        patamar=[0],
+    )
+
+
+def test_sintese_vtur_sbm(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["VTUR_SBM"], uow)
+    m.assert_called()
+    df = m.mock_calls[-1].args[0]
+    df_sbm = None
+    df_rees = Ree.read(join(DECK_TEST_DIR, "ree.dat")).rees
+    rees_sbm = df_rees.loc[df_rees["submercado"] == 2, "codigo"].unique()
+    df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+    codigos_uhes = df_uhes.loc[
+        df_uhes["ree"].isin(rees_sbm), "codigo_usina"
+    ].unique()
+
+    for uhe in codigos_uhes:
+        df_uhe = Vturuh.read(
+            join(DECK_TEST_DIR, f"vturuh{str(uhe).zfill(3)}.out")
+        ).valores
+        if df_uhe is None:
+            continue
+        if df_sbm is None:
+            df_sbm = df_uhe
+        else:
+            df_sbm["valor"] += df_uhe["valor"].to_numpy()
+
+    __compara_sintese_nwlistop(
+        df,
+        df_sbm,
+        dataInicio=datetime(2023, 10, 1),
+        cenario=1,
+        submercado=["SUL"],
+        patamar=[0],
+    )
+
+
+def test_sintese_vtur_sin(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["VTUR_SIN"], uow)
+    m.assert_called()
+    df = m.mock_calls[-1].args[0]
+    df_sin = None
+    df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+    codigos_uhes = df_uhes["codigo_usina"].unique()
+    for uhe in codigos_uhes:
+        df_uhe = Vturuh.read(
+            join(DECK_TEST_DIR, f"vturuh{str(uhe).zfill(3)}.out")
+        ).valores
+        if df_uhe is None:
+            continue
         if df_sin is None:
             df_sin = df_uhe
         else:
@@ -455,7 +994,322 @@ def test_sintese_varmf_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_sin,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
+        cenario=1,
+        patamar=[0],
+    )
+
+
+def test_sintese_qtur_ree(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["QTUR_REE"], uow)
+    m.assert_called()
+    df = m.mock_calls[-1].args[0]
+    df_ree = None
+    df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+    codigos_uhes = df_uhes.loc[df_uhes["ree"] == 2, "codigo_usina"].unique()
+    for uhe in codigos_uhes:
+        df_uhe = Vturuh.read(
+            join(DECK_TEST_DIR, f"vturuh{str(uhe).zfill(3)}.out")
+        ).valores
+        if df_uhe is None:
+            continue
+        if df_ree is None:
+            df_ree = df_uhe
+        else:
+            df_ree["valor"] += df_uhe["valor"].to_numpy()
+    # Conversão simples para conferência apenas do pat. 0
+    df_ree["valor"] *= FATOR_HM3_M3S_MES
+    __compara_sintese_nwlistop(
+        df,
+        df_ree,
+        dataInicio=datetime(2023, 10, 1),
+        cenario=1,
+        ree=["SUL"],
+        patamar=[0],
+    )
+
+
+def test_sintese_qtur_sbm(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["QTUR_SBM"], uow)
+    m.assert_called()
+    df = m.mock_calls[-1].args[0]
+    df_sbm = None
+    df_rees = Ree.read(join(DECK_TEST_DIR, "ree.dat")).rees
+    rees_sbm = df_rees.loc[df_rees["submercado"] == 2, "codigo"].unique()
+    df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+    codigos_uhes = df_uhes.loc[
+        df_uhes["ree"].isin(rees_sbm), "codigo_usina"
+    ].unique()
+
+    for uhe in codigos_uhes:
+        df_uhe = Vturuh.read(
+            join(DECK_TEST_DIR, f"vturuh{str(uhe).zfill(3)}.out")
+        ).valores
+        if df_uhe is None:
+            continue
+        if df_sbm is None:
+            df_sbm = df_uhe
+        else:
+            df_sbm["valor"] += df_uhe["valor"].to_numpy()
+    # Conversão simples para conferência apenas do pat. 0
+    df_sbm["valor"] *= FATOR_HM3_M3S_MES
+    __compara_sintese_nwlistop(
+        df,
+        df_sbm,
+        dataInicio=datetime(2023, 10, 1),
+        cenario=1,
+        submercado=["SUL"],
+        patamar=[0],
+    )
+
+
+def test_sintese_qtur_sin(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["QTUR_SIN"], uow)
+    m.assert_called()
+    df = m.mock_calls[-1].args[0]
+    df_sin = None
+    df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+    codigos_uhes = df_uhes["codigo_usina"].unique()
+    for uhe in codigos_uhes:
+        df_uhe = Vturuh.read(
+            join(DECK_TEST_DIR, f"vturuh{str(uhe).zfill(3)}.out")
+        ).valores
+        if df_uhe is None:
+            continue
+        if df_sin is None:
+            df_sin = df_uhe
+        else:
+            df_sin["valor"] += df_uhe["valor"].to_numpy()
+    # Conversão simples para conferência apenas do pat. 0
+    df_sin["valor"] *= FATOR_HM3_M3S_MES
+    __compara_sintese_nwlistop(
+        df,
+        df_sin,
+        dataInicio=datetime(2023, 10, 1),
+        cenario=1,
+        patamar=[0],
+    )
+
+
+def test_sintese_vver_ree(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["VVER_REE"], uow)
+    m.assert_called()
+    df = m.mock_calls[-1].args[0]
+    df_ree = None
+    df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+    codigos_uhes = df_uhes.loc[df_uhes["ree"] == 2, "codigo_usina"].unique()
+    for uhe in codigos_uhes:
+        df_uhe = Vertuh.read(
+            join(DECK_TEST_DIR, f"vertuh{str(uhe).zfill(3)}.out")
+        ).valores
+        if df_uhe is None:
+            continue
+        if df_ree is None:
+            df_ree = df_uhe
+        else:
+            df_ree["valor"] += df_uhe["valor"].to_numpy()
+
+    __compara_sintese_nwlistop(
+        df,
+        df_ree,
+        dataInicio=datetime(2023, 10, 1),
+        cenario=1,
+        ree=["SUL"],
+        patamar=[0],
+    )
+
+
+def test_sintese_vver_sbm(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["VVER_SBM"], uow)
+    m.assert_called()
+    df = m.mock_calls[-1].args[0]
+    df_sbm = None
+    df_rees = Ree.read(join(DECK_TEST_DIR, "ree.dat")).rees
+    rees_sbm = df_rees.loc[df_rees["submercado"] == 2, "codigo"].unique()
+    df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+    codigos_uhes = df_uhes.loc[
+        df_uhes["ree"].isin(rees_sbm), "codigo_usina"
+    ].unique()
+
+    for uhe in codigos_uhes:
+        df_uhe = Vertuh.read(
+            join(DECK_TEST_DIR, f"vertuh{str(uhe).zfill(3)}.out")
+        ).valores
+        if df_uhe is None:
+            continue
+        if df_sbm is None:
+            df_sbm = df_uhe
+        else:
+            df_sbm["valor"] += df_uhe["valor"].to_numpy()
+
+    __compara_sintese_nwlistop(
+        df,
+        df_sbm,
+        dataInicio=datetime(2023, 10, 1),
+        cenario=1,
+        submercado=["SUL"],
+        patamar=[0],
+    )
+
+
+def test_sintese_vver_sin(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["VVER_SIN"], uow)
+    m.assert_called()
+    df = m.mock_calls[-1].args[0]
+    df_sin = None
+    df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+    codigos_uhes = df_uhes["codigo_usina"].unique()
+    for uhe in codigos_uhes:
+        df_uhe = Vertuh.read(
+            join(DECK_TEST_DIR, f"vertuh{str(uhe).zfill(3)}.out")
+        ).valores
+        if df_uhe is None:
+            continue
+        if df_sin is None:
+            df_sin = df_uhe
+        else:
+            df_sin["valor"] += df_uhe["valor"].to_numpy()
+
+    __compara_sintese_nwlistop(
+        df,
+        df_sin,
+        dataInicio=datetime(2023, 10, 1),
+        cenario=1,
+        patamar=[0],
+    )
+
+
+def test_sintese_qver_ree(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["QVER_REE"], uow)
+    m.assert_called()
+    df = m.mock_calls[-1].args[0]
+    df_ree = None
+    df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+    codigos_uhes = df_uhes.loc[df_uhes["ree"] == 2, "codigo_usina"].unique()
+    for uhe in codigos_uhes:
+        df_uhe = Vertuh.read(
+            join(DECK_TEST_DIR, f"vertuh{str(uhe).zfill(3)}.out")
+        ).valores
+        if df_uhe is None:
+            continue
+        if df_ree is None:
+            df_ree = df_uhe
+        else:
+            df_ree["valor"] += df_uhe["valor"].to_numpy()
+    # Conversão simples para conferência apenas do pat. 0
+    df_ree["valor"] *= FATOR_HM3_M3S_MES
+    __compara_sintese_nwlistop(
+        df,
+        df_ree,
+        dataInicio=datetime(2023, 10, 1),
+        cenario=1,
+        ree=["SUL"],
+        patamar=[0],
+    )
+
+
+def test_sintese_qver_sbm(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["QVER_SBM"], uow)
+    m.assert_called()
+    df = m.mock_calls[-1].args[0]
+    df_sbm = None
+    df_rees = Ree.read(join(DECK_TEST_DIR, "ree.dat")).rees
+    rees_sbm = df_rees.loc[df_rees["submercado"] == 2, "codigo"].unique()
+    df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+    codigos_uhes = df_uhes.loc[
+        df_uhes["ree"].isin(rees_sbm), "codigo_usina"
+    ].unique()
+
+    for uhe in codigos_uhes:
+        df_uhe = Vertuh.read(
+            join(DECK_TEST_DIR, f"vertuh{str(uhe).zfill(3)}.out")
+        ).valores
+        if df_uhe is None:
+            continue
+        if df_sbm is None:
+            df_sbm = df_uhe
+        else:
+            df_sbm["valor"] += df_uhe["valor"].to_numpy()
+    # Conversão simples para conferência apenas do pat. 0
+    df_sbm["valor"] *= FATOR_HM3_M3S_MES
+    __compara_sintese_nwlistop(
+        df,
+        df_sbm,
+        dataInicio=datetime(2023, 10, 1),
+        cenario=1,
+        submercado=["SUL"],
+        patamar=[0],
+    )
+
+
+def test_sintese_qver_sin(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["QVER_SIN"], uow)
+    m.assert_called()
+    df = m.mock_calls[-1].args[0]
+    df_sin = None
+    df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+    codigos_uhes = df_uhes["codigo_usina"].unique()
+    for uhe in codigos_uhes:
+        df_uhe = Vertuh.read(
+            join(DECK_TEST_DIR, f"vertuh{str(uhe).zfill(3)}.out")
+        ).valores
+        if df_uhe is None:
+            continue
+        if df_sin is None:
+            df_sin = df_uhe
+        else:
+            df_sin["valor"] += df_uhe["valor"].to_numpy()
+    # Conversão simples para conferência apenas do pat. 0
+    df_sin["valor"] *= FATOR_HM3_M3S_MES
+    __compara_sintese_nwlistop(
+        df,
+        df_sin,
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -479,7 +1333,7 @@ def test_sintese_evmin_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_mevmin,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         ree=["PARANA"],
         patamar=[0],
@@ -501,7 +1355,7 @@ def test_sintese_evmin_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_mevmin,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         submercado=["SUDESTE"],
         patamar=[0],
@@ -523,7 +1377,7 @@ def test_sintese_evmin_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_mevmin,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -581,7 +1435,7 @@ def test_sintese_hjus_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -637,7 +1491,7 @@ def test_sintese_hliq_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -662,7 +1516,7 @@ def test_sintese_qtur_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -684,7 +1538,7 @@ def test_sintese_qver_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -703,10 +1557,11 @@ def test_sintese_qret_uhe(test_settings):
     df_arq = Desvuh.read(join(DECK_TEST_DIR, "desvuh006.out")).valores
     # Conversão simples para conferência apenas do pat. 0
     df_arq["valor"] *= FATOR_HM3_M3S_MES
+    df_arq["valor"] = np.round(df_arq["valor"], 2)
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -728,7 +1583,7 @@ def test_sintese_qdes_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -753,7 +1608,7 @@ def test_sintese_vafl_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -775,7 +1630,7 @@ def test_sintese_vinc_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -816,7 +1671,7 @@ def test_sintese_qdef_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_tur,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -838,7 +1693,7 @@ def test_sintese_vdef_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_tur,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -867,7 +1722,7 @@ def test_sintese_vevap_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq_pos,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -891,7 +1746,7 @@ def test_sintese_vagua_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         ree=["PARANA"],
         patamar=[0],
@@ -911,7 +1766,7 @@ def test_sintese_vagua_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -931,7 +1786,7 @@ def test_sintese_vaguai_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -951,7 +1806,7 @@ def test_sintese_cter_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         submercado=["SUDESTE"],
         patamar=[0],
@@ -971,7 +1826,7 @@ def test_sintese_cter_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -990,7 +1845,7 @@ def test_sintese_coper_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -1009,7 +1864,7 @@ def test_sintese_enaa_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -1029,7 +1884,7 @@ def test_sintese_enaa_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -1049,7 +1904,7 @@ def test_sintese_enaa_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -1068,7 +1923,7 @@ def test_sintese_enaar_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -1088,7 +1943,7 @@ def test_sintese_enaar_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -1108,7 +1963,7 @@ def test_sintese_enaar_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -1127,7 +1982,7 @@ def test_sintese_enaaf_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -1147,7 +2002,7 @@ def test_sintese_enaaf_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -1167,7 +2022,7 @@ def test_sintese_enaaf_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -1186,7 +2041,7 @@ def test_sintese_earpf_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -1206,7 +2061,7 @@ def test_sintese_earpf_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -1226,7 +2081,7 @@ def test_sintese_earpf_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -1245,7 +2100,7 @@ def test_sintese_earmf_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -1265,7 +2120,7 @@ def test_sintese_earmf_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -1285,7 +2140,7 @@ def test_sintese_earmf_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -1304,7 +2159,7 @@ def test_sintese_ghidr_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -1324,7 +2179,7 @@ def test_sintese_ghidr_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -1344,7 +2199,7 @@ def test_sintese_ghidr_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -1363,7 +2218,7 @@ def test_sintese_ghidf_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -1383,7 +2238,7 @@ def test_sintese_ghidf_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -1403,7 +2258,7 @@ def test_sintese_ghidf_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -1422,7 +2277,7 @@ def test_sintese_ghid_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -1442,7 +2297,7 @@ def test_sintese_ghid_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -1462,7 +2317,7 @@ def test_sintese_ghid_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -1481,7 +2336,7 @@ def test_sintese_gter_ute(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[1],
         classe=[1],
@@ -1502,7 +2357,7 @@ def test_sintese_gter_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -1522,7 +2377,7 @@ def test_sintese_gter_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -1541,7 +2396,7 @@ def test_sintese_everr_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -1561,7 +2416,7 @@ def test_sintese_everr_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -1581,7 +2436,7 @@ def test_sintese_everr_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -1600,7 +2455,7 @@ def test_sintese_everf_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -1620,7 +2475,7 @@ def test_sintese_everf_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -1640,7 +2495,7 @@ def test_sintese_everf_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -1659,7 +2514,7 @@ def test_sintese_everft_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -1679,7 +2534,7 @@ def test_sintese_everft_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -1699,7 +2554,7 @@ def test_sintese_everft_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -1718,7 +2573,7 @@ def test_sintese_edesr_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -1738,7 +2593,7 @@ def test_sintese_edesr_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -1758,7 +2613,7 @@ def test_sintese_edesr_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -1777,7 +2632,7 @@ def test_sintese_edesf_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -1797,7 +2652,7 @@ def test_sintese_edesf_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -1817,7 +2672,7 @@ def test_sintese_edesf_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -1836,7 +2691,7 @@ def test_sintese_mevmin_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -1856,7 +2711,7 @@ def test_sintese_mevmin_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -1876,7 +2731,7 @@ def test_sintese_mevmin_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -1895,7 +2750,7 @@ def test_sintese_evmor_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -1915,7 +2770,7 @@ def test_sintese_evmor_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -1935,7 +2790,7 @@ def test_sintese_evmor_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -1954,7 +2809,7 @@ def test_sintese_eevap_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -1974,7 +2829,7 @@ def test_sintese_eevap_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -1994,7 +2849,7 @@ def test_sintese_eevap_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -2013,7 +2868,7 @@ def test_sintese_qafl_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         usina=["CAMARGOS"],
@@ -2033,7 +2888,7 @@ def test_sintese_qinc_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         usina=["CAMARGOS"],
@@ -2053,7 +2908,7 @@ def test_sintese_vtur_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[1],
         usina=["CAMARGOS"],
@@ -2073,7 +2928,7 @@ def test_sintese_vver_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[1],
         usina=["CAMARGOS"],
@@ -2089,11 +2944,16 @@ def test_sintese_varmf_uhe(test_settings):
         OperationSynthetizer.synthetize(["VARMF_UHE"], uow)
     m.assert_called_once()
     df = m.mock_calls[0].args[0]
+    # Somente para VARM: subtrai volume mínimo para comparação com nwlistop,
+    # que imprime somente volume útil.
+    with uow:
+        df_hidr = uow.files.get_hidr().cadastro
+    df["valor"] -= df_hidr.at[1, "volume_minimo"]
     df_arq = Varmuh.read(join(DECK_TEST_DIR, "varmuh001.out")).valores
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         usina=["CAMARGOS"],
@@ -2113,7 +2973,7 @@ def test_sintese_varpf_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         usina=["CAMARGOS"],
@@ -2133,7 +2993,7 @@ def test_sintese_ghid_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[1],
         usina=["CAMARGOS"],
@@ -2156,7 +3016,7 @@ def test_sintese_def_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -2176,7 +3036,7 @@ def test_sintese_def_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -2195,7 +3055,7 @@ def test_sintese_exc_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -2215,7 +3075,7 @@ def test_sintese_exc_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -2234,7 +3094,7 @@ def test_sintese_int_sbp(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercadoDe=["SUDESTE"],
@@ -2255,7 +3115,7 @@ def test_sintese_cdef_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -2275,7 +3135,7 @@ def test_sintese_cdef_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -2294,7 +3154,7 @@ def test_sintese_merl_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -2314,7 +3174,7 @@ def test_sintese_merl_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -2333,7 +3193,7 @@ def test_sintese_vdefmin_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[1],
@@ -2353,7 +3213,7 @@ def test_sintese_vdefmax_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[1],
@@ -2373,7 +3233,7 @@ def test_sintese_vturmin_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[1],
@@ -2393,7 +3253,7 @@ def test_sintese_vturmax_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[1],
@@ -2413,7 +3273,7 @@ def test_sintese_vfpha_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[1],
@@ -2433,7 +3293,7 @@ def test_sintese_vevmin_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         ree=["SUDESTE"],
         patamar=[0],
@@ -2453,7 +3313,7 @@ def test_sintese_vevmin_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         submercado=["SUDESTE"],
         patamar=[0],
@@ -2473,7 +3333,7 @@ def test_sintese_vevmin_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -2492,7 +3352,7 @@ def test_sintese_vvminop_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         ree=["SUDESTE"],
         patamar=[0],
@@ -2512,7 +3372,7 @@ def test_sintese_vvminop_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         submercado=["SUDESTE"],
         patamar=[0],
@@ -2532,7 +3392,7 @@ def test_sintese_vret_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -2552,7 +3412,7 @@ def test_sintese_vdes_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[1],
@@ -2572,7 +3432,7 @@ def test_sintese_vghmin_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[1],
@@ -2592,7 +3452,7 @@ def test_sintese_vghmin_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         ree=["SUDESTE"],
         patamar=[0],
@@ -2612,7 +3472,7 @@ def test_sintese_vghmin_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         submercado=["SUDESTE"],
         patamar=[0],
@@ -2632,7 +3492,7 @@ def test_sintese_vghmin_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -2651,7 +3511,7 @@ def test_sintese_hmon_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -2671,7 +3531,7 @@ def test_sintese_hjus_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[1],
@@ -2691,7 +3551,7 @@ def test_sintese_hliq_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[1],
@@ -2711,7 +3571,7 @@ def test_sintese_vevp_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -2731,7 +3591,7 @@ def test_sintese_vposevap_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -2753,7 +3613,7 @@ def test_sintese_vnegevap_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 1, 1),
+        dataInicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],

@@ -11,10 +11,12 @@ from inewave.newave.arquivos import Arquivos
 from inewave.newave.patamar import Patamar
 from inewave.newave.dger import Dger
 from inewave.newave.confhd import Confhd
+from inewave.newave.modif import Modif
 from inewave.newave.conft import Conft
 from inewave.newave.clast import Clast
 from inewave.libs.eolica import Eolica
 from inewave.newave.ree import Ree
+from inewave.newave.curva import Curva
 from inewave.newave.sistema import Sistema
 from inewave.newave.pmo import Pmo
 from inewave.newave.newavetim import Newavetim
@@ -172,6 +174,10 @@ class AbstractFilesRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def get_modif(self) -> Optional[Modif]:
+        raise NotImplementedError
+
+    @abstractmethod
     def get_conft(self) -> Optional[Conft]:
         raise NotImplementedError
 
@@ -181,6 +187,10 @@ class AbstractFilesRepository(ABC):
 
     @abstractmethod
     def get_ree(self) -> Optional[Ree]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_curva(self) -> Optional[Curva]:
         raise NotImplementedError
 
     @abstractmethod
@@ -285,8 +295,10 @@ class RawFilesRepository(AbstractFilesRepository):
         self.__sistema: Optional[Sistema] = None
         self.__pmo: Optional[Pmo] = None
         self.__newavetim: Optional[Newavetim] = None
+        self.__curva: Optional[Curva] = None
         self.__ree: Optional[Ree] = None
         self.__confhd: Optional[Confhd] = None
+        self.__modif: Optional[Modif] = None
         self.__conft: Optional[Conft] = None
         self.__clast: Optional[Clast] = None
         self.__eolica: Optional[Eolica] = None
@@ -1149,6 +1161,14 @@ class RawFilesRepository(AbstractFilesRepository):
                 )
         return self.__confhd
 
+    def get_modif(self) -> Optional[Modif]:
+        if self.__modif is None:
+            if self.arquivos.modif is not None:
+                self.__modif = Modif.read(
+                    join(self.__tmppath, self.arquivos.modif)
+                )
+        return self.__modif
+
     def get_conft(self) -> Optional[Conft]:
         if self.__conft is None:
             if self.arquivos.conft is not None:
@@ -1170,6 +1190,14 @@ class RawFilesRepository(AbstractFilesRepository):
             if self.arquivos.ree is not None:
                 self.__ree = Ree.read(join(self.__tmppath, self.arquivos.ree))
         return self.__ree
+
+    def get_curva(self) -> Optional[Curva]:
+        if self.__curva is None:
+            if self.arquivos.curva is not None:
+                self.__curva = Curva.read(
+                    join(self.__tmppath, self.arquivos.curva)
+                )
+        return self.__curva
 
     def get_sistema(self) -> Optional[Sistema]:
         if self.__sistema is None:
