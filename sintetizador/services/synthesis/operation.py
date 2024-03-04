@@ -2244,9 +2244,7 @@ class OperationSynthetizer:
         mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
         starting_date = datetime(ano_inicio, mes_inicio, 1)
         data_starting_date = df["dataInicio"].min().to_pydatetime()
-        month_difference = int(
-            (starting_date - data_starting_date) / timedelta(days=30)
-        )
+        month_difference = starting_date.month - data_starting_date.month
         return month_difference
 
     @classmethod
