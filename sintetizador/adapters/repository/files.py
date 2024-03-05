@@ -1535,7 +1535,7 @@ class RawFilesRepository(AbstractFilesRepository):
             ]
 
             n_estagios = (
-                self._numero_estagios_individualizados() + mes_inicio - 1
+                self._numero_estagios_individualizados() - mes_inicio + 2
             )
             n_estagios_th = 12 if parpa == 3 else ordem_maxima
             caminho_arq = join(self.__tmppath, nome_arq)
@@ -1826,7 +1826,7 @@ class RawFilesRepository(AbstractFilesRepository):
             ]
 
             n_estagios = (
-                self._numero_estagios_individualizados() + mes_inicio - 1
+                self._numero_estagios_individualizados() - mes_inicio + 2
             )
             n_estagios_th = 12 if parpa == 3 else ordem_maxima
             if dger.tipo_simulacao_final == 1:
