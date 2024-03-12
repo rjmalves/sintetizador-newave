@@ -2486,6 +2486,10 @@ class OperationSynthetizer:
             synthesis_variables, uow
         )
 
+        if(len(valid_synthesis) == 0):
+            cls.logger.error("Variavel invalida, tentar as variaveis:")
+            cls.logger.error(cls.DEFAULT_OPERATION_SYNTHESIS_ARGS)
+
         for s in valid_synthesis:
             try:
                 filename = str(s)
