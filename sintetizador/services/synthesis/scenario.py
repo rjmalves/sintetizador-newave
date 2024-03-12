@@ -480,6 +480,7 @@ class ScenarioSynthetizer:
         mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
         ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
         anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
+        anos_pos_estudo = cls._validate_data(dger.num_anos_pos_estudo, int, "dger")
         sistema = cls._validate_data(
             cls._get_sistema(uow).custo_deficit, pd.DataFrame, "submercados"
         )
@@ -496,7 +497,7 @@ class ScenarioSynthetizer:
         cfgs = configuracoes["valor"].to_numpy().flatten()[mes_inicio - 1 :]
         datas = pd.date_range(
             datetime(year=ano_inicio - 1, month=1, day=1),
-            datetime(year=ano_inicio + anos_estudo - 1, month=12, day=1),
+            datetime(year=ano_inicio + anos_estudo + anos_pos_estudo - 1, month=12, day=1),
             freq="MS",
         )
         df_mlt = pd.DataFrame(
