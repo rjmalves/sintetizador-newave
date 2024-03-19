@@ -992,37 +992,34 @@ class RawFilesRepository(AbstractFilesRepository):
             (
                 Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
                 SpatialResolution.USINA_HIDROELETRICA,
-                TemporalResolution.PATAMAR,
-            ): lambda dir, uhe=1: Hliq.read(
-                join(dir, f"hliq{str(uhe).zfill(3)}.out")
-            ).valores,
-            (
-                Variable.VOLUME_EVAPORADO,
-                SpatialResolution.USINA_HIDROELETRICA,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, uhe=1: Vevapuh.read(
-                join(dir, f"vevapuh{str(uhe).zfill(3)}.out")
-            ).valores,
-            (
-                Variable.VIOLACAO_POSITIVA_EVAPORACAO,
-                SpatialResolution.USINA_HIDROELETRICA,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, uhe=1: Dposevap.read(
-                join(dir, f"dpos_evap{str(uhe).zfill(3)}.out")
-            ).valores,
-            (
-                Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
-                SpatialResolution.USINA_HIDROELETRICA,
-                TemporalResolution.ESTAGIO,
-            ): lambda dir, uhe=1: Dnegevap.read(
-                join(dir, f"dneg_evap{str(uhe).zfill(3)}.out")
-            ).valores.fillna(
-                0.0
+            ): lambda dir, uhe=1: self.__adiciona_coluna_patamar(
+                Dnegevap.read(
+                    join(dir, f"dneg_evap{str(uhe).zfill(3)}.out")
+                ).valores.fillna(0.0)
             ),
         }
 
-    def __extrai_patamares_df(
-        self, df: pd.DataFrame, patamares: Optional[list] = None
+    def __agrega_dfs_cmo(self, dir: str, submercado: int) -> pd.DataFrame:
+        df_med = Cmargmed.read(
+            join(dir, f"cmarg{str(submercado).zfill(3)}-med.out")
+        ).valores
+        df_med["patamar"] = 0
+        return pd.concat(
+            [
+                df_med,
+                Cmarg.read(
+                    join(dir, f"cmarg{str(submercado).zfill(3)}.out")
+                ).valores,
+            ],
+            ignore_index=True,
+        )
+
+    def __adiciona_coluna_patamar(self, df: pd.DataFrame) -> pd.DataFrame:
+        df["patamar"] = 0
+        return df
+
+    def __substitui_coluna_patamar(
+        self, df: pd.DataFrame, col: str = "TOTAL"
     ) -> pd.DataFrame:
         df.loc[df["patamar"] == col, "patamar"] = "0"
         return df.astype({"patamar": int})
