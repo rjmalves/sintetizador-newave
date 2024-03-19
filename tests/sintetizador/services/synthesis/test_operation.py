@@ -4,7 +4,9 @@ import pandas as pd
 from datetime import datetime
 from unittest.mock import patch, MagicMock
 from sintetizador.services.unitofwork import factory
+from sintetizador.model.operation.operationsynthesis import OperationSynthesis
 from sintetizador.services.synthesis.operation import OperationSynthetizer
+from sintetizador.services.bounds import OperationVariableBounds
 from sintetizador.services.synthesis.operation import FATOR_HM3_M3S_MES
 
 from inewave.newave import Sistema, Ree, Confhd, Patamar
@@ -82,16 +84,10 @@ from inewave.nwlistop import (
     Cdefsin,
     Mercl,
     Merclsin,
-    Depminuh,
-    Dvazmax,
-    Dtbmin,
-    Dtbmax,
     Dfphauh,
     Vevmin,
     Vevminm,
     Vevminsin,
-    Invade,
-    Invadem,
     Desvuh,
     Vdesviouh,
     Vghminuh,
@@ -140,14 +136,36 @@ def __compara_sintese_nwlistop(
                     df_nwlistop[col].isin(val)
                 )
 
-    print(
+    assert np.allclose(
         df_sintese.loc[filtros_sintese, "valor"].to_numpy(),
         df_nwlistop.loc[filtros_nwlistop, "valor"].to_numpy(),
     )
 
-    assert np.allclose(
-        df_sintese.loc[filtros_sintese, "valor"].to_numpy(),
-        df_nwlistop.loc[filtros_nwlistop, "valor"].to_numpy(),
+
+def __valida_metadata(chave: str, df_metadata: pd.DataFrame, calculated: bool):
+    s = OperationSynthesis.factory(chave)
+    assert s is not None
+    assert str(s) in df_metadata["chave"].tolist()
+    assert s.variable.short_name in df_metadata["nome_curto_variavel"].tolist()
+    assert s.variable.long_name in df_metadata["nome_longo_variavel"].tolist()
+    assert (
+        s.spatial_resolution.value
+        in df_metadata["nome_curto_agregacao"].tolist()
+    )
+    assert (
+        s.spatial_resolution.long_name
+        in df_metadata["nome_longo_agregacao"].tolist()
+    )
+    unit_str = (
+        OperationSynthetizer.UNITS[s].value
+        if s in OperationSynthetizer.UNITS
+        else ""
+    )
+    assert unit_str in df_metadata["unidade"].tolist()
+    assert calculated in df_metadata["calculado"].tolist()
+    assert (
+        OperationVariableBounds.is_bounded(s)
+        in df_metadata["limitado"].tolist()
     )
 
 
@@ -188,6 +206,9 @@ def test_calcula_patamar_medio_soma(test_settings):
         usina=["CAMARGOS"],
     )
 
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VTUR_UHE", df_meta, False)
+
 
 def test_calcula_patamar_medio_soma_gter_ute(test_settings):
 
@@ -223,6 +244,9 @@ def test_calcula_patamar_medio_soma_gter_ute(test_settings):
         usina=["ANGRA 1"],
         classe=[1],
     )
+
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("GTER_UTE", df_meta, False)
 
 
 def test_sintese_cmo_sbm(test_settings):
@@ -328,40 +352,6 @@ def test_sintese_ever_sin(test_settings):
     )
 
 
-# VVMINOP_SIN (soma valores dos SBM)
-
-
-def test_sintese_vvminop_sin(test_settings):
-    m = MagicMock(lambda df, filename: df)
-    with patch(
-        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
-        new=m,
-    ):
-        OperationSynthetizer.synthetize(["VVMINOP_SIN"], uow)
-    m.assert_called()
-    df = m.mock_calls[-2].args[0]
-    df_sin = None
-    df_sbms = Sistema.read(join(DECK_TEST_DIR, "sistema.dat")).custo_deficit
-    codigos_sbms = df_sbms.loc[
-        df_sbms["ficticio"] == 0, "codigo_submercado"
-    ].tolist()
-    for sbm in codigos_sbms:
-        df_sbm = Invadem.read(
-            join(DECK_TEST_DIR, f"invadem{str(sbm).zfill(3)}.out")
-        ).valores
-        if df_sin is None:
-            df_sin = df_sbm
-        else:
-            df_sin["valor"] += df_sbm["valor"].to_numpy()
-    __compara_sintese_nwlistop(
-        df,
-        df_sin,
-        dataInicio=datetime(2023, 10, 1),
-        cenario=1,
-        patamar=[0],
-    )
-
-
 # TODO - VARMI, VARMPI para UHE (consulta pmo.dat e valores de VARMF e VARPF)
 
 # VFPHA, VRET, VDES, QRET, QDES para REE, SBM e SIN (soma valores das UHEs)
@@ -376,7 +366,6 @@ def test_sintese_varmf_ree(test_settings):
         OperationSynthetizer.synthetize(["VARMF_REE"], uow)
     m.assert_called()
     df = m.mock_calls[-2].args[0]
-    print(df)
     df_ree = None
     df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
     codigos_uhes = df_uhes.loc[df_uhes["ree"] == 2, "codigo_usina"].unique()
@@ -404,6 +393,9 @@ def test_sintese_varmf_ree(test_settings):
         ree=["SUL"],
         patamar=[0],
     )
+
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VARMF_REE", df_meta, True)
 
 
 def test_sintese_varmf_sbm(test_settings):
@@ -447,6 +439,9 @@ def test_sintese_varmf_sbm(test_settings):
         patamar=[0],
     )
 
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VARMF_SBM", df_meta, True)
+
 
 def test_sintese_varmf_sin(test_settings):
     m = MagicMock(lambda df, filename: df)
@@ -484,6 +479,9 @@ def test_sintese_varmf_sin(test_settings):
         patamar=[0],
     )
 
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VARMF_SIN", df_meta, True)
+
 
 def test_sintese_vafl_ree(test_settings):
     m = MagicMock(lambda df, filename: df)
@@ -517,6 +515,9 @@ def test_sintese_vafl_ree(test_settings):
         ree=["SUL"],
         patamar=[0],
     )
+
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VAFL_REE", df_meta, True)
 
 
 def test_sintese_vafl_sbm(test_settings):
@@ -557,6 +558,9 @@ def test_sintese_vafl_sbm(test_settings):
         patamar=[0],
     )
 
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VAFL_SBM", df_meta, True)
+
 
 def test_sintese_vafl_sin(test_settings):
     m = MagicMock(lambda df, filename: df)
@@ -590,6 +594,9 @@ def test_sintese_vafl_sin(test_settings):
         patamar=[0],
     )
 
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VAFL_SIN", df_meta, True)
+
 
 def test_sintese_qafl_ree(test_settings):
     m = MagicMock(lambda df, filename: df)
@@ -621,6 +628,8 @@ def test_sintese_qafl_ree(test_settings):
         ree=["SUL"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("QAFL_REE", df_meta, True)
 
 
 def test_sintese_qafl_sbm(test_settings):
@@ -658,6 +667,8 @@ def test_sintese_qafl_sbm(test_settings):
         submercado=["SUL"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("QAFL_SBM", df_meta, True)
 
 
 def test_sintese_qafl_sin(test_settings):
@@ -689,6 +700,8 @@ def test_sintese_qafl_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("QAFL_SIN", df_meta, True)
 
 
 def test_sintese_vinc_ree(test_settings):
@@ -723,6 +736,8 @@ def test_sintese_vinc_ree(test_settings):
         ree=["SUL"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VINC_REE", df_meta, True)
 
 
 def test_sintese_vinc_sbm(test_settings):
@@ -762,6 +777,8 @@ def test_sintese_vinc_sbm(test_settings):
         submercado=["SUL"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VINC_SBM", df_meta, True)
 
 
 def test_sintese_vinc_sin(test_settings):
@@ -795,6 +812,8 @@ def test_sintese_vinc_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VINC_SIN", df_meta, True)
 
 
 def test_sintese_qinc_ree(test_settings):
@@ -819,6 +838,7 @@ def test_sintese_qinc_ree(test_settings):
             df_ree = df_uhe
         else:
             df_ree["valor"] += df_uhe["valor"].to_numpy()
+
     __compara_sintese_nwlistop(
         df,
         df_ree,
@@ -827,6 +847,8 @@ def test_sintese_qinc_ree(test_settings):
         ree=["SUL"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("QINC_REE", df_meta, True)
 
 
 def test_sintese_qinc_sbm(test_settings):
@@ -864,6 +886,8 @@ def test_sintese_qinc_sbm(test_settings):
         submercado=["SUL"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("QINC_SBM", df_meta, True)
 
 
 def test_sintese_qinc_sin(test_settings):
@@ -895,6 +919,8 @@ def test_sintese_qinc_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("QINC_SIN", df_meta, True)
 
 
 def test_sintese_vtur_ree(test_settings):
@@ -928,6 +954,8 @@ def test_sintese_vtur_ree(test_settings):
         ree=["SUL"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VTUR_REE", df_meta, True)
 
 
 def test_sintese_vtur_sbm(test_settings):
@@ -966,6 +994,8 @@ def test_sintese_vtur_sbm(test_settings):
         submercado=["SUL"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VTUR_SBM", df_meta, True)
 
 
 def test_sintese_vtur_sin(test_settings):
@@ -998,6 +1028,8 @@ def test_sintese_vtur_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VTUR_SIN", df_meta, True)
 
 
 def test_sintese_qtur_ree(test_settings):
@@ -1032,6 +1064,8 @@ def test_sintese_qtur_ree(test_settings):
         ree=["SUL"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("QTUR_REE", df_meta, True)
 
 
 def test_sintese_qtur_sbm(test_settings):
@@ -1071,6 +1105,8 @@ def test_sintese_qtur_sbm(test_settings):
         submercado=["SUL"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("QTUR_SBM", df_meta, True)
 
 
 def test_sintese_qtur_sin(test_settings):
@@ -1104,6 +1140,8 @@ def test_sintese_qtur_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("QTUR_SIN", df_meta, True)
 
 
 def test_sintese_vver_ree(test_settings):
@@ -1137,6 +1175,8 @@ def test_sintese_vver_ree(test_settings):
         ree=["SUL"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VVER_REE", df_meta, True)
 
 
 def test_sintese_vver_sbm(test_settings):
@@ -1175,6 +1215,8 @@ def test_sintese_vver_sbm(test_settings):
         submercado=["SUL"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VVER_SBM", df_meta, True)
 
 
 def test_sintese_vver_sin(test_settings):
@@ -1207,6 +1249,8 @@ def test_sintese_vver_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VVER_SIN", df_meta, True)
 
 
 def test_sintese_qver_ree(test_settings):
@@ -1241,6 +1285,8 @@ def test_sintese_qver_ree(test_settings):
         ree=["SUL"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("QVER_REE", df_meta, True)
 
 
 def test_sintese_qver_sbm(test_settings):
@@ -1280,6 +1326,8 @@ def test_sintese_qver_sbm(test_settings):
         submercado=["SUL"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("QVER_SBM", df_meta, True)
 
 
 def test_sintese_qver_sin(test_settings):
@@ -1313,6 +1361,8 @@ def test_sintese_qver_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("QVER_SIN", df_meta, True)
 
 
 ## EVMIN para REE, SBM e SIN (soma meta de EVMIN com violacao de EVMIN)
@@ -1338,6 +1388,8 @@ def test_sintese_evmin_ree(test_settings):
         ree=["PARANA"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EVMIN_REE", df_meta, True)
 
 
 def test_sintese_evmin_sbm(test_settings):
@@ -1360,6 +1412,8 @@ def test_sintese_evmin_sbm(test_settings):
         submercado=["SUDESTE"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EVMIN_SBM", df_meta, True)
 
 
 def test_sintese_evmin_sin(test_settings):
@@ -1381,6 +1435,8 @@ def test_sintese_evmin_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EVMIN_SIN", df_meta, True)
 
 
 # HJUS e HLIQ para o patamar MEDIO (média ponderada das durações dos patamares)
@@ -1440,6 +1496,8 @@ def test_sintese_hjus_uhe(test_settings):
         usina=["FURNAS"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("HJUS_UHE", df_meta, False)
 
 
 def test_sintese_hliq_uhe(test_settings):
@@ -1496,6 +1554,8 @@ def test_sintese_hliq_uhe(test_settings):
         usina=["FURNAS"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("HLIQ_UHE", df_meta, False)
 
 
 # QTUR, QVER, QRET, QDES para UHE (converter para m3/s)
@@ -1521,6 +1581,8 @@ def test_sintese_qtur_uhe(test_settings):
         usina=["FURNAS"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("QTUR_UHE", df_meta, True)
 
 
 def test_sintese_qver_uhe(test_settings):
@@ -1543,6 +1605,8 @@ def test_sintese_qver_uhe(test_settings):
         usina=["FURNAS"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("QVER_UHE", df_meta, True)
 
 
 def test_sintese_qret_uhe(test_settings):
@@ -1566,6 +1630,8 @@ def test_sintese_qret_uhe(test_settings):
         usina=["FURNAS"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("QRET_UHE", df_meta, True)
 
 
 def test_sintese_qdes_uhe(test_settings):
@@ -1588,6 +1654,8 @@ def test_sintese_qdes_uhe(test_settings):
         usina=["FURNAS"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("QDES_UHE", df_meta, True)
 
 
 # VAFL, VINC para UHE (converter para hm3)
@@ -1613,6 +1681,8 @@ def test_sintese_vafl_uhe(test_settings):
         usina=["FURNAS"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VAFL_UHE", df_meta, True)
 
 
 def test_sintese_vinc_uhe(test_settings):
@@ -1635,6 +1705,8 @@ def test_sintese_vinc_uhe(test_settings):
         usina=["FURNAS"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VINC_UHE", df_meta, True)
 
 
 # QDEF e VDEF para UHE (somar TUR com VER)
@@ -1668,6 +1740,7 @@ def test_sintese_qdef_uhe(test_settings):
     df_tur["valor"] += df_ver["valor"].to_numpy()
     # Conversão simples para conferência apenas do pat. 0 (média do estágio)
     df_tur["valor"] *= FATOR_HM3_M3S_MES
+
     __compara_sintese_nwlistop(
         df,
         df_tur,
@@ -1676,6 +1749,8 @@ def test_sintese_qdef_uhe(test_settings):
         usina=["FURNAS"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("QDEF_UHE", df_meta, True)
 
 
 def test_sintese_vdef_uhe(test_settings):
@@ -1698,6 +1773,8 @@ def test_sintese_vdef_uhe(test_settings):
         usina=["FURNAS"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VDEF_UHE", df_meta, True)
 
 
 # VEVAP para UHE (somar VPOSEVAP com VNEGEVAP)
@@ -1727,6 +1804,8 @@ def test_sintese_vevap_uhe(test_settings):
         usina=["FURNAS"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VEVAP_UHE", df_meta, True)
 
 
 # -----------------------------------------------------------------------------
@@ -1751,6 +1830,8 @@ def test_sintese_vagua_ree(test_settings):
         ree=["PARANA"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VAGUA_REE", df_meta, False)
 
 
 def test_sintese_vagua_uhe(test_settings):
@@ -1771,6 +1852,8 @@ def test_sintese_vagua_uhe(test_settings):
         usina=["FURNAS"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VAGUA_UHE", df_meta, False)
 
 
 def test_sintese_vaguai_uhe(test_settings):
@@ -1791,6 +1874,8 @@ def test_sintese_vaguai_uhe(test_settings):
         usina=["FURNAS"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VAGUAI_UHE", df_meta, False)
 
 
 def test_sintese_cter_sbm(test_settings):
@@ -1811,6 +1896,8 @@ def test_sintese_cter_sbm(test_settings):
         submercado=["SUDESTE"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("CTER_SBM", df_meta, False)
 
 
 def test_sintese_cter_sin(test_settings):
@@ -1830,6 +1917,8 @@ def test_sintese_cter_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("CTER_SIN", df_meta, False)
 
 
 def test_sintese_coper_sin(test_settings):
@@ -1849,6 +1938,8 @@ def test_sintese_coper_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("COP_SIN", df_meta, False)
 
 
 def test_sintese_enaa_ree(test_settings):
@@ -1869,6 +1960,8 @@ def test_sintese_enaa_ree(test_settings):
         patamar=[0],
         ree=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("ENAA_REE", df_meta, False)
 
 
 def test_sintese_enaa_sbm(test_settings):
@@ -1889,6 +1982,8 @@ def test_sintese_enaa_sbm(test_settings):
         patamar=[0],
         submercado=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("ENAA_SBM", df_meta, False)
 
 
 def test_sintese_enaa_sin(test_settings):
@@ -1908,6 +2003,8 @@ def test_sintese_enaa_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("ENAA_SIN", df_meta, False)
 
 
 def test_sintese_enaar_ree(test_settings):
@@ -1928,6 +2025,8 @@ def test_sintese_enaar_ree(test_settings):
         patamar=[0],
         ree=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("ENAAR_REE", df_meta, False)
 
 
 def test_sintese_enaar_sbm(test_settings):
@@ -1948,6 +2047,8 @@ def test_sintese_enaar_sbm(test_settings):
         patamar=[0],
         submercado=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("ENAAR_SBM", df_meta, False)
 
 
 def test_sintese_enaar_sin(test_settings):
@@ -1967,6 +2068,8 @@ def test_sintese_enaar_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("ENAAR_SIN", df_meta, False)
 
 
 def test_sintese_enaaf_ree(test_settings):
@@ -1987,6 +2090,8 @@ def test_sintese_enaaf_ree(test_settings):
         patamar=[0],
         ree=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("ENAAF_REE", df_meta, False)
 
 
 def test_sintese_enaaf_sbm(test_settings):
@@ -2007,6 +2112,8 @@ def test_sintese_enaaf_sbm(test_settings):
         patamar=[0],
         submercado=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("ENAAF_SBM", df_meta, False)
 
 
 def test_sintese_enaaf_sin(test_settings):
@@ -2026,6 +2133,8 @@ def test_sintese_enaaf_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("ENAAF_SIN", df_meta, False)
 
 
 def test_sintese_earpf_ree(test_settings):
@@ -2046,6 +2155,8 @@ def test_sintese_earpf_ree(test_settings):
         patamar=[0],
         ree=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EARPF_REE", df_meta, False)
 
 
 def test_sintese_earpf_sbm(test_settings):
@@ -2066,6 +2177,8 @@ def test_sintese_earpf_sbm(test_settings):
         patamar=[0],
         submercado=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EARPF_SBM", df_meta, False)
 
 
 def test_sintese_earpf_sin(test_settings):
@@ -2085,6 +2198,8 @@ def test_sintese_earpf_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EARPF_SIN", df_meta, False)
 
 
 def test_sintese_earmf_ree(test_settings):
@@ -2105,6 +2220,8 @@ def test_sintese_earmf_ree(test_settings):
         patamar=[0],
         ree=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EARMF_REE", df_meta, False)
 
 
 def test_sintese_earmf_sbm(test_settings):
@@ -2125,6 +2242,8 @@ def test_sintese_earmf_sbm(test_settings):
         patamar=[0],
         submercado=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EARMF_SBM", df_meta, False)
 
 
 def test_sintese_earmf_sin(test_settings):
@@ -2144,6 +2263,8 @@ def test_sintese_earmf_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EARMF_SIN", df_meta, False)
 
 
 def test_sintese_ghidr_ree(test_settings):
@@ -2164,6 +2285,8 @@ def test_sintese_ghidr_ree(test_settings):
         patamar=[0],
         ree=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("GHIDR_REE", df_meta, False)
 
 
 def test_sintese_ghidr_sbm(test_settings):
@@ -2184,6 +2307,8 @@ def test_sintese_ghidr_sbm(test_settings):
         patamar=[0],
         submercado=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("GHIDR_SBM", df_meta, False)
 
 
 def test_sintese_ghidr_sin(test_settings):
@@ -2203,6 +2328,8 @@ def test_sintese_ghidr_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("GHIDR_SIN", df_meta, False)
 
 
 def test_sintese_ghidf_ree(test_settings):
@@ -2223,6 +2350,8 @@ def test_sintese_ghidf_ree(test_settings):
         patamar=[0],
         ree=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("GHIDF_REE", df_meta, False)
 
 
 def test_sintese_ghidf_sbm(test_settings):
@@ -2243,6 +2372,8 @@ def test_sintese_ghidf_sbm(test_settings):
         patamar=[0],
         submercado=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("GHIDF_SBM", df_meta, False)
 
 
 def test_sintese_ghidf_sin(test_settings):
@@ -2262,6 +2393,8 @@ def test_sintese_ghidf_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("GHIDF_SIN", df_meta, False)
 
 
 def test_sintese_ghid_ree(test_settings):
@@ -2282,6 +2415,8 @@ def test_sintese_ghid_ree(test_settings):
         patamar=[0],
         ree=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("GHID_REE", df_meta, False)
 
 
 def test_sintese_ghid_sbm(test_settings):
@@ -2302,6 +2437,8 @@ def test_sintese_ghid_sbm(test_settings):
         patamar=[0],
         submercado=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("GHID_SBM", df_meta, False)
 
 
 def test_sintese_ghid_sin(test_settings):
@@ -2321,6 +2458,8 @@ def test_sintese_ghid_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("GHID_SIN", df_meta, False)
 
 
 def test_sintese_gter_ute(test_settings):
@@ -2342,6 +2481,8 @@ def test_sintese_gter_ute(test_settings):
         classe=[1],
         usina=["ANGRA 1"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("GTER_UTE", df_meta, False)
 
 
 def test_sintese_gter_sbm(test_settings):
@@ -2362,6 +2503,8 @@ def test_sintese_gter_sbm(test_settings):
         patamar=[0],
         submercado=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("GTER_SBM", df_meta, False)
 
 
 def test_sintese_gter_sin(test_settings):
@@ -2381,6 +2524,8 @@ def test_sintese_gter_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("GTER_SIN", df_meta, False)
 
 
 def test_sintese_everr_ree(test_settings):
@@ -2401,6 +2546,8 @@ def test_sintese_everr_ree(test_settings):
         patamar=[0],
         ree=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EVERR_REE", df_meta, False)
 
 
 def test_sintese_everr_sbm(test_settings):
@@ -2421,6 +2568,8 @@ def test_sintese_everr_sbm(test_settings):
         patamar=[0],
         submercado=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EVERR_SBM", df_meta, False)
 
 
 def test_sintese_everr_sin(test_settings):
@@ -2440,6 +2589,8 @@ def test_sintese_everr_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EVERR_SIN", df_meta, False)
 
 
 def test_sintese_everf_ree(test_settings):
@@ -2460,6 +2611,8 @@ def test_sintese_everf_ree(test_settings):
         patamar=[0],
         ree=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EVERF_REE", df_meta, False)
 
 
 def test_sintese_everf_sbm(test_settings):
@@ -2480,6 +2633,8 @@ def test_sintese_everf_sbm(test_settings):
         patamar=[0],
         submercado=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EVERF_SBM", df_meta, False)
 
 
 def test_sintese_everf_sin(test_settings):
@@ -2499,6 +2654,8 @@ def test_sintese_everf_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EVERF_SIN", df_meta, False)
 
 
 def test_sintese_everft_ree(test_settings):
@@ -2519,6 +2676,8 @@ def test_sintese_everft_ree(test_settings):
         patamar=[0],
         ree=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EVERFT_REE", df_meta, False)
 
 
 def test_sintese_everft_sbm(test_settings):
@@ -2539,6 +2698,8 @@ def test_sintese_everft_sbm(test_settings):
         patamar=[0],
         submercado=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EVERFT_SBM", df_meta, False)
 
 
 def test_sintese_everft_sin(test_settings):
@@ -2558,6 +2719,8 @@ def test_sintese_everft_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EVERFT_SIN", df_meta, False)
 
 
 def test_sintese_edesr_ree(test_settings):
@@ -2578,6 +2741,8 @@ def test_sintese_edesr_ree(test_settings):
         patamar=[0],
         ree=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EDESR_REE", df_meta, False)
 
 
 def test_sintese_edesr_sbm(test_settings):
@@ -2598,6 +2763,8 @@ def test_sintese_edesr_sbm(test_settings):
         patamar=[0],
         submercado=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EDESR_SBM", df_meta, False)
 
 
 def test_sintese_edesr_sin(test_settings):
@@ -2617,6 +2784,8 @@ def test_sintese_edesr_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EDESR_SIN", df_meta, False)
 
 
 def test_sintese_edesf_ree(test_settings):
@@ -2637,6 +2806,8 @@ def test_sintese_edesf_ree(test_settings):
         patamar=[0],
         ree=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EDESF_REE", df_meta, False)
 
 
 def test_sintese_edesf_sbm(test_settings):
@@ -2657,6 +2828,8 @@ def test_sintese_edesf_sbm(test_settings):
         patamar=[0],
         submercado=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EDESF_SBM", df_meta, False)
 
 
 def test_sintese_edesf_sin(test_settings):
@@ -2676,6 +2849,8 @@ def test_sintese_edesf_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EDESF_SIN", df_meta, False)
 
 
 def test_sintese_mevmin_ree(test_settings):
@@ -2696,6 +2871,8 @@ def test_sintese_mevmin_ree(test_settings):
         patamar=[0],
         ree=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("MEVMIN_REE", df_meta, False)
 
 
 def test_sintese_mevmin_sbm(test_settings):
@@ -2716,6 +2893,8 @@ def test_sintese_mevmin_sbm(test_settings):
         patamar=[0],
         submercado=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("MEVMIN_SBM", df_meta, False)
 
 
 def test_sintese_mevmin_sin(test_settings):
@@ -2735,6 +2914,8 @@ def test_sintese_mevmin_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("MEVMIN_SIN", df_meta, False)
 
 
 def test_sintese_evmor_ree(test_settings):
@@ -2755,6 +2936,8 @@ def test_sintese_evmor_ree(test_settings):
         patamar=[0],
         ree=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EVMOR_REE", df_meta, False)
 
 
 def test_sintese_evmor_sbm(test_settings):
@@ -2775,6 +2958,8 @@ def test_sintese_evmor_sbm(test_settings):
         patamar=[0],
         submercado=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EVMOR_SBM", df_meta, False)
 
 
 def test_sintese_evmor_sin(test_settings):
@@ -2794,6 +2979,8 @@ def test_sintese_evmor_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EVMOR_SIN", df_meta, False)
 
 
 def test_sintese_eevap_ree(test_settings):
@@ -2814,6 +3001,8 @@ def test_sintese_eevap_ree(test_settings):
         patamar=[0],
         ree=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EEVAP_REE", df_meta, False)
 
 
 def test_sintese_eevap_sbm(test_settings):
@@ -2834,6 +3023,8 @@ def test_sintese_eevap_sbm(test_settings):
         patamar=[0],
         submercado=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EEVAP_SBM", df_meta, False)
 
 
 def test_sintese_eevap_sin(test_settings):
@@ -2853,6 +3044,8 @@ def test_sintese_eevap_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EEVAP_SIN", df_meta, False)
 
 
 def test_sintese_qafl_uhe(test_settings):
@@ -2873,6 +3066,8 @@ def test_sintese_qafl_uhe(test_settings):
         patamar=[0],
         usina=["CAMARGOS"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("QAFL_UHE", df_meta, False)
 
 
 def test_sintese_qinc_uhe(test_settings):
@@ -2893,6 +3088,8 @@ def test_sintese_qinc_uhe(test_settings):
         patamar=[0],
         usina=["CAMARGOS"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("QINC_UHE", df_meta, False)
 
 
 def test_sintese_vtur_uhe(test_settings):
@@ -2913,6 +3110,8 @@ def test_sintese_vtur_uhe(test_settings):
         patamar=[1],
         usina=["CAMARGOS"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VTUR_UHE", df_meta, False)
 
 
 def test_sintese_vver_uhe(test_settings):
@@ -2933,6 +3132,8 @@ def test_sintese_vver_uhe(test_settings):
         patamar=[1],
         usina=["CAMARGOS"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VVER_UHE", df_meta, False)
 
 
 def test_sintese_varmf_uhe(test_settings):
@@ -2958,6 +3159,8 @@ def test_sintese_varmf_uhe(test_settings):
         patamar=[0],
         usina=["CAMARGOS"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VARMF_UHE", df_meta, False)
 
 
 def test_sintese_varpf_uhe(test_settings):
@@ -2978,6 +3181,8 @@ def test_sintese_varpf_uhe(test_settings):
         patamar=[0],
         usina=["CAMARGOS"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VARPF_UHE", df_meta, False)
 
 
 def test_sintese_ghid_uhe(test_settings):
@@ -2998,6 +3203,8 @@ def test_sintese_ghid_uhe(test_settings):
         patamar=[1],
         usina=["CAMARGOS"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("GHID_UHE", df_meta, False)
 
 
 # TODO - adicionar testes de geração eólica / vento
@@ -3021,6 +3228,8 @@ def test_sintese_def_sbm(test_settings):
         patamar=[0],
         submercado=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("DEF_SBM", df_meta, False)
 
 
 def test_sintese_def_sin(test_settings):
@@ -3040,6 +3249,8 @@ def test_sintese_def_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("DEF_SIN", df_meta, False)
 
 
 def test_sintese_exc_sbm(test_settings):
@@ -3060,6 +3271,8 @@ def test_sintese_exc_sbm(test_settings):
         patamar=[0],
         submercado=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EXC_SBM", df_meta, False)
 
 
 def test_sintese_exc_sin(test_settings):
@@ -3079,6 +3292,8 @@ def test_sintese_exc_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EXC_SIN", df_meta, False)
 
 
 def test_sintese_int_sbp(test_settings):
@@ -3100,6 +3315,8 @@ def test_sintese_int_sbp(test_settings):
         submercadoDe=["SUDESTE"],
         submercadoPara=["SUL"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("INT_SBP", df_meta, False)
 
 
 def test_sintese_cdef_sbm(test_settings):
@@ -3120,6 +3337,8 @@ def test_sintese_cdef_sbm(test_settings):
         patamar=[0],
         submercado=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("CDEF_SBM", df_meta, False)
 
 
 def test_sintese_cdef_sin(test_settings):
@@ -3139,6 +3358,8 @@ def test_sintese_cdef_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("CDEF_SIN", df_meta, False)
 
 
 def test_sintese_merl_sbm(test_settings):
@@ -3159,6 +3380,8 @@ def test_sintese_merl_sbm(test_settings):
         patamar=[0],
         submercado=["SUDESTE"],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("MERL_SBM", df_meta, False)
 
 
 def test_sintese_merl_sin(test_settings):
@@ -3178,86 +3401,8 @@ def test_sintese_merl_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
-
-
-def test_sintese_vdefmin_uhe(test_settings):
-    m = MagicMock(lambda df, filename: df)
-    with patch(
-        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
-        new=m,
-    ):
-        OperationSynthetizer.synthetize(["VDEFMIN_UHE"], uow)
-    m.assert_called()
-    df = m.mock_calls[0].args[0]
-    df_arq = Depminuh.read(join(DECK_TEST_DIR, "depminuh006.out")).valores
-    __compara_sintese_nwlistop(
-        df,
-        df_arq,
-        dataInicio=datetime(2023, 10, 1),
-        cenario=1,
-        usina=["FURNAS"],
-        patamar=[1],
-    )
-
-
-def test_sintese_vdefmax_uhe(test_settings):
-    m = MagicMock(lambda df, filename: df)
-    with patch(
-        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
-        new=m,
-    ):
-        OperationSynthetizer.synthetize(["VDEFMAX_UHE"], uow)
-    m.assert_called()
-    df = m.mock_calls[0].args[0]
-    df_arq = Dvazmax.read(join(DECK_TEST_DIR, "dvazmax006.out")).valores
-    __compara_sintese_nwlistop(
-        df,
-        df_arq,
-        dataInicio=datetime(2023, 10, 1),
-        cenario=1,
-        usina=["FURNAS"],
-        patamar=[1],
-    )
-
-
-def test_sintese_vturmin_uhe(test_settings):
-    m = MagicMock(lambda df, filename: df)
-    with patch(
-        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
-        new=m,
-    ):
-        OperationSynthetizer.synthetize(["VTURMIN_UHE"], uow)
-    m.assert_called()
-    df = m.mock_calls[0].args[0]
-    df_arq = Dtbmin.read(join(DECK_TEST_DIR, "dtbmin006.out")).valores
-    __compara_sintese_nwlistop(
-        df,
-        df_arq,
-        dataInicio=datetime(2023, 10, 1),
-        cenario=1,
-        usina=["FURNAS"],
-        patamar=[1],
-    )
-
-
-def test_sintese_vturmax_uhe(test_settings):
-    m = MagicMock(lambda df, filename: df)
-    with patch(
-        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
-        new=m,
-    ):
-        OperationSynthetizer.synthetize(["VTURMAX_UHE"], uow)
-    m.assert_called()
-    df = m.mock_calls[0].args[0]
-    df_arq = Dtbmax.read(join(DECK_TEST_DIR, "dtbmax006.out")).valores
-    __compara_sintese_nwlistop(
-        df,
-        df_arq,
-        dataInicio=datetime(2023, 10, 1),
-        cenario=1,
-        usina=["FURNAS"],
-        patamar=[1],
-    )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("MERL_SIN", df_meta, False)
 
 
 def test_sintese_vfpha_uhe(test_settings):
@@ -3278,6 +3423,8 @@ def test_sintese_vfpha_uhe(test_settings):
         usina=["FURNAS"],
         patamar=[1],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VFPHA_UHE", df_meta, False)
 
 
 def test_sintese_vevmin_ree(test_settings):
@@ -3298,6 +3445,8 @@ def test_sintese_vevmin_ree(test_settings):
         ree=["SUDESTE"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VEVMIN_REE", df_meta, False)
 
 
 def test_sintese_vevmin_sbm(test_settings):
@@ -3318,6 +3467,8 @@ def test_sintese_vevmin_sbm(test_settings):
         submercado=["SUDESTE"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VEVMIN_SBM", df_meta, False)
 
 
 def test_sintese_vevmin_sin(test_settings):
@@ -3337,46 +3488,8 @@ def test_sintese_vevmin_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
-
-
-def test_sintese_vvminop_ree(test_settings):
-    m = MagicMock(lambda df, filename: df)
-    with patch(
-        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
-        new=m,
-    ):
-        OperationSynthetizer.synthetize(["VVMINOP_REE"], uow)
-    m.assert_called()
-    df = m.mock_calls[0].args[0]
-    df_arq = Invade.read(join(DECK_TEST_DIR, "invade001.out")).valores
-    __compara_sintese_nwlistop(
-        df,
-        df_arq,
-        dataInicio=datetime(2023, 10, 1),
-        cenario=1,
-        ree=["SUDESTE"],
-        patamar=[0],
-    )
-
-
-def test_sintese_vvminop_sbm(test_settings):
-    m = MagicMock(lambda df, filename: df)
-    with patch(
-        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
-        new=m,
-    ):
-        OperationSynthetizer.synthetize(["VVMINOP_SBM"], uow)
-    m.assert_called()
-    df = m.mock_calls[0].args[0]
-    df_arq = Invadem.read(join(DECK_TEST_DIR, "invadem001.out")).valores
-    __compara_sintese_nwlistop(
-        df,
-        df_arq,
-        dataInicio=datetime(2023, 10, 1),
-        cenario=1,
-        submercado=["SUDESTE"],
-        patamar=[0],
-    )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VEVMIN_SIN", df_meta, False)
 
 
 def test_sintese_vret_uhe(test_settings):
@@ -3397,6 +3510,8 @@ def test_sintese_vret_uhe(test_settings):
         usina=["FURNAS"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VRET_UHE", df_meta, False)
 
 
 def test_sintese_vdes_uhe(test_settings):
@@ -3417,6 +3532,8 @@ def test_sintese_vdes_uhe(test_settings):
         usina=["FURNAS"],
         patamar=[1],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VDES_UHE", df_meta, False)
 
 
 def test_sintese_vghmin_uhe(test_settings):
@@ -3437,6 +3554,8 @@ def test_sintese_vghmin_uhe(test_settings):
         usina=["FURNAS"],
         patamar=[1],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VGHMIN_UHE", df_meta, False)
 
 
 def test_sintese_vghmin_ree(test_settings):
@@ -3457,6 +3576,8 @@ def test_sintese_vghmin_ree(test_settings):
         ree=["SUDESTE"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VGHMIN_REE", df_meta, False)
 
 
 def test_sintese_vghmin_sbm(test_settings):
@@ -3477,6 +3598,8 @@ def test_sintese_vghmin_sbm(test_settings):
         submercado=["SUDESTE"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VGHMIN_SBM", df_meta, False)
 
 
 def test_sintese_vghmin_sin(test_settings):
@@ -3496,6 +3619,8 @@ def test_sintese_vghmin_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VGHMIN_SIN", df_meta, False)
 
 
 def test_sintese_hmon_uhe(test_settings):
@@ -3516,6 +3641,8 @@ def test_sintese_hmon_uhe(test_settings):
         usina=["FURNAS"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("HMON_UHE", df_meta, False)
 
 
 def test_sintese_hjus_uhe(test_settings):
@@ -3536,6 +3663,8 @@ def test_sintese_hjus_uhe(test_settings):
         usina=["FURNAS"],
         patamar=[1],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("HJUS_UHE", df_meta, True)
 
 
 def test_sintese_hliq_uhe(test_settings):
@@ -3556,6 +3685,8 @@ def test_sintese_hliq_uhe(test_settings):
         usina=["FURNAS"],
         patamar=[1],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("HLIQ_UHE", df_meta, True)
 
 
 def test_sintese_vevp_uhe(test_settings):
@@ -3576,6 +3707,8 @@ def test_sintese_vevp_uhe(test_settings):
         usina=["FURNAS"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VEVP_UHE", df_meta, False)
 
 
 def test_sintese_vposevap_uhe(test_settings):
@@ -3596,6 +3729,8 @@ def test_sintese_vposevap_uhe(test_settings):
         usina=["FURNAS"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VPOSEVAP_UHE", df_meta, False)
 
 
 def test_sintese_vnegevap_uhe(test_settings):
@@ -3618,3 +3753,5 @@ def test_sintese_vnegevap_uhe(test_settings):
         usina=["FURNAS"],
         patamar=[0],
     )
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VNEGEVAP_UHE", df_meta, False)

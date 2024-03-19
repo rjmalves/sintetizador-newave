@@ -1386,7 +1386,7 @@ class OperationVariableBounds:
         n_patamares: int,
         arq_modif: Modif,
         tipo_registro_modif: Type[
-            Union[VMINT, VMAXT, VAZMINT, TURBMINT, TURBMAXT]
+            Union[VMINT, VMAXT, VAZMINT, VAZMAXT, TURBMINT, TURBMAXT]
         ],
         codigos_usinas: np.ndarray,
     ) -> Tuple[np.ndarray, np.ndarray]:
@@ -1410,7 +1410,7 @@ class OperationVariableBounds:
                     if isinstance(r, tipo_registro_modif)
                 ]
                 for reg in registros_usina:
-                    idx_data = datas.index(reg.data_inicio)
+                    idx_data = datas.index(reg.data_inicio)  # type: ignore
                     valor, unidade = cls._extrai_dados_modif_uhe(reg)
                     dados_cadastrais_modificados[i_i + idx_data : i_f] = valor
                     unidades_modificadas[i_i + idx_data : i_f] = unidade
@@ -1621,7 +1621,7 @@ class OperationVariableBounds:
                                 cls._converte_volume_percentual_hm3(
                                     df_hidr.at[u, "volume_minimo"],
                                     df_hidr.at[u, "volume_maximo"],
-                                    reg_volmin.volume,
+                                    reg_volmin.volume or 0.0,
                                 )
                             )
                         df_hidr.at[u, "volume_minimo"] = reg_volmin.volume
@@ -1635,7 +1635,7 @@ class OperationVariableBounds:
                                 cls._converte_volume_percentual_hm3(
                                     df_hidr.at[u, "volume_minimo"],
                                     df_hidr.at[u, "volume_maximo"],
-                                    reg_volmax.volume,
+                                    reg_volmax.volume or float("inf"),
                                 )
                             )
                         df_hidr.at[u, "volume_maximo"] = reg_volmax.volume

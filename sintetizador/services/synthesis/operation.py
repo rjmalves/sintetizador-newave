@@ -256,13 +256,6 @@ class OperationSynthetizer:
             ),
         ],
         OperationSynthesis(
-            Variable.VIOLACAO_VMINOP, SpatialResolution.SISTEMA_INTERLIGADO
-        ): [
-            OperationSynthesis(
-                Variable.VIOLACAO_VMINOP, SpatialResolution.SUBMERCADO
-            )
-        ],
-        OperationSynthesis(
             Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
             SpatialResolution.SISTEMA_INTERLIGADO,
         ): [
@@ -562,114 +555,6 @@ class OperationSynthetizer:
             ),
         ],
         OperationSynthesis(
-            Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
-            SpatialResolution.RESERVATORIO_EQUIVALENTE,
-        ): [
-            OperationSynthesis(
-                Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
-                SpatialResolution.USINA_HIDROELETRICA,
-            ),
-        ],
-        OperationSynthesis(
-            Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
-            SpatialResolution.SUBMERCADO,
-        ): [
-            OperationSynthesis(
-                Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
-                SpatialResolution.USINA_HIDROELETRICA,
-            ),
-        ],
-        OperationSynthesis(
-            Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
-            SpatialResolution.SISTEMA_INTERLIGADO,
-        ): [
-            OperationSynthesis(
-                Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
-                SpatialResolution.USINA_HIDROELETRICA,
-            ),
-        ],
-        OperationSynthesis(
-            Variable.VIOLACAO_DEFLUENCIA_MINIMA,
-            SpatialResolution.RESERVATORIO_EQUIVALENTE,
-        ): [
-            OperationSynthesis(
-                Variable.VIOLACAO_DEFLUENCIA_MINIMA,
-                SpatialResolution.USINA_HIDROELETRICA,
-            ),
-        ],
-        OperationSynthesis(
-            Variable.VIOLACAO_DEFLUENCIA_MINIMA,
-            SpatialResolution.SUBMERCADO,
-        ): [
-            OperationSynthesis(
-                Variable.VIOLACAO_DEFLUENCIA_MINIMA,
-                SpatialResolution.USINA_HIDROELETRICA,
-            ),
-        ],
-        OperationSynthesis(
-            Variable.VIOLACAO_DEFLUENCIA_MINIMA,
-            SpatialResolution.SISTEMA_INTERLIGADO,
-        ): [
-            OperationSynthesis(
-                Variable.VIOLACAO_DEFLUENCIA_MINIMA,
-                SpatialResolution.USINA_HIDROELETRICA,
-            ),
-        ],
-        OperationSynthesis(
-            Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
-            SpatialResolution.RESERVATORIO_EQUIVALENTE,
-        ): [
-            OperationSynthesis(
-                Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
-                SpatialResolution.USINA_HIDROELETRICA,
-            ),
-        ],
-        OperationSynthesis(
-            Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
-            SpatialResolution.SUBMERCADO,
-        ): [
-            OperationSynthesis(
-                Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
-                SpatialResolution.USINA_HIDROELETRICA,
-            ),
-        ],
-        OperationSynthesis(
-            Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
-            SpatialResolution.SISTEMA_INTERLIGADO,
-        ): [
-            OperationSynthesis(
-                Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
-                SpatialResolution.USINA_HIDROELETRICA,
-            ),
-        ],
-        OperationSynthesis(
-            Variable.VIOLACAO_TURBINAMENTO_MINIMO,
-            SpatialResolution.RESERVATORIO_EQUIVALENTE,
-        ): [
-            OperationSynthesis(
-                Variable.VIOLACAO_TURBINAMENTO_MINIMO,
-                SpatialResolution.USINA_HIDROELETRICA,
-            ),
-        ],
-        OperationSynthesis(
-            Variable.VIOLACAO_TURBINAMENTO_MINIMO,
-            SpatialResolution.SUBMERCADO,
-        ): [
-            OperationSynthesis(
-                Variable.VIOLACAO_TURBINAMENTO_MINIMO,
-                SpatialResolution.USINA_HIDROELETRICA,
-            ),
-        ],
-        OperationSynthesis(
-            Variable.VIOLACAO_TURBINAMENTO_MINIMO,
-            SpatialResolution.SISTEMA_INTERLIGADO,
-        ): [
-            OperationSynthesis(
-                Variable.VIOLACAO_TURBINAMENTO_MINIMO,
-                SpatialResolution.USINA_HIDROELETRICA,
-            ),
-        ],
-        OperationSynthesis(
             Variable.VIOLACAO_FPHA,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
         ): [
@@ -932,6 +817,10 @@ class OperationSynthetizer:
                 Variable.VAZAO_INCREMENTAL,
                 SpatialResolution.USINA_HIDROELETRICA,
             ),
+            OperationSynthesis(
+                Variable.VOLUME_INCREMENTAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
         ],
         OperationSynthesis(
             Variable.VAZAO_INCREMENTAL,
@@ -941,6 +830,10 @@ class OperationSynthetizer:
                 Variable.VAZAO_INCREMENTAL,
                 SpatialResolution.USINA_HIDROELETRICA,
             ),
+            OperationSynthesis(
+                Variable.VOLUME_INCREMENTAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
         ],
         OperationSynthesis(
             Variable.VAZAO_INCREMENTAL,
@@ -948,6 +841,10 @@ class OperationSynthetizer:
         ): [
             OperationSynthesis(
                 Variable.VAZAO_INCREMENTAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+            OperationSynthesis(
+                Variable.VOLUME_INCREMENTAL,
                 SpatialResolution.USINA_HIDROELETRICA,
             ),
         ],
@@ -2022,11 +1919,7 @@ class OperationSynthetizer:
             if (
                 v.variable
                 in [
-                    Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
-                    Variable.VIOLACAO_DEFLUENCIA_MINIMA,
                     Variable.VIOLACAO_FPHA,
-                    Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
-                    Variable.VIOLACAO_TURBINAMENTO_MINIMO,
                     Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
                     Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
                 ]
@@ -2689,8 +2582,8 @@ class OperationSynthetizer:
         """
 
         variable_map = {
-            Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL: Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
-            Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL: Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+            Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL: Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,  # noqa
+            Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL: Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,  # noqa
         }
 
         s = OperationSynthesis(
@@ -2894,7 +2787,7 @@ class OperationSynthetizer:
         return df_pat0.sort_values(cols_group + ["patamar"])
 
     @classmethod
-    def __resolve_UHE_normal(
+    def __resolve_UHE(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         confhd = cls._validate_data(
@@ -2952,35 +2845,9 @@ class OperationSynthetizer:
 
         if not df_completo.empty:
             df_completo = df_completo.loc[df_completo["dataInicio"] < fim, :]
+
+        df_completo = cls._add_ree_submercado_uhes(df_completo, uow)
         return df_completo
-
-    @classmethod
-    def __resolve_UHE(
-        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
-        if synthesis.variable in [
-            Variable.VAZAO_TURBINADA,
-            Variable.VAZAO_VERTIDA,
-            Variable.VAZAO_RETIRADA,
-            Variable.VAZAO_DESVIADA,
-        ]:
-            df = cls.__stub_converte_volume_em_vazao(synthesis, uow)
-        elif synthesis.variable in [
-            Variable.VOLUME_AFLUENTE,
-            Variable.VOLUME_INCREMENTAL,
-        ]:
-            df = cls.__stub_converte_vazao_em_volume(synthesis, uow)
-        elif synthesis.variable == Variable.VAZAO_DEFLUENTE:
-            df = cls.__stub_QDEF(synthesis, uow)
-        elif synthesis.variable == Variable.VOLUME_DEFLUENTE:
-            df = cls.__stub_VDEF(synthesis, uow)
-        elif synthesis.variable == Variable.VIOLACAO_EVAPORACAO:
-            df = cls.__stub_VEVAP(synthesis, uow)
-        else:
-            df = cls.__resolve_UHE_normal(synthesis, uow)
-
-        df = cls._add_ree_submercado_uhes(df, uow)
-        return df
 
     @classmethod
     def _add_ree_submercado_uhes(
@@ -3398,20 +3265,12 @@ class OperationSynthetizer:
             raise RuntimeError()
 
     @classmethod
-    def _resolve_stub(
-        cls, s: OperationSynthesis, uow: AbstractUnitOfWork
-    ) -> Tuple[pd.DataFrame, bool]:
+    def _stub_mappings(  # noqa
+        cls, s: OperationSynthesis
+    ) -> Optional[Callable]:
+        f = None
         if s.variable == Variable.ENERGIA_VERTIDA:
-            df = cls.__stub_EVER(s, uow)
-            df, is_stub = df, True
-        elif all(
-            [
-                s.variable == Variable.VIOLACAO_VMINOP,
-                s.spatial_resolution == SpatialResolution.SISTEMA_INTERLIGADO,
-            ]
-        ):
-            df = cls.__resolve_stub_vminop_sin(s, uow)
-            df, is_stub = df, True
+            f = cls.__stub_EVER
         elif all(
             [
                 s.variable
@@ -3427,8 +3286,7 @@ class OperationSynthetizer:
                 ],
             ]
         ):
-            df = cls.__stub_resolve_energias_iniciais_ree(s, uow)
-            df, is_stub = df, True
+            f = cls.__stub_resolve_energias_iniciais_ree
         elif all(
             [
                 s.variable
@@ -3439,8 +3297,7 @@ class OperationSynthetizer:
                 s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
             ]
         ):
-            df = cls.__stub_resolve_volumes_iniciais_uhe(s, uow)
-            df, is_stub = df, True
+            f = cls.__stub_resolve_volumes_iniciais_uhe
         elif all(
             # TODO - eliminar todas as sínteses de violações que
             # não sejam de slacks propositais das metodologias,
@@ -3467,8 +3324,7 @@ class OperationSynthetizer:
                 s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
             ]
         ):
-            df = cls.__stub_mapa_variaveis_agregacao_simples_UHE(s, uow)
-            df, is_stub = df, True
+            f = cls.__stub_mapa_variaveis_agregacao_simples_UHE
         elif all(
             [
                 s.variable
@@ -3484,8 +3340,7 @@ class OperationSynthetizer:
                 s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
             ]
         ):
-            df = cls.__stub_mapa_variaveis_vazao_UHE(s, uow)
-            df, is_stub = df, True
+            f = cls.__stub_mapa_variaveis_vazao_UHE
         elif all(
             [
                 s.variable
@@ -3496,14 +3351,65 @@ class OperationSynthetizer:
                 s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
             ]
         ):
-            df = cls.__stub_mapa_variaveis_volumes_percentuais_UHE(s, uow)
-            df, is_stub = df, True
+            f = cls.__stub_mapa_variaveis_volumes_percentuais_UHE
         elif s.variable in [Variable.ENERGIA_DEFLUENCIA_MINIMA]:
-            df = cls.__stub_energia_defluencia_minima(s, uow)
-            df, is_stub = df, True
+            f = cls.__stub_energia_defluencia_minima
         elif s.variable in [Variable.COTA_JUSANTE, Variable.QUEDA_LIQUIDA]:
-            df = cls.__stub_calc_pat_0_weighted_mean(s, uow)
-            df, is_stub = df, True
+            f = cls.__stub_calc_pat_0_weighted_mean
+        elif all(
+            [
+                s.variable
+                in [
+                    Variable.VAZAO_TURBINADA,
+                    Variable.VAZAO_VERTIDA,
+                    Variable.VAZAO_RETIRADA,
+                    Variable.VAZAO_DESVIADA,
+                ],
+                s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+            ]
+        ):
+            f = cls.__stub_converte_volume_em_vazao
+        elif all(
+            [
+                s.variable
+                in [
+                    Variable.VOLUME_AFLUENTE,
+                    Variable.VOLUME_INCREMENTAL,
+                ],
+                s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+            ]
+        ):
+            f = cls.__stub_converte_vazao_em_volume
+        elif all(
+            [
+                s.variable == Variable.VAZAO_DEFLUENTE,
+                s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+            ]
+        ):
+            f = cls.__stub_QDEF
+        elif all(
+            [
+                s.variable == Variable.VOLUME_DEFLUENTE,
+                s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+            ]
+        ):
+            f = cls.__stub_VDEF
+        elif all(
+            [
+                s.variable == Variable.VIOLACAO_EVAPORACAO,
+                s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+            ]
+        ):
+            f = cls.__stub_VEVAP
+        return f
+
+    @classmethod
+    def _resolve_stub(
+        cls, s: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> Tuple[pd.DataFrame, bool]:
+        f = cls._stub_mappings(s)
+        if f:
+            df, is_stub = f(s, uow), True
         else:
             df, is_stub = pd.DataFrame(), False
         if is_stub:
@@ -3548,8 +3454,10 @@ class OperationSynthetizer:
         metadata_df = pd.DataFrame(
             columns=[
                 "chave",
-                "nome_curto",
-                "nome_longo",
+                "nome_curto_variavel",
+                "nome_longo_variavel",
+                "nome_curto_agregacao",
+                "nome_longo_agregacao",
                 "unidade",
                 "calculado",
                 "limitado",
@@ -3557,9 +3465,11 @@ class OperationSynthetizer:
         )
         for s, calculated in success_synthesis:
             metadata_df.loc[metadata_df.shape[0]] = [
-                s.variable.value,
+                str(s),
                 s.variable.short_name,
                 s.variable.long_name,
+                s.spatial_resolution.value,
+                s.spatial_resolution.long_name,
                 cls.UNITS[s].value if s in cls.UNITS else "",
                 calculated,
                 OperationVariableBounds.is_bounded(s),
@@ -3589,12 +3499,12 @@ class OperationSynthetizer:
                 found_synthesis = False
                 cls.logger.info(f"Realizando sintese de {filename}")
                 df = cls.__get_from_cache_if_exists(s)
-                is_stub = False
+                is_stub = cls._stub_mappings(s) is not None
                 if df.empty:
                     df, is_stub = cls._resolve_stub(s, uow)
                     if not is_stub:
                         df = cls._resolve_synthesis(s, uow)
-                        cls.__store_in_cache_if_needed(s, df)
+                    cls.__store_in_cache_if_needed(s, df)
                 if df is not None:
                     if not df.empty:
                         found_synthesis = True

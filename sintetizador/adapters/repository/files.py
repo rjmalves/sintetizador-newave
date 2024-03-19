@@ -96,8 +96,6 @@ from inewave.nwlistop.vghminuh import Vghminuh
 from inewave.nwlistop.vghmin import Vghmin
 from inewave.nwlistop.vghminm import Vghminm
 from inewave.nwlistop.vghminsin import Vghminsin
-from inewave.nwlistop.invade import Invade
-from inewave.nwlistop.invadem import Invadem
 
 from inewave.nwlistop.vento import Vento
 from inewave.nwlistop.geol import Geol
@@ -112,10 +110,6 @@ from inewave.nwlistop.vturuh import Vturuh
 from inewave.nwlistop.vertuh import Vertuh
 from inewave.nwlistop.varmuh import Varmuh
 from inewave.nwlistop.varmpuh import Varmpuh
-from inewave.nwlistop.dtbmax import Dtbmax
-from inewave.nwlistop.dtbmin import Dtbmin
-from inewave.nwlistop.dvazmax import Dvazmax
-from inewave.nwlistop.depminuh import Depminuh
 from inewave.nwlistop.dfphauh import Dfphauh
 from inewave.nwlistop.pivarm import Pivarm
 from inewave.nwlistop.pivarmincr import Pivarmincr
@@ -886,38 +880,6 @@ class RawFilesRepository(AbstractFilesRepository):
                 Merclsin.read(join(dir, "merclsin.out")).valores
             ),
             (
-                Variable.VIOLACAO_DEFLUENCIA_MINIMA,
-                SpatialResolution.USINA_HIDROELETRICA,
-            ): lambda dir, uhe=1: self.__calcula_patamar_medio_soma(
-                Depminuh.read(
-                    join(dir, f"depminuh{str(uhe).zfill(3)}.out")
-                ).valores
-            ),
-            (
-                Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
-                SpatialResolution.USINA_HIDROELETRICA,
-            ): lambda dir, uhe=1: self.__calcula_patamar_medio_soma(
-                Dvazmax.read(
-                    join(dir, f"dvazmax{str(uhe).zfill(3)}.out")
-                ).valores
-            ),
-            (
-                Variable.VIOLACAO_TURBINAMENTO_MINIMO,
-                SpatialResolution.USINA_HIDROELETRICA,
-            ): lambda dir, uhe=1: self.__calcula_patamar_medio_soma(
-                Dtbmin.read(
-                    join(dir, f"dtbmin{str(uhe).zfill(3)}.out")
-                ).valores
-            ),
-            (
-                Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
-                SpatialResolution.USINA_HIDROELETRICA,
-            ): lambda dir, uhe=1: self.__calcula_patamar_medio_soma(
-                Dtbmax.read(
-                    join(dir, f"dtbmax{str(uhe).zfill(3)}.out")
-                ).valores
-            ),
-            (
                 Variable.VIOLACAO_FPHA,
                 SpatialResolution.USINA_HIDROELETRICA,
             ): lambda dir, uhe=1: self.__calcula_patamar_medio_soma(
@@ -946,22 +908,6 @@ class RawFilesRepository(AbstractFilesRepository):
                 SpatialResolution.SISTEMA_INTERLIGADO,
             ): lambda dir, _: self.__adiciona_coluna_patamar(
                 Vevminsin.read(join(dir, "vevminsin.out")).valores
-            ),
-            (
-                Variable.VIOLACAO_VMINOP,
-                SpatialResolution.RESERVATORIO_EQUIVALENTE,
-            ): lambda dir, ree=1: self.__adiciona_coluna_patamar(
-                Invade.read(
-                    join(dir, f"invade{str(ree).zfill(3)}.out")
-                ).valores
-            ),
-            (
-                Variable.VIOLACAO_VMINOP,
-                SpatialResolution.SUBMERCADO,
-            ): lambda dir, submercado=1: self.__adiciona_coluna_patamar(
-                Invadem.read(
-                    join(dir, f"invadem{str(submercado).zfill(3)}.out")
-                ).valores
             ),
             (
                 Variable.VOLUME_RETIRADO,
