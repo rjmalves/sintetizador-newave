@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Dict
 
 
 class Variable(Enum):
@@ -66,17 +67,15 @@ class Variable(Enum):
     DEFICIT = "DEF"
     EXCESSO = "EXC"
     VIOLACAO_GERACAO_HIDRAULICA_MINIMA = "VGHMIN"
-    VIOLACAO_DEFLUENCIA_MINIMA = "VDEFMIN"
-    VIOLACAO_DEFLUENCIA_MAXIMA = "VDEFMAX"
-    VIOLACAO_TURBINAMENTO_MINIMO = "VTURMIN"
-    VIOLACAO_TURBINAMENTO_MAXIMO = "VTURMAX"
     VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA = "VEVMIN"
-    VIOLACAO_VMINOP = "VVMINOP"
     VIOLACAO_FPHA = "VFPHA"
     VIOLACAO_POSITIVA_EVAPORACAO = "VPOSEVAP"
     VIOLACAO_NEGATIVA_EVAPORACAO = "VNEGEVAP"
     VIOLACAO_EVAPORACAO = "VEVAP"
     CORTE_GERACAO_EOLICA = "VEOL"
+
+    def __repr__(self) -> str:
+        return self.value
 
     @classmethod
     def factory(cls, val: str) -> "Variable":
@@ -85,5 +84,154 @@ class Variable(Enum):
                 return v
         return cls.ENERGIA_ARMAZENADA_PERCENTUAL_FINAL
 
-    def __repr__(self) -> str:
-        return self.value
+    @property
+    def short_name(self):
+        SHORT_NAMES: Dict[str, str] = {
+            "CMO": "CMO",
+            "VAGUA": "VAGUA",
+            "VAGUAI": "VAGUA Incremental",
+            "CTER": "Custo de GT",
+            "CDEF": "Custo de Déficit",
+            "COP": "COP",
+            "CFU": "CFU",
+            "ENAAR": "ENA Reservatório",
+            "ENAAF": "ENA Fio",
+            "ENAA": "ENA",
+            "EARMI": "EAR Inicial",
+            "EARPI": "EAR Percentual Inicial",
+            "EARMF": "EAR Final",
+            "EARPF": "EAR Percentual Final",
+            "GHIDR": "GH Reservatório",
+            "GHIDF": "GH Fio",
+            "GHID": "GH",
+            "HMON": "Cota de Montante",
+            "HJUS": "Cota de Jusante",
+            "HLIQ": "Queda Líquida",
+            "GTER": "GT",
+            "GEOL": "GEOL",
+            "EVER": "EVER",
+            "EVERT": "EVERT",
+            "EVERNT": "EVERNT",
+            "EVERR": "EVERR",
+            "EVERRT": "EVERRT",
+            "EVERRNT": "EVERRNT",
+            "EVERF": "EVERF",
+            "EVERFT": "EVERFT",
+            "EVERFNT": "EVERFNT",
+            "EDESR": "EDESR",
+            "EDESF": "EDESF",
+            "MEVMIN": "MEVMIN",
+            "EVMIN": "EVMIN",
+            "EVMOR": "EVMOR",
+            "EEVAP": "EEVAP",
+            "QAFL": "QAFL",
+            "QINC": "QINC",
+            "QDEF": "QDEF",
+            "QTUR": "QTUR",
+            "QVER": "QVER",
+            "QRET": "QRET",
+            "QDES": "QDES",
+            "VENTO": "VENTO",
+            "VARMI": "VAR Inicial",
+            "VARPI": "VAR Percentual Inicial",
+            "VARMF": "VAR Final",
+            "VARPF": "VAR Percentual Final",
+            "VAFL": "VAFL",
+            "VINC": "VINC",
+            "VDEF": "VDEF",
+            "VVER": "VVER",
+            "VTUR": "VTUR",
+            "VRET": "VRET",
+            "VDES": "VDES",
+            "VEVP": "VEVP",
+            "INT": "INT",
+            "MER": "MER",
+            "MERL": "MERL",
+            "UNSI": "UNSI",
+            "DEF": "DEF",
+            "EXC": "EXC",
+            "VGHMIN": "VGHMIN",
+            "VEVMIN": "VEVMIN",
+            "VFPHA": "VFPHA",
+            "VPOSEVAP": "VPOSEVAP",
+            "VNEGEVAP": "VNEGEVAP",
+            "VEVAP": "VEVAP",
+            "VEOL": "VEOL",
+        }
+        return SHORT_NAMES.get(self.value)
+
+    @property
+    def long_name(self):
+        LONG_NAMES: Dict[str, str] = {
+            "CMO": "Custo Marginal de Operação",
+            "VAGUA": "Valor da Água",
+            "VAGUAI": "Valor da Água Incremental",
+            "CTER": "Custo de Geração Térmica",
+            "CDEF": "Custo de Déficit",
+            "COP": "Custo de Operação",
+            "CFU": "Custo Futuro",
+            "ENAAR": "Energia Natural Afluente Absoluta em Reservatórios",
+            "ENAAF": "Energia Natural Afluente Absoluta em Fio d'Água",
+            "ENAA": "Energia Natural Afluente Absoluta",
+            "EARMI": "Energia Armazenada Absoluta Inicial",
+            "EARPI": "Energia Armazenada Percentual Inicial",
+            "EARMF": "Energia Armazenada Absoluta Final",
+            "EARPF": "Energia Armazenada Percentual Final",
+            "GHIDR": "Geração Hidráulica em Reservatórios",
+            "GHIDF": "Geração Hidráulica em Fio d'Água",
+            "GHID": "Geração Hidráulica",
+            "HMON": "Cota de Montante",
+            "HJUS": "Cota de Jusante",
+            "HLIQ": "Queda Líquida",
+            "GTER": "Geração Térmica",
+            "GEOL": "Geração Eólica",
+            "EVER": "Energia Vertida",
+            "EVERT": "Energia Vertida Turbinável",
+            "EVERNT": "Energia Vertida Não-Turbinável",
+            "EVERR": "Energia Vertida em Reservatórios",
+            "EVERRT": "Energia Vertida Turbinável em Reservatórios",
+            "EVERRNT": "Energia Vertida Não-Turbinável em Reservatórios",
+            "EVERF": "Energia Vertida em Fio d'Água",
+            "EVERFT": "Energia Vertida Turbinável em Fio d'Água",
+            "EVERFNT": "Energia Vertida Não-Turbinável em Fio d'Água",
+            "EDESR": "Energia Desviada em Reservatórios",
+            "EDESF": "Energia Desviada em Fio d'Água",
+            "MEVMIN": "Meta de Energia de Defluência Mínima",
+            "EVMIN": "Energia de Defluência Mínima",
+            "EVMOR": "Energia de Enchimento de Volume Morto",
+            "EEVAP": "Energia de Evaporação",
+            "QAFL": "Vazão Afluente",
+            "QINC": "Vazão Incremental",
+            "QDEF": "Vazão Defluente",
+            "QTUR": "Vazão Turbinada",
+            "QVER": "Vazão Vertida",
+            "QRET": "Vazão Retirada",
+            "QDES": "Vazão Desviada",
+            "VENTO": "Velocidade do Vento",
+            "VARMI": "Volume Armazenado Absoluto Inicial",
+            "VARPI": "Volume Armazenado Percentual Inicial",
+            "VARMF": "Volume Armazenado Absoluto Final",
+            "VARPF": "Volume Armazenado Percentual Final",
+            "VAFL": "Volume Afluente",
+            "VINC": "Volume Incremental",
+            "VDEF": "Volume Defluente",
+            "VVER": "Volume Vertido",
+            "VTUR": "Volume Turbinado",
+            "VRET": "Volume Retirado",
+            "VDES": "Volume Desviado",
+            "VEVP": "Volume Evaporado",
+            "INT": "Intercâmbio de Energia",
+            "MER": "Mercado de Energia",
+            "MERL": "Mercado de Energia Líquido",
+            "UNSI": "Geração de Usinas Não Simuladas",
+            "DEF": "Déficit",
+            "EXC": "Excesso de Energia",
+            "VGHMIN": "Violação de Geração Hidráulica Mínima",
+            "VEVMIN": "Violação de Energia de Defluência Mínima",
+            "VFPHA": "Violação de FPHA",
+            "VPOSEVAP": "Violação Positiva de Evaporação",
+            "VNEGEVAP": "Violação Negativa de Evaporação",
+            "VEVAP": "Violação de Evaporação",
+            "VEOL": "Corte de Geração Eólica",
+        }
+        return LONG_NAMES.get(self.value)

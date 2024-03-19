@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Dict
 
 
 class SpatialResolution(Enum):
@@ -19,3 +20,16 @@ class SpatialResolution(Enum):
 
     def __repr__(self):
         return self.value
+
+    @property
+    def long_name(self):
+        LONG_NAMES: Dict[str, str] = {
+            "SIN": "Sistema Interligado",
+            "SBM": "Submercado",
+            "REE": "Reservatório Equivalente",
+            "UHE": "Usina Hidroelétrica",
+            "UTE": "Usina Termelétrica",
+            "PEE": "Parque Eólico Equivalente",
+            "SBP": "Par de Submercados",
+        }
+        return LONG_NAMES.get(self.value)
