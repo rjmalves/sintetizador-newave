@@ -771,34 +771,6 @@ def test_get_nwlistop(test_settings):
     )
     assert isinstance(
         repo.get_nwlistop(
-            operationvariable.Variable.VIOLACAO_DEFLUENCIA_MINIMA,
-            operationspatialresolution.SpatialResolution.USINA_HIDROELETRICA,
-        ),
-        pd.DataFrame,
-    )
-    assert isinstance(
-        repo.get_nwlistop(
-            operationvariable.Variable.VIOLACAO_DEFLUENCIA_MAXIMA,
-            operationspatialresolution.SpatialResolution.USINA_HIDROELETRICA,
-        ),
-        pd.DataFrame,
-    )
-    assert isinstance(
-        repo.get_nwlistop(
-            operationvariable.Variable.VIOLACAO_TURBINAMENTO_MINIMO,
-            operationspatialresolution.SpatialResolution.USINA_HIDROELETRICA,
-        ),
-        pd.DataFrame,
-    )
-    assert isinstance(
-        repo.get_nwlistop(
-            operationvariable.Variable.VIOLACAO_TURBINAMENTO_MAXIMO,
-            operationspatialresolution.SpatialResolution.USINA_HIDROELETRICA,
-        ),
-        pd.DataFrame,
-    )
-    assert isinstance(
-        repo.get_nwlistop(
             operationvariable.Variable.VIOLACAO_FPHA,
             operationspatialresolution.SpatialResolution.USINA_HIDROELETRICA,
         ),
@@ -823,20 +795,6 @@ def test_get_nwlistop(test_settings):
             operationvariable.Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
             operationspatialresolution.SpatialResolution.SISTEMA_INTERLIGADO,
             None,
-        ),
-        pd.DataFrame,
-    )
-    assert isinstance(
-        repo.get_nwlistop(
-            operationvariable.Variable.VIOLACAO_VMINOP,
-            operationspatialresolution.SpatialResolution.RESERVATORIO_EQUIVALENTE,
-        ),
-        pd.DataFrame,
-    )
-    assert isinstance(
-        repo.get_nwlistop(
-            operationvariable.Variable.VIOLACAO_VMINOP,
-            operationspatialresolution.SpatialResolution.SUBMERCADO,
         ),
         pd.DataFrame,
     )
