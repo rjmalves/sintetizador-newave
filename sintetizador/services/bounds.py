@@ -2472,9 +2472,13 @@ class OperationVariableBounds:
     # de operação (efeito do polinjus...)
 
     @classmethod
+    def is_bounded(cls, s: OperationSynthesis) -> bool:
+        return s in cls.MAPPINGS
+
+    @classmethod
     def resolve_bounds(
         cls, s: OperationSynthesis, df: pd.DataFrame, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-        if s in cls.MAPPINGS:
+        if cls.is_bounded(s):
             return cls.MAPPINGS[s](df, uow)
         return df
