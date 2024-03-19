@@ -2,7 +2,7 @@ from typing import Callable, Dict, List, Tuple, Optional, Type, TypeVar
 import pandas as pd  # type: ignore
 import numpy as np
 import logging
-
+import re
 
 import traceback
 from multiprocessing import Pool
@@ -1850,6 +1850,20 @@ class OperationSynthetizer:
         return [arg for arg in args if arg is not None]
 
     @classmethod
+    def _match_wildcards(cls, variables: List[str]) -> List[str]:
+        variables_with_wildcards: List[str] = []
+        for v in variables:
+            if "*" in v:
+                variables_with_wildcards += [
+                    matched_v
+                    for matched_v in cls.DEFAULT_OPERATION_SYNTHESIS_ARGS
+                    if re.search(v.replace("*", ".*"), matched_v)
+                ]
+            else:
+                variables_with_wildcards.append(v)
+        return variables_with_wildcards
+
+    @classmethod
     def _process_variable_arguments(
         cls,
         args: List[str],
@@ -3483,8 +3497,9 @@ class OperationSynthetizer:
         if len(variables) == 0:
             synthesis_variables = OperationSynthetizer._default_args()
         else:
+            all_variables = OperationSynthetizer._match_wildcards(variables)
             synthesis_variables = (
-                OperationSynthetizer._process_variable_arguments(variables)
+                OperationSynthetizer._process_variable_arguments(all_variables)
             )
         valid_synthesis = OperationSynthetizer.filter_valid_variables(
             synthesis_variables, uow

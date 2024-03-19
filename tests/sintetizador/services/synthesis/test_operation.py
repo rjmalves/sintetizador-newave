@@ -3755,3 +3755,30 @@ def test_sintese_vnegevap_uhe(test_settings):
     )
     df_meta = m.mock_calls[-1].args[0]
     __valida_metadata("VNEGEVAP_UHE", df_meta, False)
+
+
+def test_sintese_wildcard_1match(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["CMO_*"], uow)
+    m.assert_called()
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("CMO_SBM", df_meta, False)
+
+
+def test_sintese_wildcard_Nmatches(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["GTER_*"], uow)
+    m.assert_called()
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("GTER_UTE", df_meta, False)
+    __valida_metadata("GTER_SBM", df_meta, False)
+    __valida_metadata("GTER_SIN", df_meta, False)
+    assert df_meta.shape[0] == 3
