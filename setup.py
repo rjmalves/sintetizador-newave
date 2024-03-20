@@ -1,4 +1,5 @@
 from setuptools import setup, find_packages
+from sintetizador import __version__
 
 long_description = "sintetizador_newave"
 
@@ -9,7 +10,7 @@ with open("requirements.txt", "r") as fh:
 
 setup(
     name="sintetizador_newave",
-    version="1.0.0",
+    version=__version__,
     author="Rogerio Alves",
     author_email="rogerioalves.ee@gmail.com",
     description="sintetizador_newave",
