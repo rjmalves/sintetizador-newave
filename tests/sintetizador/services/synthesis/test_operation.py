@@ -279,6 +279,9 @@ def test_sintese_cmo_sbm(test_settings):
         patamar=[0],
     )
 
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("CMO_SBM", df_meta, False)
+
 
 # -----------------------------------------------------------------------------
 # Valida sínteses que são calculadas envolvendo informações de outros arquivos,
@@ -308,6 +311,9 @@ def test_sintese_ever_ree(test_settings):
         patamar=[0],
     )
 
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EVER_REE", df_meta, True)
+
 
 def test_sintese_ever_sbm(test_settings):
     m = MagicMock(lambda df, filename: df)
@@ -330,6 +336,9 @@ def test_sintese_ever_sbm(test_settings):
         patamar=[0],
     )
 
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EVER_SBM", df_meta, True)
+
 
 def test_sintese_ever_sin(test_settings):
     m = MagicMock(lambda df, filename: df)
@@ -350,6 +359,9 @@ def test_sintese_ever_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EVER_SIN", df_meta, True)
 
 
 # TODO - VARMI, VARMPI para UHE (consulta pmo.dat e valores de VARMF e VARPF)

@@ -7,7 +7,7 @@ from inewave.newave import Dger, Ree, Confhd, Conft, Sistema
 from inewave.libs.modelos.eolica import RegistroPEECadastro
 from datetime import datetime
 from dateutil.relativedelta import relativedelta  # type: ignore
-
+from sintetizador.utils.regex import match_variables_with_wildcards
 from sintetizador.services.unitofwork import AbstractUnitOfWork
 from sintetizador.model.system.variable import Variable
 from sintetizador.model.system.systemsynthesis import SystemSynthesis
@@ -50,6 +50,12 @@ class SystemSynthetizer:
             for a in cls.DEFAULT_SYSTEM_SYNTHESIS_ARGS
         ]
         return [arg for arg in args if arg is not None]
+
+    @classmethod
+    def _match_wildcards(cls, variables: List[str]) -> List[str]:
+        return match_variables_with_wildcards(
+            variables, cls.DEFAULT_SYSTEM_SYNTHESIS_ARGS
+        )
 
     @classmethod
     def _process_variable_arguments(
@@ -376,23 +382,50 @@ class SystemSynthetizer:
         return df
 
     @classmethod
+    def _export_metadata(
+        cls,
+        success_synthesis: List[SystemSynthesis],
+        uow: AbstractUnitOfWork,
+    ):
+        metadata_df = pd.DataFrame(
+            columns=[
+                "chave",
+                "nome_curto",
+                "nome_longo",
+            ]
+        )
+        for s in success_synthesis:
+            metadata_df.loc[metadata_df.shape[0]] = [
+                str(s),
+                s.variable.short_name,
+                s.variable.long_name,
+            ]
+        with uow:
+            uow.export.synthetize_df(metadata_df, "METADADOS_SISTEMA")
+
+    @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
         cls.logger = logging.getLogger("main")
-        try:
-            if len(variables) == 0:
-                synthesis_variables = SystemSynthetizer._default_args()
-            else:
-                synthesis_variables = (
-                    SystemSynthetizer._process_variable_arguments(variables)
-                )
-            valid_synthesis = SystemSynthetizer.filter_valid_variables(
-                synthesis_variables, uow
+        if len(variables) == 0:
+            synthesis_variables = SystemSynthetizer._default_args()
+        else:
+            all_variables = cls._match_wildcards(variables)
+            synthesis_variables = (
+                SystemSynthetizer._process_variable_arguments(all_variables)
             )
-            for s in valid_synthesis:
+        valid_synthesis = SystemSynthetizer.filter_valid_variables(
+            synthesis_variables, uow
+        )
+        success_synthesis: List[SystemSynthesis] = []
+        for s in valid_synthesis:
+            try:
                 filename = str(s)
                 cls.logger.info(f"Realizando síntese de {filename}")
                 df = cls._resolve(s, uow)
                 with uow:
                     uow.export.synthetize_df(df, filename)
-        except Exception as e:
-            cls.logger.error(str(e))
+                    success_synthesis.append(s)
+            except Exception as e:
+                cls.logger.error(str(e))
+
+        cls._export_metadata(success_synthesis, uow)

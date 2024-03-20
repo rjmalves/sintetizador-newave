@@ -7,6 +7,7 @@ from traceback import print_exc
 
 from sintetizador.services.unitofwork import AbstractUnitOfWork
 from sintetizador.utils.fs import set_directory
+from sintetizador.utils.regex import match_variables_with_wildcards
 from sintetizador.model.execution.variable import Variable
 from sintetizador.model.execution.executionsynthesis import ExecutionSynthesis
 
@@ -40,6 +41,12 @@ class ExecutionSynthetizer:
             for a in cls.DEFAULT_EXECUTION_SYNTHESIS_ARGS
         ]
         return [arg for arg in args if arg is not None]
+
+    @classmethod
+    def _match_wildcards(cls, variables: List[str]) -> List[str]:
+        return match_variables_with_wildcards(
+            variables, cls.DEFAULT_EXECUTION_SYNTHESIS_ARGS
+        )
 
     @classmethod
     def _process_variable_arguments(
@@ -192,17 +199,40 @@ class ExecutionSynthetizer:
         return None
 
     @classmethod
+    def _export_metadata(
+        cls,
+        success_synthesis: List[ExecutionSynthesis],
+        uow: AbstractUnitOfWork,
+    ):
+        metadata_df = pd.DataFrame(
+            columns=[
+                "chave",
+                "nome_curto",
+                "nome_longo",
+            ]
+        )
+        for s in success_synthesis:
+            metadata_df.loc[metadata_df.shape[0]] = [
+                str(s),
+                s.variable.short_name,
+                s.variable.long_name,
+            ]
+        with uow:
+            uow.export.synthetize_df(metadata_df, "METADADOS_EXECUCAO")
+
+    @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
         cls.logger = logging.getLogger("main")
-        try:
-            if len(variables) == 0:
-                synthesis_variables = ExecutionSynthetizer._default_args()
-            else:
-                synthesis_variables = (
-                    ExecutionSynthetizer._process_variable_arguments(variables)
-                )
-
-            for s in synthesis_variables:
+        if len(variables) == 0:
+            synthesis_variables = ExecutionSynthetizer._default_args()
+        else:
+            all_variables = cls._match_wildcards(variables)
+            synthesis_variables = (
+                ExecutionSynthetizer._process_variable_arguments(all_variables)
+            )
+        success_synthesis: List[ExecutionSynthesis] = []
+        for s in synthesis_variables:
+            try:
                 filename = str(s)
                 if cls.logger is not None:
                     cls.logger.info(f"Realizando síntese de {filename}")
@@ -210,6 +240,9 @@ class ExecutionSynthetizer:
                 if df is not None:
                     with uow:
                         uow.export.synthetize_df(df, filename)
-        except Exception as e:
-            print_exc()
-            cls.logger.error(str(e))
+                        success_synthesis.append(s)
+            except Exception as e:
+                print_exc()
+                cls.logger.error(str(e))
+
+        cls._export_metadata(success_synthesis, uow)

@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta  # type: ignore
 from inewave.newave import Dger, Ree, Confhd, Conft, Sistema, Clast
 from sintetizador.utils.log import Log
+from sintetizador.utils.regex import match_variables_with_wildcards
 from sintetizador.model.settings import Settings
 from sintetizador.services.bounds import OperationVariableBounds
 from sintetizador.services.unitofwork import AbstractUnitOfWork
@@ -1851,17 +1852,9 @@ class OperationSynthetizer:
 
     @classmethod
     def _match_wildcards(cls, variables: List[str]) -> List[str]:
-        variables_with_wildcards: List[str] = []
-        for v in variables:
-            if "*" in v:
-                variables_with_wildcards += [
-                    matched_v
-                    for matched_v in cls.DEFAULT_OPERATION_SYNTHESIS_ARGS
-                    if re.search(v.replace("*", ".*"), matched_v)
-                ]
-            else:
-                variables_with_wildcards.append(v)
-        return variables_with_wildcards
+        return match_variables_with_wildcards(
+            variables, cls.DEFAULT_OPERATION_SYNTHESIS_ARGS
+        )
 
     @classmethod
     def _process_variable_arguments(
@@ -3489,22 +3482,22 @@ class OperationSynthetizer:
                 OperationVariableBounds.is_bounded(s),
             ]
         with uow:
-            uow.export.synthetize_df(metadata_df, "OPERACAO")
+            uow.export.synthetize_df(metadata_df, "METADADOS_OPERACAO")
 
     @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
         cls.logger = logging.getLogger("main")
         if len(variables) == 0:
-            synthesis_variables = OperationSynthetizer._default_args()
+            synthesis_variables = cls._default_args()
         else:
-            all_variables = OperationSynthetizer._match_wildcards(variables)
+            all_variables = cls._match_wildcards(variables)
             synthesis_variables = (
-                OperationSynthetizer._process_variable_arguments(all_variables)
+                cls._process_variable_arguments(all_variables)
             )
-        valid_synthesis = OperationSynthetizer.filter_valid_variables(
+        valid_synthesis = cls.filter_valid_variables(
             synthesis_variables, uow
         )
-        synthesis_with_prereqs = OperationSynthetizer._add_prereq_synthesis(
+        synthesis_with_prereqs = cls._add_prereq_synthesis(
             valid_synthesis
         )
         success_synthesis: List[Tuple[OperationSynthesis, bool]] = []
@@ -3541,3 +3534,8 @@ class OperationSynthetizer:
                 )
 
         cls._export_metadata(success_synthesis, uow)
+
+
+# TODO - implementar metadata na síntese de cenários
+# TODO - implementar metadata nas demais sínteses
+# TODO - implementar cálculo de EARM por UHE
