@@ -3489,7 +3489,7 @@ class OperationSynthetizer:
                 OperationVariableBounds.is_bounded(s),
             ]
         with uow:
-            uow.export.synthetize_df(metadata_df, "OPERATION")
+            uow.export.synthetize_df(metadata_df, "OPERACAO")
 
     @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
