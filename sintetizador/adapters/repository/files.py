@@ -254,7 +254,7 @@ class AbstractFilesRepository(ABC):
         pass
 
     @abstractmethod
-    def get_enavazs(self) -> Optional[Enavazf]:
+    def get_enavazs(self) -> Optional[Energias]:
         pass
 
     @abstractmethod
@@ -274,7 +274,11 @@ class AbstractFilesRepository(ABC):
         pass
 
     @abstractmethod
-    def _numero_estagios_individualizados(self) -> int:
+    def _numero_estagios_individualizados_politica(self) -> int:
+        pass
+
+    @abstractmethod
+    def _numero_estagios_individualizados_sf(self) -> int:
         pass
 
 
@@ -305,7 +309,7 @@ class RawFilesRepository(AbstractFilesRepository):
         self.__enavazf: Dict[int, Enavazf] = {}
         self.__enavazb: Dict[int, Enavazb] = {}
         self.__energias: Optional[Energias] = None
-        self.__enavazs: Optional[Enavazf] = None
+        self.__enavazs: Optional[Energias] = None
         self.__vazaos: Optional[Vazaos] = None
         self.__vazoes: Optional[Vazoes] = None
         self.__engnat: Optional[Engnat] = None
@@ -1211,23 +1215,15 @@ class RawFilesRepository(AbstractFilesRepository):
                 pass
         return self.__estados
 
-    def _numero_estagios_individualizados(self) -> int:
+    def _numero_estagios_individualizados_politica(self) -> int:
         dger = self.get_dger()
         if dger is None:
             raise RuntimeError(
                 "Erro no processamento do dger.dat para"
                 + " número de estágios individualizados"
             )
-        agregacao = (
-            self._validate_data(dger.agregacao_simulacao_final, int)
-            if dger.agregacao_simulacao_final is not None
-            else None
-        )
-        anos_estudo = self._validate_data(dger.num_anos_estudo, int)
         ano_inicio = self._validate_data(dger.ano_inicio_estudo, int)
         mes_inicio = self._validate_data(dger.mes_inicio_estudo, int)
-        if agregacao == 1:
-            return anos_estudo * 12
         arq_ree = self.get_ree()
         if arq_ree is None:
             raise RuntimeError(
@@ -1252,9 +1248,29 @@ class RawFilesRepository(AbstractFilesRepository):
             tempo_individualizado = (
                 data_fim_individualizado - data_inicio_estudo
             )
-            return int(tempo_individualizado / timedelta(days=30))
+            return int(round(tempo_individualizado / timedelta(days=30)))
         else:
             return 0
+
+    def _numero_estagios_individualizados_sf(self) -> int:
+        dger = self.get_dger()
+        if dger is None:
+            raise RuntimeError(
+                "Erro no processamento do dger.dat para"
+                + " número de estágios individualizados"
+            )
+        agregacao = (
+            self._validate_data(dger.agregacao_simulacao_final, int)
+            if dger.agregacao_simulacao_final is not None
+            else None
+        )
+        mes_inicio = self._validate_data(dger.mes_inicio_estudo, int)
+        anos_estudo = self._validate_data(dger.num_anos_estudo, int)
+        anos_pos_sf = self._validate_data(dger.num_anos_pos_sim_final, int)
+        if agregacao == 1:
+            return (anos_estudo + anos_pos_sf) * 12 - (mes_inicio - 1)
+        else:
+            return self._numero_estagios_individualizados_politica()
 
     def get_energiaf(self, iteracao: int) -> Optional[Energiaf]:
         nome_arq = (
@@ -1324,7 +1340,9 @@ class RawFilesRepository(AbstractFilesRepository):
             ]
 
             n_estagios = (
-                self._numero_estagios_individualizados() + mes_inicio - 1
+                self._numero_estagios_individualizados_politica()
+                + mes_inicio
+                - 1
             )
             n_estagios_th = 12 if parpa == 3 else ordem_maxima
             caminho_arq = join(self.__tmppath, nome_arq)
@@ -1399,7 +1417,9 @@ class RawFilesRepository(AbstractFilesRepository):
             ]
 
             n_estagios_hib = (
-                self._numero_estagios_individualizados() + mes_inicio - 1
+                self._numero_estagios_individualizados_politica()
+                + mes_inicio
+                - 1
             )
             caminho_arq = join(self.__tmppath, nome_arq)
             if pathlib.Path(caminho_arq).exists():
@@ -1439,7 +1459,9 @@ class RawFilesRepository(AbstractFilesRepository):
                 )
             n_rees = self._validate_data(arq_rees.rees, pd.DataFrame).shape[0]
             n_estagios = (
-                self._numero_estagios_individualizados() + mes_inicio - 1
+                self._numero_estagios_individualizados_politica()
+                + mes_inicio
+                - 1
             )
             n_estagios_th = 12 if parpa == 3 else ordem_maxima
             caminho_arq = join(self.__tmppath, nome_arq)
@@ -1477,7 +1499,9 @@ class RawFilesRepository(AbstractFilesRepository):
                 )
             n_rees = self._validate_data(arq_rees.rees, pd.DataFrame).shape[0]
             n_estagios = (
-                self._numero_estagios_individualizados() + mes_inicio - 1
+                self._numero_estagios_individualizados_politica()
+                + mes_inicio
+                - 1
             )
             caminho_arq = join(self.__tmppath, nome_arq)
             if pathlib.Path(caminho_arq).exists():
@@ -1538,7 +1562,7 @@ class RawFilesRepository(AbstractFilesRepository):
 
         return self.__energias
 
-    def get_enavazs(self) -> Optional[Enavazf]:
+    def get_enavazs(self) -> Optional[Energias]:
         if self.__enavazs is None:
             dger = self.get_dger()
             if dger is None:
@@ -1568,7 +1592,7 @@ class RawFilesRepository(AbstractFilesRepository):
                 )
             n_rees = self._validate_data(arq_rees.rees, pd.DataFrame).shape[0]
             n_estagios = (
-                self._numero_estagios_individualizados() + mes_inicio - 1
+                self._numero_estagios_individualizados_sf() + mes_inicio - 1
             )
             n_estagios_th = 12 if parpa == 3 else ordem_maxima
             if tipo_simulacao_final == 1:
@@ -1577,7 +1601,7 @@ class RawFilesRepository(AbstractFilesRepository):
                 num_series = ano_inicio - ano_inicio_historico - 1
             caminho_arq = join(self.__tmppath, "enavazs.dat")
             if pathlib.Path(caminho_arq).exists():
-                self.__enavazs = Enavazf.read(
+                self.__enavazs = Energias.read(
                     caminho_arq,
                     num_series,
                     n_rees,
@@ -1615,7 +1639,7 @@ class RawFilesRepository(AbstractFilesRepository):
             ]
 
             n_estagios = (
-                self._numero_estagios_individualizados() + mes_inicio - 1
+                self._numero_estagios_individualizados_sf() + mes_inicio - 1
             )
             n_estagios_th = 12 if parpa == 3 else ordem_maxima
             if dger.tipo_simulacao_final == 1:

@@ -2,7 +2,6 @@ from typing import Callable, Dict, List, Tuple, Optional, Type, TypeVar
 import pandas as pd  # type: ignore
 import numpy as np
 import logging
-import re
 
 import traceback
 from multiprocessing import Pool

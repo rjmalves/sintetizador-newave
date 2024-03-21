@@ -9,10 +9,12 @@ from dateutil.relativedelta import relativedelta  # type: ignore
 from inewave.newave import Dger, Ree, Confhd, Conft, Hidr, Vazoes, Sistema, Pmo
 from sintetizador.services.unitofwork import AbstractUnitOfWork
 from sintetizador.utils.log import Log
+from sintetizador.utils.regex import match_variables_with_wildcards
 from sintetizador.model.settings import Settings
 from sintetizador.model.scenario.variable import Variable
 from sintetizador.model.scenario.spatialresolution import SpatialResolution
 from sintetizador.model.scenario.step import Step
+from sintetizador.model.scenario.unit import Unit
 from sintetizador.model.scenario.scenariosynthesis import ScenarioSynthesis
 
 
@@ -67,12 +69,128 @@ class ScenarioSynthetizer:
         Tuple[Variable, SpatialResolution], pd.DataFrame
     ] = {}
 
+    UNITS: Dict[ScenarioSynthesis, Unit] = {
+        ScenarioSynthesis(
+            Variable.ENA_ABSOLUTA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            Step.FORWARD,
+        ): Unit.MWmes,
+        ScenarioSynthesis(
+            Variable.ENA_ABSOLUTA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            Step.BACKWARD,
+        ): Unit.MWmes,
+        ScenarioSynthesis(
+            Variable.ENA_ABSOLUTA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            Step.FINAL_SIMULATION,
+        ): Unit.MWmes,
+        ScenarioSynthesis(
+            Variable.ENA_ABSOLUTA,
+            SpatialResolution.SUBMERCADO,
+            Step.FORWARD,
+        ): Unit.MWmes,
+        ScenarioSynthesis(
+            Variable.ENA_ABSOLUTA,
+            SpatialResolution.SUBMERCADO,
+            Step.BACKWARD,
+        ): Unit.MWmes,
+        ScenarioSynthesis(
+            Variable.ENA_ABSOLUTA,
+            SpatialResolution.SUBMERCADO,
+            Step.FINAL_SIMULATION,
+        ): Unit.MWmes,
+        ScenarioSynthesis(
+            Variable.ENA_ABSOLUTA,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+            Step.FORWARD,
+        ): Unit.MWmes,
+        ScenarioSynthesis(
+            Variable.ENA_ABSOLUTA,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+            Step.BACKWARD,
+        ): Unit.MWmes,
+        ScenarioSynthesis(
+            Variable.ENA_ABSOLUTA,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+            Step.FINAL_SIMULATION,
+        ): Unit.MWmes,
+        ScenarioSynthesis(
+            Variable.VAZAO_INCREMENTAL,
+            SpatialResolution.USINA_HIDROELETRICA,
+            Step.FORWARD,
+        ): Unit.m3s,
+        ScenarioSynthesis(
+            Variable.VAZAO_INCREMENTAL,
+            SpatialResolution.USINA_HIDROELETRICA,
+            Step.BACKWARD,
+        ): Unit.m3s,
+        ScenarioSynthesis(
+            Variable.VAZAO_INCREMENTAL,
+            SpatialResolution.USINA_HIDROELETRICA,
+            Step.FINAL_SIMULATION,
+        ): Unit.m3s,
+        ScenarioSynthesis(
+            Variable.VAZAO_INCREMENTAL,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            Step.FORWARD,
+        ): Unit.m3s,
+        ScenarioSynthesis(
+            Variable.VAZAO_INCREMENTAL,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            Step.BACKWARD,
+        ): Unit.m3s,
+        ScenarioSynthesis(
+            Variable.VAZAO_INCREMENTAL,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+            Step.FINAL_SIMULATION,
+        ): Unit.m3s,
+        ScenarioSynthesis(
+            Variable.VAZAO_INCREMENTAL,
+            SpatialResolution.SUBMERCADO,
+            Step.FORWARD,
+        ): Unit.m3s,
+        ScenarioSynthesis(
+            Variable.VAZAO_INCREMENTAL,
+            SpatialResolution.SUBMERCADO,
+            Step.BACKWARD,
+        ): Unit.m3s,
+        ScenarioSynthesis(
+            Variable.VAZAO_INCREMENTAL,
+            SpatialResolution.SUBMERCADO,
+            Step.FINAL_SIMULATION,
+        ): Unit.m3s,
+        ScenarioSynthesis(
+            Variable.VAZAO_INCREMENTAL,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+            Step.FORWARD,
+        ): Unit.m3s,
+        ScenarioSynthesis(
+            Variable.VAZAO_INCREMENTAL,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+            Step.BACKWARD,
+        ): Unit.m3s,
+        ScenarioSynthesis(
+            Variable.VAZAO_INCREMENTAL,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+            Step.FINAL_SIMULATION,
+        ): Unit.m3s,
+    }
+
     T = TypeVar("T")
 
     logger: Optional[logging.Logger] = None
 
     @classmethod
     def _default_args(cls) -> List[ScenarioSynthesis]:
+        """
+        Uma lista com os argumentos padrão para a
+        síntese de cenários, utilizados caso não seja
+        especificada nenhuma lista de sínteses desejadas.
+
+        :return: A lista de objetos de síntese de cenários
+        :rtype: List[ScenarioSynthesis]
+        """
         args = [
             ScenarioSynthesis.factory(a)
             for a in cls.DEFAULT_SCENARIO_SYNTHESIS_ARGS
@@ -80,41 +198,50 @@ class ScenarioSynthetizer:
         return [arg for arg in args if arg is not None]
 
     @classmethod
+    def _match_wildcards(cls, variables: List[str]) -> List[str]:
+        """
+        Busca dentre as sínteses suportadas aquelas que
+        atendem às especificadas, utilizando
+        wildcards para se referir a mais de uma síntese.
+
+        :return: A lista de strings associadas às sínteses
+        :rtype: List[str]
+        """
+        return match_variables_with_wildcards(
+            variables, cls.DEFAULT_SCENARIO_SYNTHESIS_ARGS
+        )
+
+    @classmethod
     def _process_variable_arguments(
         cls,
         args: List[str],
     ) -> List[ScenarioSynthesis]:
+        """
+        Processa as strings fornecidas para construir os objetos
+        de sínteses de cenários correspondentes.
+
+        :return: A lista de objetos de síntese de cenários
+        :rtype: List[ScenarioSynthesis]
+        """
         args_data = [ScenarioSynthesis.factory(c) for c in args]
         valid_args = [arg for arg in args_data if arg is not None]
         return valid_args
 
     @classmethod
     def _validate_data(cls, data, type: Type[T], msg: str = "dados") -> T:
+        """
+        Realiza a validação de uma variável ser pertencente a um
+        tipo de dados desejado, realizando um logging com uma mensagem
+        adequada e lançando uma exceção em caso de erro.
+
+        :return: O dado fornecido, garantindo ser do tipo desejado
+        :rtype: T
+        """
         if not isinstance(data, type):
             if cls.logger is not None:
                 cls.logger.error(f"Erro na leitura de {msg}")
             raise RuntimeError()
         return data
-
-    @classmethod
-    def _validate_spatial_resolution_request(
-        cls, spatial_resolution: SpatialResolution, *args, **kwargs
-    ) -> bool:
-        RESOLUTION_ARGS_MAP: Dict[SpatialResolution, List[str]] = {
-            SpatialResolution.SISTEMA_INTERLIGADO: [],
-            SpatialResolution.SUBMERCADO: ["submercado"],
-            SpatialResolution.RESERVATORIO_EQUIVALENTE: ["ree"],
-            SpatialResolution.USINA_HIDROELETRICA: ["uhe"],
-        }
-
-        mandatory = RESOLUTION_ARGS_MAP[spatial_resolution]
-        valid = all([a in kwargs.keys() for a in mandatory])
-        if not valid:
-            if cls.logger is not None:
-                cls.logger.error(
-                    f"Erro no processamento da informação por {spatial_resolution}"
-                )
-        return valid
 
     @classmethod
     def _get_dger(cls, uow: AbstractUnitOfWork) -> Dger:
@@ -224,6 +351,15 @@ class ScenarioSynthetizer:
     def filter_valid_variables(
         cls, variables: List[ScenarioSynthesis], uow: AbstractUnitOfWork
     ) -> List[ScenarioSynthesis]:
+        """
+        Filtra as variáveis de síntese de cenários para que sejam somente
+        sintetizadas as válidas para o caso em questão. Para esta tarefa,
+        são lidos campos de configuração do caso, como o uso de períodos
+        individualizados e a consideração de geração eólica.
+
+        :return: A lista de objetos de síntese válidos
+        :rtype: List[ScenarioSynthesis]
+        """
         dger = cls._get_dger(uow)
         ree = cls._get_ree(uow)
         valid_variables: List[ScenarioSynthesis] = []
@@ -250,7 +386,8 @@ class ScenarioSynthetizer:
         cls, uhe: int, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         """
-        Obtém a série histórica de vazões incrementais para uma UHE.
+        Obtém a série histórica de vazões incrementais para uma UHE,
+        considerando os códigos e postos cadastrados no arquivo `confhd.dat`.
 
         - data (`datetime`)
         - vazao (`float`)
@@ -267,15 +404,6 @@ class ScenarioSynthetizer:
                 )
             raise RuntimeError()
         uhes = cls._validate_data(arq_confhd.usinas, pd.DataFrame, "UHEs")
-        arq_hidr = uow.files.get_hidr()
-        if arq_hidr is None:
-            if cls.logger is not None:
-                cls.logger.error(
-                    "Erro no processamento do hidr.dat para"
-                    + " síntese dos cenários"
-                )
-            raise RuntimeError()
-        hidr = cls._validate_data(arq_hidr.cadastro, pd.DataFrame, "hidr")
         arq_vazoes = uow.files.get_vazoes()
         if arq_vazoes is None:
             if cls.logger is not None:
@@ -285,7 +413,7 @@ class ScenarioSynthetizer:
                 )
             raise RuntimeError()
         vazoes = cls._validate_data(arq_vazoes.vazoes, pd.DataFrame, "vazões")
-        posto = uhes.loc[uhes["codigo_usina"] == uhe, "posto"].tolist()[0]
+        posto = uhes.loc[uhes["codigo_usina"] == uhe, "posto"].iloc[0]
         vazao_natural = vazoes[posto].to_numpy()
         posto_nulo = posto == 300
         if not posto_nulo:
@@ -296,7 +424,9 @@ class ScenarioSynthetizer:
             postos_montante = list(
                 set(
                     [
-                        hidr.at[int(uhe_montante), "posto"]
+                        uhes.loc[
+                            uhes["codigo_usina"] == uhe_montante, "posto"
+                        ].iloc[0]
                         for uhe_montante in uhes_montante
                     ]
                 )
@@ -347,6 +477,64 @@ class ScenarioSynthetizer:
         )
 
     @classmethod
+    def _df_modelo_mlt_uhes(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        """
+        Gera um DataFrame para ser utilizado para preenchimento dos
+        valores da MLT de cada UHE em cada estágio do modelo.
+
+        Os valores de estágio e mês são ajustados para que sejam
+        coerentes com o modelo, substituindo a visão blocada de
+        estagio = 1 para janeiro do primeiro ano do período de estudo
+        para estagio = 1 para o mês de início do estudo. Adicionalmente,
+        são filtrados estágios do período pré-estudo.
+
+        - estagio (`int`)
+        - mes (`int`)
+
+        :return: A tabela como um DataFrame
+        :rtype: pd.DataFrame | None
+
+        """
+        dger = cls._get_dger(uow)
+        mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
+        ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
+        anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
+        anos_pos_sf = cls._validate_data(
+            dger.num_anos_pos_sim_final, int, "dger"
+        )
+        opcao_parp = cls._validate_data(
+            dger.consideracao_media_anual_afluencias, int, "dger"
+        )
+        ordem_maxima_parp = cls._validate_data(
+            dger.ordem_maxima_parp, int, "dger"
+        )
+        estagios_th = 12 if opcao_parp != 0 else ordem_maxima_parp
+        data_inicio_com_th = datetime(
+            year=ano_inicio, month=1, day=1
+        ) - relativedelta(months=estagios_th)
+        data_fim_com_pos_sf = datetime(
+            year=ano_inicio + anos_estudo + anos_pos_sf - 1, month=12, day=1
+        )
+        estagios_com_th = list(
+            range(-estagios_th + 1, 12 * (anos_estudo + anos_pos_sf) + 1)
+        )
+        datas = pd.date_range(
+            data_inicio_com_th,
+            data_fim_com_pos_sf,
+            freq="MS",
+        )
+        df_mlt = pd.DataFrame(
+            data={
+                "estagio": list(estagios_com_th),
+                "mes": [d.month for d in datas],
+            }
+        )
+        df_mlt["estagio"] -= mes_inicio - 1
+        df_mlt = df_mlt.loc[df_mlt["estagio"] > 0].reset_index(drop=True)
+        print(df_mlt)
+        return df_mlt
+
+    @classmethod
     def _gera_series_vazao_mlt_uhes(
         cls, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
@@ -378,27 +566,8 @@ class ScenarioSynthetizer:
         sistema = cls._validate_data(
             cls._get_sistema(uow).custo_deficit, pd.DataFrame, "vazões"
         )
-        dger = cls._get_dger(uow)
-        mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
-        ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
-        anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
-        datas = pd.date_range(
-            datetime(year=ano_inicio - 1, month=1, day=1),
-            datetime(year=ano_inicio + anos_estudo - 1, month=12, day=1),
-            freq="MS",
-        )
-        df_mlt = pd.DataFrame(
-            data={
-                "estagio": list(
-                    range(
-                        -(12 + mes_inicio - 2),
-                        12 * anos_estudo - mes_inicio + 2,
-                    )
-                ),
-                "mes": [d.month for d in datas],
-            }
-        )
-        df_completo_mlt = pd.DataFrame()
+        df_mlt = cls._df_modelo_mlt_uhes(uow)
+        dfs_mlt_uhe: List[pd.DataFrame] = []
         # Modificação por desempenho:
         # Abre o contexto do UoW antes de iterar para não repetir leituras
         # de arquivos de maneira desnecessária
@@ -418,9 +587,8 @@ class ScenarioSynthetizer:
                     ),
                     on="mes",
                 )
-                df_completo_mlt = pd.concat(
-                    [df_completo_mlt, df_mlt_uhe], ignore_index=True
-                )
+                dfs_mlt_uhe.append(df_mlt_uhe)
+        df_completo_mlt = pd.concat(dfs_mlt_uhe, ignore_index=True)
         # Adiciona dados de ree e submercado à série
         df_completo_mlt["codigo_ree"] = df_completo_mlt.apply(
             lambda linha: uhes.loc[
@@ -450,11 +618,82 @@ class ScenarioSynthetizer:
         return df_completo_mlt.sort_values(["estagio", "codigo_usina"])
 
     @classmethod
+    def _df_modelo_mlt_rees(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        """
+        Gera um DataFrame para ser utilizado para preenchimento dos
+        valores da MLT de cada REE em cada estágio do modelo.
+
+        Os valores de estágio e mês são ajustados para que sejam
+        coerentes com o modelo, substituindo a visão blocada de
+        estagio = 1 para janeiro do primeiro ano do período de estudo
+        para estagio = 1 para o mês de início do estudo. Adicionalmente,
+        são filtrados estágios do período pré-estudo.
+
+        - estagio (`int`)
+        - configuracao (`int`)
+        - mes (`int`)
+
+        :return: A tabela como um DataFrame
+        :rtype: pd.DataFrame | None
+        """
+        configuracoes = cls._validate_data(
+            cls._get_pmo(uow).configuracoes_qualquer_modificacao,
+            pd.DataFrame,
+            "configurações",
+        )
+        dger = cls._get_dger(uow)
+        mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
+        ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
+        anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
+        anos_pos_sf = cls._validate_data(
+            dger.num_anos_pos_sim_final, int, "dger"
+        )
+        opcao_parp = cls._validate_data(
+            dger.consideracao_media_anual_afluencias, int, "dger"
+        )
+        ordem_maxima_parp = cls._validate_data(
+            dger.ordem_maxima_parp, int, "dger"
+        )
+        estagios_th = 12 if opcao_parp != 0 else ordem_maxima_parp
+        data_inicio_com_th = datetime(
+            year=ano_inicio, month=1, day=1
+        ) - relativedelta(months=estagios_th)
+        data_fim_com_pos_sf = datetime(
+            year=ano_inicio + anos_estudo + anos_pos_sf - 1, month=12, day=1
+        )
+        cfgs_th_adicionais = np.array([1] * estagios_th)
+        cfgs = (
+            configuracoes.loc[
+                (configuracoes["data"] >= data_inicio_com_th)
+                & (configuracoes["data"] <= data_fim_com_pos_sf),
+                "valor",
+            ]
+            .to_numpy()
+            .flatten()
+        )
+        estagios_com_th = list(range(-estagios_th + 1, len(cfgs) + 1))
+        datas = pd.date_range(
+            data_inicio_com_th,
+            data_fim_com_pos_sf,
+            freq="MS",
+        )
+        df_mlt = pd.DataFrame(
+            data={
+                "estagio": list(estagios_com_th),
+                "configuracao": np.concatenate([cfgs_th_adicionais, cfgs]),
+                "mes": [d.month for d in datas],
+            }
+        )
+        df_mlt["estagio"] -= mes_inicio - 1
+        df_mlt = df_mlt.loc[df_mlt["estagio"] > 0].reset_index(drop=True)
+        return df_mlt
+
+    @classmethod
     def _gera_series_energia_mlt_rees(
         cls, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         """
-        Extrai a MLT para todos os REEs.
+        Extrai a MLT em energia para todos os REEs.
 
         - codigo_ree (`int`)
         - nome_ree (`str`)
@@ -470,16 +709,8 @@ class ScenarioSynthetizer:
         """
         if cls.logger is not None:
             cls.logger.info("Calculando séries de MLT para ENAA - REE")
-        # Monta um df com estagio | configuracao | mes
-        configuracoes = cls._validate_data(
-            cls._get_pmo(uow).configuracoes_qualquer_modificacao,
-            pd.DataFrame,
-            "configurações",
-        )
         dger = cls._get_dger(uow)
-        mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
         ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
-        anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
         sistema = cls._validate_data(
             cls._get_sistema(uow).custo_deficit, pd.DataFrame, "submercados"
         )
@@ -493,22 +724,8 @@ class ScenarioSynthetizer:
         engnat = cls._validate_data(
             arq_engnat.series, pd.DataFrame, "séries de energia"
         )
-        cfgs = configuracoes["valor"].to_numpy().flatten()[mes_inicio - 1 :]
-        datas = pd.date_range(
-            datetime(year=ano_inicio - 1, month=1, day=1),
-            datetime(year=ano_inicio + anos_estudo - 1, month=12, day=1),
-            freq="MS",
-        )
-        df_mlt = pd.DataFrame(
-            data={
-                "estagio": list(range(-(12 + mes_inicio - 2), len(cfgs) + 1)),
-                "configuracao": np.concatenate(
-                    (np.array([1] * (12 + mes_inicio - 1)), cfgs)
-                ),
-                "mes": [d.month for d in datas],
-            }
-        )
-        dfs_mlt_rees = pd.DataFrame()
+        df_mlt = cls._df_modelo_mlt_rees(uow)
+        dfs_mlt_rees: List[pd.DataFrame] = []
         # Para cada REE, obtem a série de MLT para os estágios do modelo
         ano_limite_historico = ano_inicio - 1
         engnat = engnat.loc[engnat["data"].dt.year <= ano_limite_historico]
@@ -532,26 +749,8 @@ class ScenarioSynthetizer:
                 sistema["codigo_submercado"] == linha["submercado"],
                 "nome_submercado",
             ].iloc[0]
-            dfs_mlt_rees = pd.concat(
-                [dfs_mlt_rees, df_mlt_ree], ignore_index=True
-            )
-        return dfs_mlt_rees
-
-    @classmethod
-    def _engolimento_maximo_uhes(
-        cls, uow: AbstractUnitOfWork
-    ) -> Dict[int, float]:
-        hidr = cls._get_hidr(uow).cadastro
-        engolimentos: Dict[int, float] = {}
-        for idx, linha in hidr.iterrows():
-            engol_max = 0.0
-            n_conj = linha["numero_conjuntos_maquinas"]
-            for i in range(1, n_conj + 1):
-                n_maq = linha[f"numero_maquinas_conjunto_{i}"]
-                qef_maq = linha[f"vazao_nominal_conjunto_{i}"]
-                engol_max += n_maq * qef_maq
-            engolimentos[idx] = engol_max
-        return engolimentos
+            dfs_mlt_rees.append(df_mlt_ree)
+        return pd.concat(dfs_mlt_rees, ignore_index=True)
 
     @classmethod
     def _agrega_serie_mlt_uhe(
@@ -684,7 +883,16 @@ class ScenarioSynthetizer:
     ) -> pd.DataFrame:
         """
         Adiciona dados do REE aos dados de energia lidos do arquivo
-        binário `energiaf.dat`.
+        binário `energiaf.dat` e edita os valores de estágio para
+        que sejam coerentes:
+
+        - Subtrai-se (mes_inicio - 1) de todos os estágios
+        - Filtra-se o dataframe resultante para que somente
+            valores de estagio > 0 sejam retornados
+
+        Desta forma, nos dados retornados desta função, as colunas
+        de estágio e demais datas possuem os mesmos significados
+        que na modelagem conceitual.
 
         - estagio (`int`)
         - data (`datetime`)
@@ -1398,6 +1606,16 @@ class ScenarioSynthetizer:
     def _resolve_enaa_forward_iteracao(
         cls, uow: AbstractUnitOfWork, it: int
     ) -> pd.DataFrame:
+        """
+        Obtem os dados de ENA para a etapa forward em uma determinada
+        iteração de interesse, considerando já os estágios individualizados
+        e agregados, nos quais a energia é lida do arquivo binário
+        `enavazf.dat` e `energiaf.dat`, respectivamente. É adicionada uma
+        coluna `iteracao` ao DataFrame resultante.
+
+        :return: Os dados como um DataFrame.
+        :rtype: pd.DataFrame
+        """
         logger = Log.configure_process_logger(
             uow._queue, Variable.ENA_ABSOLUTA.value, it
         )
@@ -1412,6 +1630,7 @@ class ScenarioSynthetizer:
             if arq_energiaf is None:
                 if cls.logger is not None:
                     cls.logger.error("Falha na leitura de séries de energia")
+
         if arq_enavaz is None:
             df_enavaz = pd.DataFrame()
         else:
@@ -1430,7 +1649,9 @@ class ScenarioSynthetizer:
             )
         if not df_enavaz.empty and not df_energia.empty:
             with uow:
-                n_indiv = uow.files._numero_estagios_individualizados()
+                n_indiv = (
+                    uow.files._numero_estagios_individualizados_politica()
+                )
             df_ena = pd.concat(
                 [
                     df_enavaz.loc[df_enavaz["estagio"] <= n_indiv],
@@ -1448,11 +1669,17 @@ class ScenarioSynthetizer:
 
     @classmethod
     def _resolve_enaa_forward(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        """
+        Obtem os dados de ENA para a etapa forward em todas as iterações feitas
+        pelo modelo.
+
+        :return: Os dados como um DataFrame.
+        :rtype: pd.DataFrame
+        """
         convergencia = cls._validate_data(
             cls._get_pmo(uow).convergencia, pd.DataFrame, "convergência"
         )
         n_iters = convergencia["iteracao"].max()
-        df_completo = pd.DataFrame()
         n_procs = int(Settings().processors)
         with Pool(processes=n_procs) as pool:
             if n_procs > 1:
@@ -1467,14 +1694,26 @@ class ScenarioSynthetizer:
             dfs = {it: r.get(timeout=3600) for it, r in async_res.items()}
         if cls.logger is not None:
             cls.logger.info("Compactando dados...")
-        for _, df in dfs.items():
-            df_completo = pd.concat([df_completo, df], ignore_index=True)
+        df_completo = (
+            pd.concat(dfs, ignore_index=True)
+            if len(dfs) > 0
+            else pd.DataFrame()
+        )
         return df_completo
 
     @classmethod
     def _resolve_qinc_forward_iteracao(
         cls, uow: AbstractUnitOfWork, it: int
     ) -> pd.DataFrame:
+        """
+        Obtem os dados de QINC para a etapa forward em uma determinada
+        iteração de interesse, considerando apenas os estágios individualizados,
+        nos quais a vazão é lida do arquivo binário `vazaof.dat`. É adicionada
+        uma coluna `iteracao` ao DataFrame resultante.
+
+        :return: Os dados como um DataFrame.
+        :rtype: pd.DataFrame
+        """
         logger = Log.configure_process_logger(
             uow.queue, Variable.VAZAO_INCREMENTAL.value, it
         )
@@ -1497,6 +1736,13 @@ class ScenarioSynthetizer:
 
     @classmethod
     def _resolve_qinc_forward(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        """
+        Obtem os dados de QINC para a etapa forward em todas as iterações
+        feitas pelo modelo.
+
+        :return: Os dados como um DataFrame.
+        :rtype: pd.DataFrame
+        """
         convergencia = cls._validate_data(
             cls._get_pmo(uow).convergencia, pd.DataFrame, "convergência"
         )
@@ -1524,6 +1770,16 @@ class ScenarioSynthetizer:
     def _resolve_enaa_backward_iteracao(
         cls, uow: AbstractUnitOfWork, it: int
     ) -> pd.DataFrame:
+        """
+        Obtem os dados de ENA para a etapa backward em uma determinada
+        iteração de interesse, considerando já os estágios individualizados
+        e agregados, nos quais a energia é lida do arquivo binário
+        `enavazb.dat` e `energiab.dat`, respectivamente. É adicionada uma
+        coluna `iteracao` ao DataFrame resultante.
+
+        :return: Os dados como um DataFrame.
+        :rtype: pd.DataFrame
+        """
         logger = Log.configure_process_logger(
             uow._queue, Variable.ENA_ABSOLUTA.value, it
         )
@@ -1556,7 +1812,9 @@ class ScenarioSynthetizer:
         )
         if not df_enavaz.empty and not df_energia.empty:
             with uow:
-                n_indiv = uow.files._numero_estagios_individualizados()
+                n_indiv = (
+                    uow.files._numero_estagios_individualizados_politica()
+                )
             df_ena = pd.concat(
                 [
                     df_enavaz.loc[df_enavaz["estagio"] <= n_indiv],
@@ -1578,11 +1836,17 @@ class ScenarioSynthetizer:
 
     @classmethod
     def _resolve_enaa_backward(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        """
+        Obtem os dados de ENA para a etapa backward em todas as iterações
+        feitas pelo modelo.
+
+        :return: Os dados como um DataFrame.
+        :rtype: pd.DataFrame
+        """
         convergencia = cls._validate_data(
             cls._get_pmo(uow).convergencia, pd.DataFrame, "convergência"
         )
         n_iters = convergencia["iteracao"].max()
-        df_completo = pd.DataFrame()
         n_procs = int(Settings().processors)
         with Pool(processes=n_procs) as pool:
             if n_procs > 1:
@@ -1597,14 +1861,26 @@ class ScenarioSynthetizer:
             dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
         if cls.logger is not None:
             cls.logger.info("Compactando dados...")
-        for _, df in dfs.items():
-            df_completo = pd.concat([df_completo, df], ignore_index=True)
+        df_completo = (
+            pd.concat(dfs, ignore_index=True)
+            if len(dfs) > 0
+            else pd.DataFrame()
+        )
         return df_completo
 
     @classmethod
     def _resolve_qinc_backward_iteracao(
         cls, uow: AbstractUnitOfWork, it: int
     ) -> pd.DataFrame:
+        """
+        Obtem os dados de QINC para a etapa backward em uma determinada
+        iteração de interesse, considerando apenas os estágios individualizados,
+        nos quais a vazão é lida do arquivo binário `vazaob.dat`. É adicionada
+        uma coluna `iteracao` ao DataFrame resultante.
+
+        :return: Os dados como um DataFrame.
+        :rtype: pd.DataFrame
+        """
         logger = Log.configure_process_logger(
             uow.queue, Variable.VAZAO_INCREMENTAL.value, it
         )
@@ -1623,6 +1899,13 @@ class ScenarioSynthetizer:
 
     @classmethod
     def _resolve_qinc_backward(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        """
+        Obtem os dados de QINC para a etapa backward em todas as iterações
+        feitas pelo modelo.
+
+        :return: Os dados como um DataFrame.
+        :rtype: pd.DataFrame
+        """
         convergencia = cls._validate_data(
             cls._get_pmo(uow).convergencia, pd.DataFrame, "convergência"
         )
@@ -1648,6 +1931,12 @@ class ScenarioSynthetizer:
 
     @classmethod
     def _resolve_enaa_sf(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        """
+        Obtem os dados de ENA para a etapa de simulação final.
+
+        :return: Os dados como um DataFrame.
+        :rtype: pd.DataFrame
+        """
         with uow:
             arq_enavaz = uow.files.get_enavazs()
             if arq_enavaz is None:
@@ -1673,7 +1962,7 @@ class ScenarioSynthetizer:
         )
         if not df_enavaz.empty and not df_energia.empty:
             with uow:
-                n_indiv = uow.files._numero_estagios_individualizados()
+                n_indiv = uow.files._numero_estagios_individualizados_sf()
             df_ena = pd.concat(
                 [
                     df_enavaz.loc[df_enavaz["estagio"] <= n_indiv],
@@ -1692,6 +1981,12 @@ class ScenarioSynthetizer:
 
     @classmethod
     def _resolve_qinc_sf(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        """
+        Obtem os dados de QINC para a etapa de simulação final.
+
+        :return: Os dados como um DataFrame.
+        :rtype: pd.DataFrame
+        """
         with uow:
             arq = uow.files.get_vazaos()
             if arq is None:
@@ -1711,6 +2006,15 @@ class ScenarioSynthetizer:
         step: Step,
         uow: AbstractUnitOfWork,
     ) -> pd.DataFrame:
+        """
+        Obtem um DataFrame com os dados de uma variável sintetizada,
+        em uma determinada etapa, a partir do cache. Caso este dado
+        não exista, ele é calculado a partir da função de resolução
+        adequada, armazenado no cache e retornado.
+
+        :return: Os dados da variável, para a etapa, como um DataFrame.
+        :rtype: pd.DataFrame
+        """
         CACHING_FUNCTION_MAP: Dict[Tuple[Variable, Step], Callable] = {
             (Variable.ENA_ABSOLUTA, Step.FORWARD): cls._resolve_enaa_forward,
             (Variable.ENA_ABSOLUTA, Step.BACKWARD): cls._resolve_enaa_backward,
@@ -1742,6 +2046,14 @@ class ScenarioSynthetizer:
     def _resolve_group(
         cls, group_col: List[str], df: pd.DataFrame
     ) -> pd.DataFrame:
+        """
+        Realiza o agrupamento dos dados por meio de uma soma, cosiderando
+        uma lista de colunas para agrupamento e excluindo a coluna "valor",
+        que será sempre agregada.
+
+        :return: Os dados agrupados como um DataFrame.
+        :rtype: pd.DataFrame
+        """
         if not df.empty:
             cols = group_col + [
                 c for c in cls.COMMON_COLUMNS if c in df.columns
@@ -1758,6 +2070,14 @@ class ScenarioSynthetizer:
         df_mlt: pd.DataFrame,
         filter_col: Optional[str],
     ) -> pd.DataFrame:
+        """
+        Adiciona uma informação da MLT (Média de Longo
+        Termo) para cada cenário sintetizado em dados pertencentes
+        à etapa forward.
+
+        :return: Os dados com MLT como um DataFrame.
+        :rtype: pd.DataFrame
+        """
         if filter_col is not None:
             df = df.sort_values(["iteracao", "estagio", filter_col, "serie"])
             df_mlt = df_mlt.sort_values(["estagio", filter_col])
@@ -1772,33 +2092,25 @@ class ScenarioSynthetizer:
         num_iteracoes = len(iteracoes)
         elements = df[filter_col].unique() if filter_col is not None else []
 
-        df_mlts_elements = pd.DataFrame()
+        dfs_mlts_elements: List[pd.DataFrame] = []
         for estagio in estagios:
             if len(elements) > 0:
                 for element in elements:
-                    df_mlts_elements = pd.concat(
-                        [
-                            df_mlts_elements,
-                            df_mlt.loc[
-                                (df_mlt[filter_col] == element)
-                                & (df_mlt["estagio"] == estagio),
-                                "mlt",
-                            ],
-                        ],
-                        ignore_index=True,
+                    dfs_mlts_elements.append(
+                        df_mlt.loc[
+                            (df_mlt[filter_col] == element)
+                            & (df_mlt["estagio"] == estagio),
+                            "mlt",
+                        ]
                     )
             else:
-                df_mlts_elements = pd.concat(
-                    [
-                        df_mlts_elements,
-                        df_mlt.loc[
-                            (df_mlt["estagio"] == estagio),
-                            "mlt",
-                        ],
-                    ],
-                    ignore_index=True,
+                dfs_mlts_elements.append(
+                    df_mlt.loc[
+                        (df_mlt["estagio"] == estagio),
+                        "mlt",
+                    ]
                 )
-
+        df_mlts_elements = pd.concat(dfs_mlts_elements, ignore_index=True)
         mlts_ordenadas = np.repeat(df_mlts_elements.to_numpy(), num_series)
         df["mlt"] = np.tile(mlts_ordenadas, num_iteracoes)
         df["valorMlt"] = df["valor"] / df["mlt"]
@@ -1812,6 +2124,14 @@ class ScenarioSynthetizer:
         df_mlt: pd.DataFrame,
         filter_col: Optional[str],
     ) -> pd.DataFrame:
+        """
+        Adiciona uma informação da MLT (Média de Longo
+        Termo) para cada cenário sintetizado em dados pertencentes
+        à etapa backward.
+
+        :return: Os dados com MLT como um DataFrame.
+        :rtype: pd.DataFrame
+        """
         if filter_col is not None:
             df = df.sort_values(["estagio", filter_col, "serie", "abertura"])
             df_mlt = df_mlt.sort_values(["estagio", filter_col])
@@ -1828,33 +2148,26 @@ class ScenarioSynthetizer:
         num_iteracoes = len(iteracoes)
         elements = df[filter_col].unique() if filter_col is not None else []
 
-        df_mlts_elements = pd.DataFrame()
+        dfs_mlts_elements: List[pd.DataFrame] = []
         for estagio in estagios:
             if len(elements) > 0:
                 for element in elements:
-                    df_mlts_elements = pd.concat(
-                        [
-                            df_mlts_elements,
-                            df_mlt.loc[
-                                (df_mlt[filter_col] == element)
-                                & (df_mlt["estagio"] == estagio),
-                                "mlt",
-                            ],
-                        ],
-                        ignore_index=True,
+                    dfs_mlts_elements.append(
+                        df_mlt.loc[
+                            (df_mlt[filter_col] == element)
+                            & (df_mlt["estagio"] == estagio),
+                            "mlt",
+                        ]
                     )
             else:
-                df_mlts_elements = pd.concat(
-                    [
-                        df_mlts_elements,
-                        df_mlt.loc[
-                            (df_mlt["estagio"] == estagio),
-                            "mlt",
-                        ],
-                    ],
-                    ignore_index=True,
+                dfs_mlts_elements.append(
+                    df_mlt.loc[
+                        (df_mlt["estagio"] == estagio),
+                        "mlt",
+                    ]
                 )
 
+        df_mlts_elements = pd.concat(dfs_mlts_elements, ignore_index=True)
         mlts_ordenadas = np.repeat(
             df_mlts_elements.to_numpy(), num_series * num_aberturas
         )
@@ -1870,6 +2183,14 @@ class ScenarioSynthetizer:
         df_mlt: pd.DataFrame,
         filter_col: Optional[str],
     ) -> pd.DataFrame:
+        """
+        Adiciona uma informação da MLT (Média de Longo
+        Termo) para cada cenário sintetizado em dados pertencentes
+        à etapa de simulação final.
+
+        :return: Os dados com MLT como um DataFrame.
+        :rtype: pd.DataFrame
+        """
         if filter_col is not None:
             df = df.sort_values(["estagio", filter_col, "serie"])
             df_mlt = df_mlt.sort_values(["estagio", filter_col])
@@ -1882,33 +2203,26 @@ class ScenarioSynthetizer:
         estagios = df["estagio"].unique()
         elements = df[filter_col].unique() if filter_col is not None else []
 
-        df_mlts_elements = pd.DataFrame()
+        dfs_mlts_elements: List[pd.DataFrame] = []
         for estagio in estagios:
             if len(elements) > 0:
                 for element in elements:
-                    df_mlts_elements = pd.concat(
-                        [
-                            df_mlts_elements,
-                            df_mlt.loc[
-                                (df_mlt[filter_col] == element)
-                                & (df_mlt["estagio"] == estagio),
-                                "mlt",
-                            ],
-                        ],
-                        ignore_index=True,
+                    dfs_mlts_elements.append(
+                        df_mlt.loc[
+                            (df_mlt[filter_col] == element)
+                            & (df_mlt["estagio"] == estagio),
+                            "mlt",
+                        ]
                     )
             else:
-                df_mlts_elements = pd.concat(
-                    [
-                        df_mlts_elements,
-                        df_mlt.loc[
-                            (df_mlt["estagio"] == estagio),
-                            "mlt",
-                        ],
-                    ],
-                    ignore_index=True,
+                dfs_mlts_elements.append(
+                    df_mlt.loc[
+                        (df_mlt["estagio"] == estagio),
+                        "mlt",
+                    ]
                 )
 
+        df_mlts_elements = pd.concat(dfs_mlts_elements, ignore_index=True)
         mlts_ordenadas = np.repeat(df_mlts_elements.to_numpy(), num_series)
         df["mlt"] = mlts_ordenadas
         df["valorMlt"] = df["valor"] / df["mlt"]
@@ -1922,6 +2236,19 @@ class ScenarioSynthetizer:
         df: pd.DataFrame,
         uow: AbstractUnitOfWork,
     ) -> pd.DataFrame:
+        """
+        Adiciona uma informação da MLT (Média de Longo
+        Termo) para cada cenário sintetizado na forma das colunas:
+
+        - mlt (`float`)
+        - valorMlt (`float`)
+
+        Para este processamento, é considerada a resolução espacial
+        e também a etapa a qual pertencem os cenários da síntese.
+
+        :return: Os dados com MLT como um DataFrame.
+        :rtype: pd.DataFrame
+        """
         # Descobre o valor em MLT
         df = df.copy()
         df_mlt = cls._get_cached_mlt(
@@ -1949,6 +2276,22 @@ class ScenarioSynthetizer:
     def _resolve_spatial_resolution(
         cls, synthesis: ScenarioSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
+        """
+        Realiza a resolução da agregação espacial dos dados,
+        considerando a síntese desejada e os dados disponíveis.
+
+        Caso a variável não exista diretamente como uma saída do modelo,
+        é realizada uma agregação na resolução espacial desejada.
+
+        Adicionalmente, é adicionada uma informação da MLT (Média de Longo
+        Termo) para cada cenário sintetizado na forma das colunas:
+
+        - mlt (`float`)
+        - valorMlt (`float`)
+
+        :return: Os dados como um DataFrame.
+        :rtype: pd.DataFrame
+        """
         RESOLUTION_MAP: Dict[SpatialResolution, List[str]] = {
             SpatialResolution.SISTEMA_INTERLIGADO: [],
             SpatialResolution.SUBMERCADO: ["nome_submercado"],
@@ -1965,6 +2308,14 @@ class ScenarioSynthetizer:
     def _process_quantiles(
         cls, df: pd.DataFrame, quantiles: List[float]
     ) -> pd.DataFrame:
+        """
+        Calcula estatísticas de quantis para cada grupo
+        de cenários sintetizados, considerando também aberturas
+        quando estas fazem parte dos dados fornecidos.
+
+        :return: Os dados como um DataFrame.
+        :rtype: pd.DataFrame
+        """
         group_cols = [
             col
             for col in df.columns.tolist()
@@ -1992,6 +2343,14 @@ class ScenarioSynthetizer:
 
     @classmethod
     def _process_mean(cls, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Calcula estatísticas de média e desvio-padrão para cada grupo
+        de cenários sintetizados, considerando também aberturas
+        quando estas fazem parte dos dados fornecidos.
+
+        :return: Os dados como um DataFrame.
+        :rtype: pd.DataFrame
+        """
         group_cols = [
             col
             for col in df.columns.tolist()
@@ -2012,7 +2371,14 @@ class ScenarioSynthetizer:
         return pd.concat([df, df_mean, df_std], ignore_index=True)
 
     @classmethod
-    def _postprocess(cls, df: pd.DataFrame):
+    def _postprocess(cls, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Realiza o pós-processamento e cálculo de estatístcas das séries
+        sintetizadas, extraindo informações relevantes para análise.
+
+        :return: Os dados como um DataFrame.
+        :rtype: pd.DataFrame
+        """
         column_names = {
             "data": "dataInicio",
             "data_fim": "dataFim",
@@ -2031,21 +2397,67 @@ class ScenarioSynthetizer:
         return df
 
     @classmethod
+    def _export_metadata(
+        cls,
+        success_synthesis: List[ScenarioSynthesis],
+        uow: AbstractUnitOfWork,
+    ):
+        """
+        Realiza a exportação dos metadados dos cenários sintetizados, com
+        a descrição de quais sínteses foram realizadas e algumas
+        características de cada uma.
+
+        - chave (`str`)
+        - nome_curto_variavel (`str`)
+        - nome_longo_variavel (`str`)
+        - nome_curto_agregacao (`str`)
+        - nome_longo_agregacao (`str`)
+        - nome_curto_etapa (`str`)
+        - nome_longo_etapa (`str`)
+        - unidade (`str`)
+
+        """
+        metadata_df = pd.DataFrame(
+            columns=[
+                "chave",
+                "nome_curto_variavel",
+                "nome_longo_variavel",
+                "nome_curto_agregacao",
+                "nome_longo_agregacao",
+                "nome_curto_etapa",
+                "nome_longo_etapa",
+                "unidade",
+            ]
+        )
+        for s in success_synthesis:
+            metadata_df.loc[metadata_df.shape[0]] = [
+                str(s),
+                s.variable.short_name,
+                s.variable.long_name,
+                s.spatial_resolution.short_name,
+                s.spatial_resolution.long_name,
+                s.step.short_name,
+                s.step.long_name,
+                cls.UNITS[s].value if s in cls.UNITS else "",
+            ]
+        with uow:
+            uow.export.synthetize_df(metadata_df, "METADADOS_CENARIOS")
+
+    @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
         cls.logger = logging.getLogger("main")
-        try:
-            if len(variables) == 0:
-                synthesis_variables = ScenarioSynthetizer._default_args()
-            else:
-                synthesis_variables = (
-                    ScenarioSynthetizer._process_variable_arguments(variables)
-                )
-            valid_synthesis = ScenarioSynthetizer.filter_valid_variables(
-                synthesis_variables, uow
+        if len(variables) == 0:
+            synthesis_variables = cls._default_args()
+        else:
+            all_variables = cls._match_wildcards(variables)
+            synthesis_variables = cls._process_variable_arguments(
+                all_variables
             )
-            for s in valid_synthesis:
+        valid_synthesis = cls.filter_valid_variables(synthesis_variables, uow)
+        success_synthesis: List[ScenarioSynthesis] = []
+        for s in valid_synthesis:
+            try:
                 filename = str(s)
-
                 cls.logger.info(f"Realizando síntese de {filename}")
                 df = cls._resolve_spatial_resolution(s, uow)
                 if df is None:
@@ -2054,10 +2466,12 @@ class ScenarioSynthetizer:
                     if df.empty:
                         cls.logger.info("Erro ao realizar a síntese")
                         continue
-                # TODO - adicionar estatísticas ao postprocess
                 df = cls._postprocess(df)
                 with uow:
                     uow.export.synthetize_df(df, filename)
-        except Exception as e:
-            print_exc()
-            cls.logger.error(str(e))
+                    success_synthesis.append(s)
+            except Exception as e:
+                print_exc()
+                cls.logger.error(str(e))
+
+        cls._export_metadata(success_synthesis, uow)
