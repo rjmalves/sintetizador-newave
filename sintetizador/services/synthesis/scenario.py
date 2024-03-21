@@ -531,7 +531,6 @@ class ScenarioSynthetizer:
         )
         df_mlt["estagio"] -= mes_inicio - 1
         df_mlt = df_mlt.loc[df_mlt["estagio"] > 0].reset_index(drop=True)
-        print(df_mlt)
         return df_mlt
 
     @classmethod
