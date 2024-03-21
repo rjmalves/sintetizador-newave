@@ -7,7 +7,7 @@ import traceback
 from multiprocessing import Pool
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta  # type: ignore
-from inewave.newave import Dger, Ree, Confhd, Conft, Sistema, Clast
+from inewave.newave import Dger, Ree, Confhd, Conft, Sistema, Clast, Hidr
 from sintetizador.utils.log import Log
 from sintetizador.utils.regex import match_variables_with_wildcards
 from sintetizador.model.settings import Settings
@@ -1077,6 +1077,32 @@ class OperationSynthetizer:
                 SpatialResolution.USINA_HIDROELETRICA,
             ),
         ],
+        OperationSynthesis(
+            Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
+            SpatialResolution.USINA_HIDROELETRICA,
+        ): [
+            OperationSynthesis(
+                Variable.QUEDA_LIQUIDA,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+            OperationSynthesis(
+                Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
+        OperationSynthesis(
+            Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
+            SpatialResolution.USINA_HIDROELETRICA,
+        ): [
+            OperationSynthesis(
+                Variable.QUEDA_LIQUIDA,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+            OperationSynthesis(
+                Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+                SpatialResolution.USINA_HIDROELETRICA,
+            ),
+        ],
     }
 
     SYNTHESIS_TO_CACHE: List[OperationSynthesis] = list(
@@ -1793,6 +1819,19 @@ class OperationSynthetizer:
                     )
                 raise RuntimeError()
             return confhd
+
+    @classmethod
+    def _get_hidr(cls, uow: AbstractUnitOfWork) -> Hidr:
+        with uow:
+            hidr = uow.files.get_hidr()
+            if hidr is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do hidr.dat para"
+                        + " síntese da operação"
+                    )
+                raise RuntimeError()
+            return hidr
 
     @classmethod
     def _get_conft(cls, uow: AbstractUnitOfWork) -> Conft:
@@ -2601,27 +2640,6 @@ class OperationSynthetizer:
         return df_uhe
 
     @classmethod
-    def __resolve_stub_vminop_sin(
-        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
-        sintese_sbm = OperationSynthesis(
-            variable=synthesis.variable,
-            spatial_resolution=SpatialResolution.SUBMERCADO,
-        )
-        cache_vminop = cls._get_from_cache(sintese_sbm)
-        cols_group = [
-            c
-            for c in cache_vminop.columns
-            if c in cls.IDENTIFICATION_COLUMNS and c != "submercado"
-        ]
-        df_sin = (
-            cache_vminop.groupby(cols_group)
-            .sum(numeric_only=True)
-            .reset_index()
-        )
-        return df_sin
-
-    @classmethod
     def __stub_resolve_energias_iniciais_ree(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
@@ -2745,6 +2763,118 @@ class OperationSynthetizer:
         df_inicial["valor"] = valores_iniciais
         df_inicial["valor"] = df_inicial["valor"].fillna(0.0)
         return df_inicial
+
+    @classmethod
+    def _obtem_usinas_jusante(
+        cls, nome_usina: str, df_uhes: pd.DataFrame
+    ) -> List[str]:
+        uhes_jusante: List[str] = []
+        codigo_uhe_jusante = df_uhes.loc[
+            df_uhes["nome_usina"] == nome_usina, "codigo_usina_jusante"
+        ].iloc[0]
+        while codigo_uhe_jusante != 0:
+            nome_uhe_jusante = df_uhes.loc[
+                df_uhes["codigo_usina"] == codigo_uhe_jusante, "nome_usina"
+            ].iloc[0]
+            uhes_jusante.append(nome_uhe_jusante)
+            codigo_uhe_jusante = df_uhes.loc[
+                df_uhes["codigo_usina"] == codigo_uhe_jusante,
+                "codigo_usina_jusante",
+            ].iloc[0]
+
+        return uhes_jusante
+
+    @classmethod
+    def _acumula_produtibilidades_reservatorios(
+        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        df_uhes = cls._validate_data(
+            cls._get_confhd(uow).usinas, pd.DataFrame, "UHEs"
+        )
+        cadastro_uhes = cls._validate_data(
+            cls._get_hidr(uow).cadastro, pd.DataFrame, "hidr"
+        )
+        # Para cada usina, obtem a lista de usina a jusante até
+        # o mar e acumula as produtibilidades
+        df["prod_acum"] = df["prod_ponto"]
+        uhes = df["usina"].unique().tolist()
+        for uhe in uhes:
+            regulacao_uhe = cadastro_uhes.loc[
+                cadastro_uhes["nome_usina"] == uhe, "tipo_regulacao"
+            ].iloc[0]
+            if regulacao_uhe == "M":
+                uhes_jusante = cls._obtem_usinas_jusante(uhe, df_uhes)
+                for uhe_jusante in uhes_jusante:
+                    prod_jusante = df.loc[
+                        df["usina"] == uhe_jusante, "prod_ponto"
+                    ].to_numpy()
+                    if len(prod_jusante) > 0:
+                        df.loc[df["usina"] == uhe, "prod_acum"] += prod_jusante
+            else:
+                df.loc[df["usina"] == uhe, "prod_acum"] = 0.0
+        return df
+
+    @classmethod
+    def __stub_EARM_UHE(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        sintese_hliq = OperationSynthesis(
+            Variable.QUEDA_LIQUIDA,
+            synthesis.spatial_resolution,
+        )
+        mapa_earm_varm = {
+            Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL: Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,  # noqa
+            Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL: Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,  # noqa
+        }
+        sintese_varm = OperationSynthesis(
+            mapa_earm_varm[synthesis.variable],
+            synthesis.spatial_resolution,
+        )
+        df_hliq = cls._get_from_cache(sintese_hliq)
+        df_hliq = df_hliq.loc[df_hliq["patamar"] == 0].copy()
+        df_varm = cls._get_from_cache(sintese_varm)
+        # Converte queda líquida em produtividade usando a
+        # produtibilidade específica
+        hidr = cls._validate_data(
+            cls._get_hidr(uow).cadastro, pd.DataFrame, "UHEs"
+        )
+        nomes_uhes = df_hliq["usina"].unique().tolist()
+        n_entradas_uhe = df_hliq.loc[df_hliq["usina"] == nomes_uhes[0]].shape[
+            0
+        ]
+        hidr_uhes = hidr.loc[hidr["nome_usina"].isin(nomes_uhes)].set_index(
+            "nome_usina"
+        )
+        # Produtibilidades em MW / ( (m3/s) / m)
+        prod_esp = np.repeat(
+            hidr_uhes.loc[nomes_uhes, "produtibilidade_especifica"].to_numpy(),
+            n_entradas_uhe,
+        )
+        # Converte para MW / ( (hm3 / mes) / m )
+        prod_esp /= 2.63
+
+        # Adiciona ao df e acumula as produtibilidades nos reservatórios
+        df_hliq["prod_esp"] = prod_esp
+        df_hliq["prod_ponto"] = df_hliq["prod_esp"] * df_hliq["valor"]
+        df_hliq = cls._acumula_produtibilidades_reservatorios(df_hliq, uow)
+
+        uhes_varm = df_varm["usina"].unique()
+        df_hliq = df_hliq.loc[df_hliq["usina"].isin(uhes_varm)].copy()
+
+        # Multiplica o volume (útil) armazenado em cada UHE pela
+        # produtibilidade acumulada nos pontos de operação.
+        df_hliq = df_hliq.sort_values(["usina", "estagio", "patamar"])
+        df_varm = df_varm.sort_values(["usina", "estagio", "patamar"])
+
+        df_varm["valor"] = (
+            df_varm["valor"] - df_varm["limiteInferior"]
+        ) * df_hliq["prod_acum"].to_numpy()
+        df_varm["limiteInferior"] = 0.0
+        df_varm["limiteSuperior"] = (
+            df_varm["limiteSuperior"] - df_varm["limiteInferior"]
+        ) * df_hliq["prod_acum"].to_numpy()
+
+        return df_varm
 
     @classmethod
     def __stub_energia_defluencia_minima(
@@ -3407,6 +3537,17 @@ class OperationSynthetizer:
             ]
         ):
             f = cls.__stub_VEVAP
+        elif all(
+            [
+                s.variable
+                in [
+                    Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
+                    Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
+                ],
+                s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+            ]
+        ):
+            f = cls.__stub_EARM_UHE
         return f
 
     @classmethod
@@ -3490,15 +3631,11 @@ class OperationSynthetizer:
             synthesis_variables = cls._default_args()
         else:
             all_variables = cls._match_wildcards(variables)
-            synthesis_variables = (
-                cls._process_variable_arguments(all_variables)
+            synthesis_variables = cls._process_variable_arguments(
+                all_variables
             )
-        valid_synthesis = cls.filter_valid_variables(
-            synthesis_variables, uow
-        )
-        synthesis_with_prereqs = cls._add_prereq_synthesis(
-            valid_synthesis
-        )
+        valid_synthesis = cls.filter_valid_variables(synthesis_variables, uow)
+        synthesis_with_prereqs = cls._add_prereq_synthesis(valid_synthesis)
         success_synthesis: List[Tuple[OperationSynthesis, bool]] = []
         for s in synthesis_with_prereqs:
             try:
@@ -3533,8 +3670,3 @@ class OperationSynthetizer:
                 )
 
         cls._export_metadata(success_synthesis, uow)
-
-
-# TODO - implementar metadata na síntese de cenários
-# TODO - implementar metadata nas demais sínteses
-# TODO - implementar cálculo de EARM por UHE

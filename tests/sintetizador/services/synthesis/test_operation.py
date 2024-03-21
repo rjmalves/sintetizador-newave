@@ -366,6 +366,51 @@ def test_sintese_ever_sin(test_settings):
 
 # TODO - VARMI, VARMPI para UHE (consulta pmo.dat e valores de VARMF e VARPF)
 
+# EARM para UHE: calcula produtibilidades acumulando
+
+
+def test_sintese_earmf_uhe(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["EARMF_UHE"], uow)
+    m.assert_called()
+    df = m.mock_calls[-2].args[0]
+    df.to_csv("test_earmf_uhe.csv")
+    # df_ree = None
+    # df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+    # codigos_uhes = df_uhes.loc[df_uhes["ree"] == 2, "codigo_usina"].unique()
+    # with uow:
+    #     df_hidr = uow.files.get_hidr().cadastro
+    # for uhe in codigos_uhes:
+    #     df_uhe = Varmuh.read(
+    #         join(DECK_TEST_DIR, f"varmuh{str(uhe).zfill(3)}.out")
+    #     ).valores
+    #     if df_uhe is None:
+    #         continue
+    #     if df_ree is None:
+    #         df_ree = df_uhe
+    #     else:
+    #         df_ree["valor"] += df_uhe["valor"].to_numpy()
+    #     # Somente para VARM: soma volume mínimo para comparação com síntese,
+    #     # que imprime volume total.
+    #     df_ree["valor"] += df_hidr.at[uhe, "volume_minimo"]
+
+    # __compara_sintese_nwlistop(
+    #     df,
+    #     df_ree,
+    #     dataInicio=datetime(2023, 10, 1),
+    #     cenario=1,
+    #     ree=["SUL"],
+    #     patamar=[0],
+    # )
+
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EARMF_UHE", df_meta, True)
+
+
 # VFPHA, VRET, VDES, QRET, QDES para REE, SBM e SIN (soma valores das UHEs)
 
 
@@ -1553,6 +1598,7 @@ def test_sintese_hliq_uhe(test_settings):
         OperationSynthetizer.synthetize(["HLIQ_UHE"], uow)
     m.assert_called()
     df = m.mock_calls[-2].args[0]
+    df.to_csv("teste_hliq.csv")
     df_arq = __calcula_media_ponderada(
         __adiciona_duracoes_patamares(
             Hliq.read(join(DECK_TEST_DIR, "hliq006.out")).valores
@@ -1567,7 +1613,7 @@ def test_sintese_hliq_uhe(test_settings):
         patamar=[0],
     )
     df_meta = m.mock_calls[-1].args[0]
-    __valida_metadata("HLIQ_UHE", df_meta, False)
+    __valida_metadata("HLIQ_UHE", df_meta, True)
 
 
 # QTUR, QVER, QRET, QDES para UHE (converter para m3/s)
@@ -1582,6 +1628,7 @@ def test_sintese_qtur_uhe(test_settings):
         OperationSynthetizer.synthetize(["QTUR_UHE"], uow)
     m.assert_called()
     df = m.mock_calls[-2].args[0]
+    df.to_csv("teste_qtur.csv")
     df_arq = Vturuh.read(join(DECK_TEST_DIR, "vturuh006.out")).valores
     # Conversão simples para conferência apenas do pat. 0
     df_arq["valor"] *= FATOR_HM3_M3S_MES
@@ -3113,6 +3160,7 @@ def test_sintese_vtur_uhe(test_settings):
         OperationSynthetizer.synthetize(["VTUR_UHE"], uow)
     m.assert_called()
     df = m.mock_calls[0].args[0]
+    df.to_csv("teste_vtur.csv")
     df_arq = Vturuh.read(join(DECK_TEST_DIR, "vturuh001.out")).valores
     __compara_sintese_nwlistop(
         df,
@@ -3157,6 +3205,7 @@ def test_sintese_varmf_uhe(test_settings):
         OperationSynthetizer.synthetize(["VARMF_UHE"], uow)
     m.assert_called()
     df = m.mock_calls[0].args[0]
+    df.to_csv("test_varmf_uhe.csv")
     # Somente para VARM: subtrai volume mínimo para comparação com nwlistop,
     # que imprime somente volume útil.
     with uow:
@@ -3206,6 +3255,7 @@ def test_sintese_ghid_uhe(test_settings):
         OperationSynthetizer.synthetize(["GHID_UHE"], uow)
     m.assert_called()
     df = m.mock_calls[0].args[0]
+    df.to_csv("teste_ghid.csv")
     df_arq = Ghiduh.read(join(DECK_TEST_DIR, "ghiduh001.out")).valores
     __compara_sintese_nwlistop(
         df,
@@ -3655,50 +3705,6 @@ def test_sintese_hmon_uhe(test_settings):
     )
     df_meta = m.mock_calls[-1].args[0]
     __valida_metadata("HMON_UHE", df_meta, False)
-
-
-def test_sintese_hjus_uhe(test_settings):
-    m = MagicMock(lambda df, filename: df)
-    with patch(
-        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
-        new=m,
-    ):
-        OperationSynthetizer.synthetize(["HJUS_UHE"], uow)
-    m.assert_called()
-    df = m.mock_calls[0].args[0]
-    df_arq = Hjus.read(join(DECK_TEST_DIR, "hjus006.out")).valores
-    __compara_sintese_nwlistop(
-        df,
-        df_arq,
-        dataInicio=datetime(2023, 10, 1),
-        cenario=1,
-        usina=["FURNAS"],
-        patamar=[1],
-    )
-    df_meta = m.mock_calls[-1].args[0]
-    __valida_metadata("HJUS_UHE", df_meta, True)
-
-
-def test_sintese_hliq_uhe(test_settings):
-    m = MagicMock(lambda df, filename: df)
-    with patch(
-        "sintetizador.adapters.repository.export.TestExportRepository.synthetize_df",
-        new=m,
-    ):
-        OperationSynthetizer.synthetize(["HLIQ_UHE"], uow)
-    m.assert_called()
-    df = m.mock_calls[0].args[0]
-    df_arq = Hliq.read(join(DECK_TEST_DIR, "hliq006.out")).valores
-    __compara_sintese_nwlistop(
-        df,
-        df_arq,
-        dataInicio=datetime(2023, 10, 1),
-        cenario=1,
-        usina=["FURNAS"],
-        patamar=[1],
-    )
-    df_meta = m.mock_calls[-1].args[0]
-    __valida_metadata("HLIQ_UHE", df_meta, True)
 
 
 def test_sintese_vevp_uhe(test_settings):
