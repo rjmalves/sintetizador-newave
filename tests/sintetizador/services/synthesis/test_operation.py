@@ -378,7 +378,6 @@ def test_sintese_earmf_uhe(test_settings):
         OperationSynthetizer.synthetize(["EARMF_UHE"], uow)
     m.assert_called()
     df = m.mock_calls[-2].args[0]
-    df.to_csv("test_earmf_uhe.csv")
     # df_ree = None
     # df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
     # codigos_uhes = df_uhes.loc[df_uhes["ree"] == 2, "codigo_usina"].unique()
@@ -1598,7 +1597,6 @@ def test_sintese_hliq_uhe(test_settings):
         OperationSynthetizer.synthetize(["HLIQ_UHE"], uow)
     m.assert_called()
     df = m.mock_calls[-2].args[0]
-    df.to_csv("teste_hliq.csv")
     df_arq = __calcula_media_ponderada(
         __adiciona_duracoes_patamares(
             Hliq.read(join(DECK_TEST_DIR, "hliq006.out")).valores
@@ -1628,7 +1626,6 @@ def test_sintese_qtur_uhe(test_settings):
         OperationSynthetizer.synthetize(["QTUR_UHE"], uow)
     m.assert_called()
     df = m.mock_calls[-2].args[0]
-    df.to_csv("teste_qtur.csv")
     df_arq = Vturuh.read(join(DECK_TEST_DIR, "vturuh006.out")).valores
     # Conversão simples para conferência apenas do pat. 0
     df_arq["valor"] *= FATOR_HM3_M3S_MES
@@ -3160,7 +3157,6 @@ def test_sintese_vtur_uhe(test_settings):
         OperationSynthetizer.synthetize(["VTUR_UHE"], uow)
     m.assert_called()
     df = m.mock_calls[0].args[0]
-    df.to_csv("teste_vtur.csv")
     df_arq = Vturuh.read(join(DECK_TEST_DIR, "vturuh001.out")).valores
     __compara_sintese_nwlistop(
         df,
@@ -3205,7 +3201,7 @@ def test_sintese_varmf_uhe(test_settings):
         OperationSynthetizer.synthetize(["VARMF_UHE"], uow)
     m.assert_called()
     df = m.mock_calls[0].args[0]
-    df.to_csv("test_varmf_uhe.csv")
+
     # Somente para VARM: subtrai volume mínimo para comparação com nwlistop,
     # que imprime somente volume útil.
     with uow:
@@ -3255,7 +3251,6 @@ def test_sintese_ghid_uhe(test_settings):
         OperationSynthetizer.synthetize(["GHID_UHE"], uow)
     m.assert_called()
     df = m.mock_calls[0].args[0]
-    df.to_csv("teste_ghid.csv")
     df_arq = Ghiduh.read(join(DECK_TEST_DIR, "ghiduh001.out")).valores
     __compara_sintese_nwlistop(
         df,
