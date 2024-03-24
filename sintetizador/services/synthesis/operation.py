@@ -1102,6 +1102,33 @@ class OperationSynthetizer:
                 SpatialResolution.USINA_HIDROELETRICA,
             ),
         ],
+        OperationSynthesis(
+            Variable.VOLUME_EVAPORADO,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_EVAPORADO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            )
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_EVAPORADO,
+            SpatialResolution.SUBMERCADO,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_EVAPORADO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            )
+        ],
+        OperationSynthesis(
+            Variable.VOLUME_EVAPORADO,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): [
+            OperationSynthesis(
+                Variable.VOLUME_EVAPORADO,
+                SpatialResolution.USINA_HIDROELETRICA,
+            )
+        ],
     }
 
     SYNTHESIS_TO_CACHE: List[OperationSynthesis] = list(
@@ -3318,20 +3345,33 @@ class OperationSynthetizer:
     def _processa_media(cls, df: pd.DataFrame) -> pd.DataFrame:
         cols_valores = ["cenario", "valor"]
         cols_agrupamento = [c for c in df.columns if c not in cols_valores]
-        df_mean = (
-            df.groupby(cols_agrupamento)[["valor"]]
-            .mean(engine="numba")
-            .reset_index()
-        )
+        try:
+            df_mean = (
+                df.groupby(cols_agrupamento)[["valor"]]
+                .mean(engine="numba")
+                .reset_index()
+            )
+        except ZeroDivisionError:
+            df_mean = (
+                df.groupby(cols_agrupamento)[["valor"]]
+                .mean(engine="cython")
+                .reset_index()
+            )
         df_mean["cenario"] = "mean"
-        df_std = (
-            df.groupby(cols_agrupamento)[["valor"]]
-            .std(engine="numba")
-            .reset_index()
-        )
+        try:
+            df_std = (
+                df.groupby(cols_agrupamento)[["valor"]]
+                .std(engine="numba")
+                .reset_index()
+            )
+        except ZeroDivisionError:
+            df_std = (
+                df.groupby(cols_agrupamento)[["valor"]]
+                .std(engine="cython")
+                .reset_index()
+            )
         df_std["cenario"] = "std"
-        df = pd.concat([df, df_mean, df_std], ignore_index=True)
-        return df
+        return pd.concat([df_mean, df_std], ignore_index=True)
 
     @classmethod
     def _processa_quantis(
@@ -3366,13 +3406,14 @@ class OperationSynthetizer:
             columns={level_column[0]: "cenario"}
         )
         df_q["cenario"] = df_q["cenario"].apply(quantile_map)
-        return pd.concat([df, df_q], ignore_index=True)
+        return df_q
 
     @classmethod
     def _postprocess(cls, df: pd.DataFrame) -> pd.DataFrame:
         ti = time()
-        df = cls._processa_quantis(df, [0.05 * i for i in range(21)])
-        df = cls._processa_media(df)
+        df_q = cls._processa_quantis(df, [0.05 * i for i in range(21)])
+        df_m = cls._processa_media(df)
+        df = pd.concat([df, df_q, df_m], ignore_index=True)
         df = df.astype({"cenario": str})
         tf = time()
         if cls.logger:

@@ -1469,7 +1469,11 @@ class OperationVariableBounds:
             if c in cls.IDENTIFICATION_COLUMNS and c not in cols_grp_validas
         ]
         df = df.astype({"serie": int})
-        df_group = df.groupby(cols_group).sum(numeric_only=True).reset_index()
+        df_group = (
+            df.groupby(cols_group)[["patamar", "duracaoPatamar", "valor"]]
+            .sum(engine="numba")
+            .reset_index()
+        )
         if col_grp == "sin" or col_grp is None:
             df_group = df_group.drop(columns=["group"])
         else:
@@ -1506,7 +1510,11 @@ class OperationVariableBounds:
             if c in cls.IDENTIFICATION_COLUMNS and c not in cols_grp_validas
         ]
         df = df.astype({"serie": int})
-        df_group = df.groupby(cols_group).sum(numeric_only=True).reset_index()
+        df_group = (
+            df.groupby(cols_group)[["patamar", "duracaoPatamar", "valor"]]
+            .sum(engine="numba")
+            .reset_index()
+        )
         if col_grp == "sin" or col_grp is None:
             df_group = df_group.drop(columns=["group"])
         else:
@@ -1552,7 +1560,11 @@ class OperationVariableBounds:
             if c in cls.IDENTIFICATION_COLUMNS and c not in cols_grp_validas
         ]
         df = df.astype({"serie": int})
-        df_group = df.groupby(cols_group).sum(numeric_only=True).reset_index()
+        df_group = (
+            df.groupby(cols_group)[["patamar", "duracaoPatamar", "valor"]]
+            .sum(engine="numba")
+            .reset_index()
+        )
         if col_grp:
             df_group = df_group.rename(columns={"group": col_grp})
         else:
@@ -2324,7 +2336,11 @@ class OperationVariableBounds:
             raise RuntimeError(f"Coluna de agrupamento inválida: {col_grp}")
 
         cols_group = ["group", "data"]
-        df_group = df.groupby(cols_group).sum(numeric_only=True).reset_index()
+        df_group = (
+            df.groupby(cols_group)[["patamar", "duracaoPatamar", "valor"]]
+            .sum(engine="numba")
+            .reset_index()
+        )
 
         if ordem_sintese:
             df_group["group"] = pd.Categorical(
