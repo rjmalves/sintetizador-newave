@@ -3292,11 +3292,8 @@ class OperationSynthetizer:
         ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
         mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
         starting_date = datetime(ano_inicio, mes_inicio, 1)
-        data_starting_date = df["dataInicio"].min().to_pydatetime()
-        month_difference = int(
-            (starting_date - data_starting_date) / timedelta(days=30)
-        )
-        return month_difference
+        data_starting_date = df["dataInicio"].min()
+        return starting_date.month - data_starting_date.month
 
     @classmethod
     def _resolve_starting_stage(
@@ -3304,17 +3301,16 @@ class OperationSynthetizer:
     ):
         ti = time()
         month_difference = cls._offset_meses_inicio(df, uow)
-        starting_df = df.copy()
-        starting_df.loc[:, "estagio"] -= month_difference
+        df.loc[:, "estagio"] -= month_difference
         # Considera somente estágios do período de estudo em diante
-        starting_df = starting_df.loc[starting_df["estagio"] > 0]
-        starting_df = starting_df.rename(columns={"serie": "cenario"})
+        df = df.loc[df["estagio"] > 0]
+        df = df.rename(columns={"serie": "cenario"})
         tf = time()
         if cls.logger:
             cls.logger.info(
                 f"Tempo para consideração do estágio inicial: {tf - ti:.2f} s"
             )
-        return starting_df.copy()
+        return df
 
     @classmethod
     def _processa_media(cls, df: pd.DataFrame) -> pd.DataFrame:
