@@ -2,6 +2,7 @@ from typing import Callable, Dict, List, Tuple, Optional, TypeVar, Type
 import pandas as pd  # type: ignore
 import numpy as np  # type: ignore
 import logging
+from time import time
 from traceback import print_exc
 from multiprocessing import Pool
 from datetime import datetime
@@ -2442,9 +2443,11 @@ class ScenarioSynthetizer:
         with uow:
             uow.export.synthetize_df(metadata_df, "METADADOS_CENARIOS")
 
+
     @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
         cls.logger = logging.getLogger("main")
+        ti = time()
         if len(variables) == 0:
             synthesis_variables = cls._default_args()
         else:
@@ -2455,6 +2458,7 @@ class ScenarioSynthetizer:
         valid_synthesis = cls.filter_valid_variables(synthesis_variables, uow)
         success_synthesis: List[ScenarioSynthesis] = []
         for s in valid_synthesis:
+            ti_s = time()
             try:
                 filename = str(s)
                 cls.logger.info(f"Realizando síntese de {filename}")
@@ -2468,9 +2472,13 @@ class ScenarioSynthetizer:
                 df = cls._postprocess(df)
                 with uow:
                     uow.export.synthetize_df(df, filename)
-                    success_synthesis.append(s)
+                success_synthesis.append(s)
+                tf_s = time()
+                cls.logger.info(f"Tempo para síntese de {str(s)}: {tf_s - ti_s:.2f} s")
             except Exception as e:
                 print_exc()
                 cls.logger.error(str(e))
 
         cls._export_metadata(success_synthesis, uow)
+        tf = time()
+        cls.logger.info(f"Tempo para síntese dos cenários: {tf - ti:.2f} s")

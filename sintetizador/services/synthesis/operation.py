@@ -2,7 +2,7 @@ from typing import Callable, Dict, List, Tuple, Optional, Type, TypeVar
 import pandas as pd  # type: ignore
 import numpy as np
 import logging
-
+from time import time
 import traceback
 from multiprocessing import Pool
 from datetime import datetime, timedelta
@@ -2799,6 +2799,8 @@ class OperationSynthetizer:
         df["prod_acum"] = df["prod_ponto"]
         uhes = df["usina"].unique().tolist()
         for uhe in uhes:
+            if cls.logger:
+                cls.logger.info(f"Calculando prodt. acumulada para uhe {uhe}...")
             regulacao_uhe = cadastro_uhes.loc[
                 cadastro_uhes["nome_usina"] == uhe, "tipo_regulacao"
             ].iloc[0]
@@ -2818,6 +2820,7 @@ class OperationSynthetizer:
     def __stub_EARM_UHE(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
+        ti = time()
         sintese_hliq = OperationSynthesis(
             Variable.QUEDA_LIQUIDA,
             synthesis.spatial_resolution,
@@ -2873,6 +2876,12 @@ class OperationSynthetizer:
         df_varm["limiteSuperior"] = (
             df_varm["limiteSuperior"] - df_varm["limiteInferior"]
         ) * df_hliq["prod_acum"].to_numpy()
+
+        tf = time()
+        if cls.logger:
+            cls.logger.info(
+                f"Tempo para conversão do VARM em EARM: {tf - ti:.2f} s"
+            )
 
         return df_varm
 
@@ -3581,7 +3590,12 @@ class OperationSynthetizer:
     def _resolve_bounds(
         cls, s: OperationSynthesis, df: pd.DataFrame, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-        return OperationVariableBounds.resolve_bounds(s, df, uow)
+        ti = time()
+        df = OperationVariableBounds.resolve_bounds(s, df, uow)
+        tf = time()
+        if cls.logger:
+            cls.logger.info(f"Tempo para cálculo dos limites: {tf - ti:.2f} s")
+        return df
 
     @classmethod
     def _resolve_synthesis(
@@ -3627,6 +3641,7 @@ class OperationSynthetizer:
     @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
         cls.logger = logging.getLogger("main")
+        ti = time()
         if len(variables) == 0:
             synthesis_variables = cls._default_args()
         else:
@@ -3638,6 +3653,7 @@ class OperationSynthetizer:
         synthesis_with_prereqs = cls._add_prereq_synthesis(valid_synthesis)
         success_synthesis: List[Tuple[OperationSynthesis, bool]] = []
         for s in synthesis_with_prereqs:
+            ti_s = time()
             try:
                 filename = str(s)
                 found_synthesis = False
@@ -3657,6 +3673,10 @@ class OperationSynthetizer:
                         with uow:
                             uow.export.synthetize_df(df, filename)
                         success_synthesis.append((s, is_stub))
+                        tf_s = time()
+                        cls.logger.info(
+                            f"Tempo para síntese de {str(s)}: {tf_s - ti_s:.2f} s"
+                        )
                 if not found_synthesis:
                     cls.logger.warning(
                         "Nao foram encontrados dados"
@@ -3670,3 +3690,5 @@ class OperationSynthetizer:
                 )
 
         cls._export_metadata(success_synthesis, uow)
+        tf = time()
+        cls.logger.info(f"Tempo para síntese da operação: {tf - ti:.2f} s")
