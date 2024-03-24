@@ -2806,9 +2806,7 @@ class OperationSynthetizer:
         uhes = df["usina"].unique().tolist()
         for uhe in uhes:
             if cls.logger:
-                cls.logger.info(
-                    f"Calculando prodt. acumulada para uhe {uhe}..."
-                )
+                cls.logger.info(f"Calculando prodt. acumulada para {uhe}...")
             regulacao_uhe = cadastro_uhes.loc[
                 cadastro_uhes["nome_usina"] == uhe, "tipo_regulacao"
             ].iloc[0]
@@ -2918,6 +2916,7 @@ class OperationSynthetizer:
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         df = cls._resolve_spatial_resolution(synthesis, uow)
+        ti = time()
         df_pat0 = df.copy()
         df_pat0["patamar"] = 0
         df_pat0["valor"] = (
@@ -2937,7 +2936,13 @@ class OperationSynthetizer:
             numeric_only=True
         )
         df_pat0 = pd.concat([df, df_pat0], ignore_index=True)
-        return df_pat0.sort_values(cols_group + ["patamar"])
+        df_pat0 = df_pat0.sort_values(cols_group + ["patamar"])
+        tf = time()
+        if cls.logger:
+            cls.logger.info(
+                f"Tempo para cálculo do patamar médio: {tf - ti:.2f} s"
+            )
+        return df_pat0
 
     @classmethod
     def __resolve_UHE(
