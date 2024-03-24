@@ -17,7 +17,6 @@ from sintetizador.model.operation.variable import Variable
 from sintetizador.model.operation.spatialresolution import SpatialResolution
 from sintetizador.model.operation.operationsynthesis import OperationSynthesis
 from sintetizador.model.operation.unit import Unit
-from pandarallel import pandarallel
 
 FATOR_HM3_M3S_MES = 1.0 / 2.63
 
@@ -2932,7 +2931,12 @@ class OperationSynthetizer:
                 "valor",
             ]
         ]
-        df_pat0 = df_pat0.groupby(cols_group, as_index=False).parallel_apply(sum)
+        df_pat0 = (
+            df_pat0.groupby(cols_group)[["duracaoPatamar", "valor"]]
+            .sum(engine="numba")
+            .reset_index()
+        )
+        df_pat0["patamar"] = 0
         df_pat0 = pd.concat([df, df_pat0], ignore_index=True)
         df_pat0 = df_pat0.sort_values(cols_group + ["patamar"])
         tf = time()
@@ -3315,11 +3319,15 @@ class OperationSynthetizer:
         cols_valores = ["cenario", "valor"]
         cols_agrupamento = [c for c in df.columns if c not in cols_valores]
         df_mean = (
-            df.groupby(cols_agrupamento).mean(numeric_only=True).reset_index()
+            df.groupby(cols_agrupamento)[["valor"]]
+            .mean(engine="numba")
+            .reset_index()
         )
         df_mean["cenario"] = "mean"
         df_std = (
-            df.groupby(cols_agrupamento).std(numeric_only=True).reset_index()
+            df.groupby(cols_agrupamento)[["valor"]]
+            .std(engine="numba")
+            .reset_index()
         )
         df_std["cenario"] = "std"
         df = pd.concat([df, df_mean, df_std], ignore_index=True)
@@ -3332,8 +3340,8 @@ class OperationSynthetizer:
         cols_valores = ["cenario", "valor"]
         cols_agrupamento = [c for c in df.columns if c not in cols_valores]
         df_q = (
-            df.groupby(cols_agrupamento)
-            .quantile(quantiles, numeric_only=True)
+            df.groupby(cols_agrupamento)[["cenario", "valor"]]
+            .quantile(quantiles)
             .reset_index()
         )
 
@@ -3683,7 +3691,6 @@ class OperationSynthetizer:
     @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
         cls.logger = logging.getLogger("main")
-        pandarallel.initialize(nb_workers=int(Settings().processors))
         ti = time()
         if len(variables) == 0:
             synthesis_variables = cls._default_args()
