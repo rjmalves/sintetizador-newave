@@ -2312,6 +2312,7 @@ class OperationSynthetizer:
         if "submercado" in df.columns:
             return df
         else:
+            ti = time()
             cols = df.columns.tolist()
             rees = cls._validate_data(
                 cls._get_ree(uow).rees, pd.DataFrame, "REEs"
@@ -2336,6 +2337,11 @@ class OperationSynthetizer:
                 nomes_sbms_df, n_series * n_estagios * n_patamares
             )
             # Reordena as colunas e retorna
+            tf = time()
+            if cls.logger:
+                cls.logger.info(
+                    f"Tempo para adicionar SBM dos REE: {tf - ti:.2f} s"
+                )
             return df[["ree", "submercado"] + [c for c in cols if c != "ree"]]
 
     @classmethod
@@ -2800,7 +2806,9 @@ class OperationSynthetizer:
         uhes = df["usina"].unique().tolist()
         for uhe in uhes:
             if cls.logger:
-                cls.logger.info(f"Calculando prodt. acumulada para uhe {uhe}...")
+                cls.logger.info(
+                    f"Calculando prodt. acumulada para uhe {uhe}..."
+                )
             regulacao_uhe = cadastro_uhes.loc[
                 cadastro_uhes["nome_usina"] == uhe, "tipo_regulacao"
             ].iloc[0]
@@ -3004,6 +3012,7 @@ class OperationSynthetizer:
         if "ree" in df.columns and "submercado" in df.columns:
             return df
         else:
+            ti = time()
             cols = df.columns.tolist()
             confhd = cls._validate_data(
                 cls._get_confhd(uow).usinas, pd.DataFrame, "UHEs"
@@ -3034,6 +3043,11 @@ class OperationSynthetizer:
             df["submercado"] = np.repeat(
                 nomes_sbms_df, n_series * n_estagios * n_patamares
             )
+            tf = time()
+            if cls.logger:
+                cls.logger.info(
+                    f"Tempo para adicionar REE e SBM das UHE: {tf - ti:.2f} s"
+                )
             # Reordena as colunas e retorna
             return df[
                 ["usina", "ree", "submercado"]
@@ -3163,6 +3177,7 @@ class OperationSynthetizer:
         if "submercado" in df.columns:
             return df
         else:
+            ti = time()
             cols = df.columns.tolist()
             utes = cls._validate_data(
                 cls._get_conft(uow).usinas, pd.DataFrame, "UTEs"
@@ -3186,6 +3201,11 @@ class OperationSynthetizer:
             df["submercado"] = np.repeat(
                 nomes_sbms_df, n_series * n_estagios * n_patamares
             )
+            tf = time()
+            if cls.logger:
+                cls.logger.info(
+                    f"Tempo para adicionar SBM das UTE: {tf - ti:.2f} s"
+                )
             # Reordena as colunas e retorna
             return df[
                 ["usina", "submercado"] + [c for c in cols if c != "usina"]
@@ -3270,12 +3290,18 @@ class OperationSynthetizer:
     def _resolve_starting_stage(
         cls, df: pd.DataFrame, uow: AbstractUnitOfWork
     ):
+        ti = time()
         month_difference = cls._offset_meses_inicio(df, uow)
         starting_df = df.copy()
         starting_df.loc[:, "estagio"] -= month_difference
         # Considera somente estágios do período de estudo em diante
         starting_df = starting_df.loc[starting_df["estagio"] > 0]
         starting_df = starting_df.rename(columns={"serie": "cenario"})
+        tf = time()
+        if cls.logger:
+            cls.logger.info(
+                f"Tempo para consideração do estágio inicial: {tf - ti:.2f} s"
+            )
         return starting_df.copy()
 
     @classmethod
@@ -3330,9 +3356,15 @@ class OperationSynthetizer:
 
     @classmethod
     def _postprocess(cls, df: pd.DataFrame) -> pd.DataFrame:
+        ti = time()
         df = cls._processa_quantis(df, [0.05 * i for i in range(21)])
         df = cls._processa_media(df)
         df = df.astype({"cenario": str})
+        tf = time()
+        if cls.logger:
+            cls.logger.info(
+                f"Tempo para pos-processamento: {tf - ti:.2f} s"
+            )
         return df
 
     @classmethod
