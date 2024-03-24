@@ -2992,12 +2992,19 @@ class OperationSynthetizer:
             dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
         if cls.logger is not None:
             cls.logger.info("Compactando dados...")
+        ti = time()
         dfs_validos = [d for d in dfs.values() if d is not None]
         if len(dfs_validos) > 0:
             df_completo = pd.concat(dfs_validos, ignore_index=True)
 
         if not df_completo.empty:
             df_completo = df_completo.loc[df_completo["dataInicio"] < fim, :]
+
+        tf = time()
+        if cls.logger is not None:
+            cls.logger.info(
+                f"Tempo para compactação dos dados: {tf - ti:.2f} s"
+            )
 
         df_completo = cls._add_ree_submercado_uhes(df_completo, uow)
         return df_completo
@@ -3362,9 +3369,7 @@ class OperationSynthetizer:
         df = df.astype({"cenario": str})
         tf = time()
         if cls.logger:
-            cls.logger.info(
-                f"Tempo para pos-processamento: {tf - ti:.2f} s"
-            )
+            cls.logger.info(f"Tempo para pos-processamento: {tf - ti:.2f} s")
         return df
 
     @classmethod
@@ -3616,7 +3621,13 @@ class OperationSynthetizer:
         cls, s: OperationSynthesis, df: pd.DataFrame
     ):
         if s in cls.SYNTHESIS_TO_CACHE:
+            ti = time()
             cls.CACHED_SYNTHESIS[s] = df.copy()
+            tf = time()
+            if cls.logger:
+                cls.logger.info(
+                    f"Tempo para armazenamento na cache: {tf - ti:.2f} s"
+                )
 
     @classmethod
     def _resolve_bounds(
