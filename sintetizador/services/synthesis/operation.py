@@ -17,7 +17,7 @@ from sintetizador.model.operation.variable import Variable
 from sintetizador.model.operation.spatialresolution import SpatialResolution
 from sintetizador.model.operation.operationsynthesis import OperationSynthesis
 from sintetizador.model.operation.unit import Unit
-
+from pandarallel import pandarallel
 
 FATOR_HM3_M3S_MES = 1.0 / 2.63
 
@@ -2932,9 +2932,7 @@ class OperationSynthetizer:
                 "valor",
             ]
         ]
-        df_pat0 = df_pat0.groupby(cols_group, as_index=False).sum(
-            numeric_only=True
-        )
+        df_pat0 = df_pat0.groupby(cols_group, as_index=False).parallel_apply(sum)
         df_pat0 = pd.concat([df, df_pat0], ignore_index=True)
         df_pat0 = df_pat0.sort_values(cols_group + ["patamar"])
         tf = time()
@@ -3685,6 +3683,7 @@ class OperationSynthetizer:
     @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
         cls.logger = logging.getLogger("main")
+        pandarallel.initialize(nb_workers=int(Settings().processors))
         ti = time()
         if len(variables) == 0:
             synthesis_variables = cls._default_args()
