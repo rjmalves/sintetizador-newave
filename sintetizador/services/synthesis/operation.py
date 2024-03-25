@@ -1816,6 +1816,8 @@ class OperationSynthetizer:
 
     logger: Optional[logging.Logger] = None
 
+    UHE_REE_SBM_MAP: Optional[pd.DataFrame] = None
+
     @classmethod
     def _get_dger(cls, uow: AbstractUnitOfWork) -> Dger:
         with uow:
@@ -3107,6 +3109,34 @@ class OperationSynthetizer:
         return df_completo
 
     @classmethod
+    def _get_uhe_ree_sbm_df(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        if cls.UHE_REE_SBM_MAP is None:
+            confhd = cls._validate_data(
+                cls._get_confhd(uow).usinas, pd.DataFrame, "UHEs"
+            ).set_index("nome_usina")
+            rees = cls._validate_data(
+                cls._get_ree(uow).rees, pd.DataFrame, "REEs"
+            ).set_index("codigo")
+            sistema = cls._validate_data(
+                cls._get_sistema(uow).custo_deficit, pd.DataFrame, "SBMs"
+            )
+            sistema = sistema.drop_duplicates(
+                ["codigo_submercado", "nome_submercado"]
+            ).set_index("codigo_submercado")
+            df_aux = pd.DataFrame(data={"uhes": confhd.index.tolist()})
+            df_aux["ree"] = df_aux["uhes"].apply(
+                lambda u: rees.at[confhd.at[u, "ree"], "nome"]
+            )
+            df_aux["submercado"] = df_aux["uhes"].apply(
+                lambda u: rees.at[confhd.at[u, "ree"], "submercado"]
+            )
+            df_aux["nome_submercado"] = df_aux["submercado"].apply(
+                lambda c: sistema.at[c, "nome_submercado"]
+            )
+            cls.UHE_REE_SBM_MAP = df_aux.set_index("uhes")
+        return cls.UHE_REE_SBM_MAP.copy()
+
+    @classmethod
     def _add_ree_submercado_uhes(
         cls, df: pd.DataFrame, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
@@ -3132,17 +3162,9 @@ class OperationSynthetizer:
             ).set_index("codigo_submercado")
             # Obtem os nomes dos REEs e SBMs na mesma ordem em que aparecem as UHEs
             uhes_df = np.array(df["usina"].unique().tolist())
-            df_aux = pd.DataFrame(data={"uhes": uhes_df})
-            df_aux["ree"] = df_aux["uhes"].apply(
-                lambda u: rees.at[confhd.at[u, "ree"], "nome"]
-            )
-            df_aux["submercado"] = df_aux["uhes"].apply(
-                lambda u: rees.at[confhd.at[u, "ree"], "submercado"]
-            )
-            df_aux["nome_submercado"] = df_aux["submercado"].apply(
-                lambda c: sistema.at[c, "nome_submercado"]
-            )
             # Aplica de modo posicional por desempenho
+            df_aux = cls._get_uhe_ree_sbm_df(uow)
+            df_aux = df_aux.loc[uhes_df]
             n_patamares = len(df["patamar"].unique())
             n_estagios = len(df["estagio"].unique())
             n_series = len(df["serie"].unique())
