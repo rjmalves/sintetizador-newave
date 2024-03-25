@@ -3021,15 +3021,14 @@ class OperationSynthetizer:
             df_pat0["valor"] * df_pat0["duracaoPatamar"]
         ) / cls.STAGE_DURATION_HOURS
         df_base = df.iloc[::n_pats].reset_index().copy()
-        # df_base = df.drop_duplicates(subset=cols_dup, ignore_index=True).copy()
         df_base["patamar"] = 0
         df_base["duracaoPatamar"] = cls.STAGE_DURATION_HOURS
         arr = df_pat0["valor"].to_numpy()
         n_linhas = arr.shape[0]
         n_elementos_distintos = n_linhas // n_pats
         df_base["valor"] = arr.reshape((n_elementos_distintos, -1)).sum(axis=1)
-        df = pd.concat([df_pat0, df_base], ignore_index=True, copy=True)
-        df = df.sort_values(cols_dup + ["patamar"])
+        df_pat0 = pd.concat([df_pat0, df_base], ignore_index=True, copy=True)
+        df_pat0 = df.sort_values(cols_dup + ["patamar"])
         tf = time()
         if cls.logger:
             cls.logger.info(
