@@ -7,7 +7,16 @@ import traceback
 from multiprocessing import Pool
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta  # type: ignore
-from inewave.newave import Dger, Ree, Confhd, Conft, Sistema, Clast, Hidr
+from inewave.newave import (
+    Dger,
+    Ree,
+    Confhd,
+    Conft,
+    Sistema,
+    Clast,
+    Hidr,
+    Patamar,
+)
 from sintetizador.utils.log import Log
 from sintetizador.utils.regex import match_variables_with_wildcards
 from sintetizador.model.settings import Settings
@@ -1899,6 +1908,19 @@ class OperationSynthetizer:
             return sist
 
     @classmethod
+    def _get_patamar(cls, uow: AbstractUnitOfWork) -> Patamar:
+        with uow:
+            pat = uow.files.get_patamar()
+            if pat is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do patamar.dat para"
+                        + " síntese da operação"
+                    )
+                raise RuntimeError()
+            return pat
+
+    @classmethod
     def _validate_data(cls, data, type: Type[T], msg: str = "dados") -> T:
         if not isinstance(data, type):
             if cls.logger is not None:
@@ -2937,35 +2959,77 @@ class OperationSynthetizer:
         )
         return df_meta
 
+    # @classmethod
+    # def __stub_calc_pat_0_weighted_mean(
+    #     cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    # ) -> pd.DataFrame:
+    #     df = cls._resolve_spatial_resolution(synthesis, uow)
+    #     ti = time()
+    #     df_pat0 = df.copy()
+    #     df_pat0["patamar"] = 0
+    #     df_pat0["valor"] = (
+    #         df_pat0["valor"] * df_pat0["duracaoPatamar"]
+    #     ) / cls.STAGE_DURATION_HOURS
+    #     cols_group = [
+    #         c
+    #         for c in df.columns
+    #         if c
+    #         not in [
+    #             "patamar",
+    #             "duracaoPatamar",
+    #             "valor",
+    #         ]
+    #     ]
+    #     df_pat0 = (
+    #         df_pat0.groupby(cols_group, sort=False)[["duracaoPatamar", "valor"]]
+    #         .sum(engine="numba")
+    #         .reset_index()
+    #     )
+    #     df_pat0["patamar"] = 0
+    #     df_pat0 = pd.concat([df, df_pat0], ignore_index=True)
+    #     df_pat0 = df_pat0.sort_values(cols_group + ["patamar"])
+    #     tf = time()
+    #     if cls.logger:
+    #         cls.logger.info(
+    #             f"Tempo para cálculo do patamar médio: {tf - ti:.2f} s"
+    #         )
+    #     return df_pat0
+
     @classmethod
     def __stub_calc_pat_0_weighted_mean(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         df = cls._resolve_spatial_resolution(synthesis, uow)
+        n_pats = cls._validate_data(
+            cls._get_patamar(uow).numero_patamares, int, "patamar"
+        )
         ti = time()
-        df_pat0 = df.copy()
-        df_pat0["patamar"] = 0
-        df_pat0["valor"] = (
-            df_pat0["valor"] * df_pat0["duracaoPatamar"]
-        ) / cls.STAGE_DURATION_HOURS
-        cols_group = [
+        cols_dup = [
             c
             for c in df.columns
             if c
             not in [
+                "dataInicio",
+                "dataFim",
                 "patamar",
                 "duracaoPatamar",
                 "valor",
             ]
         ]
-        df_pat0 = (
-            df_pat0.groupby(cols_group, sort=False)[["duracaoPatamar", "valor"]]
-            .sum(engine="numba")
-            .reset_index()
-        )
-        df_pat0["patamar"] = 0
-        df_pat0 = pd.concat([df, df_pat0], ignore_index=True)
-        df_pat0 = df_pat0.sort_values(cols_group + ["patamar"])
+        df_pat0 = df.copy()
+        df_pat0["valor"] = (
+            df_pat0["valor"] * df_pat0["duracaoPatamar"]
+        ) / cls.STAGE_DURATION_HOURS
+        df_base = df.iloc[::n_pats].reset_index().copy()
+        # df_base = df.drop_duplicates(subset=cols_dup, ignore_index=True).copy()
+        df_base["patamar"] = 0
+        df_base["duracaoPatamar"] = cls.STAGE_DURATION_HOURS
+        arr = df_pat0["valor"].to_numpy()
+        n_linhas = arr.shape[0]
+        n_elementos_distintos = n_linhas // n_pats
+        df_base["valor"] = arr.reshape((n_elementos_distintos, -1)).sum(axis=1)
+        df = pd.concat([df_pat0, df_base], ignore_index=True, copy=True)
+        df = df.sort_values(cols_dup + ["patamar"])
         tf = time()
         if cls.logger:
             cls.logger.info(
