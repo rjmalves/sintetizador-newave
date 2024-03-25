@@ -3132,20 +3132,26 @@ class OperationSynthetizer:
             ).set_index("codigo_submercado")
             # Obtem os nomes dos REEs e SBMs na mesma ordem em que aparecem as UHEs
             uhes_df = np.array(df["usina"].unique().tolist())
-            rees_df = [rees.at[confhd.at[u, "ree"], "nome"] for u in uhes_df]
-            codigos_sbms_df = [
-                rees.at[confhd.at[u, "ree"], "submercado"] for u in uhes_df
-            ]
-            nomes_sbms_df = [
-                sistema.at[c, "nome_submercado"] for c in codigos_sbms_df
-            ]
+            df_aux = pd.DataFrame(data={"uhes": uhes_df})
+            df_aux["ree"] = df_aux["uhes"].apply(
+                lambda u: rees.at[confhd.at[u, "ree"], "nome"]
+            )
+            df_aux["submercado"] = df_aux["uhes"].apply(
+                lambda u: rees.at[confhd.at[u, "ree"], "submercado"]
+            )
+            df_aux["nome_submercado"] = df_aux["submercado"].apply(
+                lambda c: sistema.at[c, "nome_submercado"]
+            )
             # Aplica de modo posicional por desempenho
             n_patamares = len(df["patamar"].unique())
             n_estagios = len(df["estagio"].unique())
             n_series = len(df["serie"].unique())
-            df["ree"] = np.repeat(rees_df, n_series * n_estagios * n_patamares)
+            df["ree"] = np.repeat(
+                df_aux["ree"].tolist(), n_series * n_estagios * n_patamares
+            )
             df["submercado"] = np.repeat(
-                nomes_sbms_df, n_series * n_estagios * n_patamares
+                df_aux["nome_submercado"].tolist(),
+                n_series * n_estagios * n_patamares,
             )
             tf = time()
             if cls.logger:
