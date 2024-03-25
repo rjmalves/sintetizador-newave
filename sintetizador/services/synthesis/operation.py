@@ -2959,7 +2959,7 @@ class OperationSynthetizer:
             ]
         ]
         df_pat0 = (
-            df_pat0.groupby(cols_group)[["duracaoPatamar", "valor"]]
+            df_pat0.groupby(cols_group, sort=False)[["duracaoPatamar", "valor"]]
             .sum(engine="numba")
             .reset_index()
         )
@@ -3347,26 +3347,26 @@ class OperationSynthetizer:
         cols_agrupamento = [c for c in df.columns if c not in cols_valores]
         try:
             df_mean = (
-                df.groupby(cols_agrupamento)[["valor"]]
+                df.groupby(cols_agrupamento, sort=False)[["valor"]]
                 .mean(engine="numba")
                 .reset_index()
             )
         except ZeroDivisionError:
             df_mean = (
-                df.groupby(cols_agrupamento)[["valor"]]
+                df.groupby(cols_agrupamento, sort=False)[["valor"]]
                 .mean(engine="cython")
                 .reset_index()
             )
         df_mean["cenario"] = "mean"
         try:
             df_std = (
-                df.groupby(cols_agrupamento)[["valor"]]
+                df.groupby(cols_agrupamento, sort=False)[["valor"]]
                 .std(engine="numba")
                 .reset_index()
             )
         except ZeroDivisionError:
             df_std = (
-                df.groupby(cols_agrupamento)[["valor"]]
+                df.groupby(cols_agrupamento, sort=False)[["valor"]]
                 .std(engine="cython")
                 .reset_index()
             )
@@ -3380,7 +3380,7 @@ class OperationSynthetizer:
         cols_valores = ["cenario", "valor"]
         cols_agrupamento = [c for c in df.columns if c not in cols_valores]
         df_q = (
-            df.groupby(cols_agrupamento)[["cenario", "valor"]]
+            df.groupby(cols_agrupamento, sort=False)[["cenario", "valor"]]
             .quantile(quantiles)
             .reset_index()
         )
