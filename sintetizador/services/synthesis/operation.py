@@ -43,7 +43,7 @@ class OperationSynthetizer:
         "usina",
         "patamar",
         "duracaoPatamar",
-        "serie",
+        "cenario",
     ]
 
     STAGE_DURATION_HOURS = 730
@@ -219,6 +219,8 @@ class OperationSynthetizer:
     ]
 
     CACHED_SYNTHESIS: Dict[OperationSynthesis, pd.DataFrame] = {}
+
+    ORDERED_SYNTHESIS_ENTITIES: Dict[OperationSynthesis, Dict[str, list]] = {}
 
     # Declaração de dependência entre uma síntese e outras,
     # para o caso de variáveis que não são explicitamente fornecidas
@@ -2057,6 +2059,22 @@ class OperationSynthetizer:
         return result_synthesis
 
     @classmethod
+    def _get_unique_col_values_in_order(
+        cls, df: pd.DataFrame, cols: List[str]
+    ):
+        return {col: df[col].unique().tolist() for col in cols}
+
+    @classmethod
+    def _set_ordered_entities(
+        cls, s: OperationSynthesis, entities: Dict[str, list]
+    ):
+        cls.ORDERED_SYNTHESIS_ENTITIES[s] = entities
+
+    @classmethod
+    def _get_ordered_entities(cls, s: OperationSynthesis) -> Dict[str, list]:
+        return cls.ORDERED_SYNTHESIS_ENTITIES[s]
+
+    @classmethod
     def __obtem_duracoes_patamares(
         cls, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
@@ -2092,15 +2110,15 @@ class OperationSynthetizer:
         n_datas = len(datas)
         patamares = df["patamar"].unique().tolist()
         n_patamares = len(patamares)
-        n_series = int(df.shape[0] / (n_datas * n_patamares))
+        n_cenarios = int(df.shape[0] / (n_datas * n_patamares))
         df["serie"] = np.tile(
-            np.repeat(np.arange(1, n_series + 1), n_patamares), n_datas
+            np.repeat(np.arange(1, n_cenarios + 1), n_patamares), n_datas
         )
         # Atribui estagio e dataFim de forma posicional
         estagios = list(range(1, n_datas + 1))
-        estagios_df = np.repeat(estagios, n_series * n_patamares)
+        estagios_df = np.repeat(estagios, n_cenarios * n_patamares)
         datasFim = [d + relativedelta(months=1) for d in datas]
-        datasFim_df = np.repeat(datasFim, n_series * n_patamares)
+        datasFim_df = np.repeat(datasFim, n_cenarios * n_patamares)
         df = df.rename(columns={"data": "dataInicio"})
         df["estagio"] = estagios_df
         df["dataFim"] = datasFim_df
@@ -2111,7 +2129,7 @@ class OperationSynthetizer:
         for d in datas:
             duracoes_data = df_pat.loc[df_pat["data"] == d, "valor"].to_numpy()
             duracoes_patamares = np.concatenate(
-                (duracoes_patamares, np.tile(duracoes_data, n_series))
+                (duracoes_patamares, np.tile(duracoes_data, n_cenarios))
             )
         df["duracaoPatamar"] = cls.STAGE_DURATION_HOURS * duracoes_patamares
         return df[
@@ -2175,6 +2193,7 @@ class OperationSynthetizer:
             cols = df_sbm.columns.tolist()
             df_sbm["submercado"] = sbm_name
             df_sbm = df_sbm[["submercado"] + cols]
+            df_sbm = df_sbm.rename(columns={"serie": "cenario"})
             return df_sbm
 
     @classmethod
@@ -2213,6 +2232,16 @@ class OperationSynthetizer:
         if len(dfs_validos) > 0:
             df_completo = pd.concat(dfs_validos, ignore_index=True)
 
+        # Otimização: ordena as entidades para facilitar a busca
+        usinas = cls._get_unique_col_values_in_order(
+            df_completo, ["submercado"]
+        )
+        outras_cols = cls._get_unique_col_values_in_order(
+            dfs_validos[0],
+            ["estagio", "dataInicio", "dataFim", "patamar", "cenario"],
+        )
+        cls._set_ordered_entities(synthesis, {**usinas, **outras_cols})
+
         return df_completo
 
     @classmethod
@@ -2250,6 +2279,7 @@ class OperationSynthetizer:
             df_sbp["submercadoDe"] = sbm1_name
             df_sbp["submercadoPara"] = sbm2_name
             df_sbp = df_sbp[["submercadoDe", "submercadoPara"] + cols]
+
             return df_sbp
 
     @classmethod
@@ -2288,6 +2318,17 @@ class OperationSynthetizer:
         dfs_validos = [d for d in dfs.values() if d is not None]
         if len(dfs_validos) > 0:
             df_completo = pd.concat(dfs_validos, ignore_index=True)
+        df_completo = df_completo.rename(columns={"serie": "cenario"})
+
+        # Otimização: ordena as entidades para facilitar a busca
+        usinas = cls._get_unique_col_values_in_order(
+            df_completo, ["submercadoDe", "submercadoPara"]
+        )
+        outras_cols = cls._get_unique_col_values_in_order(
+            dfs_validos[0],
+            ["estagio", "dataInicio", "dataFim", "patamar", "cenario"],
+        )
+        cls._set_ordered_entities(synthesis, {**usinas, **outras_cols})
 
         return df_completo
 
@@ -2320,6 +2361,7 @@ class OperationSynthetizer:
             cols = df_sbm.columns.tolist()
             df_sbm["ree"] = ree_name
             df_sbm = df_sbm[["ree"] + cols]
+            df_sbm = df_sbm.rename(columns={"serie": "cenario"})
             return df_sbm
 
     @classmethod
@@ -2348,13 +2390,21 @@ class OperationSynthetizer:
         if len(dfs_validos) > 0:
             df_completo = pd.concat(dfs_validos, ignore_index=True)
 
-        df_completo = cls._add_submercado_rees(df_completo, uow)
+        # Otimização: ordena as entidades para facilitar a busca
+        usinas = cls._get_unique_col_values_in_order(df_completo, ["ree"])
+        outras_cols = cls._get_unique_col_values_in_order(
+            dfs_validos[0],
+            ["estagio", "dataInicio", "dataFim", "patamar", "cenario"],
+        )
+        cls._set_ordered_entities(synthesis, {**usinas, **outras_cols})
+
+        df_completo = cls._add_submercado_rees(synthesis, df_completo, uow)
 
         return df_completo
 
     @classmethod
     def _add_submercado_rees(
-        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
+        cls, s: OperationSynthesis, df: pd.DataFrame, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         """
         Adiciona a informação do SBM a uma síntese feita para REEs.
@@ -2374,17 +2424,18 @@ class OperationSynthetizer:
                 ["codigo_submercado", "nome_submercado"]
             ).set_index("codigo_submercado")
             # Obtem os nomes dos SBMs na mesma ordem em que aparecem os REEs
-            rees_df = np.array(df["ree"].unique().tolist())
+            entities = cls._get_ordered_entities(s)
+            rees_df = entities["ree"]
             codigos_sbms_df = [rees.at[r, "submercado"] for r in rees_df]
             nomes_sbms_df = [
                 sistema.at[c, "nome_submercado"] for c in codigos_sbms_df
             ]
             # Aplica de modo posicional por desempenho
-            n_patamares = len(df["patamar"].unique())
-            n_estagios = len(df["estagio"].unique())
-            n_series = len(df["serie"].unique())
+            n_patamares = len(entities["patamar"])
+            n_estagios = len(entities["estagio"])
+            n_cenarios = len(entities["cenario"])
             df["submercado"] = np.repeat(
-                nomes_sbms_df, n_series * n_estagios * n_patamares
+                nomes_sbms_df, n_cenarios * n_estagios * n_patamares
             )
             # Reordena as colunas e retorna
             tf = time()
@@ -2424,6 +2475,7 @@ class OperationSynthetizer:
             cols = df_uhe.columns.tolist()
             df_uhe["usina"] = uhe_name
             df_uhe = df_uhe[["usina"] + cols]
+            df_uhe = df_uhe.rename(columns={"serie": "cenario"})
             return df_uhe
 
     @classmethod
@@ -2432,7 +2484,7 @@ class OperationSynthetizer:
     ) -> pd.DataFrame:
         if df is None:
             return df
-        df.sort_values(["classe", "data", "serie", "patamar"], inplace=True)
+        df.sort_values(["classe", "data", "cenario", "patamar"], inplace=True)
         classes = df["classe"].unique().tolist()
         n_classes = len(classes)
         datas = df["data"].unique().tolist()
@@ -2440,15 +2492,15 @@ class OperationSynthetizer:
         n_datas = len(datas)
         patamares = df["patamar"].unique().tolist()
         n_patamares = len(patamares)
-        n_series = int(df.shape[0] / (n_datas * n_patamares * n_classes))
+        n_cenarios = int(df.shape[0] / (n_datas * n_patamares * n_classes))
         # Atribui estagio e dataFim de forma posicional
         estagios = list(range(1, n_datas + 1))
         estagios_df = np.tile(
-            np.repeat(estagios, n_series * n_patamares), n_classes
+            np.repeat(estagios, n_cenarios * n_patamares), n_classes
         )
         datasFim = [d + relativedelta(months=1) for d in datas]
         datasFim_df = np.tile(
-            np.repeat(datasFim, n_series * n_patamares), n_classes
+            np.repeat(datasFim, n_cenarios * n_patamares), n_classes
         )
         df = df.copy()
         df["estagio"] = estagios_df
@@ -2461,7 +2513,7 @@ class OperationSynthetizer:
         for d in datas:
             duracoes_data = df_pat.loc[df_pat["data"] == d, "valor"].to_numpy()
             duracoes_patamares = np.concatenate(
-                (duracoes_patamares, np.tile(duracoes_data, n_series))
+                (duracoes_patamares, np.tile(duracoes_data, n_cenarios))
             )
         duracoes_patamares = np.tile(duracoes_patamares, n_classes)
         df["duracaoPatamar"] = cls.STAGE_DURATION_HOURS * duracoes_patamares
@@ -2490,6 +2542,9 @@ class OperationSynthetizer:
                     submercado=sbm_index,
                 ),
                 uow,
+            )
+            df_gtert = df_gtert.rename(
+                columns={"serie": "cenario", "classe": "usina"}
             )
             return df_gtert
 
@@ -2732,25 +2787,25 @@ class OperationSynthetizer:
         else:
             groups = [1]
         n_groups = len(groups)
-        series = df_inicial["serie"].unique().tolist()
-        n_series = len(series)
+        cenarios = df_inicial["cenario"].unique().tolist()
+        n_cenarios = len(cenarios)
         estagios = df_inicial["estagio"].unique().tolist()
         n_estagios = len(estagios)
         # Faz uma atribuição posicional. A maneira mais pythonica é lenta.
         offset_meses = cls._offset_meses_inicio(df_inicial, uow)
-        offsets_groups = [i * n_series * n_estagios for i in range(n_groups)]
-        indices_primeiros_estagios = offset_meses * n_series + np.tile(
-            np.arange(n_series), n_groups
+        offsets_groups = [i * n_cenarios * n_estagios for i in range(n_groups)]
+        indices_primeiros_estagios = offset_meses * n_cenarios + np.tile(
+            np.arange(n_cenarios), n_groups
         )
-        indices_primeiros_estagios += np.repeat(offsets_groups, n_series)
+        indices_primeiros_estagios += np.repeat(offsets_groups, n_cenarios)
         earmi_pmo = earmi_pmo.loc[earmi_pmo["group"].isin(groups)]
         valores_earmi = (
             earmi_pmo.set_index("group").loc[groups, col_earmi_pmo].to_numpy()
         )
         valores_iniciais = df_inicial["valor"].to_numpy()
-        valores_iniciais[n_series:] = valores_iniciais[:-n_series]
+        valores_iniciais[n_cenarios:] = valores_iniciais[:-n_cenarios]
         valores_iniciais[indices_primeiros_estagios] = np.repeat(
-            valores_earmi, n_series
+            valores_earmi, n_cenarios
         )
         df_inicial["valor"] = valores_iniciais
         df_inicial["valor"] = df_inicial["valor"].fillna(0.0)
@@ -2791,20 +2846,21 @@ class OperationSynthetizer:
             == Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL
             else "valor_percentual"
         )
+        entities = cls._get_ordered_entities(sintese_final)
         df_inicial = df_final.copy()
-        uhes = df_inicial["usina"].unique().tolist()
+        uhes = entities["usina"]
         n_uhes = len(uhes)
-        series = df_inicial["serie"].unique().tolist()
-        n_series = len(series)
-        estagios = df_inicial["estagio"].unique().tolist()
+        cenarios = entities["cenario"]
+        n_cenarios = len(cenarios)
+        estagios = entities["estagio"]
         n_estagios = len(estagios)
         # Faz uma atribuição posicional. A maneira mais pythonica é lenta.
         offset_meses = cls._offset_meses_inicio(df_inicial, uow)
-        offsets_uhes = [i * n_series * n_estagios for i in range(n_uhes)]
-        indices_primeiros_estagios = offset_meses * n_series + np.tile(
-            np.arange(n_series), n_uhes
+        offsets_uhes = [i * n_cenarios * n_estagios for i in range(n_uhes)]
+        indices_primeiros_estagios = offset_meses * n_cenarios + np.tile(
+            np.arange(n_cenarios), n_uhes
         )
-        indices_primeiros_estagios += np.repeat(offsets_uhes, n_series)
+        indices_primeiros_estagios += np.repeat(offsets_uhes, n_cenarios)
         varmi_pmo = varmi_pmo.loc[varmi_pmo["nome_usina"].isin(uhes)]
         valores_varmi = (
             varmi_pmo.set_index("nome_usina")
@@ -2812,9 +2868,9 @@ class OperationSynthetizer:
             .to_numpy()
         )
         valores_iniciais = df_inicial["valor"].to_numpy()
-        valores_iniciais[n_series:] = valores_iniciais[:-n_series]
+        valores_iniciais[n_cenarios:] = valores_iniciais[:-n_cenarios]
         valores_iniciais[indices_primeiros_estagios] = np.repeat(
-            valores_varmi, n_series
+            valores_varmi, n_cenarios
         )
         df_inicial["valor"] = valores_iniciais
         df_inicial["valor"] = df_inicial["valor"].fillna(0.0)
@@ -2842,7 +2898,7 @@ class OperationSynthetizer:
 
     @classmethod
     def _acumula_produtibilidades_reservatorios(
-        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
+        cls, df: pd.DataFrame, uhes: List[str], uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         df_uhes = cls._validate_data(
             cls._get_confhd(uow).usinas, pd.DataFrame, "UHEs"
@@ -2853,7 +2909,6 @@ class OperationSynthetizer:
         # Para cada usina, obtem a lista de usina a jusante até
         # o mar e acumula as produtibilidades
         df["prod_acum"] = df["prod_ponto"]
-        uhes = df["usina"].unique().tolist()
         for uhe in uhes:
             if cls.logger:
                 cls.logger.info(f"Calculando prodt. acumulada para {uhe}...")
@@ -2897,16 +2952,18 @@ class OperationSynthetizer:
         hidr = cls._validate_data(
             cls._get_hidr(uow).cadastro, pd.DataFrame, "UHEs"
         )
-        nomes_uhes = df_hliq["usina"].unique().tolist()
-        n_entradas_uhe = df_hliq.loc[df_hliq["usina"] == nomes_uhes[0]].shape[
-            0
-        ]
-        hidr_uhes = hidr.loc[hidr["nome_usina"].isin(nomes_uhes)].set_index(
-            "nome_usina"
-        )
+        nomes_uhes_hliq = cls._get_ordered_entities(sintese_hliq)["usina"]
+        n_entradas_uhe = df_hliq.loc[
+            df_hliq["usina"] == nomes_uhes_hliq[0]
+        ].shape[0]
+        hidr_uhes = hidr.loc[
+            hidr["nome_usina"].isin(nomes_uhes_hliq)
+        ].set_index("nome_usina")
         # Produtibilidades em MW / ( (m3/s) / m)
         prod_esp = np.repeat(
-            hidr_uhes.loc[nomes_uhes, "produtibilidade_especifica"].to_numpy(),
+            hidr_uhes.loc[
+                nomes_uhes_hliq, "produtibilidade_especifica"
+            ].to_numpy(),
             n_entradas_uhe,
         )
         # Converte para MW / ( (hm3 / mes) / m )
@@ -2915,10 +2972,10 @@ class OperationSynthetizer:
         # Adiciona ao df e acumula as produtibilidades nos reservatórios
         df_hliq["prod_esp"] = prod_esp
         df_hliq["prod_ponto"] = df_hliq["prod_esp"] * df_hliq["valor"]
-        df_hliq = cls._acumula_produtibilidades_reservatorios(df_hliq, uow)
+        df_hliq = cls._acumula_produtibilidades_reservatorios(df_hliq, nomes_uhes_hliq, uow)
 
-        uhes_varm = df_varm["usina"].unique()
-        df_hliq = df_hliq.loc[df_hliq["usina"].isin(uhes_varm)].copy()
+        nomes_uhes_varm = cls._get_ordered_entities(sintese_varm)["usina"]
+        df_hliq = df_hliq.loc[df_hliq["usina"].isin(nomes_uhes_varm)].copy()
 
         # Multiplica o volume (útil) armazenado em cada UHE pela
         # produtibilidade acumulada nos pontos de operação.
@@ -3083,29 +3140,36 @@ class OperationSynthetizer:
                 if cls.logger is not None:
                     cls.logger.info("Paralelizando...")
             async_res = {
-                idx: pool.apply_async(
+                name: pool.apply_async(
                     cls._resolve_UHE_usina, (uow, synthesis, idx, name)
                 )
                 for idx, name in zip(uhes_idx, uhes_name)
             }
             dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
+
         if cls.logger is not None:
             cls.logger.info("Compactando dados...")
         ti = time()
-        dfs_validos = [d for d in dfs.values() if d is not None]
+        dfs_validos = [df for df in dfs.values() if df is not None]
         if len(dfs_validos) > 0:
             df_completo = pd.concat(dfs_validos, ignore_index=True)
-
         if not df_completo.empty:
             df_completo = df_completo.loc[df_completo["dataInicio"] < fim, :]
+
+        # Otimização: ordena as entidades para facilitar a busca
+        usinas = cls._get_unique_col_values_in_order(df_completo, ["usina"])
+        outras_cols = cls._get_unique_col_values_in_order(
+            dfs_validos[0],
+            ["estagio", "dataInicio", "dataFim", "patamar", "cenario"],
+        )
+        cls._set_ordered_entities(synthesis, {**usinas, **outras_cols})
 
         tf = time()
         if cls.logger is not None:
             cls.logger.info(
                 f"Tempo para compactação dos dados: {tf - ti:.2f} s"
             )
-
-        df_completo = cls._add_ree_submercado_uhes(df_completo, uow)
+        df_completo = cls._add_ree_submercado_uhes(synthesis, df_completo, uow)
         return df_completo
 
     @classmethod
@@ -3138,7 +3202,7 @@ class OperationSynthetizer:
 
     @classmethod
     def _add_ree_submercado_uhes(
-        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
+        cls, s: OperationSynthesis, df: pd.DataFrame, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         """
         Adiciona a informação do REE e SBM a uma síntese feita para UHEs.
@@ -3148,32 +3212,21 @@ class OperationSynthetizer:
         else:
             ti = time()
             cols = df.columns.tolist()
-            confhd = cls._validate_data(
-                cls._get_confhd(uow).usinas, pd.DataFrame, "UHEs"
-            ).set_index("nome_usina")
-            rees = cls._validate_data(
-                cls._get_ree(uow).rees, pd.DataFrame, "REEs"
-            ).set_index("codigo")
-            sistema = cls._validate_data(
-                cls._get_sistema(uow).custo_deficit, pd.DataFrame, "SBMs"
-            )
-            sistema = sistema.drop_duplicates(
-                ["codigo_submercado", "nome_submercado"]
-            ).set_index("codigo_submercado")
             # Obtem os nomes dos REEs e SBMs na mesma ordem em que aparecem as UHEs
-            uhes_df = np.array(df["usina"].unique().tolist())
+            entities = cls._get_ordered_entities(s)
+            uhes_df = entities["usina"]
             # Aplica de modo posicional por desempenho
             df_aux = cls._get_uhe_ree_sbm_df(uow)
             df_aux = df_aux.loc[uhes_df]
-            n_patamares = len(df["patamar"].unique())
-            n_estagios = len(df["estagio"].unique())
-            n_series = len(df["serie"].unique())
+            n_patamares = len(entities["patamar"])
+            n_estagios = len(entities["estagio"])
+            n_cenarios = len(entities["cenario"])
             df["ree"] = np.repeat(
-                df_aux["ree"].tolist(), n_series * n_estagios * n_patamares
+                df_aux["ree"].tolist(), n_cenarios * n_estagios * n_patamares
             )
             df["submercado"] = np.repeat(
                 df_aux["nome_submercado"].tolist(),
-                n_series * n_estagios * n_patamares,
+                n_cenarios * n_estagios * n_patamares,
             )
             tf = time()
             if cls.logger:
@@ -3195,8 +3248,8 @@ class OperationSynthetizer:
         )
         utes_idx = conft["codigo_usina"]
         utes_name = conft["nome_usina"]
-        df = pd.DataFrame()
         with uow:
+            dfs_utes = []
             for s, n in zip(utes_idx, utes_name):
                 if cls.logger is not None:
                     cls.logger.info(f"Processando arquivo da UTE: {s} - {n}")
@@ -3212,11 +3265,13 @@ class OperationSynthetizer:
                     continue
                 cols = df_ute.columns.tolist()
                 df_ute["usina"] = n
-                df_ute = df_ute[["usina"] + cols]
-                df = pd.concat(
-                    [df, df_ute],
-                    ignore_index=True,
-                )
+                dfs_utes.append(df_ute)
+            df = pd.concat(
+                dfs_utes,
+                ignore_index=True,
+            )
+            df = df[["usina"] + cols]
+            df = df.rename(columns={"serie": "cenario"})
             return df
 
     @classmethod
@@ -3264,18 +3319,19 @@ class OperationSynthetizer:
             pd.DataFrame,
             "usinas termelétricas",
         )[["codigo_usina", "nome_usina"]].drop_duplicates()
-        usinas_arquivo = df_completo["classe"].unique().tolist()
+        usinas_arquivo = df_completo["usina"].unique().tolist()
         nomes_usinas_arquivo = [
             clast.loc[clast["codigo_usina"] == c, "nome_usina"].iloc[0]
             for c in usinas_arquivo
         ]
         linhas_por_usina = df_completo.loc[
-            df_completo["classe"] == usinas_arquivo[0]
+            df_completo["usina"] == usinas_arquivo[0]
         ].shape[0]
-        df_completo["classe"] = np.repeat(
+        df_completo["usina"] = np.repeat(
             nomes_usinas_arquivo, linhas_por_usina
         )
-        return df_completo.rename(columns={"classe": "usina"})[
+        df_completo = df_completo.rename(columns={"serie": "cenario"})
+        df_completo = df_completo[
             [
                 "usina",
                 "estagio",
@@ -3283,10 +3339,18 @@ class OperationSynthetizer:
                 "dataFim",
                 "patamar",
                 "duracaoPatamar",
-                "serie",
+                "cenario",
                 "valor",
             ]
         ]
+        # Otimização: ordena as entidades para facilitar a busca
+        usinas = cls._get_unique_col_values_in_order(df_completo, ["usina"])
+        outras_cols = cls._get_unique_col_values_in_order(
+            dfs_validos[0],
+            ["estagio", "dataInicio", "dataFim", "patamar", "cenario"],
+        )
+        cls._set_ordered_entities(synthesis, {**usinas, **outras_cols})
+        return df_completo
 
     @classmethod
     def __resolve_UTE(
@@ -3297,11 +3361,11 @@ class OperationSynthetizer:
         else:
             df = cls.__resolve_UTE_normal(synthesis, uow)
 
-        return cls._add_submercado_utes(df, uow)
+        return cls._add_submercado_utes(synthesis, df, uow)
 
     @classmethod
     def _add_submercado_utes(
-        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
+        cls, s: OperationSynthesis, df: pd.DataFrame, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         """
         Adiciona a informação do SBM a uma síntese feita para UTEs.
@@ -3321,17 +3385,18 @@ class OperationSynthetizer:
                 ["codigo_submercado", "nome_submercado"]
             ).set_index("codigo_submercado")
             # Obtem os nomes dos SBMs na mesma ordem em que aparecem as UTEs
-            utes_df = np.array(df["usina"].unique().tolist())
+            entities = cls._get_ordered_entities(s)
+            utes_df = entities["usina"]
             codigos_sbms_df = [utes.at[r, "submercado"] for r in utes_df]
             nomes_sbms_df = [
                 sistema.at[c, "nome_submercado"] for c in codigos_sbms_df
             ]
             # Aplica de modo posicional por desempenho
-            n_patamares = len(df["patamar"].unique())
-            n_estagios = len(df["estagio"].unique())
-            n_series = len(df["serie"].unique())
+            n_patamares = len(entities["patamar"])
+            n_estagios = len(entities["estagio"])
+            n_cenarios = len(entities["cenario"])
             df["submercado"] = np.repeat(
-                nomes_sbms_df, n_series * n_estagios * n_patamares
+                nomes_sbms_df, n_cenarios * n_estagios * n_patamares
             )
             tf = time()
             if cls.logger:
@@ -3366,6 +3431,7 @@ class OperationSynthetizer:
                 for r in regs:
                     uees_idx.append(r.codigo_pee)
                     uees_name.append(r.nome_pee)
+            dfs_uees = []
             for s, n in zip(uees_idx, uees_name):
                 if cls.logger is not None:
                     cls.logger.info(f"Processando arquivo da UEE: {s} - {n}")
@@ -3381,11 +3447,22 @@ class OperationSynthetizer:
                     continue
                 cols = df_uee.columns.tolist()
                 df_uee["pee"] = n
-                df_uee = df_uee[["pee"] + cols]
-                df = pd.concat(
-                    [df, df_uee],
-                    ignore_index=True,
-                )
+                dfs_uees.append(df_uee)
+            df = pd.concat(
+                dfs_uees,
+                ignore_index=True,
+            )
+            df = df[["pee"] + cols]
+            df = df.rename(columns={"serie": "cenario"})
+
+            # Otimização: ordena as entidades para facilitar a busca
+            usinas = cls._get_unique_col_values_in_order(df, ["pee"])
+            outras_cols = cls._get_unique_col_values_in_order(
+                df_uee[0],
+                ["estagio", "dataInicio", "dataFim", "patamar", "cenario"],
+            )
+            cls._set_ordered_entities(synthesis, {**usinas, **outras_cols})
+
             return df
 
     @classmethod
@@ -3424,7 +3501,6 @@ class OperationSynthetizer:
         df.loc[:, "estagio"] -= month_difference
         # Considera somente estágios do período de estudo em diante
         df = df.loc[df["estagio"] > 0]
-        df = df.rename(columns={"serie": "cenario"})
         tf = time()
         if cls.logger:
             cls.logger.info(
