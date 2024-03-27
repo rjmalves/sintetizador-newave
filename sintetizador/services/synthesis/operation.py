@@ -3537,17 +3537,11 @@ class OperationSynthetizer:
 
     @classmethod
     def _resolve_starting_stage(cls, df: pd.DataFrame):
-        ti = time()
         df.loc[:, "estagio"] -= cls.SYNTHESIS_SHARED_DATA[
             "offset_meses_inicio"
         ]
         # Considera somente estágios do período de estudo em diante
         df = df.loc[df["estagio"] > 0]
-        tf = time()
-        if cls.logger:
-            cls.logger.info(
-                f"Tempo para consideração do estágio inicial: {tf - ti:.2f} s"
-            )
         return df
 
     @classmethod
@@ -3619,14 +3613,10 @@ class OperationSynthetizer:
 
     @classmethod
     def _postprocess(cls, df: pd.DataFrame) -> pd.DataFrame:
-        ti = time()
         df_q = cls._processa_quantis(df, [0.05 * i for i in range(21)])
         df_m = cls._processa_media(df)
         df = pd.concat([df, df_q, df_m], ignore_index=True)
         df = df.astype({"cenario": str})
-        tf = time()
-        if cls.logger:
-            cls.logger.info(f"Tempo para pos-processamento: {tf - ti:.2f} s")
         return df
 
     @classmethod
