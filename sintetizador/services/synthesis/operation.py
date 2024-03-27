@@ -3088,6 +3088,9 @@ class OperationSynthetizer:
         df_base["valor"] = arr.reshape((n_elementos_distintos, -1)).sum(axis=1)
         df_pat0 = pd.concat([df_pat0, df_base], ignore_index=True, copy=True)
         df_pat0 = df.sort_values(cols_dup + ["patamar"])
+        entities = cls._get_ordered_entities(synthesis)
+        entities["patamar"] = list(range(n_pats + 1))
+        cls._set_ordered_entities(synthesis, entities)
         tf = time()
         if cls.logger:
             cls.logger.info(
