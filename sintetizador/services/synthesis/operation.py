@@ -4000,12 +4000,12 @@ class OperationSynthetizer:
                 if df is not None:
                     if not df.empty:
                         found_synthesis = True
-                        ti = time()
+                        ti_e = time()
                         with uow:
                             uow.export.synthetize_df(df, filename)
-                        tf = time()
+                        tf_e = time()
                         cls.logger.info(
-                            f"Tempo para exportação dos dados: {tf - ti:.2f} s"
+                            f"Tempo para exportação dos dados: {tf_e - ti_e:.2f} s"
                         )
                         success_synthesis.append((s, is_stub))
                         tf_s = time()
