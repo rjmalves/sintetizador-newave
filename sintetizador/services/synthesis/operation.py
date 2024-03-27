@@ -2544,7 +2544,7 @@ class OperationSynthetizer:
 
         internal_stubs = {
             Variable.COTA_JUSANTE: cls._internal_stub_calc_pat_0_weighted_mean,
-            Variable.QUEDA_LIQUIDA: cls._internal_stub_calc_pat_0_weighted_mean
+            Variable.QUEDA_LIQUIDA: cls._internal_stub_calc_pat_0_weighted_mean,
         }
 
         with uow:
@@ -3149,7 +3149,7 @@ class OperationSynthetizer:
         df_pat0 = pd.concat([df_pat0, df_base], ignore_index=True, copy=True)
         df_pat0 = df_pat0.sort_values(cols_dup + ["patamar"])
         return df_pat0
-    
+
     @classmethod
     def __stub_calc_pat_0_weighted_mean(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
@@ -4000,8 +4000,13 @@ class OperationSynthetizer:
                 if df is not None:
                     if not df.empty:
                         found_synthesis = True
+                        ti = time()
                         with uow:
                             uow.export.synthetize_df(df, filename)
+                        tf = time()
+                        cls.logger.info(
+                            f"Tempo para exportação dos dados: {tf - ti:.2f} s"
+                        )
                         success_synthesis.append((s, is_stub))
                         tf_s = time()
                         cls.logger.info(
