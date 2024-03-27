@@ -3082,7 +3082,7 @@ class OperationSynthetizer:
         df_pat0["valor"] = (
             df_pat0["valor"] * df_pat0["duracaoPatamar"]
         ) / cls.STAGE_DURATION_HOURS
-        df_base = df.iloc[::n_pats].reset_index().copy()
+        df_base = df.iloc[::n_pats].reset_index(drop=True).copy()
         df_base["patamar"] = 0
         df_base["duracaoPatamar"] = cls.STAGE_DURATION_HOURS
         arr = df_pat0["valor"].to_numpy()
