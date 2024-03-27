@@ -2172,14 +2172,18 @@ class OperationSynthetizer:
         return df_pat
 
     @classmethod
-    def __add_temporal_info(
-        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
+    def _add_temporal_info(cls, df: pd.DataFrame) -> pd.DataFrame:
         df = df.copy()
         df.sort_values(["data", "serie", "patamar"], inplace=True)
         cols = df.columns.tolist()
+        # Descobre estágios e datas sem pegar dos dados compartilhados
+        # devido a algumas sínteses poderem só existir para parte do
+        # horizonte (estágios individualizados)
         n_estagios = df["data"].unique().shape[0]
         n_cenarios = cls.SYNTHESIS_SHARED_DATA["numero_cenarios_sim_final"]
+        # Descobre patamares sem pegar dos dados compartilhados
+        # porque algumas sínteses podem só existir para valores médios
+        # mensais
         patamares = df["patamar"].unique().tolist()
         n_patamares = len(patamares)
         df["serie"] = np.tile(
@@ -2204,16 +2208,17 @@ class OperationSynthetizer:
             df_patamares["patamar"].isin(patamares)
         ]
         duracoes_patamares = np.array((), dtype=np.float64)
-        for d in datas_inicio:
+        duracoes_patamares = np.zeros(
+            (n_cenarios * n_patamares * n_estagios,), dtype=np.float64
+        )
+        tamanho_bloco = n_cenarios * n_patamares
+        for i, d in enumerate(datas_inicio):
             duracoes_data = df_patamares.loc[
                 df_patamares["data"] == d, "valor"
             ].to_numpy()
-            duracoes_patamares = np.concatenate(
-                (
-                    duracoes_patamares,
-                    np.tile(duracoes_data, n_cenarios),
-                )
-            )
+            i_i = i * tamanho_bloco
+            i_f = i_i + tamanho_bloco
+            duracoes_patamares[i_i:i_f] = np.tile(duracoes_data, n_cenarios)
         df["duracaoPatamar"] = duracoes_patamares * cls.STAGE_DURATION_HOURS
         return df[
             ["estagio", "dataInicio", "dataFim", "patamar", "duracaoPatamar"]
@@ -2224,11 +2229,10 @@ class OperationSynthetizer:
     def _resolve_temporal_resolution(
         cls,
         df: pd.DataFrame,
-        uow: AbstractUnitOfWork,
     ) -> pd.DataFrame:
         if df is None:
             return None
-        return cls.__add_temporal_info(df, uow)
+        return cls._add_temporal_info(df)
 
     @classmethod
     def __resolve_SIN(
@@ -2243,7 +2247,7 @@ class OperationSynthetizer:
                 "",
             )
             if df is not None:
-                return cls._resolve_temporal_resolution(df, uow)
+                return cls._resolve_temporal_resolution(df)
             else:
                 return pd.DataFrame()
 
@@ -2268,8 +2272,7 @@ class OperationSynthetizer:
                     synthesis.variable,
                     synthesis.spatial_resolution,
                     submercado=sbm_index,
-                ),
-                uow,
+                )
             )
             if df_sbm is None:
                 return None
@@ -2353,8 +2356,7 @@ class OperationSynthetizer:
                     synthesis.variable,
                     synthesis.spatial_resolution,
                     submercados=(sbm1_index, sbm2_index),
-                ),
-                uow,
+                )
             )
             if df_sbp is None:
                 return None
@@ -2436,8 +2438,7 @@ class OperationSynthetizer:
                     synthesis.variable,
                     synthesis.spatial_resolution,
                     ree=ree_index,
-                ),
-                uow,
+                )
             )
             if df_sbm is None:
                 return None
@@ -2549,8 +2550,7 @@ class OperationSynthetizer:
                     synthesis.variable,
                     synthesis.spatial_resolution,
                     uhe=uhe_index,
-                ),
-                uow,
+                )
             )
             if df_uhe is None:
                 return None
@@ -2559,6 +2559,10 @@ class OperationSynthetizer:
             df_uhe["usina"] = uhe_name
             df_uhe = df_uhe[["usina"] + cols]
             df_uhe = df_uhe.rename(columns={"serie": "cenario"})
+            # Considerar estágio inicial
+            df_uhe = cls._resolve_starting_stage(df_uhe)
+            # Pós-processamento
+            df_uhe = cls._postprocess(df_uhe)
             return df_uhe
 
     @classmethod
@@ -3108,9 +3112,7 @@ class OperationSynthetizer:
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         df = cls._resolve_spatial_resolution(synthesis, uow)
-        n_pats = cls._validate_data(
-            cls._get_patamar(uow).numero_patamares, int, "patamar"
-        )
+        n_pats = cls.SYNTHESIS_SHARED_DATA["numero_patamares"]
         ti = time()
         cols_dup = [
             c
@@ -3134,7 +3136,9 @@ class OperationSynthetizer:
         arr = df_pat0["valor"].to_numpy()
         n_linhas = arr.shape[0]
         n_elementos_distintos = n_linhas // n_pats
-        df_base["valor"] = arr.reshape((n_elementos_distintos, -1)).sum(axis=1)
+        df_base["valor"] = arr.reshape((n_elementos_distintos, -1)).mean(
+            axis=1
+        )
         df_pat0 = pd.concat([df_pat0, df_base], ignore_index=True, copy=True)
         df_pat0 = df_pat0.sort_values(cols_dup + ["patamar"])
         entities = cls._get_ordered_entities(synthesis)
@@ -3310,8 +3314,7 @@ class OperationSynthetizer:
                         synthesis.variable,
                         synthesis.spatial_resolution,
                         ute=s,
-                    ),
-                    uow,
+                    )
                 )
                 if df_ute is None:
                     continue
@@ -3492,8 +3495,7 @@ class OperationSynthetizer:
                         synthesis.variable,
                         synthesis.spatial_resolution,
                         uee=s,
-                    ),
-                    uow,
+                    )
                 )
                 if df_uee is None:
                     continue
@@ -3534,9 +3536,7 @@ class OperationSynthetizer:
         return solver(synthesis, uow)
 
     @classmethod
-    def _resolve_starting_stage(
-        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
-    ):
+    def _resolve_starting_stage(cls, df: pd.DataFrame):
         ti = time()
         df.loc[:, "estagio"] -= cls.SYNTHESIS_SHARED_DATA[
             "offset_meses_inicio"
@@ -3969,8 +3969,6 @@ class OperationSynthetizer:
                 if df is not None:
                     if not df.empty:
                         found_synthesis = True
-                        df = cls._resolve_starting_stage(df, uow)
-                        df = cls._postprocess(df)
                         with uow:
                             uow.export.synthetize_df(df, filename)
                         success_synthesis.append((s, is_stub))
