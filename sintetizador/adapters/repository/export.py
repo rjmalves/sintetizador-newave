@@ -29,15 +29,16 @@ class ParquetExportRepository(AbstractExportRepository):
         # venv/lib/python3.10/site-packages/pyarrow/pandas_compat.py:373:
         # FutureWarning: is_sparse is deprecated and will be removed in a
         # future version. Check `isinstance(dtype, pd.SparseDtype)` instead.
-        with warnings.catch_warnings():
-            pq.write_table(
-                pa.Table.from_pandas(df),
-                self.path.joinpath(filename + ".parquet.gzip"),
-                # compression="gzip",
-                write_statistics=False,
-                flavor="spark",
-                coerce_timestamps="ms",
-            )
+        df.to_parquet(self.path.joinpath(filename + ".parquet.gzip"))
+        # with warnings.catch_warnings():
+        #     pq.write_table(
+        #         pa.Table.from_pandas(df),
+        #         self.path.joinpath(filename + ".parquet.gzip"),
+        #         # compression="gzip",
+        #         write_statistics=False,
+        #         flavor="spark",
+        #         coerce_timestamps="ms",
+        #     )
         return True
 
 
