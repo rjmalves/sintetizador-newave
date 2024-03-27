@@ -2541,6 +2541,12 @@ class OperationSynthetizer:
         logger = Log.configure_process_logger(
             uow.queue, logger_name, uhe_index
         )
+
+        internal_stubs = {
+            Variable.COTA_JUSANTE: cls._internal_stub_calc_pat_0_weighted_mean,
+            Variable.QUEDA_LIQUIDA: cls._internal_stub_calc_pat_0_weighted_mean
+        }
+
         with uow:
             logger.info(
                 f"Processando arquivo da UHE: {uhe_index} - {uhe_name}"
@@ -2555,15 +2561,18 @@ class OperationSynthetizer:
             if df_uhe is None:
                 return None
 
-            cols = df_uhe.columns.tolist()
-            df_uhe["usina"] = uhe_name
-            df_uhe = df_uhe[["usina"] + cols]
-            df_uhe = df_uhe.rename(columns={"serie": "cenario"})
-            # Considerar estágio inicial
-            df_uhe = cls._resolve_starting_stage(df_uhe)
-            # Pós-processamento
-            df_uhe = cls._postprocess(df_uhe)
-            return df_uhe
+        cols = df_uhe.columns.tolist()
+        df_uhe["usina"] = uhe_name
+        df_uhe = df_uhe[["usina"] + cols]
+        df_uhe = df_uhe.rename(columns={"serie": "cenario"})
+        # Considerar estágio inicial
+        df_uhe = cls._resolve_starting_stage(df_uhe)
+        # Aplica correções necessárias
+        if synthesis.variable in internal_stubs:
+            df_uhe = internal_stubs[synthesis.variable](df_uhe)
+        # Pós-processamento
+        df_uhe = cls._postprocess(df_uhe)
+        return df_uhe
 
     @classmethod
     def _resolve_gtert_temporal(
@@ -3107,6 +3116,40 @@ class OperationSynthetizer:
         )
         return df_meta
 
+    @classmethod
+    def _internal_stub_calc_pat_0_weighted_mean(
+        cls, df: pd.DataFrame
+    ) -> pd.DataFrame:
+        n_pats = cls.SYNTHESIS_SHARED_DATA["numero_patamares"]
+        cols_dup = [
+            c
+            for c in df.columns
+            if c
+            not in [
+                "dataInicio",
+                "dataFim",
+                "patamar",
+                "duracaoPatamar",
+                "valor",
+            ]
+        ]
+        df_pat0 = df.copy()
+        df_pat0["valor"] = (
+            df_pat0["valor"] * df_pat0["duracaoPatamar"]
+        ) / cls.STAGE_DURATION_HOURS
+        df_base = df.iloc[::n_pats].reset_index(drop=True).copy()
+        df_base["patamar"] = 0
+        df_base["duracaoPatamar"] = cls.STAGE_DURATION_HOURS
+        arr = df_pat0["valor"].to_numpy()
+        n_linhas = arr.shape[0]
+        n_elementos_distintos = n_linhas // n_pats
+        df_base["valor"] = arr.reshape((n_elementos_distintos, -1)).mean(
+            axis=1
+        )
+        df_pat0 = pd.concat([df_pat0, df_base], ignore_index=True, copy=True)
+        df_pat0 = df_pat0.sort_values(cols_dup + ["patamar"])
+        return df_pat0
+    
     @classmethod
     def __stub_calc_pat_0_weighted_mean(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
@@ -3783,8 +3826,6 @@ class OperationSynthetizer:
             f = cls.__stub_mapa_variaveis_volumes_percentuais_UHE
         elif s.variable in [Variable.ENERGIA_DEFLUENCIA_MINIMA]:
             f = cls.__stub_energia_defluencia_minima
-        elif s.variable in [Variable.COTA_JUSANTE, Variable.QUEDA_LIQUIDA]:
-            f = cls.__stub_calc_pat_0_weighted_mean
         elif all(
             [
                 s.variable
