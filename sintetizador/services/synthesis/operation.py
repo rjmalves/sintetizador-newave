@@ -3255,6 +3255,9 @@ class OperationSynthetizer:
         if not df_completo.empty:
             df_completo = df_completo.loc[df_completo["dataInicio"] < fim, :]
 
+        df_completo = df_completo.sort_values(
+            ["usinas", "estagio", "patamar", "cenario"]
+        ).reset_index(drop=True)
         # Otimização: ordena as entidades para facilitar a busca
         usinas = cls._get_unique_col_values_in_order(df_completo, ["usina"])
         outras_cols = cls._get_unique_col_values_in_order(
