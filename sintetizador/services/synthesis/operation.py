@@ -2972,7 +2972,9 @@ class OperationSynthetizer:
         # Adiciona ao df e acumula as produtibilidades nos reservatórios
         df_hliq["prod_esp"] = prod_esp
         df_hliq["prod_ponto"] = df_hliq["prod_esp"] * df_hliq["valor"]
-        df_hliq = cls._acumula_produtibilidades_reservatorios(df_hliq, nomes_uhes_hliq, uow)
+        df_hliq = cls._acumula_produtibilidades_reservatorios(
+            df_hliq, nomes_uhes_hliq, uow
+        )
 
         nomes_uhes_varm = cls._get_ordered_entities(sintese_varm)["usina"]
         df_hliq = df_hliq.loc[df_hliq["usina"].isin(nomes_uhes_varm)].copy()
@@ -3059,6 +3061,7 @@ class OperationSynthetizer:
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         df = cls._resolve_spatial_resolution(synthesis, uow)
+        print(df)
         n_pats = cls._validate_data(
             cls._get_patamar(uow).numero_patamares, int, "patamar"
         )
@@ -3087,7 +3090,7 @@ class OperationSynthetizer:
         n_elementos_distintos = n_linhas // n_pats
         df_base["valor"] = arr.reshape((n_elementos_distintos, -1)).sum(axis=1)
         df_pat0 = pd.concat([df_pat0, df_base], ignore_index=True, copy=True)
-        df_pat0 = df.sort_values(cols_dup + ["patamar"])
+        df_pat0 = df_pat0.sort_values(cols_dup + ["patamar"])
         entities = cls._get_ordered_entities(synthesis)
         entities["patamar"] = list(range(n_pats + 1))
         cls._set_ordered_entities(synthesis, entities)
