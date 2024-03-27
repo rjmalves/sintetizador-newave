@@ -34,6 +34,7 @@ class ParquetExportRepository(AbstractExportRepository):
                 pa.Table.from_pandas(df),
                 self.path.joinpath(filename + ".parquet.gzip"),
                 # compression="gzip",
+                write_statistics=False,
                 flavor="spark",
                 coerce_timestamps="ms",
             )
