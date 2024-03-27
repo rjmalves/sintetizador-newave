@@ -1,11 +1,11 @@
-from typing import Callable, Dict, List, Tuple, Optional, Type, TypeVar
+from typing import Callable, Dict, List, Tuple, Optional, Type, TypeVar, Any
 import pandas as pd  # type: ignore
 import numpy as np
 import logging
 from time import time
 import traceback
 from multiprocessing import Pool
-from datetime import datetime, timedelta
+from datetime import datetime
 from dateutil.relativedelta import relativedelta  # type: ignore
 from inewave.newave import (
     Dger,
@@ -1820,6 +1820,8 @@ class OperationSynthetizer:
 
     UHE_REE_SBM_MAP: Optional[pd.DataFrame] = None
 
+    SYNTHESIS_SHARED_DATA: Dict[str, Any] = {}
+
     @classmethod
     def _get_dger(cls, uow: AbstractUnitOfWork) -> Dger:
         with uow:
@@ -2075,28 +2077,99 @@ class OperationSynthetizer:
         return cls.ORDERED_SYNTHESIS_ENTITIES[s]
 
     @classmethod
-    def __obtem_duracoes_patamares(
-        cls, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
-        arq_patamares = uow.files.get_patamar()
-        if arq_patamares:
-            df_pat = arq_patamares.duracao_mensal_patamares
-            if df_pat is not None:
-                df_pat_0 = df_pat.groupby("data", as_index=False).sum(
-                    numeric_only=True
-                )
-                df_pat_0["patamar"] = 0
-                df_pat = pd.concat([df_pat, df_pat_0], ignore_index=True)
-                df_pat.sort_values(["data", "patamar"], inplace=True)
-                return df_pat
-            else:
-                if cls.logger:
-                    cls.logger.error("Erro na leitura dos patamares")
-                raise RuntimeError()
+    def _calc_synthesis_shared_data(cls, uow: AbstractUnitOfWork):
+        if cls.logger is not None:
+            cls.logger.info("Calculando dados compartilhados para síntese")
+        ti = time()
+
+        dger = cls._get_dger(uow)
+        mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
+        ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
+        num_anos_estudo = cls._validate_data(dger.num_anos_estudo, int, "dger")
+        num_anos_pos_sim_final = cls._validate_data(
+            dger.num_anos_pos_sim_final, int, "dger"
+        )
+        numero_cenarios_sim_final_sintetica = cls._validate_data(
+            dger.num_series_sinteticas, int, "dger"
+        )
+        # TODO
+        numero_cenarios_sim_final_historica = cls._validate_data(
+            dger.num_series_sinteticas, int, "dger"
+        )
+        if dger.tipo_simulacao_final == 1:
+            numero_cenarios_sim_final = numero_cenarios_sim_final_sintetica
         else:
-            if cls.logger:
-                cls.logger.error("Erro na abertura do arquivo de patamares")
-            raise RuntimeError()
+            numero_cenarios_sim_final = numero_cenarios_sim_final_historica
+        offset_meses_inicio = mes_inicio - 1
+        anos_sim_final = num_anos_estudo + num_anos_pos_sim_final
+        numero_estagios_internos_sim_final = 12 * anos_sim_final
+        datas_inicio_estagios_internos_sim_final = pd.date_range(
+            datetime(ano_inicio, 1, 1),
+            datetime(ano_inicio + anos_sim_final - 1, 12, 1),
+            freq="MS",
+        )
+        datas_fim_estagios_internos_sim_final = [
+            d + relativedelta(months=1)
+            for d in datas_inicio_estagios_internos_sim_final
+        ]
+
+        patamar = cls._get_patamar(uow)
+        numero_patamares = patamar.numero_patamares
+        duracoes_patamares = cls._obtem_duracoes_patamares(
+            cls._validate_data(
+                patamar.duracao_mensal_patamares, pd.DataFrame, "patamar"
+            )
+        )
+
+        sistema = cls._get_sistema(uow)
+        df_submercados = sistema.custo_deficit
+        numero_submercados = len(
+            df_submercados.loc[
+                df_submercados["ficticio"] == 0, "codigo_submercado"
+            ]
+            .unique()
+            .tolist()
+        )
+
+        ree = cls._get_ree(uow)
+        numero_rees = ree.rees.shape[0]
+
+        confhd = cls._get_confhd(uow)
+        df_uhes = confhd.usinas
+        numero_uhes = len(df_uhes["nome_usina"].unique().tolist())
+
+        conft = cls._get_conft(uow)
+        df_utes = conft.usinas
+        numero_utes = len(df_utes["nome_usina"].unique().tolist())
+
+        cls.SYNTHESIS_SHARED_DATA = {
+            "numero_estagios_internos_sim_final": numero_estagios_internos_sim_final,
+            "datas_inicio_estagios_internos_sim_final": datas_inicio_estagios_internos_sim_final,
+            "datas_fim_estagios_internos_sim_final": datas_fim_estagios_internos_sim_final,
+            "numero_cenarios_sim_final": numero_cenarios_sim_final,
+            "offset_meses_inicio": offset_meses_inicio,
+            "numero_patamares": numero_patamares,
+            "numero_submercados": numero_submercados,
+            "numero_rees": numero_rees,
+            "numero_uhes": numero_uhes,
+            "numero_utes": numero_utes,
+            "duracoes_patamares": duracoes_patamares,
+        }
+        tf = time()
+        if cls.logger is not None:
+            cls.logger.info(
+                f"Tempo para cálculo dos dados compartilhados: {tf-ti:.2f} s"
+            )
+
+    @classmethod
+    def _obtem_duracoes_patamares(cls, df_pat: pd.DataFrame) -> pd.DataFrame:
+        df_pat_0 = df_pat.groupby("data", as_index=False).sum(
+            numeric_only=True
+        )
+        df_pat_0["patamar"] = 0
+        df_pat = pd.concat([df_pat, df_pat_0], ignore_index=True)
+        df_pat.sort_values(["data", "patamar"], inplace=True)
+        return df_pat
 
     @classmethod
     def __add_temporal_info(
@@ -2105,33 +2178,43 @@ class OperationSynthetizer:
         df = df.copy()
         df.sort_values(["data", "serie", "patamar"], inplace=True)
         cols = df.columns.tolist()
-        datas = df["data"].unique().tolist()
-        datas.sort()
-        n_datas = len(datas)
+        n_estagios = df["data"].unique().shape[0]
+        n_cenarios = cls.SYNTHESIS_SHARED_DATA["numero_cenarios_sim_final"]
         patamares = df["patamar"].unique().tolist()
         n_patamares = len(patamares)
-        n_cenarios = int(df.shape[0] / (n_datas * n_patamares))
         df["serie"] = np.tile(
-            np.repeat(np.arange(1, n_cenarios + 1), n_patamares), n_datas
+            np.repeat(np.arange(1, n_cenarios + 1), n_patamares), n_estagios
         )
         # Atribui estagio e dataFim de forma posicional
-        estagios = list(range(1, n_datas + 1))
+        estagios = np.arange(1, n_estagios + 1)
         estagios_df = np.repeat(estagios, n_cenarios * n_patamares)
-        datasFim = [d + relativedelta(months=1) for d in datas]
-        datasFim_df = np.repeat(datasFim, n_cenarios * n_patamares)
+        datas_inicio = cls.SYNTHESIS_SHARED_DATA[
+            "datas_inicio_estagios_internos_sim_final"
+        ][:n_estagios]
+        datas_fim = cls.SYNTHESIS_SHARED_DATA[
+            "datas_fim_estagios_internos_sim_final"
+        ][:n_estagios]
+        datasFim_df = np.repeat(datas_fim, n_cenarios * n_patamares)
         df = df.rename(columns={"data": "dataInicio"})
         df["estagio"] = estagios_df
         df["dataFim"] = datasFim_df
         # Atribui durações dos patamares de forma posicional
-        df_pat = cls.__obtem_duracoes_patamares(uow)
-        df_pat = df_pat.loc[df_pat["patamar"].isin(patamares)]
+        df_patamares = cls.SYNTHESIS_SHARED_DATA["duracoes_patamares"].copy()
+        df_patamares = df_patamares.loc[
+            df_patamares["patamar"].isin(patamares)
+        ]
         duracoes_patamares = np.array((), dtype=np.float64)
-        for d in datas:
-            duracoes_data = df_pat.loc[df_pat["data"] == d, "valor"].to_numpy()
+        for d in datas_inicio:
+            duracoes_data = df_patamares.loc[
+                df_patamares["data"] == d, "valor"
+            ].to_numpy()
             duracoes_patamares = np.concatenate(
-                (duracoes_patamares, np.tile(duracoes_data, n_cenarios))
+                (
+                    duracoes_patamares,
+                    np.tile(duracoes_data, n_cenarios),
+                )
             )
-        df["duracaoPatamar"] = cls.STAGE_DURATION_HOURS * duracoes_patamares
+        df["duracaoPatamar"] = duracoes_patamares * cls.STAGE_DURATION_HOURS
         return df[
             ["estagio", "dataInicio", "dataFim", "patamar", "duracaoPatamar"]
             + [c for c in cols if c not in ["patamar", "data"]]
@@ -2507,7 +2590,7 @@ class OperationSynthetizer:
         df["dataFim"] = datasFim_df
         df = df.rename(columns={"data": "dataInicio"})
         # Atribui duração dos patamares de forma posicional
-        df_pat = cls.__obtem_duracoes_patamares(uow)
+        df_pat = cls.SYNTHESIS_SHARED_DATA["duracoes_patamares"].copy()
         df_pat = df_pat.loc[df_pat["patamar"].isin(patamares)]
         duracoes_patamares = np.array((), dtype=np.float64)
         for d in datas:
@@ -3020,48 +3103,11 @@ class OperationSynthetizer:
         )
         return df_meta
 
-    # @classmethod
-    # def __stub_calc_pat_0_weighted_mean(
-    #     cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
-    # ) -> pd.DataFrame:
-    #     df = cls._resolve_spatial_resolution(synthesis, uow)
-    #     ti = time()
-    #     df_pat0 = df.copy()
-    #     df_pat0["patamar"] = 0
-    #     df_pat0["valor"] = (
-    #         df_pat0["valor"] * df_pat0["duracaoPatamar"]
-    #     ) / cls.STAGE_DURATION_HOURS
-    #     cols_group = [
-    #         c
-    #         for c in df.columns
-    #         if c
-    #         not in [
-    #             "patamar",
-    #             "duracaoPatamar",
-    #             "valor",
-    #         ]
-    #     ]
-    #     df_pat0 = (
-    #         df_pat0.groupby(cols_group, sort=False)[["duracaoPatamar", "valor"]]
-    #         .sum(engine="numba")
-    #         .reset_index()
-    #     )
-    #     df_pat0["patamar"] = 0
-    #     df_pat0 = pd.concat([df, df_pat0], ignore_index=True)
-    #     df_pat0 = df_pat0.sort_values(cols_group + ["patamar"])
-    #     tf = time()
-    #     if cls.logger:
-    #         cls.logger.info(
-    #             f"Tempo para cálculo do patamar médio: {tf - ti:.2f} s"
-    #         )
-    #     return df_pat0
-
     @classmethod
     def __stub_calc_pat_0_weighted_mean(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         df = cls._resolve_spatial_resolution(synthesis, uow)
-        print(df)
         n_pats = cls._validate_data(
             cls._get_patamar(uow).numero_patamares, int, "patamar"
         )
@@ -3488,23 +3534,13 @@ class OperationSynthetizer:
         return solver(synthesis, uow)
 
     @classmethod
-    def _offset_meses_inicio(
-        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
-    ) -> int:
-        dger = cls._get_dger(uow)
-        ano_inicio = cls._validate_data(dger.ano_inicio_estudo, int, "dger")
-        mes_inicio = cls._validate_data(dger.mes_inicio_estudo, int, "dger")
-        starting_date = datetime(ano_inicio, mes_inicio, 1)
-        data_starting_date = df["dataInicio"].min()
-        return starting_date.month - data_starting_date.month
-
-    @classmethod
     def _resolve_starting_stage(
         cls, df: pd.DataFrame, uow: AbstractUnitOfWork
     ):
         ti = time()
-        month_difference = cls._offset_meses_inicio(df, uow)
-        df.loc[:, "estagio"] -= month_difference
+        df.loc[:, "estagio"] -= cls.SYNTHESIS_SHARED_DATA[
+            "offset_meses_inicio"
+        ]
         # Considera somente estágios do período de estudo em diante
         df = df.loc[df["estagio"] > 0]
         tf = time()
@@ -3916,6 +3952,7 @@ class OperationSynthetizer:
         valid_synthesis = cls.filter_valid_variables(synthesis_variables, uow)
         synthesis_with_prereqs = cls._add_prereq_synthesis(valid_synthesis)
         success_synthesis: List[Tuple[OperationSynthesis, bool]] = []
+        cls._calc_synthesis_shared_data(uow)
         for s in synthesis_with_prereqs:
             ti_s = time()
             try:
