@@ -54,7 +54,7 @@ class OperationVariableBounds:
         "usina",
         "patamar",
         "duracaoPatamar",
-        "serie",
+        "cenario",
     ]
 
     STAGE_DURATION_HOURS = 730.0
@@ -980,7 +980,7 @@ class OperationVariableBounds:
         rees_df = df["ree"].unique().tolist()
         n_rees = len(rees_df)
         n_estagios = len(datas_inicio)
-        n_cenarios = len(df["serie"].unique())
+        n_cenarios = len(df["cenario"].unique())
         n_patamares = len(df["patamar"].unique())
 
         cols_agrupar = ["nome_ree", "data"]
@@ -1026,7 +1026,7 @@ class OperationVariableBounds:
         sbms_df = df["submercado"].unique().tolist()
         n_sbms = len(sbms_df)
         n_estagios = len(datas_inicio)
-        n_cenarios = len(df["serie"].unique())
+        n_cenarios = len(df["cenario"].unique())
         n_patamares = len(df["patamar"].unique())
 
         cols_agrupar = ["nome_submercado", "data"]
@@ -1073,7 +1073,7 @@ class OperationVariableBounds:
         # Obtem REEs do DF na ordem em que aparecem
         datas_inicio = df["dataInicio"].unique().tolist()
         n_estagios = len(datas_inicio)
-        n_cenarios = len(df["serie"].unique())
+        n_cenarios = len(df["cenario"].unique())
         n_patamares = len(df["patamar"].unique())
 
         cols_agrupar = ["data"]
@@ -1261,7 +1261,7 @@ class OperationVariableBounds:
         duracao_patamar_horas = kwargs.get(
             "duracao_patamar_horas", cls.STAGE_DURATION_HOURS
         )
-        if unidade_cadastro == "'%'" and unidade_sintese == "hm3":
+        if unidade_cadastro == "'%'" and unidade_sintese == "'h'":
             return cls._converte_volume_percentual_hm3(
                 limite_inferior,
                 limite_superior,
@@ -1468,7 +1468,7 @@ class OperationVariableBounds:
             for c in df.columns
             if c in cls.IDENTIFICATION_COLUMNS and c not in cols_grp_validas
         ]
-        df = df.astype({"serie": int})
+        df = df.astype({"cenario": int})
         df_group = (
             df.groupby(cols_group)[["patamar", "duracaoPatamar", "valor"]]
             .sum(engine="numba")
@@ -1509,7 +1509,7 @@ class OperationVariableBounds:
             for c in df.columns
             if c in cls.IDENTIFICATION_COLUMNS and c not in cols_grp_validas
         ]
-        df = df.astype({"serie": int})
+        df = df.astype({"cenario": int})
         df_group = (
             df.groupby(cols_group)[["patamar", "duracaoPatamar", "valor"]]
             .sum(engine="numba")
@@ -1559,7 +1559,7 @@ class OperationVariableBounds:
             for c in df.columns
             if c in cls.IDENTIFICATION_COLUMNS and c not in cols_grp_validas
         ]
-        df = df.astype({"serie": int})
+        df = df.astype({"cenario": int})
         df_group = (
             df.groupby(cols_group)[["patamar", "duracaoPatamar", "valor"]]
             .sum(engine="numba")
@@ -1599,7 +1599,7 @@ class OperationVariableBounds:
         datas_inicio = df["dataInicio"].unique().tolist()
         n_usinas = len(df["usina"].unique())
         n_estagios = len(datas_inicio)
-        n_cenarios = len(df["serie"].unique())
+        n_cenarios = len(df["cenario"].unique())
         n_patamares = len(df["patamar"].unique())
         # Lê hidr.dat
         arq_hidr = cls._get_hidr(uow)
@@ -1758,7 +1758,7 @@ class OperationVariableBounds:
         datas_inicio = df["dataInicio"].unique().tolist()
         n_usinas = len(df["usina"].unique())
         n_estagios = len(datas_inicio)
-        n_cenarios = len(df["serie"].unique())
+        n_cenarios = len(df["cenario"].unique())
         n_patamares = len(df["patamar"].unique())
         # Lê hidr.dat
         arq_hidr = cls._get_hidr(uow)
@@ -2198,7 +2198,7 @@ class OperationVariableBounds:
         """
         datas_inicio = df["dataInicio"].unique().tolist()
         n_estagios = len(datas_inicio)
-        n_cenarios = len(df["serie"].unique())
+        n_cenarios = len(df["cenario"].unique())
         n_patamares = len(df["patamar"].unique())
         # Filtra os pares de submercados de limites dentre os
         # que existem no df
@@ -2318,6 +2318,7 @@ class OperationVariableBounds:
         df: pd.DataFrame,
         col_grp: Optional[str] = None,
         ordem_sintese: Optional[list] = None,
+        datas_sintese: Optional[list] = None,
     ) -> pd.DataFrame:
         """
         Realiza a agregação de limites de geração de usinas
@@ -2334,6 +2335,9 @@ class OperationVariableBounds:
             df["group"] = df[col_grp]
         else:
             raise RuntimeError(f"Coluna de agrupamento inválida: {col_grp}")
+
+        if datas_sintese:
+            df = df.loc[df["data"].isin(datas_sintese)].reset_index(drop=True)
 
         cols_group = ["group", "data"]
         df_group = (
@@ -2454,15 +2458,17 @@ class OperationVariableBounds:
             df_gtmax, arq_conft, arq_sistema
         )
         # Agrupa os limites, se necessário
+        datas_sintese = df["dataInicio"].unique().tolist()
         ordem_sintese = (
             df[col_grp].unique().tolist() if col_grp != "sin" else None
         )
         df_gtmin = cls._agrega_variaveis_limites_ute(
-            df_gtmin, col_grp, ordem_sintese
+            df_gtmin, col_grp, ordem_sintese, datas_sintese
         )
         df_gtmax = cls._agrega_variaveis_limites_ute(
-            df_gtmax, col_grp, ordem_sintese
+            df_gtmax, col_grp, ordem_sintese, datas_sintese
         )
+
         # Repete os limites para todos os estágios e cenarios
         df = cls._expande_dados_cenarios_gter(
             df, df_gtmin, df_gtmax, col_grp, ordem_sintese

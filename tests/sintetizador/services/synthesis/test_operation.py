@@ -113,7 +113,7 @@ def __compara_sintese_nwlistop(
     data = kwargs.get("dataInicio", datetime(2023, 10, 1))
     cenario = kwargs.get("cenario", 1)
     filtros_sintese = (df_sintese["dataInicio"] == data) & (
-        df_sintese["cenario"] == str(cenario)
+        df_sintese["cenario"] == cenario
     )
     filtros_nwlistop = (df_nwlistop["data"] == data) & (
         df_nwlistop["serie"] == cenario
@@ -135,6 +135,9 @@ def __compara_sintese_nwlistop(
                 filtros_nwlistop = filtros_nwlistop & (
                     df_nwlistop[col].isin(val)
                 )
+
+    # print(df_sintese.loc[filtros_sintese])
+    # print(df_nwlistop.loc[filtros_nwlistop])
 
     assert np.allclose(
         df_sintese.loc[filtros_sintese, "valor"].to_numpy(),
@@ -231,6 +234,7 @@ def test_calcula_patamar_medio_soma_gter_ute(test_settings):
         OperationSynthetizer.synthetize(["GTER_UTE"], uow)
     m.assert_called()
     df = m.mock_calls[0].args[0]
+
     df_arq = __calcula_patamar_medio_soma_gter_ute(
         Gtert.read(join(DECK_TEST_DIR, "gtert001.out")).valores
     )
@@ -348,7 +352,7 @@ def test_sintese_ever_sin(test_settings):
     ):
         OperationSynthetizer.synthetize(["EVER_SIN"], uow)
     m.assert_called()
-    df = m.mock_calls[-2].args[0]
+    df = m.mock_calls[-3].args[0]
     df_evert = Evertsin.read(join(DECK_TEST_DIR, "evertsin.out")).valores
     df_evernt = Perdfsin.read(join(DECK_TEST_DIR, "perdfsin.out")).valores
     df_evert["valor"] += df_evernt["valor"].to_numpy()
@@ -378,6 +382,8 @@ def test_sintese_earmf_uhe(test_settings):
         OperationSynthetizer.synthetize(["EARMF_UHE"], uow)
     m.assert_called()
     df = m.mock_calls[-2].args[0]
+    print(df)
+    # raise RuntimeError
     # df_ree = None
     # df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
     # codigos_uhes = df_uhes.loc[df_uhes["ree"] == 2, "codigo_usina"].unique()
@@ -1596,7 +1602,7 @@ def test_sintese_hliq_uhe(test_settings):
     ):
         OperationSynthetizer.synthetize(["HLIQ_UHE"], uow)
     m.assert_called()
-    df = m.mock_calls[-2].args[0]
+    df = m.mock_calls[-3].args[0]
     df_arq = __calcula_media_ponderada(
         __adiciona_duracoes_patamares(
             Hliq.read(join(DECK_TEST_DIR, "hliq006.out")).valores
@@ -1611,7 +1617,7 @@ def test_sintese_hliq_uhe(test_settings):
         patamar=[0],
     )
     df_meta = m.mock_calls[-1].args[0]
-    __valida_metadata("HLIQ_UHE", df_meta, True)
+    __valida_metadata("HLIQ_UHE", df_meta, False)
 
 
 # QTUR, QVER, QRET, QDES para UHE (converter para m3/s)
