@@ -3123,18 +3123,7 @@ class OperationSynthetizer:
         cls, df: pd.DataFrame
     ) -> pd.DataFrame:
         n_pats = cls.SYNTHESIS_SHARED_DATA["numero_patamares"]
-        cols_dup = [
-            c
-            for c in df.columns
-            if c
-            not in [
-                "dataInicio",
-                "dataFim",
-                "patamar",
-                "duracaoPatamar",
-                "valor",
-            ]
-        ]
+        cols_dup = ["usina", "estagio", "cenario"]
         df_pat0 = df.copy()
         df_pat0["valor"] = (
             df_pat0["valor"] * df_pat0["duracaoPatamar"]
@@ -3150,50 +3139,6 @@ class OperationSynthetizer:
         )
         df_pat0 = pd.concat([df_pat0, df_base], ignore_index=True, copy=True)
         df_pat0 = df_pat0.sort_values(cols_dup + ["patamar"])
-        return df_pat0
-
-    @classmethod
-    def __stub_calc_pat_0_weighted_mean(
-        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
-        df = cls._resolve_spatial_resolution(synthesis, uow)
-        n_pats = cls.SYNTHESIS_SHARED_DATA["numero_patamares"]
-        ti = time()
-        cols_dup = [
-            c
-            for c in df.columns
-            if c
-            not in [
-                "dataInicio",
-                "dataFim",
-                "patamar",
-                "duracaoPatamar",
-                "valor",
-            ]
-        ]
-        df_pat0 = df.copy()
-        df_pat0["valor"] = (
-            df_pat0["valor"] * df_pat0["duracaoPatamar"]
-        ) / cls.STAGE_DURATION_HOURS
-        df_base = df.iloc[::n_pats].reset_index(drop=True).copy()
-        df_base["patamar"] = 0
-        df_base["duracaoPatamar"] = cls.STAGE_DURATION_HOURS
-        arr = df_pat0["valor"].to_numpy()
-        n_linhas = arr.shape[0]
-        n_elementos_distintos = n_linhas // n_pats
-        df_base["valor"] = arr.reshape((n_elementos_distintos, -1)).mean(
-            axis=1
-        )
-        df_pat0 = pd.concat([df_pat0, df_base], ignore_index=True, copy=True)
-        df_pat0 = df_pat0.sort_values(cols_dup + ["patamar"])
-        entities = cls._get_ordered_entities(synthesis)
-        entities["patamar"] = list(range(n_pats + 1))
-        cls._set_ordered_entities(synthesis, entities)
-        tf = time()
-        if cls.logger:
-            cls.logger.info(
-                f"Tempo para cálculo do patamar médio: {tf - ti:.2f} s"
-            )
         return df_pat0
 
     @classmethod
@@ -3257,9 +3202,6 @@ class OperationSynthetizer:
         if not df_completo.empty:
             df_completo = df_completo.loc[df_completo["dataInicio"] < fim, :]
 
-        df_completo = df_completo.sort_values(
-            ["usina", "estagio", "patamar", "cenario"]
-        ).reset_index(drop=True)
         # Otimização: ordena as entidades para facilitar a busca
         usinas = cls._get_unique_col_values_in_order(df_completo, ["usina"])
         outras_cols = cls._get_unique_col_values_in_order(
@@ -3977,9 +3919,9 @@ class OperationSynthetizer:
     def _add_synthesis_stats(cls, s: OperationSynthesis, df: pd.DataFrame):
         df["variavel"] = s.variable.value
         if s.spatial_resolution not in cls.SYNTHESIS_STATS:
-            cls.SYNTHESIS_STATS[s] = [df]
+            cls.SYNTHESIS_STATS[s.spatial_resolution] = [df]
         else:
-            cls.SYNTHESIS_STATS[s].append(df)
+            cls.SYNTHESIS_STATS[s.spatial_resolution].append(df)
 
     @classmethod
     def _export_cenario_synthesis(
@@ -4012,7 +3954,9 @@ class OperationSynthetizer:
                 cols_df = df.columns.tolist()
                 cols_sem_variavel = [c for c in cols_df if c != "variavel"]
                 df = df[["variavel"] + cols_sem_variavel]
-                uow.export.synthetize_df(df, f"OPERACAO_{str(res)}")
+                uow.export.synthetize_df(
+                    df, f"ESTATISTICAS_OPERACAO_{res.value}"
+                )
 
     @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
