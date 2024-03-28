@@ -1822,6 +1822,8 @@ class OperationSynthetizer:
 
     SYNTHESIS_SHARED_DATA: Dict[str, Any] = {}
 
+    SYNTHESIS_STATS: Dict[SpatialResolution, List[pd.DataFrame]] = {}
+
     @classmethod
     def _get_dger(cls, uow: AbstractUnitOfWork) -> Dger:
         with uow:
@@ -2536,7 +2538,7 @@ class OperationSynthetizer:
         synthesis: OperationSynthesis,
         uhe_index: int,
         uhe_name: str,
-    ) -> pd.DataFrame:
+    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         logger_name = f"{synthesis.variable.value}_{uhe_name}"
         logger = Log.configure_process_logger(
             uow.queue, logger_name, uhe_index
@@ -2571,8 +2573,8 @@ class OperationSynthetizer:
         if synthesis.variable in internal_stubs:
             df_uhe = internal_stubs[synthesis.variable](df_uhe)
         # Pós-processamento
-        # df_uhe = cls._postprocess(df_uhe)
-        return df_uhe
+        df_stats = cls._postprocess(df_uhe)
+        return pd.concat([df_uhe, df_stats], ignore_index=True)
 
     @classmethod
     def _resolve_gtert_temporal(
@@ -3661,9 +3663,8 @@ class OperationSynthetizer:
     def _postprocess(cls, df: pd.DataFrame) -> pd.DataFrame:
         df_q = cls._processa_quantis(df, [0.05 * i for i in range(21)])
         df_m = cls._processa_media(df)
-        df = pd.concat([df, df_q, df_m], ignore_index=True)
-        df = df.astype({"cenario": str})
-        return df
+        df_stats = pd.concat([df_q, df_m], ignore_index=True)
+        return df_stats
 
     @classmethod
     def _earmi_percentual(
@@ -3973,6 +3974,47 @@ class OperationSynthetizer:
             uow.export.synthetize_df(metadata_df, "METADADOS_OPERACAO")
 
     @classmethod
+    def _add_synthesis_stats(cls, s: OperationSynthesis, df: pd.DataFrame):
+        df["variavel"] = s.variable.value
+        if s.spatial_resolution not in cls.SYNTHESIS_STATS:
+            cls.SYNTHESIS_STATS[s] = [df]
+        else:
+            cls.SYNTHESIS_STATS[s].append(df)
+
+    @classmethod
+    def _export_cenario_synthesis(
+        cls, s: OperationSynthesis, df: pd.DataFrame, uow: AbstractUnitOfWork
+    ):
+        filename = str(s)
+        ti_e = time()
+        n_cenarios = cls.SYNTHESIS_SHARED_DATA["numero_cenarios_sim_final"]
+        cenarios = list(range(1, n_cenarios + 1))
+        df_cenarios = df.loc[df["cenario"].isin(cenarios)].reset_index(
+            drop=True
+        )
+        df_stats = df.loc[~df["cenario"].isin(cenarios)].reset_index(drop=True)
+        cls._add_synthesis_stats(s, df_stats)
+        with uow:
+            uow.export.synthetize_df(df_cenarios, filename)
+        tf_e = time()
+        cls.logger.info(
+            f"Tempo para exportação dos dados: {tf_e - ti_e:.2f} s"
+        )
+
+    @classmethod
+    def _export_stats(
+        cls,
+        uow: AbstractUnitOfWork,
+    ):
+        for res, dfs in cls.SYNTHESIS_STATS.items():
+            with uow:
+                df = pd.concat(dfs, ignore_index=True)
+                cols_df = df.columns.tolist()
+                cols_sem_variavel = [c for c in cols_df if c != "variavel"]
+                df = df[["variavel"] + cols_sem_variavel]
+                uow.export.synthetize_df(df, f"OPERACAO_{str(res)}")
+
+    @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
         cls.logger = logging.getLogger("main")
         ti = time()
@@ -4003,30 +4045,25 @@ class OperationSynthetizer:
                 if df is not None:
                     if not df.empty:
                         found_synthesis = True
-                        ti_e = time()
-                        with uow:
-                            uow.export.synthetize_df(df, filename)
-                        tf_e = time()
-                        cls.logger.info(
-                            f"Tempo para exportação dos dados: {tf_e - ti_e:.2f} s"
-                        )
-                        success_synthesis.append((s, is_stub))
+                        cls._export_cenario_synthesis(s, df, uow)
                         tf_s = time()
                         cls.logger.info(
-                            f"Tempo para síntese de {str(s)}: {tf_s - ti_s:.2f} s"
+                            f"Tempo para síntese de {filename}: {tf_s - ti_s:.2f} s"
                         )
+                        success_synthesis.append((s, is_stub))
                 if not found_synthesis:
                     cls.logger.warning(
                         "Nao foram encontrados dados"
-                        + f" para a sintese de {str(s)}"
+                        + f" para a sintese de {filename}"
                     )
             except Exception as e:
                 traceback.print_exc()
                 cls.logger.error(str(e))
                 cls.logger.error(
-                    f"Nao foi possível realizar a sintese de: {str(s)}"
+                    f"Nao foi possível realizar a sintese de: {filename}"
                 )
 
+        cls._export_stats(uow)
         cls._export_metadata(success_synthesis, uow)
         tf = time()
         cls.logger.info(f"Tempo para síntese da operação: {tf - ti:.2f} s")
