@@ -2249,7 +2249,9 @@ class OperationSynthetizer:
                 "",
             )
             if df is not None:
-                return cls._resolve_temporal_resolution(df)
+                df = cls._resolve_temporal_resolution(df)
+                df = df.rename(columns={"serie": "cenario"})
+                return cls._apply_starting_stage_postprocess(df)
             else:
                 return pd.DataFrame()
 
@@ -2282,7 +2284,7 @@ class OperationSynthetizer:
             df_sbm["submercado"] = sbm_name
             df_sbm = df_sbm[["submercado"] + cols]
             df_sbm = df_sbm.rename(columns={"serie": "cenario"})
-            return df_sbm
+            return cls._apply_starting_stage_postprocess(df_sbm)
 
     @classmethod
     def __resolve_SBM(
@@ -2366,8 +2368,8 @@ class OperationSynthetizer:
             df_sbp["submercadoDe"] = sbm1_name
             df_sbp["submercadoPara"] = sbm2_name
             df_sbp = df_sbp[["submercadoDe", "submercadoPara"] + cols]
-
-            return df_sbp
+            df_sbp = df_sbp.rename(columns={"serie": "cenario"})
+            return cls._apply_starting_stage_postprocess(df_sbp)
 
     @classmethod
     def __resolve_SBP(
@@ -2435,20 +2437,21 @@ class OperationSynthetizer:
             logger.info(
                 f"Processando arquivo do REE: {ree_index} - {ree_name}"
             )
-            df_sbm = cls._resolve_temporal_resolution(
+            df_ree = cls._resolve_temporal_resolution(
                 uow.files.get_nwlistop(
                     synthesis.variable,
                     synthesis.spatial_resolution,
                     ree=ree_index,
                 )
             )
-            if df_sbm is None:
+            if df_ree is None:
                 return None
-            cols = df_sbm.columns.tolist()
-            df_sbm["ree"] = ree_name
-            df_sbm = df_sbm[["ree"] + cols]
-            df_sbm = df_sbm.rename(columns={"serie": "cenario"})
-            return df_sbm
+            cols = df_ree.columns.tolist()
+            df_ree["ree"] = ree_name
+            df_ree = df_ree[["ree"] + cols]
+            df_ree = df_ree.rename(columns={"serie": "cenario"})
+            cls._apply_starting_stage_postprocess(df_ree)
+            return df_ree
 
     @classmethod
     def __resolve_REE(
@@ -2567,18 +2570,15 @@ class OperationSynthetizer:
         df_uhe["usina"] = uhe_name
         df_uhe = df_uhe[["usina"] + cols]
         df_uhe = df_uhe.rename(columns={"serie": "cenario"})
-        # Considerar estágio inicial
         df_uhe = cls._resolve_starting_stage(df_uhe)
-        # Aplica correções necessárias
         if synthesis.variable in internal_stubs:
             df_uhe = internal_stubs[synthesis.variable](df_uhe)
-        # Pós-processamento
         df_stats = cls._postprocess(df_uhe)
         return pd.concat([df_uhe, df_stats], ignore_index=True)
 
     @classmethod
     def _resolve_gtert_temporal(
-        cls, df: Optional[pd.DataFrame], uow: AbstractUnitOfWork
+        cls, df: Optional[pd.DataFrame]
     ) -> pd.DataFrame:
         if df is None:
             return df
@@ -2639,12 +2639,11 @@ class OperationSynthetizer:
                     synthesis.spatial_resolution,
                     submercado=sbm_index,
                 ),
-                uow,
             )
             df_gtert = df_gtert.rename(
                 columns={"serie": "cenario", "classe": "usina"}
             )
-            return df_gtert
+            return cls._apply_starting_stage_postprocess(df_gtert)
 
     @classmethod
     def __stub_converte_volume_em_vazao(
@@ -3316,7 +3315,7 @@ class OperationSynthetizer:
                 ignore_index=True,
             )
             df = df[["usina"] + cols]
-            df = df.rename(columns={"serie": "cenario"})
+
             return df
 
     @classmethod
@@ -3607,6 +3606,12 @@ class OperationSynthetizer:
         df_m = cls._processa_media(df)
         df_stats = pd.concat([df_q, df_m], ignore_index=True)
         return df_stats
+
+    @classmethod
+    def _apply_starting_stage_postprocess(cls, df: pd.DataFrame):
+        df = cls._resolve_starting_stage(df)
+        df_stats = cls._postprocess(df)
+        return pd.concat([df, df_stats], ignore_index=True)
 
     @classmethod
     def _earmi_percentual(

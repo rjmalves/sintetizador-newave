@@ -2336,9 +2336,8 @@ class OperationVariableBounds:
             raise RuntimeError(f"Coluna de agrupamento inválida: {col_grp}")
 
         cols_group = ["group", "data"]
-        print(df)
         df_group = (
-            df.groupby(cols_group)[["patamar", "duracaoPatamar", "valor"]]
+            df.groupby(cols_group)[["valor_MWmed"]]
             .sum(engine="numba")
             .reset_index()
         )
@@ -2379,7 +2378,7 @@ class OperationVariableBounds:
         """
         datas_inicio = df["dataInicio"].unique().tolist()
         n_estagios = len(datas_inicio)
-        n_cenarios = len(df["serie"].unique())
+        n_cenarios = len(df["cenario"].unique())
         n_patamares = len(df["patamar"].unique())
         if col_grp != "sin":
             for u in ordem_sintese:
