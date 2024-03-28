@@ -2571,7 +2571,7 @@ class OperationSynthetizer:
         if synthesis.variable in internal_stubs:
             df_uhe = internal_stubs[synthesis.variable](df_uhe)
         # Pós-processamento
-        df_uhe = cls._postprocess(df_uhe)
+        # df_uhe = cls._postprocess(df_uhe)
         return df_uhe
 
     @classmethod
@@ -2580,7 +2580,7 @@ class OperationSynthetizer:
     ) -> pd.DataFrame:
         if df is None:
             return df
-        df.sort_values(["classe", "data", "cenario", "patamar"], inplace=True)
+        df.sort_values(["classe", "data", "serie", "patamar"], inplace=True)
         classes = df["classe"].unique().tolist()
         n_classes = len(classes)
         datas = df["data"].unique().tolist()

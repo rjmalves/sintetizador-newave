@@ -1142,8 +1142,8 @@ class OperationVariableBounds:
         Retorna as durações dos patamares em cada estágio, na ordem em que aparecem
         no DataFrame da síntese em processamento.
         """
-        ex = df["serie"].unique().tolist()[0]
-        return df.loc[df["serie"] == ex, "duracaoPatamar"].to_numpy()
+        ex = df["cenario"].unique().tolist()[0]
+        return df.loc[df["cenario"] == ex, "duracaoPatamar"].to_numpy()
 
     @classmethod
     def _dado_cadastral_hidr_uhes(
@@ -1881,7 +1881,7 @@ class OperationVariableBounds:
         datas_inicio = df["dataInicio"].unique().tolist()
         n_usinas = len(df["usina"].unique())
         n_estagios = len(datas_inicio)
-        n_cenarios = len(df["serie"].unique())
+        n_cenarios = len(df["cenario"].unique())
         n_patamares = len(df["patamar"].unique())
         # Lê hidr.dat
         arq_hidr = cls._get_hidr(uow)
@@ -2336,6 +2336,7 @@ class OperationVariableBounds:
             raise RuntimeError(f"Coluna de agrupamento inválida: {col_grp}")
 
         cols_group = ["group", "data"]
+        print(df)
         df_group = (
             df.groupby(cols_group)[["patamar", "duracaoPatamar", "valor"]]
             .sum(engine="numba")
