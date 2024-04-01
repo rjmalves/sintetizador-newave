@@ -1008,7 +1008,7 @@ class OperationSynthetizer:
             nome_usina_jusante = df_usinas.loc[
                 df_usinas["codigo_usina"] == codigo_usina_jusante, "nome_usina"
             ].iloc[0]
-            prod_usina = df.loc[df["usina"] == codigo_usina, "prod"]
+            prod_usina = df.loc[df["usina"] == nome_usina, "prod"]
             prod_jusante = df.loc[
                 df["usina"] == nome_usina_jusante, "prod"
             ].to_numpy()
