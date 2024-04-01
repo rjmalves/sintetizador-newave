@@ -364,6 +364,11 @@ class OperationSynthetizer:
         sbm_index: int,
         sbm_name: str,
     ) -> Optional[pd.DataFrame]:
+        """
+        Obtem os dados da síntese de operação para um submercado
+        a partir do arquivo de saída do NWLISTOP.
+        """
+
         logger_name = f"{synthesis.variable.value}_{sbm_name}"
         logger = Log.configure_process_logger(
             uow.queue, logger_name, sbm_index
@@ -391,7 +396,11 @@ class OperationSynthetizer:
     @classmethod
     def __resolve_SBM(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
+    ) -> Optional[pd.DataFrame]:
+        """
+        Resolve a síntese de operação para uma variável operativa
+        de um submercado a partir dos arquivos de saída do NWLISTOP.
+        """
 
         submarkets = Deck.submercados(uow)
         real_submarkets = submarkets.loc[
@@ -472,7 +481,7 @@ class OperationSynthetizer:
     @classmethod
     def __resolve_SBP(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
+    ) -> Optional[pd.DataFrame]:
         """
         Resolve a síntese de operação para uma variável operativa
         de um par de submercados a partir dos arquivos de saída do NWLISTOP.
@@ -516,6 +525,11 @@ class OperationSynthetizer:
         ree_index: int,
         ree_name: str,
     ) -> Optional[pd.DataFrame]:
+        """
+        Obtem os dados da síntese de operação para um REE
+        a partir do arquivo de saída do NWLISTOP.
+        """
+
         logger_name = f"{synthesis.variable.value}_{ree_name}"
         logger = Log.configure_process_logger(
             uow.queue, logger_name, ree_index
@@ -544,7 +558,11 @@ class OperationSynthetizer:
     @classmethod
     def __resolve_REE(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
+    ) -> Optional[pd.DataFrame]:
+        """
+        Resolve a síntese de operação para uma variável operativa
+        de um REE a partir dos arquivos de saída do NWLISTOP.
+        """
 
         def _add_submarket_to_eer_synthesis(
             s: OperationSynthesis, df: pd.DataFrame, uow: AbstractUnitOfWork
@@ -730,6 +748,10 @@ class OperationSynthetizer:
     def _post_resolve_gtert(
         cls, df: Optional[pd.DataFrame], uow: AbstractUnitOfWork
     ) -> Optional[pd.DataFrame]:
+        """
+        Realiza pós-processamento após a resolução da extração dados
+        em um DataFrame de síntese da geração térmica por UTE.
+        """
         if df is None:
             return df
         df = df.rename(
@@ -813,88 +835,104 @@ class OperationSynthetizer:
         return cls._post_resolve_gtert(df, uow)
 
     @classmethod
-    def __stub_converte_volume_em_vazao(
+    def _convert_volume_to_flow(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
+        """
+        Realiza a conversão de síntese de volume para vazão.
+        """
         variable_map = {
             Variable.VAZAO_VERTIDA: Variable.VOLUME_VERTIDO,
             Variable.VAZAO_TURBINADA: Variable.VOLUME_TURBINADO,
             Variable.VAZAO_DESVIADA: Variable.VOLUME_DESVIADO,
             Variable.VAZAO_RETIRADA: Variable.VOLUME_RETIRADO,
         }
-        synt_vol = OperationSynthesis(
+        volume_synthesis = OperationSynthesis(
             variable_map[synthesis.variable],
             synthesis.spatial_resolution,
         )
-        df_completo = cls._get_from_cache(synt_vol)
-        df_completo.loc[:, "valor"] = (
-            df_completo["valor"]
+        df = cls._get_from_cache(volume_synthesis)
+        df.loc[:, VALUE_COL] = (
+            df[VALUE_COL]
             * HM3_M3S_MONTHLY_FACTOR
             * STAGE_DURATION_HOURS
-            / df_completo["duracaoPatamar"]
+            / df[BLOCK_DURATION_COL]
         )
 
-        return df_completo
+        return df
 
     @classmethod
-    def __stub_converte_vazao_em_volume(
+    def _convert_flow_to_volume(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
+        """
+        Realiza a conversão de síntese de vazão para volume.
+        """
         variable_map = {
             Variable.VOLUME_AFLUENTE: Variable.VAZAO_AFLUENTE,
             Variable.VOLUME_INCREMENTAL: Variable.VAZAO_INCREMENTAL,
         }
-        synt_vaz = OperationSynthesis(
+        flow_synthesis = OperationSynthesis(
             variable_map[synthesis.variable],
             synthesis.spatial_resolution,
         )
-        df_completo = cls._get_from_cache(synt_vaz)
-        df_completo.loc[:, "valor"] = (
-            df_completo["valor"]
-            * df_completo["duracaoPatamar"]
+        df = cls._get_from_cache(flow_synthesis)
+        df.loc[:, VALUE_COL] = (
+            df[VALUE_COL]
+            * df[BLOCK_DURATION_COL]
             / (HM3_M3S_MONTHLY_FACTOR * STAGE_DURATION_HOURS)
         )
-        return df_completo
+        return df
 
     @classmethod
     def __stub_QDEF(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-        sintese_tur = OperationSynthesis(
+        """
+        Realiza o cálculo da vazão defluente a partir dos valores
+        das vazões turbinada e vertida.
+        """
+        turbined_synthesis = OperationSynthesis(
             Variable.VAZAO_TURBINADA,
             synthesis.spatial_resolution,
         )
-        sintese_ver = OperationSynthesis(
+        spilled_synthesis = OperationSynthesis(
             Variable.VAZAO_VERTIDA,
             synthesis.spatial_resolution,
         )
-        df_tur = cls._get_from_cache(sintese_tur)
-        df_ver = cls._get_from_cache(sintese_ver)
+        turbined_df = cls._get_from_cache(turbined_synthesis)
+        spilled_df = cls._get_from_cache(spilled_synthesis)
 
-        df_ver.loc[:, "valor"] = (
-            df_tur["valor"].to_numpy() + df_ver["valor"].to_numpy()
+        spilled_df.loc[:, VALUE_COL] = (
+            turbined_df[VALUE_COL].to_numpy()
+            + spilled_df[VALUE_COL].to_numpy()
         )
-        return df_ver
+        return spilled_df
 
     @classmethod
     def __stub_VDEF(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-        sintese_tur = OperationSynthesis(
+        """
+        Realiza o cálculo do volume defluente a partir dos valores
+        dos volumes turbinado e vertido.
+        """
+        turbined_synthesis = OperationSynthesis(
             Variable.VOLUME_TURBINADO,
             synthesis.spatial_resolution,
         )
-        sintese_ver = OperationSynthesis(
+        spilled_synthesis = OperationSynthesis(
             Variable.VOLUME_VERTIDO,
             synthesis.spatial_resolution,
         )
-        df_tur = cls._get_from_cache(sintese_tur)
-        df_ver = cls._get_from_cache(sintese_ver)
+        turbined_df = cls._get_from_cache(turbined_synthesis)
+        spilled_df = cls._get_from_cache(spilled_synthesis)
 
-        df_ver.loc[:, "valor"] = (
-            df_tur["valor"].to_numpy() + df_ver["valor"].to_numpy()
+        spilled_df.loc[:, VALUE_COL] = (
+            turbined_df[VALUE_COL].to_numpy()
+            + spilled_df[VALUE_COL].to_numpy()
         )
-        return df_ver
+        return spilled_df
 
     @classmethod
     def __stub_VEVAP(
@@ -1821,7 +1859,7 @@ class OperationSynthetizer:
                 s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
             ]
         ):
-            f = cls.__stub_converte_volume_em_vazao
+            f = cls._convert_volume_to_flow
         elif all(
             [
                 s.variable
@@ -1832,7 +1870,7 @@ class OperationSynthetizer:
                 s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
             ]
         ):
-            f = cls.__stub_converte_vazao_em_volume
+            f = cls._convert_flow_to_volume
         elif all(
             [
                 s.variable == Variable.VAZAO_DEFLUENTE,
