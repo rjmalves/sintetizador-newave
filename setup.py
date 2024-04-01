@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
-from sintetizador import __version__
+from app import __version__
 
 long_description = "sintetizador_newave"
 

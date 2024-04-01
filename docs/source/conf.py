@@ -19,7 +19,7 @@ import plotly.io as pio
 pio.renderers.default = "sphinx_gallery"
 
 sys.path.insert(0, os.path.abspath("../../"))
-from sintetizador import __version__  # noqa: E402
+from app import __version__  # noqa: E402
 
 
 # -- Project information -----------------------------------------------------
