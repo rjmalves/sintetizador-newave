@@ -2,7 +2,7 @@ from enum import Enum
 from typing import Dict, List
 from app.internal.constants import (
     HYDRO_COL,
-    THEMAL_COL,
+    THERMAL_COL,
     EER_COL,
     EEP_COL,
     SUBMARKET_COL,
@@ -56,7 +56,7 @@ class SpatialResolution(Enum):
             SpatialResolution.RESERVATORIO_EQUIVALENTE: [EER_COL],
             SpatialResolution.PARQUE_EOLICO_EQUIVALENTE: [EEP_COL],
             SpatialResolution.USINA_HIDROELETRICA: [HYDRO_COL],
-            SpatialResolution.USINA_TERMELETRICA: [THEMAL_COL],
+            SpatialResolution.USINA_TERMELETRICA: [THERMAL_COL],
             SpatialResolution.PAR_SUBMERCADOS: [
                 EXCHANGE_SOURCE_COL,
                 EXCHANGE_TARGET_COL,

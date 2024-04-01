@@ -571,10 +571,10 @@ class Deck:
             df_aux["ree"] = df_aux["uhes"].apply(
                 lambda u: rees.at[confhd.at[u, "ree"], "nome"]
             )
-            df_aux["submercado"] = df_aux["uhes"].apply(
+            df_aux["codigo_submercado"] = df_aux["uhes"].apply(
                 lambda u: rees.at[confhd.at[u, "ree"], "submercado"]
             )
-            df_aux["nome_submercado"] = df_aux["submercado"].apply(
+            df_aux["submercado"] = df_aux["codigo_submercado"].apply(
                 lambda c: sistema.at[c, "nome_submercado"]
             )
             df_aux = df_aux.set_index("uhes")
