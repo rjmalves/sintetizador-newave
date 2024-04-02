@@ -1016,8 +1016,10 @@ class OperationVariableBounds:
         limites_superiores_cenarios = cls._expande_dados_para_cenarios(
             limites_superiores, n_rees, n_estagios, n_cenarios, n_patamares
         )
-        df["limiteInferior"] = np.round(limites_inferiores_cenarios, 2)
-        df["limiteSuperior"] = np.round(limites_superiores_cenarios, 2)
+        n_casas = 1 if unidade_sintese == "'%'" else 0
+        df["valor"] = np.round(df["valor"], n_casas)
+        df["limiteInferior"] = np.round(limites_inferiores_cenarios, n_casas)
+        df["limiteSuperior"] = np.round(limites_superiores_cenarios, n_casas)
         return df
 
     @classmethod
@@ -1072,8 +1074,10 @@ class OperationVariableBounds:
         limites_superiores_cenarios = cls._expande_dados_para_cenarios(
             limites_superiores, n_sbms, n_estagios, n_cenarios, n_patamares
         )
-        df["limiteInferior"] = np.round(limites_inferiores_cenarios, 2)
-        df["limiteSuperior"] = np.round(limites_superiores_cenarios, 2)
+        n_casas = 1 if unidade_sintese == "'%'" else 0
+        df["valor"] = np.round(df["valor"], n_casas)
+        df["limiteInferior"] = np.round(limites_inferiores_cenarios, n_casas)
+        df["limiteSuperior"] = np.round(limites_superiores_cenarios, n_casas)
         return df
 
     @classmethod
@@ -1118,8 +1122,10 @@ class OperationVariableBounds:
         limites_superiores_cenarios = cls._expande_dados_para_cenarios(
             limites_superiores, 1, n_estagios, n_cenarios, n_patamares
         )
-        df["limiteInferior"] = np.round(limites_inferiores_cenarios, 2)
-        df["limiteSuperior"] = np.round(limites_superiores_cenarios, 2)
+        n_casas = 1 if unidade_sintese == "'%'" else 0
+        df["valor"] = np.round(df["valor"], n_casas)
+        df["limiteInferior"] = np.round(limites_inferiores_cenarios, n_casas)
+        df["limiteSuperior"] = np.round(limites_superiores_cenarios, n_casas)
         return df
 
     @classmethod
@@ -1635,6 +1641,10 @@ class OperationVariableBounds:
         # Lê modif.dat
         arq_modif = cls._get_modif(uow)
 
+        possui_limites = (
+            "limiteInferior" in df.columns and "limiteSuperior" in df.columns
+        )
+
         # Obtem usinas do df na ordem em que aparecem e durações dos patamares
         codigos_usinas = cls._codigos_usinas_unicas(df, df_hidr)
 
@@ -1769,7 +1779,7 @@ class OperationVariableBounds:
         df["valor"] = np.round(df["valor"], 2)
         # Específico do VARM: soma o limite inferior cadastral, pois o representado
         # nos arquivos de saída é em volume útil (hm3).
-        if unidade_sintese == "'h'":
+        if unidade_sintese == "'h'" and not possui_limites:
             df["valor"] += limites_inferiores_cenarios
 
         return df

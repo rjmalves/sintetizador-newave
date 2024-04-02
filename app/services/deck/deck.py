@@ -266,7 +266,7 @@ class Deck:
         num_anos_historico = cls.DECK_DATA_CACHING.get("num_anos_historico")
         if num_anos_historico is None:
             shist = cls._get_shist(uow)
-            ano_inicio_estudo = cls.ano_inicio_estudo()
+            ano_inicio_estudo = cls.ano_inicio_estudo(uow)
             ano_inicio_varredura = cls._validate_data(
                 shist.ano_inicio_varredura,
                 int,

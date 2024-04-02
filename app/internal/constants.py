@@ -18,6 +18,9 @@ BLOCK_DURATION_COL = "duracaoPatamar"
 VALUE_COL = "valor"
 LOWER_BOUND_COL = "limiteInferior"
 UPPER_BOUND_COL = "limiteSuperior"
+VARIABLE_COL = "variavel"
+GROUPING_TMP_COL = "group"
+PRODUCTIVITY_TMP_COL = "prod"
 
 SYNTHESIS_IDENTIFICATION_COLUMNS = [
     START_DATE_COL,
@@ -46,3 +49,15 @@ OPERATION_SYNTHESIS_COMMON_COLUMNS = [
 ]
 
 OPERATION_SYNTHESIS_VALUE_COLUMNS = [""]
+
+import pandas  # type: ignore # noqa: E402
+
+__has_numba = True
+try:
+    import numba  # type: ignore # noqa: E402
+except ImportError:
+    __has_numba = False
+if pandas.__version__ >= "2.2.0" and __has_numba:
+    PANDAS_GROUPING_ENGINE = "numba"
+else:
+    PANDAS_GROUPING_ENGINE = "cython"

@@ -364,9 +364,169 @@ def test_sintese_ever_sin(test_settings):
     __valida_metadata("EVER_SIN", df_meta, True)
 
 
-# TODO - VARMI, VARMPI para UHE (consulta pmo.dat e valores de VARMF e VARPF)
+def test_sintese_earmi_ree(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "app.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["EARMI_REE"], uow)
+    m.assert_called()
+    df = m.mock_calls[-3].args[0]
+    # TODO - implementar validação
+
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EARMI_REE", df_meta, True)
+
+
+def test_sintese_earpi_ree(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "app.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["EARPI_REE"], uow)
+    m.assert_called()
+    df = m.mock_calls[-3].args[0]
+    # TODO - implementar validação
+
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EARPI_REE", df_meta, True)
+
+
+def test_sintese_earmi_sbm(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "app.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["EARMI_SBM"], uow)
+    m.assert_called()
+    df = m.mock_calls[-3].args[0]
+    # TODO - implementar validação
+
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EARMI_SBM", df_meta, True)
+
+
+def test_sintese_earpi_sbm(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "app.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["EARPI_SBM"], uow)
+    m.assert_called()
+    df = m.mock_calls[-3].args[0]
+    # TODO - implementar validação
+
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EARPI_SBM", df_meta, True)
+
+
+def test_sintese_earmi_sin(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "app.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["EARMI_SIN"], uow)
+    m.assert_called()
+    df = m.mock_calls[-3].args[0]
+    # TODO - implementar validação
+
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EARMI_SIN", df_meta, True)
+
+
+def test_sintese_earpi_sin(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "app.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["EARPI_SIN"], uow)
+    m.assert_called()
+    df = m.mock_calls[-3].args[0]
+    # TODO - implementar validação
+
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EARPI_SIN", df_meta, True)
+
+
+def test_sintese_varmi_uhe(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "app.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["VARMI_UHE"], uow)
+    m.assert_called()
+    df = m.mock_calls[-3].args[0]
+    # TODO - implementar validação
+
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VARMI_UHE", df_meta, True)
+
+
+def test_sintese_varpi_uhe(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "app.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["VARPI_UHE"], uow)
+    m.assert_called()
+    df = m.mock_calls[-3].args[0]
+    # TODO - implementar validação
+
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("VARPI_UHE", df_meta, True)
+
 
 # EARM para UHE: calcula produtibilidades acumulando
+
+
+def test_sintese_earmi_uhe(test_settings):
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "app.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize(["EARMI_UHE"], uow)
+    m.assert_called()
+    df = m.mock_calls[-3].args[0]
+    # raise RuntimeError
+    # df_ree = None
+    # df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
+    # codigos_uhes = df_uhes.loc[df_uhes["ree"] == 2, "codigo_usina"].unique()
+    # with uow:
+    #     df_hidr = uow.files.get_hidr().cadastro
+    # for uhe in codigos_uhes:
+    #     df_uhe = Varmuh.read(
+    #         join(DECK_TEST_DIR, f"varmuh{str(uhe).zfill(3)}.out")
+    #     ).valores
+    #     if df_uhe is None:
+    #         continue
+    #     if df_ree is None:
+    #         df_ree = df_uhe
+    #     else:
+    #         df_ree["valor"] += df_uhe["valor"].to_numpy()
+    #     # Somente para VARM: soma volume mínimo para comparação com síntese,
+    #     # que imprime volume total.
+    #     df_ree["valor"] += df_hidr.at[uhe, "volume_minimo"]
+
+    # __compara_sintese_nwlistop(
+    #     df,
+    #     df_ree,
+    #     dataInicio=datetime(2023, 10, 1),
+    #     cenario=1,
+    #     ree=["SUL"],
+    #     patamar=[0],
+    # )
+
+    df_meta = m.mock_calls[-1].args[0]
+    __valida_metadata("EARMI_UHE", df_meta, True)
 
 
 def test_sintese_earmf_uhe(test_settings):
@@ -378,7 +538,6 @@ def test_sintese_earmf_uhe(test_settings):
         OperationSynthetizer.synthetize(["EARMF_UHE"], uow)
     m.assert_called()
     df = m.mock_calls[-3].args[0]
-    df.to_csv("teste.csv")
     # raise RuntimeError
     # df_ree = None
     # df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
