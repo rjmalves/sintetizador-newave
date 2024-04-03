@@ -61,3 +61,5 @@ if pandas.__version__ >= "2.2.0" and __has_numba:
     PANDAS_GROUPING_ENGINE = "numba"
 else:
     PANDAS_GROUPING_ENGINE = "cython"
+
+STRING_DF_TYPE = pandas.StringDtype(storage="pyarrow")

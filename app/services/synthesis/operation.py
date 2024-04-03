@@ -43,6 +43,7 @@ from app.internal.constants import (
     LOWER_BOUND_COL,
     UPPER_BOUND_COL,
     PANDAS_GROUPING_ENGINE,
+    STRING_DF_TYPE,
 )
 
 
@@ -233,14 +234,14 @@ class OperationSynthetizer:
         df = cls._resolve_temporal_resolution(df, uow)
         for col, val in entity_column_values.items():
             df[col] = val
-            df = df.astype({col: pd.StringDtype(storage="pyarrow")})
+            df = df.astype({col: STRING_DF_TYPE})
         df = df[spatial_res.all_synthesis_df_columns]
         df = cls._resolve_starting_stage(df, uow)
         if s.variable in internal_stubs:
             df = internal_stubs[s.variable](df, uow)
         df_stats = cls._calc_statistics(df)
         df = pd.concat([df, df_stats], ignore_index=True)
-        df = df.astype({SCENARIO_COL: pd.StringDtype(storage="pyarrow")})
+        df = df.astype({SCENARIO_COL: STRING_DF_TYPE})
         return df
 
     @classmethod
@@ -668,9 +669,7 @@ class OperationSynthetizer:
                         submarkets_names_df,
                         num_scenarios * num_stages * num_blocks,
                     )
-                    df = df.astype(
-                        {SUBMARKET_COL: pd.StringDtype(storage="pyarrow")}
-                    )
+                    df = df.astype({SUBMARKET_COL: STRING_DF_TYPE})
                     return df[
                         [EER_COL, SUBMARKET_COL]
                         + OPERATION_SYNTHESIS_COMMON_COLUMNS
@@ -821,8 +820,8 @@ class OperationSynthetizer:
                     )
                     df = df.astype(
                         {
-                            EER_COL: pd.StringDtype(storage="pyarrow"),
-                            SUBMARKET_COL: pd.StringDtype(storage="pyarrow"),
+                            EER_COL: STRING_DF_TYPE,
+                            SUBMARKET_COL: STRING_DF_TYPE,
                         }
                     )
                     return df[
@@ -1790,7 +1789,7 @@ class OperationSynthetizer:
         df = cls._resolve_starting_stage(df, uow)
         df_stats = cls._calc_statistics(df)
         df = pd.concat([df, df_stats], ignore_index=True)
-        df = df.astype({SCENARIO_COL: pd.StringDtype(storage="pyarrow")})
+        df = df.astype({SCENARIO_COL: STRING_DF_TYPE})
         return df
 
     @classmethod
@@ -1844,7 +1843,7 @@ class OperationSynthetizer:
                 df[THERMAL_COL] == thermals_in_data[0]
             ].shape[0]
             df[THERMAL_COL] = np.repeat(thermals_names, lines_by_thermal)
-            df = df.astype({THERMAL_COL: pd.StringDtype(storage="pyarrow")})
+            df = df.astype({THERMAL_COL: STRING_DF_TYPE})
             return df
 
         def _add_submarket_to_thermal_synthesis(
@@ -1879,9 +1878,7 @@ class OperationSynthetizer:
                     df[SUBMARKET_COL] = np.repeat(
                         nomes_sbms_df, num_scenarios * num_stages * num_blocks
                     )
-                    df = df.astype(
-                        {SUBMARKET_COL: pd.StringDtype(storage="pyarrow")}
-                    )
+                    df = df.astype({SUBMARKET_COL: STRING_DF_TYPE})
 
                     # Reordena as colunas e retorna
                     return df[
@@ -2472,6 +2469,7 @@ class OperationSynthetizer:
         DataFrame de estatísticas da agregação espacial em questão.
         """
         df[VARIABLE_COL] = s.variable.value
+
         if s.spatial_resolution not in cls.SYNTHESIS_STATS:
             cls.SYNTHESIS_STATS[s.spatial_resolution] = [df]
         else:
@@ -2492,16 +2490,17 @@ class OperationSynthetizer:
             message_root="Tempo para exportacao dos dados", logger=cls.logger
         ):
             num_scenarios = Deck.numero_cenarios_simulacao_final(uow)
-            scenarios = list(range(1, num_scenarios + 1))
-            scenarios_df = df.loc[
-                df[SCENARIO_COL].isin(scenarios)
-            ].reset_index(drop=True)
-            scenarios_df = scenarios_df.astype({SCENARIO_COL: int})
-            stats_df = df.loc[~df[SCENARIO_COL].isin(scenarios)].reset_index(
-                drop=True
+            scenarios = pd.Series(
+                np.arange(1, num_scenarios + 1), dtype=STRING_DF_TYPE
             )
+            scenarios_df = df.loc[df[SCENARIO_COL].isin(scenarios)]
+            scenarios_df = scenarios_df.astype({SCENARIO_COL: int})
+            stats_df = df.drop(index=scenarios.index).reset_index(drop=True)
+            scenarios_df = scenarios_df.reset_index(drop=True)
             if stats_df.empty:
                 stats_df = cls._calc_statistics(scenarios_df)
+            print(scenarios_df)
+            print(stats_df)
             cls._add_synthesis_stats(s, stats_df)
             cls.__store_in_cache_if_needed(s, scenarios_df)
             with uow:
@@ -2526,6 +2525,7 @@ class OperationSynthetizer:
                     c for c in df_columns if c != VARIABLE_COL
                 ]
                 df = df[[VARIABLE_COL] + columns_without_variable]
+                df = df.astype({VARIABLE_COL: STRING_DF_TYPE})
                 uow.export.synthetize_df(
                     df, f"ESTATISTICAS_OPERACAO_{res.value}"
                 )
