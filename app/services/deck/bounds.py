@@ -924,6 +924,8 @@ class OperationVariableBounds:
         )
         # Adiciona os earmax de cada ree no curva e calcula
         # o limite inferior absoluto
+        print(df_curva)
+        print(df_earmax)
         df_curva["earmax"] = df_curva.apply(
             lambda linha: df_earmax.loc[
                 (df_earmax["codigo_ree"] == linha["codigo_ree"])
