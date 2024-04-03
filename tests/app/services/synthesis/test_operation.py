@@ -493,34 +493,7 @@ def test_sintese_earmi_uhe(test_settings):
         OperationSynthetizer.synthetize(["EARMI_UHE"], uow)
     m.assert_called()
     df = m.mock_calls[-3].args[0]
-    # raise RuntimeError
-    # df_ree = None
-    # df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
-    # codigos_uhes = df_uhes.loc[df_uhes["ree"] == 2, "codigo_usina"].unique()
-    # with uow:
-    #     df_hidr = uow.files.get_hidr().cadastro
-    # for uhe in codigos_uhes:
-    #     df_uhe = Varmuh.read(
-    #         join(DECK_TEST_DIR, f"varmuh{str(uhe).zfill(3)}.out")
-    #     ).valores
-    #     if df_uhe is None:
-    #         continue
-    #     if df_ree is None:
-    #         df_ree = df_uhe
-    #     else:
-    #         df_ree["valor"] += df_uhe["valor"].to_numpy()
-    #     # Somente para VARM: soma volume mínimo para comparação com síntese,
-    #     # que imprime volume total.
-    #     df_ree["valor"] += df_hidr.at[uhe, "volume_minimo"]
-
-    # __compara_sintese_nwlistop(
-    #     df,
-    #     df_ree,
-    #     dataInicio=datetime(2023, 10, 1),
-    #     cenario=1,
-    #     ree=["SUL"],
-    #     patamar=[0],
-    # )
+    # TODO - validar
 
     df_meta = m.mock_calls[-1].args[0]
     __valida_metadata("EARMI_UHE", df_meta, True)
@@ -535,34 +508,7 @@ def test_sintese_earmf_uhe(test_settings):
         OperationSynthetizer.synthetize(["EARMF_UHE"], uow)
     m.assert_called()
     df = m.mock_calls[-3].args[0]
-    # raise RuntimeError
-    # df_ree = None
-    # df_uhes = Confhd.read(join(DECK_TEST_DIR, "confhd.dat")).usinas
-    # codigos_uhes = df_uhes.loc[df_uhes["ree"] == 2, "codigo_usina"].unique()
-    # with uow:
-    #     df_hidr = uow.files.get_hidr().cadastro
-    # for uhe in codigos_uhes:
-    #     df_uhe = Varmuh.read(
-    #         join(DECK_TEST_DIR, f"varmuh{str(uhe).zfill(3)}.out")
-    #     ).valores
-    #     if df_uhe is None:
-    #         continue
-    #     if df_ree is None:
-    #         df_ree = df_uhe
-    #     else:
-    #         df_ree["valor"] += df_uhe["valor"].to_numpy()
-    #     # Somente para VARM: soma volume mínimo para comparação com síntese,
-    #     # que imprime volume total.
-    #     df_ree["valor"] += df_hidr.at[uhe, "volume_minimo"]
-
-    # __compara_sintese_nwlistop(
-    #     df,
-    #     df_ree,
-    #     dataInicio=datetime(2023, 10, 1),
-    #     cenario=1,
-    #     ree=["SUL"],
-    #     patamar=[0],
-    # )
+    # TODO - validar
 
     df_meta = m.mock_calls[-1].args[0]
     __valida_metadata("EARMF_UHE", df_meta, True)
@@ -2685,7 +2631,6 @@ def test_sintese_gter_ute(test_settings):
         OperationSynthetizer.synthetize(["GTER_UTE"], uow)
     m.assert_called()
     df = m.mock_calls[0].args[0]
-    print(df)
     df_arq = Gtert.read(join(DECK_TEST_DIR, "gtert001.out")).valores
     __compara_sintese_nwlistop(
         df,
