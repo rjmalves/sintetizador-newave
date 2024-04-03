@@ -724,6 +724,9 @@ class OperationVariableBounds:
         df["data"] = df["configuracao"].apply(
             lambda c: df_configs.loc[df_configs["valor"] == c, "data"].iloc[0]
         )
+        print(data_inicio, data_fim)
+        print(df_configs)
+        print(df)
         return df
 
     @classmethod
