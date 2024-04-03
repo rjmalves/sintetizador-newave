@@ -2491,16 +2491,15 @@ class OperationSynthetizer:
         ):
             num_scenarios = Deck.numero_cenarios_simulacao_final(uow)
             scenarios = pd.Series(
-                np.arange(1, num_scenarios + 1), dtype=STRING_DF_TYPE
+                [str(i) for i in np.arange(1, num_scenarios + 1)],
+                dtype=STRING_DF_TYPE,
             )
             scenarios_df = df.loc[df[SCENARIO_COL].isin(scenarios)]
             scenarios_df = scenarios_df.astype({SCENARIO_COL: int})
-            stats_df = df.drop(index=scenarios.index).reset_index(drop=True)
+            stats_df = df.drop(index=scenarios_df.index).reset_index(drop=True)
             scenarios_df = scenarios_df.reset_index(drop=True)
             if stats_df.empty:
                 stats_df = cls._calc_statistics(scenarios_df)
-            print(scenarios_df)
-            print(stats_df)
             cls._add_synthesis_stats(s, stats_df)
             cls.__store_in_cache_if_needed(s, scenarios_df)
             with uow:
