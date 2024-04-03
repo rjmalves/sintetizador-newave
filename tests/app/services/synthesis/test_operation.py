@@ -2631,7 +2631,6 @@ def test_sintese_gter_ute(test_settings):
         OperationSynthetizer.synthetize(["GTER_UTE"], uow)
     m.assert_called()
     df = m.mock_calls[0].args[0]
-    print(df)
     df_arq = Gtert.read(join(DECK_TEST_DIR, "gtert001.out")).valores
     __compara_sintese_nwlistop(
         df,
@@ -2677,6 +2676,7 @@ def test_sintese_gter_sin(test_settings):
         OperationSynthetizer.synthetize(["GTER_SIN"], uow)
     m.assert_called()
     df = m.mock_calls[0].args[0]
+    print(df)
     df_arq = Gttotsin.read(join(DECK_TEST_DIR, "gttotsin.out")).valores
     __compara_sintese_nwlistop(
         df,

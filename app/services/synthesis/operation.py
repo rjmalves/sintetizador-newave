@@ -270,12 +270,14 @@ class OperationSynthetizer:
 
             spatial_resolution = s.spatial_resolution
 
+            for c in early_hooks:
+                df = c(s, df, uow)
+
             df = df.sort_values(
                 spatial_resolution.sorting_synthesis_df_columns
             ).reset_index(drop=True)
 
-            for c in early_hooks:
-                df = c(s, df, uow)
+            df.to_csv("teste.csv")
 
             entity_columns_order = cls._get_unique_column_values_in_order(
                 df,
@@ -793,44 +795,8 @@ class OperationSynthetizer:
             df = df.loc[
                 df[START_DATE_COL]
                 < Deck.data_fim_estagios_individualizados_sim_final(uow),
-            ]
+            ].reset_index(drop=True)
             return df
-
-        def _add_eer_submarket_to_hydro_synthesis(
-            s: OperationSynthesis, df: pd.DataFrame, uow: AbstractUnitOfWork
-        ) -> pd.DataFrame:
-            if EER_COL in df.columns and SUBMARKET_COL in df.columns:
-                return df
-            else:
-                with time_and_log(
-                    message_root="Tempo para adicionar REE e SBM das UHE",
-                    logger=cls.logger,
-                ):
-                    entities = cls._get_ordered_entities(s)
-                    hydro_df = entities[HYDRO_COL]
-                    aux_df = Deck.uhes_rees_submercados_map(uow)
-                    aux_df = aux_df.loc[hydro_df]
-                    num_blocks = len(entities[BLOCK_COL])
-                    num_stages = len(entities[STAGE_COL])
-                    num_scenarios = len(entities[SCENARIO_COL])
-                    df[EER_COL] = np.repeat(
-                        aux_df[EER_COL].tolist(),
-                        num_scenarios * num_stages * num_blocks,
-                    )
-                    df[SUBMARKET_COL] = np.repeat(
-                        aux_df[SUBMARKET_COL].tolist(),
-                        num_scenarios * num_stages * num_blocks,
-                    )
-                    df = df.astype(
-                        {
-                            EER_COL: STRING_DF_TYPE,
-                            SUBMARKET_COL: STRING_DF_TYPE,
-                        }
-                    )
-                    return df[
-                        [HYDRO_COL, EER_COL, SUBMARKET_COL]
-                        + OPERATION_SYNTHESIS_COMMON_COLUMNS
-                    ]
 
         uhes = Deck.uhes(uow).sort_values("nome_usina")
         uhes_idx = uhes["codigo_usina"]
@@ -855,7 +821,6 @@ class OperationSynthetizer:
             synthesis,
             uow,
             early_hooks=[_limit_stages_with_hydro],
-            # late_hooks=[_add_eer_submarket_to_hydro_synthesis],
         )
         return df
 
@@ -1838,6 +1803,9 @@ class OperationSynthetizer:
         def _replace_thermal_code_by_name(
             s: OperationSynthesis, df: pd.DataFrame, uow: AbstractUnitOfWork
         ) -> pd.DataFrame:
+            df = df.sort_values(
+                s.spatial_resolution.sorting_synthesis_df_columns
+            ).reset_index(drop=True)
             conft = Deck.utes(uow)
             thermals_in_data = df[THERMAL_COL].unique().tolist()
             thermals_names = [

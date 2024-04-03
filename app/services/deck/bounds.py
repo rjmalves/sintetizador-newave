@@ -6,6 +6,7 @@ from app.model.operation.variable import Variable
 from app.model.operation.spatialresolution import SpatialResolution
 from app.model.operation.operationsynthesis import OperationSynthesis
 from app.services.unitofwork import AbstractUnitOfWork
+from app.services.deck.deck import Deck
 
 from inewave.newave import (
     Dger,
@@ -2346,23 +2347,9 @@ class OperationVariableBounds:
 
     @classmethod
     def _adiciona_submercado_limites_gter(
-        cls, df: pd.DataFrame, arq_conft: Conft, arq_sistema: Sistema
+        cls, df: pd.DataFrame, mapa_ute_sbm: pd.DataFrame
     ) -> pd.DataFrame:
-        df_usinas = cls._validate_data(arq_conft.usinas, pd.DataFrame)
-        df_submercados = cls._validate_data(
-            arq_sistema.custo_deficit, pd.DataFrame
-        )
-        # Adiciona informação do submercado de cada UTE
-        df["submercado"] = df["codigo_usina"].apply(
-            lambda c: df_usinas.loc[
-                df_usinas["codigo_usina"] == c, "submercado"
-            ].iloc[0]
-        )
-        df["submercado"] = df["submercado"].apply(
-            lambda c: df_submercados.loc[
-                df_submercados["codigo_submercado"] == c, "nome_submercado"
-            ].iloc[0]
-        )
+        df = df.join(mapa_ute_sbm[["submercado"]], on="nome_usina")
         df = df.rename(columns={"nome_usina": "usina"})
         return df.drop(columns=["codigo_usina"])
 
@@ -2401,21 +2388,56 @@ class OperationVariableBounds:
         )
 
         if ordem_sintese:
+            df_group = df_group.loc[
+                df_group["group"].isin(ordem_sintese)
+            ].copy()
             df_group["group"] = pd.Categorical(
                 df_group["group"], categories=ordem_sintese, ordered=True
             )
         df_group = df_group.sort_values(["group", "data"])
-
         df_group["group"] = df_group["group"].astype(str)
 
         if col_grp:
             df_group = df_group.rename(columns={"group": col_grp})
         else:
             df_group = df_group.drop(columns=["group"])
+
         return df_group
 
     @classmethod
     def _expande_dados_cenarios_gter(
+        cls,
+        df: pd.DataFrame,
+        df_gtmin: pd.DataFrame,
+        df_gtmax: pd.DataFrame,
+        col_grp: str,
+        ordem_sintese: list,
+    ) -> pd.DataFrame:
+        """
+        Expande os dados da síntese de geração térmica
+        para o número de cenários e patamares existentes.
+
+        É um wrapper para a chamada da _expande_dados_para_cenarios
+        pois existe o comportamento particular dos limites de geração
+        serem fornecidos apenas em MWmed por estágio, e por
+        questões de desempenho este são repetidos
+        (n_patamares * n_cenarios) vezes como se existisse apenas 1
+        patamar e a conversão para MWmes é feita posterioremente.
+        """
+        n_cenarios = len(df["cenario"].unique())
+        n_patamares = len(df["patamar"].unique())
+        lim_inf = np.repeat(
+            df_gtmin["valor_MWmed"].to_numpy(), n_cenarios * n_patamares
+        )
+        lim_sup = np.repeat(
+            df_gtmax["valor_MWmed"].to_numpy(), n_cenarios * n_patamares
+        )
+        df["limiteInferior"] = lim_inf
+        df["limiteSuperior"] = lim_sup
+        return df
+
+    @classmethod
+    def _expande_dados_cenarios_gter_2(
         cls,
         df: pd.DataFrame,
         df_gtmin: pd.DataFrame,
@@ -2494,34 +2516,23 @@ class OperationVariableBounds:
         de acordo com a síntese desejada, mas os limites deverão ser
         agregados de acordo.
         """
-        from time import time
-
         # Lê os limites em MWmed do pmo.dat
-        ti = time()
-        arq_pmo = cls._get_pmo(uow)
+        arq_pmo = Deck.pmo(uow)
         df_gtmin = cls._validate_data(
             arq_pmo.geracao_minima_usinas_termicas, pd.DataFrame
         )
         df_gtmax = cls._validate_data(
             arq_pmo.geracao_maxima_usinas_termicas, pd.DataFrame
         )
-        tf = time()
-        print(f"Tempo para leitura do pmo: {tf - ti:.2f}")
         # Adiciona informações do submercado de cada UTE
-        print("Mercado de cada UTE")
-        ti = time()
-        arq_conft = cls._get_conft(uow)
-        arq_sistema = cls._get_sistema(uow)
+        mapa_ute_sbm = Deck.utes_submercados_map(uow)
         df_gtmin = cls._adiciona_submercado_limites_gter(
-            df_gtmin, arq_conft, arq_sistema
+            df_gtmin, mapa_ute_sbm
         )
         df_gtmax = cls._adiciona_submercado_limites_gter(
-            df_gtmax, arq_conft, arq_sistema
+            df_gtmax, mapa_ute_sbm
         )
-        tf = time()
-        print(f"Tempo para mercado de cada UTE: {tf - ti:.2f}")
         # Agrupa os limites, se necessário
-        ti = time()
         datas_sintese = df["dataInicio"].unique().tolist()
         ordem_sintese = (
             df[col_grp].unique().tolist() if col_grp != "sin" else None
@@ -2532,17 +2543,10 @@ class OperationVariableBounds:
         df_gtmax = cls._agrega_variaveis_limites_ute(
             df_gtmax, col_grp, ordem_sintese, datas_sintese
         )
-        tf = time()
-        print(f"Tempo para agrupar limites: {tf - ti:.2f}")
-        print("Expandindo para cenários")
         # Repete os limites para todos os estágios e cenarios
-        ti = time()
         df = cls._expande_dados_cenarios_gter(
             df, df_gtmin, df_gtmax, col_grp, ordem_sintese
         )
-        tf = time()
-        print(f"Tempo para expandir cenários: {tf - ti:.2f}")
-
         # Converte os limites para MWmes
         df["limiteInferior"] *= df["duracaoPatamar"] / cls.STAGE_DURATION_HOURS
         df["limiteSuperior"] *= df["duracaoPatamar"] / cls.STAGE_DURATION_HOURS
