@@ -25,7 +25,7 @@ class ParquetExportRepository(AbstractExportRepository):
 
     def synthetize_df(self, df: pd.DataFrame, filename: str) -> bool:
         pq.write_table(
-            pa.Table.from_pandas(df),
+            pa.Table.from_pandas(df, safe=False),
             self.path.joinpath(filename + ".parquet.gzip"),
             compression="gzip",
             write_statistics=False,
