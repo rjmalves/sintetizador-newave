@@ -32,7 +32,6 @@ class ParquetExportRepository(AbstractExportRepository):
             flavor="spark",
             coerce_timestamps="ms",
             allow_truncated_timestamps=True,
-            data_page_size=4096,
         )
         return True
 
