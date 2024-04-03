@@ -2494,7 +2494,10 @@ class OperationVariableBounds:
         de acordo com a síntese desejada, mas os limites deverão ser
         agregados de acordo.
         """
+        from time import time
+
         # Lê os limites em MWmed do pmo.dat
+        ti = time()
         arq_pmo = cls._get_pmo(uow)
         df_gtmin = cls._validate_data(
             arq_pmo.geracao_minima_usinas_termicas, pd.DataFrame
@@ -2502,7 +2505,11 @@ class OperationVariableBounds:
         df_gtmax = cls._validate_data(
             arq_pmo.geracao_maxima_usinas_termicas, pd.DataFrame
         )
+        tf = time()
+        print(f"Tempo para leitura do pmo: {tf - ti:.2f}")
         # Adiciona informações do submercado de cada UTE
+        print("Mercado de cada UTE")
+        ti = time()
         arq_conft = cls._get_conft(uow)
         arq_sistema = cls._get_sistema(uow)
         df_gtmin = cls._adiciona_submercado_limites_gter(
@@ -2511,7 +2518,10 @@ class OperationVariableBounds:
         df_gtmax = cls._adiciona_submercado_limites_gter(
             df_gtmax, arq_conft, arq_sistema
         )
+        tf = time()
+        print(f"Tempo para mercado de cada UTE: {tf - ti:.2f}")
         # Agrupa os limites, se necessário
+        ti = time()
         datas_sintese = df["dataInicio"].unique().tolist()
         ordem_sintese = (
             df[col_grp].unique().tolist() if col_grp != "sin" else None
@@ -2522,11 +2532,16 @@ class OperationVariableBounds:
         df_gtmax = cls._agrega_variaveis_limites_ute(
             df_gtmax, col_grp, ordem_sintese, datas_sintese
         )
-
+        tf = time()
+        print(f"Tempo para agrupar limites: {tf - ti:.2f}")
+        print("Expandindo para cenários")
         # Repete os limites para todos os estágios e cenarios
+        ti = time()
         df = cls._expande_dados_cenarios_gter(
             df, df_gtmin, df_gtmax, col_grp, ordem_sintese
         )
+        tf = time()
+        print(f"Tempo para expandir cenários: {tf - ti:.2f}")
 
         # Converte os limites para MWmes
         df["limiteInferior"] *= df["duracaoPatamar"] / cls.STAGE_DURATION_HOURS
