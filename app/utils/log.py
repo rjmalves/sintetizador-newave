@@ -5,6 +5,7 @@ from multiprocessing import Process
 from typing import Optional
 import errno
 import time
+import sys
 from app.utils.singleton import Singleton
 
 
@@ -32,7 +33,7 @@ class Log(metaclass=Singleton):
         root = logging.getLogger()
         f = logging.Formatter("%(asctime)s %(levelname)s: %(message)s")
         # Logger para STDOUT
-        std_h = logging.StreamHandler()
+        std_h = logging.StreamHandler(stream=sys.stdout)
         std_h.setFormatter(f)
         root.addHandler(std_h)
         root.setLevel(logging.DEBUG)

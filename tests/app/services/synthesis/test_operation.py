@@ -136,9 +136,6 @@ def __compara_sintese_nwlistop(
                     df_nwlistop[col].isin(val)
                 )
 
-    # print(df_sintese.loc[filtros_sintese])
-    # print(df_nwlistop.loc[filtros_nwlistop])
-
     assert np.allclose(
         df_sintese.loc[filtros_sintese, "valor"].to_numpy(),
         df_nwlistop.loc[filtros_nwlistop, "valor"].to_numpy(),

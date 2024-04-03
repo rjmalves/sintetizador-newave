@@ -2,12 +2,13 @@ from typing import Callable, Dict, List, Tuple, Optional, TypeVar
 import pandas as pd  # type: ignore
 import numpy as np
 import logging
-from time import time
 from datetime import datetime
 import traceback
+from logging import INFO, WARNING, ERROR
 from multiprocessing import Pool
 from app.utils.graph import Graph
 from app.utils.log import Log
+from app.utils.timing import time_and_log
 from app.utils.regex import match_variables_with_wildcards
 from app.model.settings import Settings
 from app.services.deck.bounds import OperationVariableBounds
@@ -50,6 +51,8 @@ class OperationSynthetizer:
     T = TypeVar("T")
     logger: Optional[logging.Logger] = None
 
+    # time_and_log = partial(time_and_log, logger=logger)
+
     # Por padrão, todas as sínteses suportadas são consideradas
     DEFAULT_OPERATION_SYNTHESIS_ARGS: List[str] = SUPPORTED_SYNTHESIS
 
@@ -67,14 +70,9 @@ class OperationSynthetizer:
     SYNTHESIS_STATS: Dict[SpatialResolution, List[pd.DataFrame]] = {}
 
     @classmethod
-    def _log(cls, msg: str, level: str = "info"):
+    def _log(cls, msg: str, level: int = INFO):
         if cls.logger is not None:
-            level_map = {
-                "info": cls.logger.info,
-                "warning": cls.logger.warning,
-                "error": cls.logger.error,
-            }
-            level_map[level](msg)
+            cls.logger.log(level, msg)
 
     @classmethod
     def _default_args(cls) -> List[OperationSynthesis]:
@@ -127,8 +125,6 @@ class OperationSynthetizer:
         policy_with_hydro = eers["ano_fim_individualizado"].isna().sum() == 0
         has_hydro = simulation_with_hydro or policy_with_hydro
         valid_variables: List[OperationSynthesis] = []
-        cls._log(f"Caso com geração de cenários de eólica: {has_wind}")
-        cls._log(f"Caso com modelagem híbrida: {has_hydro}")
         for v in variables:
             if (
                 v.variable
@@ -219,6 +215,81 @@ class OperationSynthetizer:
         Obtem um conjunto de entidades ordenadas para uma síntese.
         """
         return cls.ORDERED_SYNTHESIS_ENTITIES[s]
+
+    @classmethod
+    def _post_resolve_entity(
+        cls,
+        df: Optional[pd.DataFrame],
+        s: OperationSynthesis,
+        entity_column_values: Dict[str, str],
+        uow: AbstractUnitOfWork,
+        internal_stubs: Dict[Variable, Callable] = {},
+    ) -> Optional[pd.DataFrame]:
+        """
+        Realiza pós-processamento após a resolução da extração dados
+        em um DataFrame de síntese extraído do NWLISTOP.
+        """
+        if df is None:
+            return df
+        spatial_res = s.spatial_resolution
+        df = cls._resolve_temporal_resolution(df, uow)
+        for col, val in entity_column_values.items():
+            df[col] = val
+        df = df[spatial_res.all_synthesis_df_columns]
+        df = cls._resolve_starting_stage(df, uow)
+        if s.variable in internal_stubs:
+            df = internal_stubs[s.variable](df, uow)
+        df_stats = cls._calc_statistics(df)
+        return pd.concat([df, df_stats], ignore_index=True)
+
+    @classmethod
+    def _post_resolve(
+        cls,
+        resolve_responses: Dict[str, Optional[pd.DataFrame]],
+        s: OperationSynthesis,
+        uow: AbstractUnitOfWork,
+        early_hooks: List[Callable] = [],
+        late_hooks: List[Callable] = [],
+    ) -> Optional[pd.DataFrame]:
+        """
+        Realiza pós-processamento após a resolução da extração
+        de todos os dados de síntese extraídos do NWLISTOP para uma síntese.
+        """
+        with time_and_log(
+            message_root="Tempo para compactacao dos dados", logger=cls.logger
+        ):
+            valid_dfs = [
+                df for df in resolve_responses.values() if df is not None
+            ]
+            if len(valid_dfs) > 0:
+                df = pd.concat(valid_dfs, ignore_index=True)
+            else:
+                return None
+
+            for c in early_hooks:
+                df = c(s, df, uow)
+
+            spatial_resolution = s.spatial_resolution
+
+            df = df.sort_values(
+                spatial_resolution.sorting_synthesis_df_columns
+            ).reset_index(drop=True)
+
+            entity_columns_order = cls._get_unique_column_values_in_order(
+                df,
+                spatial_resolution.entity_synthesis_df_columns,
+            )
+            other_columns_order = cls._get_unique_column_values_in_order(
+                valid_dfs[0],
+                spatial_resolution.non_entity_sorting_synthesis_df_columns,
+            )
+            cls._set_ordered_entities(
+                s, {**entity_columns_order, **other_columns_order}
+            )
+
+            for c in late_hooks:
+                df = c(s, df, uow)
+        return df
 
     @classmethod
     def _resolve_temporal_resolution(
@@ -344,15 +415,16 @@ class OperationSynthetizer:
     def __resolve_SIN(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> Optional[pd.DataFrame]:
-        with uow:
-            cls._log("Processando arquivo do SIN")
-            df = uow.files.get_nwlistop(
-                synthesis.variable,
-                synthesis.spatial_resolution,
-                "",
-            )
-
-        df = cls._post_resolve_entity(df, synthesis, {}, uow)
+        with time_and_log(
+            message_root="Tempo para obter dados do SIN", logger=cls.logger
+        ):
+            with uow:
+                df = uow.files.get_nwlistop(
+                    synthesis.variable,
+                    synthesis.spatial_resolution,
+                    "",
+                )
+            df = cls._post_resolve_entity(df, synthesis, {}, uow)
         return cls._post_resolve({"SIN": df}, synthesis, uow)
 
     @classmethod
@@ -414,16 +486,17 @@ class OperationSynthetizer:
         ]
 
         n_procs = int(Settings().processors)
-        with Pool(processes=n_procs) as pool:
-            if n_procs > 1:
-                cls._log("Paralelizando...")
-            async_res = {
-                idx: pool.apply_async(
-                    cls._resolve_SBM_entity, (uow, synthesis, idx, name)
-                )
-                for idx, name in zip(sbms_idx, sbms_name)
-            }
-            dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
+        with time_and_log(
+            message_root="Tempo para obter dados de SBM", logger=cls.logger
+        ):
+            with Pool(processes=n_procs) as pool:
+                async_res = {
+                    idx: pool.apply_async(
+                        cls._resolve_SBM_entity, (uow, synthesis, idx, name)
+                    )
+                    for idx, name in zip(sbms_idx, sbms_name)
+                }
+                dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
 
         df = cls._post_resolve(
             dfs,
@@ -495,18 +568,19 @@ class OperationSynthetizer:
         ]
 
         n_procs = int(Settings().processors)
-        with Pool(processes=n_procs) as pool:
-            if n_procs > 1:
-                cls._log("Paralelizando...")
-            async_res = {
-                f"{idx1}-{idx2}": pool.apply_async(
-                    cls._resolve_SBP_entity,
-                    (uow, synthesis, idx1, name1, idx2, name2),
-                )
-                for idx1, name1 in zip(sbms_idx, sbms_name)
-                for idx2, name2 in zip(sbms_idx, sbms_name)
-            }
-            dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
+        with time_and_log(
+            message_root="Tempo para obter dados de SBP", logger=cls.logger
+        ):
+            with Pool(processes=n_procs) as pool:
+                async_res = {
+                    f"{idx1}-{idx2}": pool.apply_async(
+                        cls._resolve_SBP_entity,
+                        (uow, synthesis, idx1, name1, idx2, name2),
+                    )
+                    for idx1, name1 in zip(sbms_idx, sbms_name)
+                    for idx2, name2 in zip(sbms_idx, sbms_name)
+                }
+                dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
 
         df = cls._post_resolve(
             dfs,
@@ -568,50 +642,52 @@ class OperationSynthetizer:
             if SUBMARKET_COL in df.columns:
                 return df
             else:
-                ti = time()
-                eers = Deck.rees(uow).set_index("nome")
-                submarkets = Deck.submercados(uow)
-                submarkets = submarkets.drop_duplicates(
-                    ["codigo_submercado", "nome_submercado"]
-                ).set_index("codigo_submercado")
-                entities = cls._get_ordered_entities(s)
-                eers_df = entities[EER_COL]
-                submarkets_codes_df = [
-                    eers.at[r, "submercado"] for r in eers_df
-                ]
-                submarkets_names_df = [
-                    submarkets.at[c, "nome_submercado"]
-                    for c in submarkets_codes_df
-                ]
-                num_blocks = len(entities[BLOCK_COL])
-                num_stages = len(entities[STAGE_COL])
-                num_scenarios = len(entities[SCENARIO_COL])
-                df[SUBMARKET_COL] = np.repeat(
-                    submarkets_names_df,
-                    num_scenarios * num_stages * num_blocks,
-                )
-                tf = time()
-                cls._log(f"Tempo para adicionar SBM dos REE: {tf - ti:.2f} s")
-                return df[
-                    [EER_COL, SUBMARKET_COL]
-                    + OPERATION_SYNTHESIS_COMMON_COLUMNS
-                ]
+                with time_and_log(
+                    message_root="Tempo para adicionar SBM dos REE",
+                    logger=cls.logger,
+                ):
+                    eers = Deck.rees(uow).set_index("nome")
+                    submarkets = Deck.submercados(uow)
+                    submarkets = submarkets.drop_duplicates(
+                        ["codigo_submercado", "nome_submercado"]
+                    ).set_index("codigo_submercado")
+                    entities = cls._get_ordered_entities(s)
+                    eers_df = entities[EER_COL]
+                    submarkets_codes_df = [
+                        eers.at[r, "submercado"] for r in eers_df
+                    ]
+                    submarkets_names_df = [
+                        submarkets.at[c, "nome_submercado"]
+                        for c in submarkets_codes_df
+                    ]
+                    num_blocks = len(entities[BLOCK_COL])
+                    num_stages = len(entities[STAGE_COL])
+                    num_scenarios = len(entities[SCENARIO_COL])
+                    df[SUBMARKET_COL] = np.repeat(
+                        submarkets_names_df,
+                        num_scenarios * num_stages * num_blocks,
+                    )
+                    return df[
+                        [EER_COL, SUBMARKET_COL]
+                        + OPERATION_SYNTHESIS_COMMON_COLUMNS
+                    ]
 
         rees = Deck.rees(uow).sort_values("nome")
         rees_idx = rees["codigo"]
         rees_name = rees["nome"]
 
         n_procs = int(Settings().processors)
-        with Pool(processes=n_procs) as pool:
-            if n_procs > 1:
-                cls._log("Paralelizando...")
-            async_res = {
-                idx: pool.apply_async(
-                    cls._resolve_REE_entity, (uow, synthesis, idx, name)
-                )
-                for idx, name in zip(rees_idx, rees_name)
-            }
-            dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
+        with time_and_log(
+            message_root="Tempo para ler dados de REE", logger=cls.logger
+        ):
+            with Pool(processes=n_procs) as pool:
+                async_res = {
+                    idx: pool.apply_async(
+                        cls._resolve_REE_entity, (uow, synthesis, idx, name)
+                    )
+                    for idx, name in zip(rees_idx, rees_name)
+                }
+                dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
 
         df = cls._post_resolve(
             dfs,
@@ -619,81 +695,6 @@ class OperationSynthetizer:
             uow,
             late_hooks=[_add_submarket_to_eer_synthesis],
         )
-        return df
-
-    @classmethod
-    def _post_resolve_entity(
-        cls,
-        df: Optional[pd.DataFrame],
-        s: OperationSynthesis,
-        entity_column_values: Dict[str, str],
-        uow: AbstractUnitOfWork,
-        internal_stubs: Dict[Variable, Callable] = {},
-    ) -> Optional[pd.DataFrame]:
-        """
-        Realiza pós-processamento após a resolução da extração dados
-        em um DataFrame de síntese extraído do NWLISTOP.
-        """
-        if df is None:
-            return df
-        spatial_res = s.spatial_resolution
-        df = cls._resolve_temporal_resolution(df, uow)
-        for col, val in entity_column_values.items():
-            df[col] = val
-        df = df[spatial_res.all_synthesis_df_columns]
-        df = cls._resolve_starting_stage(df, uow)
-        if s.variable in internal_stubs:
-            df = internal_stubs[s.variable](df, uow)
-        df_stats = cls._calc_statistics(df)
-        return pd.concat([df, df_stats], ignore_index=True)
-
-    @classmethod
-    def _post_resolve(
-        cls,
-        resolve_responses: Dict[str, Optional[pd.DataFrame]],
-        s: OperationSynthesis,
-        uow: AbstractUnitOfWork,
-        early_hooks: List[Callable] = [],
-        late_hooks: List[Callable] = [],
-    ) -> Optional[pd.DataFrame]:
-        """
-        Realiza pós-processamento após a resolução da extração
-        de todos os dados de síntese extraídos do NWLISTOP para uma síntese.
-        """
-        cls._log("Compactando dados...")
-        ti = time()
-        valid_dfs = [df for df in resolve_responses.values() if df is not None]
-        if len(valid_dfs) > 0:
-            df = pd.concat(valid_dfs, ignore_index=True)
-        else:
-            return None
-
-        for c in early_hooks:
-            df = c(s, df, uow)
-
-        spatial_resolution = s.spatial_resolution
-
-        df = df.sort_values(
-            spatial_resolution.sorting_synthesis_df_columns
-        ).reset_index(drop=True)
-
-        entity_columns_order = cls._get_unique_column_values_in_order(
-            df,
-            spatial_resolution.entity_synthesis_df_columns,
-        )
-        other_columns_order = cls._get_unique_column_values_in_order(
-            valid_dfs[0],
-            spatial_resolution.non_entity_sorting_synthesis_df_columns,
-        )
-        cls._set_ordered_entities(
-            s, {**entity_columns_order, **other_columns_order}
-        )
-
-        for c in late_hooks:
-            df = c(s, df, uow)
-
-        tf = time()
-        cls._log(f"Tempo para compactação dos dados: {tf - ti:.2f} s")
         return df
 
     @classmethod
@@ -772,94 +773,79 @@ class OperationSynthetizer:
         )
 
     @classmethod
-    def _post_resolve_gtert(
-        cls, df: Optional[pd.DataFrame], uow: AbstractUnitOfWork
+    def __resolve_UHE(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> Optional[pd.DataFrame]:
         """
-        Realiza pós-processamento após a resolução da extração dados
-        em um DataFrame de síntese da geração térmica por UTE.
+        Resolve a síntese de operação para uma variável operativa
+        de uma UHE a partir dos arquivos de saída do NWLISTOP.
         """
-        if df is None:
+
+        def _limit_stages_with_hydro(
+            s: OperationSynthesis, df: pd.DataFrame, uow: AbstractUnitOfWork
+        ) -> pd.DataFrame:
+            df = df.loc[
+                df[START_DATE_COL]
+                < Deck.data_fim_estagios_individualizados_sim_final(uow),
+            ]
             return df
-        df = df.rename(
-            columns={
-                "data": START_DATE_COL,
-                "serie": SCENARIO_COL,
-                "classe": THERMAL_COL,
-            }
-        ).copy()
-        df.sort_values(
-            [THERMAL_COL, START_DATE_COL, SCENARIO_COL, BLOCK_COL],
-            inplace=True,
+
+        def _add_eer_submarket_to_hydro_synthesis(
+            s: OperationSynthesis, df: pd.DataFrame, uow: AbstractUnitOfWork
+        ) -> pd.DataFrame:
+            if EER_COL in df.columns and SUBMARKET_COL in df.columns:
+                return df
+            else:
+                with time_and_log(
+                    message_root="Tempo para adicionar REE e SBM das UHE",
+                    logger=cls.logger,
+                ):
+                    entities = cls._get_ordered_entities(s)
+                    hydro_df = entities[HYDRO_COL]
+                    aux_df = Deck.uhes_rees_submercados_map(uow)
+                    aux_df = aux_df.loc[hydro_df]
+                    num_blocks = len(entities[BLOCK_COL])
+                    num_stages = len(entities[STAGE_COL])
+                    num_scenarios = len(entities[SCENARIO_COL])
+                    df[EER_COL] = np.repeat(
+                        aux_df[EER_COL].tolist(),
+                        num_scenarios * num_stages * num_blocks,
+                    )
+                    df[SUBMARKET_COL] = np.repeat(
+                        aux_df[SUBMARKET_COL].tolist(),
+                        num_scenarios * num_stages * num_blocks,
+                    )
+                    return df[
+                        [HYDRO_COL, EER_COL, SUBMARKET_COL]
+                        + OPERATION_SYNTHESIS_COMMON_COLUMNS
+                    ]
+
+        uhes = Deck.uhes(uow).sort_values("nome_usina")
+        uhes_idx = uhes["codigo_usina"]
+        uhes_name = uhes["nome_usina"]
+
+        n_procs = int(Settings().processors)
+        with time_and_log(
+            message_root="Tempo para ler dados de UHE",
+            logger=cls.logger,
+        ):
+            with Pool(processes=n_procs) as pool:
+                async_res = {
+                    name: pool.apply_async(
+                        cls._resolve_UHE_entity, (uow, synthesis, idx, name)
+                    )
+                    for idx, name in zip(uhes_idx, uhes_name)
+                }
+                dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
+
+        df = cls._post_resolve(
+            dfs,
+            synthesis,
+            uow,
+            early_hooks=[_limit_stages_with_hydro],
+            late_hooks=[_add_eer_submarket_to_hydro_synthesis],
         )
-        num_stages = df[START_DATE_COL].unique().shape[0]
-        stages = np.arange(1, num_stages + 1)
-        num_scenarios = Deck.numero_cenarios_simulacao_final(uow)
-        blocks = df[BLOCK_COL].unique().tolist()
-        num_blocks = len(blocks)
-        thermals = df[THERMAL_COL].unique().tolist()
-        num_thermals = len(thermals)
-        start_dates = Deck.datas_inicio_estagios_internos_sim_final(uow)[
-            :num_stages
-        ]
-        end_dates = np.array(
-            Deck.datas_fim_estagios_internos_sim_final(uow)[:num_stages]
-        )
-        stages_to_df_column = np.tile(
-            np.repeat(stages, num_scenarios * num_blocks), num_thermals
-        )
-        end_dates_to_df_column: np.ndarray = np.tile(
-            np.repeat(end_dates, num_scenarios * num_blocks), num_thermals
-        )
-        df = df.copy()
-        df[STAGE_COL] = stages_to_df_column
-        df[END_DATE_COL] = end_dates_to_df_column
-        df_block_lengths = Deck.duracao_mensal_patamares(uow)
-        df_block_lengths = df_block_lengths.loc[
-            df_block_lengths["patamar"].isin(blocks)
-        ]
-        block_durations = np.zeros(
-            (num_scenarios * num_blocks * num_stages,), dtype=np.float64
-        )
-        data_block_size = num_scenarios * num_blocks
-        for i, d in enumerate(start_dates):
-            date_durations = df_block_lengths.loc[
-                df_block_lengths["data"] == d, "valor"
-            ].to_numpy()
-            i_i = i * data_block_size
-            i_f = i_i + data_block_size
-            block_durations[i_i:i_f] = np.tile(date_durations, num_scenarios)
-        block_durations = np.tile(block_durations, num_thermals)
-        df[BLOCK_DURATION_COL] = STAGE_DURATION_HOURS * block_durations
         return df
-
-    @classmethod
-    def _resolve_gtert(
-        cls,
-        uow: AbstractUnitOfWork,
-        synthesis: OperationSynthesis,
-        sbm_index: int,
-        sbm_name: str,
-    ) -> Optional[pd.DataFrame]:
-        """
-        Obtém os dados da síntese de operação para todas as UTE
-        de um submercado a partir do arquivo de saída do NWLISTOP.
-        """
-        logger_name = f"{synthesis.variable.value}_{sbm_name}"
-        logger = Log.configure_process_logger(
-            uow.queue, logger_name, sbm_index
-        )
-
-        with uow:
-            logger.info(
-                f"Processando arquivo do submercado: {sbm_index} - {sbm_name}"
-            )
-            df = uow.files.get_nwlistop(
-                synthesis.variable,
-                synthesis.spatial_resolution,
-                submercado=sbm_index,
-            )
-        return cls._post_resolve_gtert(df, uow)
 
     @classmethod
     def _convert_volume_to_flow(
@@ -1386,86 +1372,98 @@ class OperationSynthetizer:
         Realiza o cálculo da energia armazenada em cada UHE a partir
         dos volumes armazenados e das quedas líquidas.
         """
-        ti = time()
-        net_drop_synthesis = OperationSynthesis(
-            Variable.QUEDA_LIQUIDA,
-            synthesis.spatial_resolution,
-        )
+        with time_and_log(
+            message_root="Tempo para conversao do VARM em EARM",
+            logger=cls.logger,
+        ):
+            net_drop_synthesis = OperationSynthesis(
+                Variable.QUEDA_LIQUIDA,
+                synthesis.spatial_resolution,
+            )
 
-        earmi = Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL
-        earmf = Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL
-        varmi = Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL
-        varmf = Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL
+            earmi = Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL
+            earmf = Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL
+            varmi = Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL
+            varmf = Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL
 
-        energy_volume_map = {
-            earmi: varmi,
-            earmf: varmf,
-        }
-        stored_volume_sythesis = OperationSynthesis(
-            energy_volume_map[synthesis.variable],
-            synthesis.spatial_resolution,
-        )
-        net_drop_df = cls._get_from_cache(net_drop_synthesis)
-        net_drop_df = net_drop_df.loc[net_drop_df[BLOCK_COL] == 0].copy()
-        stored_volume_df = cls._get_from_cache(stored_volume_sythesis)
-        # Converte queda líquida em produtividade usando a
-        # produtibilidade específica
-        hidr = Deck.hidr(uow)
-        net_drop_hydro_names = cls._get_ordered_entities(net_drop_synthesis)[
-            HYDRO_COL
-        ]
-        num_entries_by_hydro = net_drop_df.loc[
-            net_drop_df[HYDRO_COL] == net_drop_hydro_names[0]
-        ].shape[0]
-        hydro_hidr_data = hidr.loc[
-            hidr["nome_usina"].isin(net_drop_hydro_names)
-        ].set_index("nome_usina")
-        # Produtibilidades em MW / ( (m3/s) / m)
-        specific_productivity = np.repeat(
-            hydro_hidr_data.loc[
-                net_drop_hydro_names, "produtibilidade_especifica"
-            ].to_numpy(),
-            num_entries_by_hydro,
-        )
-        # Converte para MW / ( (hm3 / mes) / m )
-        specific_productivity *= HM3_M3S_MONTHLY_FACTOR
+            energy_volume_map = {
+                earmi: varmi,
+                earmf: varmf,
+            }
+            stored_volume_sythesis = OperationSynthesis(
+                energy_volume_map[synthesis.variable],
+                synthesis.spatial_resolution,
+            )
+            net_drop_df = cls._get_from_cache(net_drop_synthesis)
+            net_drop_df = net_drop_df.loc[net_drop_df[BLOCK_COL] == 0].copy()
+            stored_volume_df = cls._get_from_cache(stored_volume_sythesis)
+            # Converte queda líquida em produtividade usando a
+            # produtibilidade específica
+            hidr = Deck.hidr(uow)
+            net_drop_hydro_names = cls._get_ordered_entities(
+                net_drop_synthesis
+            )[HYDRO_COL]
+            num_entries_by_hydro = net_drop_df.loc[
+                net_drop_df[HYDRO_COL] == net_drop_hydro_names[0]
+            ].shape[0]
+            hydro_hidr_data = hidr.loc[
+                hidr["nome_usina"].isin(net_drop_hydro_names)
+            ].set_index("nome_usina")
+            # Produtibilidades em MW / ( (m3/s) / m)
+            specific_productivity = np.repeat(
+                hydro_hidr_data.loc[
+                    net_drop_hydro_names, "produtibilidade_especifica"
+                ].to_numpy(),
+                num_entries_by_hydro,
+            )
+            # Converte para MW / ( (hm3 / mes) / m )
+            specific_productivity *= HM3_M3S_MONTHLY_FACTOR
 
-        # Adiciona ao df e acumula as produtibilidades nos reservatórios
-        net_drop_df[PRODUCTIVITY_TMP_COL] = specific_productivity
-        net_drop_df[PRODUCTIVITY_TMP_COL] *= net_drop_df[VALUE_COL]
-        net_drop_df = cls._calc_accumulated_productivity(
-            net_drop_df, net_drop_hydro_names, uow
-        )
+            # Adiciona ao df e acumula as produtibilidades nos reservatórios
+            net_drop_df[PRODUCTIVITY_TMP_COL] = specific_productivity
+            net_drop_df[PRODUCTIVITY_TMP_COL] *= net_drop_df[VALUE_COL]
+            net_drop_df = cls._calc_accumulated_productivity(
+                net_drop_df, net_drop_hydro_names, uow
+            )
 
-        stored_volume_hydro_names = cls._get_ordered_entities(
-            stored_volume_sythesis
-        )[HYDRO_COL]
-        net_drop_df = net_drop_df.loc[
-            net_drop_df[HYDRO_COL].isin(stored_volume_hydro_names)
-        ].copy()
+            stored_volume_hydro_names = cls._get_ordered_entities(
+                stored_volume_sythesis
+            )[HYDRO_COL]
+            net_drop_df = net_drop_df.loc[
+                net_drop_df[HYDRO_COL].isin(stored_volume_hydro_names)
+            ].copy()
 
-        # Multiplica o volume (útil) armazenado em cada UHE pela
-        # produtibilidade acumulada nos pontos de operação.
-        net_drop_df = net_drop_df.sort_values(
-            [HYDRO_COL, STAGE_COL, BLOCK_COL]
-        )
-        stored_volume_df = stored_volume_df.sort_values(
-            [HYDRO_COL, STAGE_COL, BLOCK_COL]
-        )
+            # Multiplica o volume (útil) armazenado em cada UHE pela
+            # produtibilidade acumulada nos pontos de operação.
+            net_drop_df = net_drop_df.sort_values(
+                [HYDRO_COL, STAGE_COL, BLOCK_COL]
+            )
+            stored_volume_df = stored_volume_df.sort_values(
+                [HYDRO_COL, STAGE_COL, BLOCK_COL]
+            )
 
-        stored_volume_df[VALUE_COL] = (
-            stored_volume_df[VALUE_COL] - stored_volume_df[LOWER_BOUND_COL]
-        ) * net_drop_df[PRODUCTIVITY_TMP_COL].to_numpy()
-        stored_volume_df[LOWER_BOUND_COL] = 0.0
-        stored_volume_df[UPPER_BOUND_COL] = (
-            stored_volume_df[UPPER_BOUND_COL]
-            - stored_volume_df[LOWER_BOUND_COL]
-        ) * net_drop_df[PRODUCTIVITY_TMP_COL].to_numpy()
-
-        tf = time()
-        cls._log(f"Tempo para conversão do VARM em EARM: {tf - ti:.2f} s")
+            stored_volume_df[VALUE_COL] = (
+                stored_volume_df[VALUE_COL] - stored_volume_df[LOWER_BOUND_COL]
+            ) * net_drop_df[PRODUCTIVITY_TMP_COL].to_numpy()
+            stored_volume_df[LOWER_BOUND_COL] = 0.0
+            stored_volume_df[UPPER_BOUND_COL] = (
+                stored_volume_df[UPPER_BOUND_COL]
+                - stored_volume_df[LOWER_BOUND_COL]
+            ) * net_drop_df[PRODUCTIVITY_TMP_COL].to_numpy()
 
         return stored_volume_df
+
+    @classmethod
+    def __stub_MER_MERL(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        """
+        Realiza o processamento da síntese de mercado de energia,
+        adequando o formato para ser compatível com as demais saídas
+        do NWLISTOP.
+        """
+        # TODO - resolve especial
+        return cls._resolve_spatial_resolution(synthesis, uow)
 
     @classmethod
     def __stub_EVMIN(
@@ -1492,78 +1490,94 @@ class OperationSynthetizer:
         return goal_df
 
     @classmethod
-    def __resolve_UHE(
-        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    def _post_resolve_gtert(
+        cls, df: Optional[pd.DataFrame], uow: AbstractUnitOfWork
     ) -> Optional[pd.DataFrame]:
         """
-        Resolve a síntese de operação para uma variável operativa
-        de uma UHE a partir dos arquivos de saída do NWLISTOP.
+        Realiza pós-processamento após a resolução da extração dados
+        em um DataFrame de síntese da geração térmica por UTE.
         """
-
-        def _limit_stages_with_hydro(
-            s: OperationSynthesis, df: pd.DataFrame, uow: AbstractUnitOfWork
-        ) -> pd.DataFrame:
-            df = df.loc[
-                df[START_DATE_COL]
-                < Deck.data_fim_estagios_individualizados_sim_final(uow),
-            ]
+        if df is None:
             return df
-
-        def _add_eer_submarket_to_hydro_synthesis(
-            s: OperationSynthesis, df: pd.DataFrame, uow: AbstractUnitOfWork
-        ) -> pd.DataFrame:
-            if EER_COL in df.columns and SUBMARKET_COL in df.columns:
-                return df
-            else:
-                ti = time()
-                entities = cls._get_ordered_entities(s)
-                hydro_df = entities[HYDRO_COL]
-                aux_df = Deck.uhes_rees_submercados_map(uow)
-                aux_df = aux_df.loc[hydro_df]
-                num_blocks = len(entities[BLOCK_COL])
-                num_stages = len(entities[STAGE_COL])
-                num_scenarios = len(entities[SCENARIO_COL])
-                df[EER_COL] = np.repeat(
-                    aux_df[EER_COL].tolist(),
-                    num_scenarios * num_stages * num_blocks,
-                )
-                df[SUBMARKET_COL] = np.repeat(
-                    aux_df[SUBMARKET_COL].tolist(),
-                    num_scenarios * num_stages * num_blocks,
-                )
-                tf = time()
-                cls._log(
-                    f"Tempo para adicionar REE e SBM das UHE: {tf - ti:.2f} s"
-                )
-                return df[
-                    [HYDRO_COL, EER_COL, SUBMARKET_COL]
-                    + OPERATION_SYNTHESIS_COMMON_COLUMNS
-                ]
-
-        uhes = Deck.uhes(uow).sort_values("nome_usina")
-        uhes_idx = uhes["codigo_usina"]
-        uhes_name = uhes["nome_usina"]
-
-        n_procs = int(Settings().processors)
-        with Pool(processes=n_procs) as pool:
-            if n_procs > 1:
-                cls._log("Paralelizando...")
-            async_res = {
-                name: pool.apply_async(
-                    cls._resolve_UHE_entity, (uow, synthesis, idx, name)
-                )
-                for idx, name in zip(uhes_idx, uhes_name)
+        df = df.rename(
+            columns={
+                "data": START_DATE_COL,
+                "serie": SCENARIO_COL,
+                "classe": THERMAL_COL,
             }
-            dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
-
-        df = cls._post_resolve(
-            dfs,
-            synthesis,
-            uow,
-            early_hooks=[_limit_stages_with_hydro],
-            late_hooks=[_add_eer_submarket_to_hydro_synthesis],
+        ).copy()
+        df.sort_values(
+            [THERMAL_COL, START_DATE_COL, SCENARIO_COL, BLOCK_COL],
+            inplace=True,
         )
+        num_stages = df[START_DATE_COL].unique().shape[0]
+        stages = np.arange(1, num_stages + 1)
+        num_scenarios = Deck.numero_cenarios_simulacao_final(uow)
+        blocks = df[BLOCK_COL].unique().tolist()
+        num_blocks = len(blocks)
+        thermals = df[THERMAL_COL].unique().tolist()
+        num_thermals = len(thermals)
+        start_dates = Deck.datas_inicio_estagios_internos_sim_final(uow)[
+            :num_stages
+        ]
+        end_dates = np.array(
+            Deck.datas_fim_estagios_internos_sim_final(uow)[:num_stages]
+        )
+        stages_to_df_column = np.tile(
+            np.repeat(stages, num_scenarios * num_blocks), num_thermals
+        )
+        end_dates_to_df_column: np.ndarray = np.tile(
+            np.repeat(end_dates, num_scenarios * num_blocks), num_thermals
+        )
+        df = df.copy()
+        df[STAGE_COL] = stages_to_df_column
+        df[END_DATE_COL] = end_dates_to_df_column
+        df_block_lengths = Deck.duracao_mensal_patamares(uow)
+        df_block_lengths = df_block_lengths.loc[
+            df_block_lengths["patamar"].isin(blocks)
+        ]
+        block_durations = np.zeros(
+            (num_scenarios * num_blocks * num_stages,), dtype=np.float64
+        )
+        data_block_size = num_scenarios * num_blocks
+        for i, d in enumerate(start_dates):
+            date_durations = df_block_lengths.loc[
+                df_block_lengths["data"] == d, "valor"
+            ].to_numpy()
+            i_i = i * data_block_size
+            i_f = i_i + data_block_size
+            block_durations[i_i:i_f] = np.tile(date_durations, num_scenarios)
+        block_durations = np.tile(block_durations, num_thermals)
+        df[BLOCK_DURATION_COL] = STAGE_DURATION_HOURS * block_durations
         return df
+
+    @classmethod
+    def _resolve_gtert(
+        cls,
+        uow: AbstractUnitOfWork,
+        synthesis: OperationSynthesis,
+        sbm_index: int,
+        sbm_name: str,
+    ) -> Optional[pd.DataFrame]:
+        """
+        Obtém os dados da síntese de operação para todas as UTE
+        de um submercado a partir do arquivo de saída do NWLISTOP.
+        """
+        logger_name = f"{synthesis.variable.value}_{sbm_name}"
+        logger = Log.configure_process_logger(
+            uow.queue, logger_name, sbm_index
+        )
+
+        with uow:
+            logger.info(
+                f"Processando arquivo do submercado: {sbm_index} - {sbm_name}"
+            )
+            df = uow.files.get_nwlistop(
+                synthesis.variable,
+                synthesis.spatial_resolution,
+                submercado=sbm_index,
+            )
+        return cls._post_resolve_gtert(df, uow)
 
     @classmethod
     def __stub_GTER_UTE(
@@ -1596,36 +1610,37 @@ class OperationSynthetizer:
             if SUBMARKET_COL in df.columns:
                 return df
             else:
-                ti = time()
-                thermals = Deck.utes(uow).set_index("nome_usina")
-                submarkets = Deck.submercados(uow)
-                submarkets = submarkets.drop_duplicates(
-                    ["codigo_submercado", "nome_submercado"]
-                ).set_index("codigo_submercado")
-                # Obtem os nomes dos SBMs na mesma ordem em que aparecem as UTEs
-                entities = cls._get_ordered_entities(s)
-                thermals_df = entities[THERMAL_COL]
-                codigos_sbms_df = [
-                    thermals.at[r, "submercado"] for r in thermals_df
-                ]
-                nomes_sbms_df = [
-                    submarkets.at[c, "nome_submercado"]
-                    for c in codigos_sbms_df
-                ]
-                # Aplica de modo posicional por desempenho
-                num_blocks = len(entities[BLOCK_COL])
-                num_stages = len(entities[STAGE_COL])
-                num_scenarios = len(entities[SCENARIO_COL])
-                df[SUBMARKET_COL] = np.repeat(
-                    nomes_sbms_df, num_scenarios * num_stages * num_blocks
-                )
-                tf = time()
-                cls._log(f"Tempo para adicionar SBM das UTE: {tf - ti:.2f} s")
-                # Reordena as colunas e retorna
-                return df[
-                    [THERMAL_COL, SUBMARKET_COL]
-                    + OPERATION_SYNTHESIS_COMMON_COLUMNS
-                ]
+                with time_and_log(
+                    message_root="Tempo para adicionar SBM das UTE",
+                    logger=cls.logger,
+                ):
+                    thermals = Deck.utes(uow).set_index("nome_usina")
+                    submarkets = Deck.submercados(uow)
+                    submarkets = submarkets.drop_duplicates(
+                        ["codigo_submercado", "nome_submercado"]
+                    ).set_index("codigo_submercado")
+                    # Obtem os nomes dos SBMs na mesma ordem em que aparecem as UTEs
+                    entities = cls._get_ordered_entities(s)
+                    thermals_df = entities[THERMAL_COL]
+                    codigos_sbms_df = [
+                        thermals.at[r, "submercado"] for r in thermals_df
+                    ]
+                    nomes_sbms_df = [
+                        submarkets.at[c, "nome_submercado"]
+                        for c in codigos_sbms_df
+                    ]
+                    # Aplica de modo posicional por desempenho
+                    num_blocks = len(entities[BLOCK_COL])
+                    num_stages = len(entities[STAGE_COL])
+                    num_scenarios = len(entities[SCENARIO_COL])
+                    df[SUBMARKET_COL] = np.repeat(
+                        nomes_sbms_df, num_scenarios * num_stages * num_blocks
+                    )
+                    # Reordena as colunas e retorna
+                    return df[
+                        [THERMAL_COL, SUBMARKET_COL]
+                        + OPERATION_SYNTHESIS_COMMON_COLUMNS
+                    ]
 
         submarkets = Deck.submercados(uow)
         real_submarkets = submarkets.loc[
@@ -1644,16 +1659,18 @@ class OperationSynthetizer:
             variable=synthesis.variable,
             spatial_resolution=synthesis.spatial_resolution,
         )
-        with Pool(processes=n_procs) as pool:
-            if n_procs > 1:
-                cls._log("Paralelizando...")
-            async_res = {
-                idx: pool.apply_async(
-                    cls._resolve_gtert, (uow, synthesis, idx, name)
-                )
-                for idx, name in zip(sbms_idx, sbms_name)
-            }
-            dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
+        with time_and_log(
+            message_root="Tempo para ler dados de UTE",
+            logger=cls.logger,
+        ):
+            with Pool(processes=n_procs) as pool:
+                async_res = {
+                    idx: pool.apply_async(
+                        cls._resolve_gtert, (uow, synthesis, idx, name)
+                    )
+                    for idx, name in zip(sbms_idx, sbms_name)
+                }
+                dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
 
         df = cls._post_resolve(
             dfs,
@@ -1842,7 +1859,7 @@ class OperationSynthetizer:
 
         level_column = [c for c in quantile_df.columns if "level_" in c]
         if len(level_column) != 1:
-            cls._log("Erro no cálculo dos quantis", "error")
+            cls._log("Erro no cálculo dos quantis", ERROR)
             raise RuntimeError()
 
         quantile_df = quantile_df.drop(columns=[SCENARIO_COL]).rename(
@@ -1931,11 +1948,11 @@ class OperationSynthetizer:
             cls._log(f"Lendo do cache - {str(s)}")
             res = cls.CACHED_SYNTHESIS.get(s)
             if res is None:
-                cls._log(f"Erro na leitura do cache - {str(s)}", "error")
+                cls._log(f"Erro na leitura do cache - {str(s)}", ERROR)
                 raise RuntimeError()
             return res.copy()
         else:
-            cls._log(f"Erro na leitura do cache - {str(s)}", "error")
+            cls._log(f"Erro na leitura do cache - {str(s)}", ERROR)
             raise RuntimeError()
 
     @classmethod
@@ -2085,6 +2102,8 @@ class OperationSynthetizer:
             ]
         ):
             f = cls.__stub_EARM_UHE
+        elif s.variable in [Variable.MERCADO, Variable.MERCADO_LIQUIDO]:
+            f = cls.__stub_MER_MERL
         return f
 
     @classmethod
@@ -2127,10 +2146,11 @@ class OperationSynthetizer:
         caso esta seja uma variável que deva ser armazenada.
         """
         if s in cls.SYNTHESIS_TO_CACHE:
-            ti = time()
-            cls.CACHED_SYNTHESIS[s] = df.copy()
-            tf = time()
-            cls._log(f"Tempo para armazenamento na cache: {tf - ti:.2f} s")
+            with time_and_log(
+                message_root="Tempo para armazenamento na cache",
+                logger=cls.logger,
+            ):
+                cls.CACHED_SYNTHESIS[s] = df.copy()
 
     @classmethod
     def _resolve_bounds(
@@ -2140,10 +2160,12 @@ class OperationSynthetizer:
         Realiza o cálculo dos limites superiores e inferiores para
         a síntese caso esta seja uma variável limitada.
         """
-        ti = time()
-        df = OperationVariableBounds.resolve_bounds(s, df, uow)
-        tf = time()
-        cls._log(f"Tempo para cálculo dos limites: {tf - ti:.2f} s")
+        with time_and_log(
+            message_root="Tempo para calculo dos limites",
+            logger=cls.logger,
+        ):
+            df = OperationVariableBounds.resolve_bounds(s, df, uow)
+
         return df
 
     @classmethod
@@ -2218,24 +2240,24 @@ class OperationSynthetizer:
         ao DataFrame de estatísticas da agregação espacial em questão.
         """
         filename = str(s)
-        ti_e = time()
-        num_scenarios = Deck.numero_cenarios_simulacao_final(uow)
-        scenarios = list(range(1, num_scenarios + 1))
-        scenarios_df = df.loc[df[SCENARIO_COL].isin(scenarios)].reset_index(
-            drop=True
-        )
-        scenarios_df = scenarios_df.astype({SCENARIO_COL: int})
-        stats_df = df.loc[~df[SCENARIO_COL].isin(scenarios)].reset_index(
-            drop=True
-        )
-        if stats_df.empty:
-            stats_df = cls._calc_statistics(scenarios_df)
-        cls._add_synthesis_stats(s, stats_df)
-        cls.__store_in_cache_if_needed(s, scenarios_df)
-        with uow:
-            uow.export.synthetize_df(scenarios_df, filename)
-        tf_e = time()
-        cls._log(f"Tempo para exportação dos dados: {tf_e - ti_e:.2f} s")
+        with time_and_log(
+            message_root="Tempo para exportacao dos dados", logger=cls.logger
+        ):
+            num_scenarios = Deck.numero_cenarios_simulacao_final(uow)
+            scenarios = list(range(1, num_scenarios + 1))
+            scenarios_df = df.loc[
+                df[SCENARIO_COL].isin(scenarios)
+            ].reset_index(drop=True)
+            scenarios_df = scenarios_df.astype({SCENARIO_COL: int})
+            stats_df = df.loc[~df[SCENARIO_COL].isin(scenarios)].reset_index(
+                drop=True
+            )
+            if stats_df.empty:
+                stats_df = cls._calc_statistics(scenarios_df)
+            cls._add_synthesis_stats(s, stats_df)
+            cls.__store_in_cache_if_needed(s, scenarios_df)
+            with uow:
+                uow.export.synthetize_df(scenarios_df, filename)
 
     @classmethod
     def _export_stats(
@@ -2290,40 +2312,40 @@ class OperationSynthetizer:
         Realiza a síntese de operação para uma variável
         fornecida.
         """
-        ti_s = time()
-        try:
-            filename = str(s)
-            found_synthesis = False
-            cls._log(f"Realizando sintese de {filename}")
-            df = cls.__get_from_cache_if_exists(s)
-            is_stub = cls._stub_mappings(s) is not None
-            if df.empty:
-                df, is_stub = cls._resolve_stub(s, uow)
-                if not is_stub:
-                    df = cls._resolve_synthesis(s, uow)
-            if df is not None:
-                if not df.empty:
-                    found_synthesis = True
-                    cls._export_scenario_synthesis(s, df, uow)
-                    tf_s = time()
+        filename = str(s)
+        with time_and_log(
+            message_root=f"Tempo para sintese de {filename}",
+            logger=cls.logger,
+        ):
+            try:
+                found_synthesis = False
+                cls._log(f"Realizando sintese de {filename}")
+                df = cls.__get_from_cache_if_exists(s)
+                is_stub = cls._stub_mappings(s) is not None
+                if df.empty:
+                    df, is_stub = cls._resolve_stub(s, uow)
+                    if not is_stub:
+                        df = cls._resolve_synthesis(s, uow)
+                if df is not None:
+                    if not df.empty:
+                        found_synthesis = True
+                        cls._export_scenario_synthesis(s, df, uow)
+                        return s
+                if not found_synthesis:
                     cls._log(
-                        f"Tempo para síntese de {filename}: {tf_s - ti_s:.2f} s"
+                        "Nao foram encontrados dados"
+                        + f" para a sintese de {filename}",
+                        WARNING,
                     )
-                    return s
-            if not found_synthesis:
+                return None
+            except Exception as e:
+                traceback.print_exc()
+                cls._log(str(e), ERROR)
                 cls._log(
-                    "Nao foram encontrados dados"
-                    + f" para a sintese de {filename}",
-                    "warning",
+                    f"Nao foi possível realizar a sintese de: {filename}",
+                    ERROR,
                 )
-            return None
-        except Exception as e:
-            traceback.print_exc()
-            cls._log(str(e), "error")
-            cls._log(
-                f"Nao foi possível realizar a sintese de: {filename}", "error"
-            )
-            return None
+                return None
 
     @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
@@ -2334,17 +2356,18 @@ class OperationSynthetizer:
         e então são resolvidas de acordo com a síntese.
         """
         cls.logger = logging.getLogger("main")
-        ti = time()
-        synthesis_with_dependencies = cls._preprocess_synthesis_variables(
-            variables, uow
-        )
-        success_synthesis: List[OperationSynthesis] = []
-        for s in synthesis_with_dependencies:
-            r = cls._synthetize_single_variable(s, uow)
-            if r:
-                success_synthesis.append(r)
+        with time_and_log(
+            message_root="Tempo para sintese da operacao",
+            logger=cls.logger,
+        ):
+            synthesis_with_dependencies = cls._preprocess_synthesis_variables(
+                variables, uow
+            )
+            success_synthesis: List[OperationSynthesis] = []
+            for s in synthesis_with_dependencies:
+                r = cls._synthetize_single_variable(s, uow)
+                if r:
+                    success_synthesis.append(r)
 
-        cls._export_stats(uow)
-        cls._export_metadata(success_synthesis, uow)
-        tf = time()
-        cls._log(f"Tempo para síntese da operação: {tf - ti:.2f} s")
+            cls._export_stats(uow)
+            cls._export_metadata(success_synthesis, uow)
