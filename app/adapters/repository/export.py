@@ -4,7 +4,6 @@ import pandas as pd  # type: ignore
 import pyarrow as pa  # type: ignore
 import pyarrow.parquet as pq  # type: ignore
 import pathlib
-import warnings
 
 
 class AbstractExportRepository(ABC):
@@ -25,19 +24,14 @@ class ParquetExportRepository(AbstractExportRepository):
         return pathlib.Path(self.__path)
 
     def synthetize_df(self, df: pd.DataFrame, filename: str) -> bool:
-        # Silencia:
-        # venv/lib/python3.10/site-packages/pyarrow/pandas_compat.py:373:
-        # FutureWarning: is_sparse is deprecated and will be removed in a
-        # future version. Check `isinstance(dtype, pd.SparseDtype)` instead.
-        with warnings.catch_warnings():
-            pq.write_table(
-                pa.Table.from_pandas(df),
-                self.path.joinpath(filename + ".parquet.gzip"),
-                compression="gzip",
-                write_statistics=False,
-                flavor="spark",
-                coerce_timestamps="ms",
-            )
+        pq.write_table(
+            pa.Table.from_pandas(df),
+            self.path.joinpath(filename + ".parquet.gzip"),
+            compression="gzip",
+            write_statistics=False,
+            flavor="spark",
+            coerce_timestamps="ms",
+        )
         return True
 
 

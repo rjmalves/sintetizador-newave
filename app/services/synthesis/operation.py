@@ -233,12 +233,15 @@ class OperationSynthetizer:
         df = cls._resolve_temporal_resolution(df, uow)
         for col, val in entity_column_values.items():
             df[col] = val
+            df = df.astype({col: pd.StringDtype(storage="pyarrow")})
         df = df[spatial_res.all_synthesis_df_columns]
         df = cls._resolve_starting_stage(df, uow)
         if s.variable in internal_stubs:
             df = internal_stubs[s.variable](df, uow)
         df_stats = cls._calc_statistics(df)
-        return pd.concat([df, df_stats], ignore_index=True)
+        df = pd.concat([df, df_stats], ignore_index=True)
+        df = df.astype({SCENARIO_COL: pd.StringDtype(storage="pyarrow")})
+        return df
 
     @classmethod
     def _post_resolve(
@@ -665,6 +668,9 @@ class OperationSynthetizer:
                         submarkets_names_df,
                         num_scenarios * num_stages * num_blocks,
                     )
+                    df = df.astype(
+                        {SUBMARKET_COL: pd.StringDtype(storage="pyarrow")}
+                    )
                     return df[
                         [EER_COL, SUBMARKET_COL]
                         + OPERATION_SYNTHESIS_COMMON_COLUMNS
@@ -812,6 +818,12 @@ class OperationSynthetizer:
                     df[SUBMARKET_COL] = np.repeat(
                         aux_df[SUBMARKET_COL].tolist(),
                         num_scenarios * num_stages * num_blocks,
+                    )
+                    df = df.astype(
+                        {
+                            EER_COL: pd.StringDtype(storage="pyarrow"),
+                            SUBMARKET_COL: pd.StringDtype(storage="pyarrow"),
+                        }
                     )
                     return df[
                         [HYDRO_COL, EER_COL, SUBMARKET_COL]
@@ -1409,7 +1421,8 @@ class OperationSynthetizer:
             stored_volume_hydro_names = stored_volume_entities[HYDRO_COL]
             stored_volume_hydro_blocks = stored_volume_entities[BLOCK_COL]
             net_drop_df = net_drop_df.loc[
-                net_drop_df[HYDRO_COL].isin(stored_volume_hydro_names) & net_drop_df[BLOCK_COL].isin(stored_volume_hydro_blocks)
+                net_drop_df[HYDRO_COL].isin(stored_volume_hydro_names)
+                & net_drop_df[BLOCK_COL].isin(stored_volume_hydro_blocks)
             ].copy()
 
             net_drop_df = net_drop_df.sort_values(
@@ -1776,7 +1789,9 @@ class OperationSynthetizer:
         df = cls._resolve_temporal_resolution_GTER_UTE(df, uow)
         df = cls._resolve_starting_stage(df, uow)
         df_stats = cls._calc_statistics(df)
-        return pd.concat([df, df_stats], ignore_index=True)
+        df = pd.concat([df, df_stats], ignore_index=True)
+        df = df.astype({SCENARIO_COL: pd.StringDtype(storage="pyarrow")})
+        return df
 
     @classmethod
     def _resolve_GTER_UTE_entity(
@@ -1829,6 +1844,7 @@ class OperationSynthetizer:
                 df[THERMAL_COL] == thermals_in_data[0]
             ].shape[0]
             df[THERMAL_COL] = np.repeat(thermals_names, lines_by_thermal)
+            df = df.astype({THERMAL_COL: pd.StringDtype(storage="pyarrow")})
             return df
 
         def _add_submarket_to_thermal_synthesis(
@@ -1863,6 +1879,10 @@ class OperationSynthetizer:
                     df[SUBMARKET_COL] = np.repeat(
                         nomes_sbms_df, num_scenarios * num_stages * num_blocks
                     )
+                    df = df.astype(
+                        {SUBMARKET_COL: pd.StringDtype(storage="pyarrow")}
+                    )
+
                     # Reordena as colunas e retorna
                     return df[
                         [THERMAL_COL, SUBMARKET_COL]

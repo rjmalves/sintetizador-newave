@@ -1221,6 +1221,10 @@ UNITS: Dict[OperationSynthesis, Unit] = {
     ): Unit.perc,
     OperationSynthesis(
         Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
+        SpatialResolution.USINA_HIDROELETRICA,
+    ): Unit.MWmes,
+    OperationSynthesis(
+        Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
         SpatialResolution.RESERVATORIO_EQUIVALENTE,
     ): Unit.MWmes,
     OperationSynthesis(
@@ -1230,6 +1234,10 @@ UNITS: Dict[OperationSynthesis, Unit] = {
     OperationSynthesis(
         Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
         SpatialResolution.SISTEMA_INTERLIGADO,
+    ): Unit.MWmes,
+    OperationSynthesis(
+        Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
+        SpatialResolution.USINA_HIDROELETRICA,
     ): Unit.MWmes,
     OperationSynthesis(
         Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
