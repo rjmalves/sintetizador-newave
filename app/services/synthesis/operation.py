@@ -763,13 +763,16 @@ class OperationSynthetizer:
             Variable.COTA_JUSANTE: _calc_block_0_weighted_mean,  # noqa
             Variable.QUEDA_LIQUIDA: _calc_block_0_weighted_mean,  # noqa
         }
+        aux_df = Deck.uhes_rees_submercados_map(uow)
         return cls._post_resolve_entity(
             df,
             synthesis,
             {
                 synthesis.spatial_resolution.entity_synthesis_df_columns[
                     0
-                ]: uhe_name
+                ]: uhe_name,
+                EER_COL: aux_df.at[uhe_name, EER_COL],
+                SUBMARKET_COL: aux_df.at[uhe_name, SUBMARKET_COL],
             },
             uow,
             internal_stubs=internal_stubs,
@@ -852,7 +855,7 @@ class OperationSynthetizer:
             synthesis,
             uow,
             early_hooks=[_limit_stages_with_hydro],
-            late_hooks=[_add_eer_submarket_to_hydro_synthesis],
+            # late_hooks=[_add_eer_submarket_to_hydro_synthesis],
         )
         return df
 

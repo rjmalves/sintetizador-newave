@@ -17,6 +17,7 @@ import pandas as pd  # type: ignore
 from typing import Any, Optional, TypeVar, Type, List
 
 from app.services.unitofwork import AbstractUnitOfWork
+from app.internal.constants import STRING_DF_TYPE
 
 
 class Deck:
@@ -561,9 +562,13 @@ class Deck:
     ) -> pd.DataFrame:
         df_aux = cls.DECK_DATA_CACHING.get("uhes_rees_submercados_map")
         if df_aux is None:
-            confhd = cls.uhes(uow).set_index("nome_usina")
-            rees = cls.rees(uow).set_index("codigo")
-            sistema = cls.submercados(uow)
+            confhd = cls.uhes(uow).astype({"nome_usina": STRING_DF_TYPE})
+            confhd = confhd.set_index("nome_usina")
+            rees = cls.rees(uow).astype({"nome": STRING_DF_TYPE})
+            rees = rees.set_index("codigo")
+            sistema = cls.submercados(uow).astype(
+                {"nome_submercado": STRING_DF_TYPE}
+            )
             sistema = sistema.drop_duplicates(
                 ["codigo_submercado", "nome_submercado"]
             ).set_index("codigo_submercado")
