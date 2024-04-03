@@ -585,3 +585,28 @@ class Deck:
             df_aux = df_aux.set_index("uhes")
             cls.DECK_DATA_CACHING["uhes_rees_submercados_map"] = df_aux
         return df_aux.copy()
+
+    @classmethod
+    def utes_submercados_map(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        df_aux = cls.DECK_DATA_CACHING.get("utes_submercados_map")
+        if df_aux is None:
+            utes = Deck.utes(uow).astype({"nome_usina": STRING_DF_TYPE})
+            utes = utes.set_index("nome_usina")
+            sistema = cls.submercados(uow).astype(
+                {"nome_submercado": STRING_DF_TYPE}
+            )
+            sistema = sistema.drop_duplicates(
+                ["codigo_submercado", "nome_submercado"]
+            ).set_index("codigo_submercado")
+            df_aux = pd.DataFrame(
+                data={
+                    "utes": utes.index.tolist(),
+                    "codigo_submercado": utes["submercado"].tolist(),
+                }
+            )
+            df_aux["submercado"] = df_aux["codigo_submercado"].apply(
+                lambda c: sistema.at[c, "nome_submercado"]
+            )
+            df_aux = df_aux.set_index("utes")
+            cls.DECK_DATA_CACHING["utes_submercados_map"] = df_aux
+        return df_aux.copy()

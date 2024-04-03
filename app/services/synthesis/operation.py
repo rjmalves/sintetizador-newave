@@ -1821,6 +1821,8 @@ class OperationSynthetizer:
                 synthesis.spatial_resolution,
                 submercado=sbm_index,
             )
+        if df is not None:
+            df[SUBMARKET_COL] = sbm_name
         return cls._post_resolve_GTER_UTE_entity(df, uow)
 
     @classmethod
@@ -1848,46 +1850,6 @@ class OperationSynthetizer:
             df[THERMAL_COL] = np.repeat(thermals_names, lines_by_thermal)
             df = df.astype({THERMAL_COL: STRING_DF_TYPE})
             return df
-
-        def _add_submarket_to_thermal_synthesis(
-            s: OperationSynthesis, df: pd.DataFrame, uow: AbstractUnitOfWork
-        ) -> pd.DataFrame:
-            if SUBMARKET_COL in df.columns:
-                return df
-            else:
-                with time_and_log(
-                    message_root="Tempo para adicionar SBM das UTE",
-                    logger=cls.logger,
-                ):
-                    thermals = Deck.utes(uow).set_index("nome_usina")
-                    submarkets = Deck.submercados(uow)
-                    submarkets = submarkets.drop_duplicates(
-                        ["codigo_submercado", "nome_submercado"]
-                    ).set_index("codigo_submercado")
-                    # Obtem os nomes dos SBMs na mesma ordem em que aparecem as UTEs
-                    entities = cls._get_ordered_entities(s)
-                    thermals_df = entities[THERMAL_COL]
-                    codigos_sbms_df = [
-                        thermals.at[r, "submercado"] for r in thermals_df
-                    ]
-                    nomes_sbms_df = [
-                        submarkets.at[c, "nome_submercado"]
-                        for c in codigos_sbms_df
-                    ]
-                    # Aplica de modo posicional por desempenho
-                    num_blocks = len(entities[BLOCK_COL])
-                    num_stages = len(entities[STAGE_COL])
-                    num_scenarios = len(entities[SCENARIO_COL])
-                    df[SUBMARKET_COL] = np.repeat(
-                        nomes_sbms_df, num_scenarios * num_stages * num_blocks
-                    )
-                    df = df.astype({SUBMARKET_COL: STRING_DF_TYPE})
-
-                    # Reordena as colunas e retorna
-                    return df[
-                        [THERMAL_COL, SUBMARKET_COL]
-                        + OPERATION_SYNTHESIS_COMMON_COLUMNS
-                    ]
 
         submarkets = Deck.submercados(uow)
         real_submarkets = submarkets.loc[
@@ -1925,7 +1887,6 @@ class OperationSynthetizer:
             synthesis,
             uow,
             early_hooks=[_replace_thermal_code_by_name],
-            late_hooks=[_add_submarket_to_thermal_synthesis],
         )
         return df
 
