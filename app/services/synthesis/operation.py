@@ -618,13 +618,18 @@ class OperationSynthetizer:
                 ree=ree_index,
             )
 
+        aux_df = Deck.uhes_rees_submercados_map(uow)
+
         return cls._post_resolve_entity(
             df,
             synthesis,
             {
                 synthesis.spatial_resolution.entity_synthesis_df_columns[
                     0
-                ]: ree_name
+                ]: ree_name,
+                SUBMARKET_COL: aux_df.loc[
+                    aux_df[EER_COL] == ree_name, SUBMARKET_COL
+                ].iloc[0],
             },
             uow,
         )
