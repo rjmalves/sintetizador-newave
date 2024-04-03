@@ -705,7 +705,7 @@ class OperationVariableBounds:
 
     @classmethod
     def _adiciona_data_configuracoes(
-        cls, df: pd.DataFrame, arq_pmo: Pmo, arq_dger: Dger
+        cls, df_earmax: pd.DataFrame, arq_pmo: Pmo, arq_dger: Dger
     ) -> pd.DataFrame:
         """
         Adiciona a informação da data associada a cada configuração
@@ -719,15 +719,23 @@ class OperationVariableBounds:
         df_configs = cls._filtra_datas_df(
             df_configs, "data", data_inicio, data_fim
         )
-        # Adiciona informação da data de cada configuração e reordena
+        # Adiciona informação da configuração de cada data e reordena
         # pela ordem que aparece no dataframe da síntese
-        df["data"] = df["configuracao"].apply(
-            lambda c: df_configs.loc[df_configs["valor"] == c, "data"].iloc[0]
+        rees = df_earmax["nome_ree"].unique()
+        n_rees = rees.shape[0]
+        n_datas = df_configs.shape[0]
+        df_configs = pd.concat([df_configs] * n_rees, ignore_index=True)
+        df_configs["nome_ree"] = np.repeat(rees, n_datas)
+        df_configs = df_configs.rename(columns={"valor": "configuracao"})
+        df_configs["valor_MWmes"] = df_configs.apply(
+            lambda linha: df_earmax.loc[
+                (df_earmax["nome_ree"] == linha["nome_ree"])
+                & (df_earmax["configuracao"] == linha["configuracao"]),
+                "valor_MWmes",
+            ].iloc[0],
+            axis=1,
         )
-        print(data_inicio, data_fim)
-        print(df_configs)
-        print(df)
-        return df
+        return df_configs
 
     @classmethod
     def _ordena_rees(
@@ -927,8 +935,6 @@ class OperationVariableBounds:
         )
         # Adiciona os earmax de cada ree no curva e calcula
         # o limite inferior absoluto
-        print(df_curva)
-        print(df_earmax)
         df_curva["earmax"] = df_curva.apply(
             lambda linha: df_earmax.loc[
                 (df_earmax["codigo_ree"] == linha["codigo_ree"])
