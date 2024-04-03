@@ -53,10 +53,20 @@ class SpatialResolution(Enum):
         col_maps: Dict[SpatialResolution, List[str]] = {
             SpatialResolution.SISTEMA_INTERLIGADO: [],
             SpatialResolution.SUBMERCADO: [SUBMARKET_COL],
-            SpatialResolution.RESERVATORIO_EQUIVALENTE: [EER_COL],
-            SpatialResolution.PARQUE_EOLICO_EQUIVALENTE: [EEP_COL],
-            SpatialResolution.USINA_HIDROELETRICA: [HYDRO_COL],
-            SpatialResolution.USINA_TERMELETRICA: [THERMAL_COL],
+            SpatialResolution.RESERVATORIO_EQUIVALENTE: [
+                EER_COL,
+                SUBMARKET_COL,
+            ],
+            SpatialResolution.PARQUE_EOLICO_EQUIVALENTE: [
+                EEP_COL,
+                SUBMARKET_COL,
+            ],
+            SpatialResolution.USINA_HIDROELETRICA: [
+                HYDRO_COL,
+                EER_COL,
+                SUBMARKET_COL,
+            ],
+            SpatialResolution.USINA_TERMELETRICA: [THERMAL_COL, SUBMARKET_COL],
             SpatialResolution.PAR_SUBMERCADOS: [
                 EXCHANGE_SOURCE_COL,
                 EXCHANGE_TARGET_COL,

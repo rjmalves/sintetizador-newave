@@ -277,8 +277,6 @@ class OperationSynthetizer:
                 spatial_resolution.sorting_synthesis_df_columns
             ).reset_index(drop=True)
 
-            df.to_csv("teste.csv")
-
             entity_columns_order = cls._get_unique_column_values_in_order(
                 df,
                 spatial_resolution.entity_synthesis_df_columns,
@@ -988,7 +986,6 @@ class OperationSynthetizer:
             spatial_resolution=SpatialResolution.USINA_HIDROELETRICA,
         )
         hydro_df = cls._get_from_cache(hydro_synthesis)
-
         return hydro_df
 
     @classmethod
