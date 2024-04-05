@@ -568,6 +568,54 @@ class OperationVariableBounds:
             df, col_grp="sin"
         ),
         OperationSynthesis(
+            Variable.VOLUME_EVAPORADO,
+            SpatialResolution.USINA_HIDROELETRICA,
+        ): lambda df, uow: OperationVariableBounds._qevp_vevp_uhe_bounds(
+            df, uow, unidade_sintese="hm3"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_EVAPORADO,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
+            df, col_grp="ree"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_EVAPORADO,
+            SpatialResolution.SUBMERCADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
+            df, col_grp="submercado"
+        ),
+        OperationSynthesis(
+            Variable.VOLUME_EVAPORADO,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
+            df, col_grp="sin"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_EVAPORADA,
+            SpatialResolution.USINA_HIDROELETRICA,
+        ): lambda df, uow: OperationVariableBounds._qevp_vevp_uhe_bounds(
+            df, uow, unidade_sintese="m3/s"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_EVAPORADA,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
+            df, col_grp="ree"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_EVAPORADA,
+            SpatialResolution.SUBMERCADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
+            df, col_grp="submercado"
+        ),
+        OperationSynthesis(
+            Variable.VAZAO_EVAPORADA,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
+            df, col_grp="sin"
+        ),
+        OperationSynthesis(
             Variable.INTERCAMBIO,
             SpatialResolution.PAR_SUBMERCADOS,
         ): lambda df, uow: OperationVariableBounds._int_sbp_bounds(df, uow),
@@ -1495,17 +1543,20 @@ class OperationVariableBounds:
         """
         cols_grp_validas = ["usina", "ree", "submercado", "sin"]
 
+        col_grp_map: Dict[str, List[str]] = {
+            "usina": ["usina", "ree", "submercado"],
+            "ree": ["ree", "submercado"],
+            "submercado": ["submercado"],
+            "sin": [],
+        }
+
         if col_grp is None:
             return df
 
-        if col_grp == "sin":
-            df["group"] = 1
-        elif col_grp in cols_grp_validas:
-            df["group"] = df[col_grp]
-        else:
+        if col_grp not in col_grp_map:
             raise RuntimeError(f"Coluna de agrupamento inválida: {col_grp}")
 
-        cols_group = ["group"] + [
+        cols_group = col_grp_map[col_grp] + [
             c
             for c in df.columns
             if c in cls.IDENTIFICATION_COLUMNS and c not in cols_grp_validas
@@ -1518,10 +1569,6 @@ class OperationVariableBounds:
             .sum(engine="numba")
             .reset_index()
         )
-        if col_grp == "sin" or col_grp is None:
-            df_group = df_group.drop(columns=["group"])
-        else:
-            df_group = df_group.rename(columns={"group": col_grp})
         return df_group
 
     @classmethod
@@ -1536,34 +1583,7 @@ class OperationVariableBounds:
         É usada em casos em que osdados são fornecidos em unidade
         de volume, mas a síntese desejada é em unidade de vazão.
         """
-        cols_grp_validas = ["usina", "ree", "submercado", "sin"]
-
-        if col_grp is None:
-            return df
-
-        if col_grp == "sin":
-            df["group"] = 1
-        elif col_grp in cols_grp_validas:
-            df["group"] = df[col_grp]
-        else:
-            raise RuntimeError(f"Coluna de agrupamento inválida: {col_grp}")
-
-        cols_group = ["group"] + [
-            c
-            for c in df.columns
-            if c in cls.IDENTIFICATION_COLUMNS and c not in cols_grp_validas
-        ]
-        df_group = (
-            df.groupby(cols_group)[
-                ["duracaoPatamar", "valor", "limiteInferior", "limiteSuperior"]
-            ]
-            .sum(engine="numba")
-            .reset_index()
-        )
-        if col_grp == "sin" or col_grp is None:
-            df_group = df_group.drop(columns=["group"])
-        else:
-            df_group = df_group.rename(columns={"group": col_grp})
+        df_group = cls._agrega_variaveis_uhe(df, col_grp)
 
         # Converte volume para vazão
         for c in ["valor", "limiteInferior", "limiteSuperior"]:
@@ -1587,34 +1607,7 @@ class OperationVariableBounds:
         É usada em casos em que os dados são fornecidos em unidade
         de volume total (hm3), mas a síntese desejada é em percentual.
         """
-        cols_grp_validas = ["usina", "ree", "submercado", "sin"]
-
-        if col_grp is None:
-            return df
-
-        if col_grp == "sin":
-            df["group"] = 1
-        elif col_grp in cols_grp_validas:
-            df["group"] = df[col_grp]
-        else:
-            raise RuntimeError(f"Coluna de agrupamento inválida: {col_grp}")
-
-        cols_group = ["group"] + [
-            c
-            for c in df.columns
-            if c in cls.IDENTIFICATION_COLUMNS and c not in cols_grp_validas
-        ]
-        df_group = (
-            df.groupby(cols_group)[
-                ["duracaoPatamar", "valor", "limiteInferior", "limiteSuperior"]
-            ]
-            .sum(engine="numba")
-            .reset_index()
-        )
-        if col_grp:
-            df_group = df_group.rename(columns={"group": col_grp})
-        else:
-            df_group = df_group.drop(columns=["group"])
+        df_group = cls._agrega_variaveis_uhe(df, col_grp)
 
         # Obter dados cadastrais para cada UHE, desconsiderando modif.dat
 
@@ -2137,6 +2130,19 @@ class OperationVariableBounds:
         para cada UHE.
         """
         # TODO - Procurar limite superior no modif.dat
+        df["limiteInferior"] = 0.0
+        df["limiteSuperior"] = float("inf")
+        return df
+
+    @classmethod
+    def _qevp_vevp_uhe_bounds(
+        cls, df: pd.DataFrame, uow: AbstractUnitOfWork, unidade_sintese: str
+    ) -> pd.DataFrame:
+        """
+        Adiciona ao DataFrame da síntese os limites inferior e superior
+        para as variáveis de Volume Evaporado (VEVP) e Vazão Evaporada (QEVP)
+        para cada UHE.
+        """
         df["limiteInferior"] = 0.0
         df["limiteSuperior"] = float("inf")
         return df

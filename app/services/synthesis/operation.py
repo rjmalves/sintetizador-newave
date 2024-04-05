@@ -44,6 +44,8 @@ from app.internal.constants import (
     UPPER_BOUND_COL,
     PANDAS_GROUPING_ENGINE,
     STRING_DF_TYPE,
+    OPERATION_SYNTHESIS_METADATA_OUTPUT,
+    OPERATION_SYNTHESIS_STATS_ROOT,
 )
 
 
@@ -67,6 +69,15 @@ class OperationSynthetizer:
 
     # Estatísticas das sínteses são armazenadas separadamente
     SYNTHESIS_STATS: Dict[SpatialResolution, List[pd.DataFrame]] = {}
+
+    @classmethod
+    def clear_cache(cls):
+        """
+        Limpa o cache de síntese de operação.
+        """
+        cls.CACHED_SYNTHESIS.clear()
+        cls.ORDERED_SYNTHESIS_ENTITIES.clear()
+        cls.SYNTHESIS_STATS.clear()
 
     @classmethod
     def _log(cls, msg: str, level: int = INFO):
@@ -975,6 +986,7 @@ class OperationSynthetizer:
             run_of_river_df[VALUE_COL].to_numpy()
             + reservoir_df[VALUE_COL].to_numpy()
         )
+
         return reservoir_df
 
     @classmethod
@@ -1637,7 +1649,7 @@ class OperationSynthetizer:
             num_scenarios: int,
             num_blocks: int,
             num_thermals: int,
-            end_dates: List[datetime],
+            end_dates: np.ndarray,
         ) -> pd.DataFrame:
             """
             Adiciona informações de estágio a um DataFrame, utilizando o
@@ -1714,9 +1726,9 @@ class OperationSynthetizer:
             start_dates = Deck.datas_inicio_estagios_internos_sim_final(uow)[
                 :num_stages
             ]
-            end_dates = Deck.datas_fim_estagios_internos_sim_final(uow)[
-                :num_stages
-            ]
+            end_dates = np.array(
+                Deck.datas_fim_estagios_internos_sim_final(uow)[:num_stages]
+            )
             df = _replace_scenario_info(
                 df, num_stages, num_scenarios, num_blocks, num_thermals
             )
@@ -2207,6 +2219,7 @@ class OperationSynthetizer:
                     Variable.VAZAO_TURBINADA,
                     Variable.VAZAO_RETIRADA,
                     Variable.VAZAO_DESVIADA,
+                    Variable.VAZAO_EVAPORADA,
                 ],
                 s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
             ]
@@ -2394,7 +2407,9 @@ class OperationSynthetizer:
                 OperationVariableBounds.is_bounded(s),
             ]
         with uow:
-            uow.export.synthetize_df(metadata_df, "METADADOS_OPERACAO")
+            uow.export.synthetize_df(
+                metadata_df, OPERATION_SYNTHESIS_METADATA_OUTPUT
+            )
 
     @classmethod
     def _add_synthesis_stats(cls, s: OperationSynthesis, df: pd.DataFrame):
@@ -2428,6 +2443,7 @@ class OperationSynthetizer:
                 [str(i) for i in np.arange(1, num_scenarios + 1)],
                 dtype=STRING_DF_TYPE,
             )
+            df = df.astype({SCENARIO_COL: str})
             scenarios_df = df.loc[df[SCENARIO_COL].isin(scenarios)]
             scenarios_df = scenarios_df.astype({SCENARIO_COL: int})
             stats_df = df.drop(index=scenarios_df.index).reset_index(drop=True)
@@ -2465,7 +2481,7 @@ class OperationSynthetizer:
                     res.sorting_synthesis_df_columns
                 ).reset_index(drop=True)
                 uow.export.synthetize_df(
-                    df, f"ESTATISTICAS_OPERACAO_{res.value}"
+                    df,  f"{OPERATION_SYNTHESIS_STATS_ROOT}_{res.value}"
                 )
 
     @classmethod
