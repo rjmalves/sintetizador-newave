@@ -145,6 +145,9 @@ def __compara_sintese_nwlistop(
     assert len(dados_sintese) > 0
     assert len(dados_nwlistop) > 0
 
+    # print(dados_sintese)
+    # print(dados_nwlistop)
+
     assert np.allclose(
         dados_sintese,
         dados_nwlistop,
@@ -190,6 +193,22 @@ def __sintetiza_com_mock(synthesis_str) -> Tuple[pd.DataFrame, pd.DataFrame]:
     assert df is not None
     assert df_meta is not None
     return df, df_meta
+
+
+def __sintetiza_com_mock_wildcard(synthesis_str) -> pd.DataFrame:
+    m = MagicMock(lambda df, filename: df)
+    with patch(
+        "app.adapters.repository.export.TestExportRepository.synthetize_df",
+        new=m,
+    ):
+        OperationSynthetizer.synthetize([synthesis_str], uow)
+        OperationSynthetizer.clear_cache()
+    m.assert_called()
+    df_meta = __obtem_dados_sintese_mock(
+        OPERATION_SYNTHESIS_METADATA_OUTPUT, m
+    )
+    assert df_meta is not None
+    return df_meta
 
 
 def __obtem_dados_sintese_mock(
@@ -644,6 +663,7 @@ def test_sintese_qafl_ree(test_settings):
             df_ree = df_uhe
         else:
             df_ree["valor"] += df_uhe["valor"].to_numpy()
+
     __compara_sintese_nwlistop(
         df,
         df_ree,
@@ -913,7 +933,7 @@ def test_sintese_vtur_ree(test_settings):
         dataInicio=datetime(2023, 10, 1),
         cenario=1,
         ree=["SUL"],
-        patamar=[0],
+        patamar=[1],
     )
     __valida_metadata("VTUR_REE", df_meta, True)
 
@@ -946,7 +966,7 @@ def test_sintese_vtur_sbm(test_settings):
         dataInicio=datetime(2023, 10, 1),
         cenario=1,
         submercado=["SUL"],
-        patamar=[0],
+        patamar=[1],
     )
     __valida_metadata("VTUR_SBM", df_meta, True)
 
@@ -973,7 +993,7 @@ def test_sintese_vtur_sin(test_settings):
         df_sin,
         dataInicio=datetime(2023, 10, 1),
         cenario=1,
-        patamar=[0],
+        patamar=[1],
     )
     __valida_metadata("VTUR_SIN", df_meta, True)
 
@@ -995,6 +1015,10 @@ def test_sintese_qtur_ree(test_settings):
         else:
             df_ree["valor"] += df_uhe["valor"].to_numpy()
     # Conversão simples para conferência apenas do pat. 0
+    df_ree = (
+        df_ree.groupby(["data", "serie"]).sum(numeric_only=True).reset_index()
+    )
+    df_ree["patamar"] = "TOTAL"
     df_ree["valor"] *= HM3_M3S_MONTHLY_FACTOR
     __compara_sintese_nwlistop(
         df,
@@ -1029,6 +1053,10 @@ def test_sintese_qtur_sbm(test_settings):
         else:
             df_sbm["valor"] += df_uhe["valor"].to_numpy()
     # Conversão simples para conferência apenas do pat. 0
+    df_sbm = (
+        df_sbm.groupby(["data", "serie"]).sum(numeric_only=True).reset_index()
+    )
+    df_sbm["patamar"] = "TOTAL"
     df_sbm["valor"] *= HM3_M3S_MONTHLY_FACTOR
     __compara_sintese_nwlistop(
         df,
@@ -1058,6 +1086,10 @@ def test_sintese_qtur_sin(test_settings):
         else:
             df_sin["valor"] += df_uhe["valor"].to_numpy()
     # Conversão simples para conferência apenas do pat. 0
+    df_sin = (
+        df_sin.groupby(["data", "serie"]).sum(numeric_only=True).reset_index()
+    )
+    df_sin["patamar"] = "TOTAL"
     df_sin["valor"] *= HM3_M3S_MONTHLY_FACTOR
     __compara_sintese_nwlistop(
         df,
@@ -1092,7 +1124,7 @@ def test_sintese_vver_ree(test_settings):
         dataInicio=datetime(2023, 10, 1),
         cenario=1,
         ree=["SUL"],
-        patamar=[0],
+        patamar=[1],
     )
     __valida_metadata("VVER_REE", df_meta, True)
 
@@ -1125,7 +1157,7 @@ def test_sintese_vver_sbm(test_settings):
         dataInicio=datetime(2023, 10, 1),
         cenario=1,
         submercado=["SUL"],
-        patamar=[0],
+        patamar=[1],
     )
     __valida_metadata("VVER_SBM", df_meta, True)
 
@@ -1152,7 +1184,7 @@ def test_sintese_vver_sin(test_settings):
         df_sin,
         dataInicio=datetime(2023, 10, 1),
         cenario=1,
-        patamar=[0],
+        patamar=[1],
     )
     __valida_metadata("VVER_SIN", df_meta, True)
 
@@ -1174,6 +1206,10 @@ def test_sintese_qver_ree(test_settings):
         else:
             df_ree["valor"] += df_uhe["valor"].to_numpy()
     # Conversão simples para conferência apenas do pat. 0
+    df_ree = (
+        df_ree.groupby(["data", "serie"]).sum(numeric_only=True).reset_index()
+    )
+    df_ree["patamar"] = "TOTAL"
     df_ree["valor"] *= HM3_M3S_MONTHLY_FACTOR
     __compara_sintese_nwlistop(
         df,
@@ -1208,6 +1244,10 @@ def test_sintese_qver_sbm(test_settings):
         else:
             df_sbm["valor"] += df_uhe["valor"].to_numpy()
     # Conversão simples para conferência apenas do pat. 0
+    df_sbm = (
+        df_sbm.groupby(["data", "serie"]).sum(numeric_only=True).reset_index()
+    )
+    df_sbm["patamar"] = "TOTAL"
     df_sbm["valor"] *= HM3_M3S_MONTHLY_FACTOR
     __compara_sintese_nwlistop(
         df,
@@ -1237,6 +1277,10 @@ def test_sintese_qver_sin(test_settings):
         else:
             df_sin["valor"] += df_uhe["valor"].to_numpy()
     # Conversão simples para conferência apenas do pat. 0
+    df_sin = (
+        df_sin.groupby(["data", "serie"]).sum(numeric_only=True).reset_index()
+    )
+    df_sin["patamar"] = "TOTAL"
     df_sin["valor"] *= HM3_M3S_MONTHLY_FACTOR
     __compara_sintese_nwlistop(
         df,
@@ -1309,18 +1353,21 @@ def test_sintese_hjus_uhe(test_settings):
     def __adiciona_duracoes_patamares(df: pd.DataFrame) -> pd.DataFrame:
         arq_pat = Patamar.read(join(DECK_TEST_DIR, "patamar.dat"))
         df_pat = arq_pat.duracao_mensal_patamares
+        df = df.astype({"patamar": int})
         df["duracaoPatamar"] = df.apply(
             lambda linha: df_pat.loc[
-                df_pat["data"] == linha["data"], "valor"
+                (df_pat["data"] == linha["data"])
+                & (df_pat["patamar"] == linha["patamar"]),
+                "valor",
             ].iloc[0],
             axis=1,
         )
+        df = df.astype({"patamar": str})
         return df
 
     def __calcula_media_ponderada(df: pd.DataFrame) -> pd.DataFrame:
         df_pat0 = df.copy()
-        df_pat0["patamar"] = 0
-        df_pat0["valor"] = (df_pat0["valor"] * df_pat0["duracaoPatamar"]) / 730
+        df_pat0["valor"] = df_pat0["valor"] * df_pat0["duracaoPatamar"]
         cols_group = [
             c
             for c in df.columns
@@ -1331,11 +1378,14 @@ def test_sintese_hjus_uhe(test_settings):
                 "valor",
             ]
         ]
-        df_pat0 = df_pat0.groupby(cols_group, as_index=False).sum(
-            numeric_only=True
+        df_group = (
+            df_pat0.groupby(cols_group).sum(numeric_only=True).reset_index()
         )
-        df_pat0 = pd.concat([df, df_pat0], ignore_index=True)
-        return df_pat0.sort_values(cols_group + ["patamar"])
+        df_group["patamar"] = "TOTAL"
+        df_pat0 = pd.concat([df_pat0, df_group], ignore_index=True)
+        return df_pat0.sort_values(cols_group + ["patamar"]).reset_index(
+            drop=True
+        )
 
     synthesis_str = "HJUS_UHE"
     df, df_meta = __sintetiza_com_mock(synthesis_str)
@@ -1344,6 +1394,7 @@ def test_sintese_hjus_uhe(test_settings):
             Hjus.read(join(DECK_TEST_DIR, "hjus006.out")).valores
         )
     )
+
     __compara_sintese_nwlistop(
         df,
         df_arq,
@@ -1360,18 +1411,21 @@ def test_sintese_hliq_uhe(test_settings):
     def __adiciona_duracoes_patamares(df: pd.DataFrame) -> pd.DataFrame:
         arq_pat = Patamar.read(join(DECK_TEST_DIR, "patamar.dat"))
         df_pat = arq_pat.duracao_mensal_patamares
+        df = df.astype({"patamar": int})
         df["duracaoPatamar"] = df.apply(
             lambda linha: df_pat.loc[
-                df_pat["data"] == linha["data"], "valor"
+                (df_pat["data"] == linha["data"])
+                & (df_pat["patamar"] == linha["patamar"]),
+                "valor",
             ].iloc[0],
             axis=1,
         )
+        df = df.astype({"patamar": str})
         return df
 
     def __calcula_media_ponderada(df: pd.DataFrame) -> pd.DataFrame:
         df_pat0 = df.copy()
-        df_pat0["patamar"] = 0
-        df_pat0["valor"] = (df_pat0["valor"] * df_pat0["duracaoPatamar"]) / 730
+        df_pat0["valor"] = df_pat0["valor"] * df_pat0["duracaoPatamar"]
         cols_group = [
             c
             for c in df.columns
@@ -1382,11 +1436,14 @@ def test_sintese_hliq_uhe(test_settings):
                 "valor",
             ]
         ]
-        df_pat0 = df_pat0.groupby(cols_group, as_index=False).sum(
-            numeric_only=True
+        df_group = (
+            df_pat0.groupby(cols_group).sum(numeric_only=True).reset_index()
         )
-        df_pat0 = pd.concat([df, df_pat0], ignore_index=True)
-        return df_pat0.sort_values(cols_group + ["patamar"])
+        df_group["patamar"] = "TOTAL"
+        df_pat0 = pd.concat([df_pat0, df_group], ignore_index=True)
+        return df_pat0.sort_values(cols_group + ["patamar"]).reset_index(
+            drop=True
+        )
 
     synthesis_str = "HLIQ_UHE"
     df, df_meta = __sintetiza_com_mock(synthesis_str)
@@ -1414,6 +1471,10 @@ def test_sintese_qtur_uhe(test_settings):
     df, df_meta = __sintetiza_com_mock(synthesis_str)
     df_arq = Vturuh.read(join(DECK_TEST_DIR, "vturuh006.out")).valores
     # Conversão simples para conferência apenas do pat. 0
+    df_arq = (
+        df_arq.groupby(["data", "serie"]).sum(numeric_only=True).reset_index()
+    )
+    df_arq["patamar"] = "TOTAL"
     df_arq["valor"] *= HM3_M3S_MONTHLY_FACTOR
     __compara_sintese_nwlistop(
         df,
@@ -1431,6 +1492,10 @@ def test_sintese_qver_uhe(test_settings):
     df, df_meta = __sintetiza_com_mock(synthesis_str)
     df_arq = Vertuh.read(join(DECK_TEST_DIR, "vertuh006.out")).valores
     # Conversão simples para conferência apenas do pat. 0
+    df_arq = (
+        df_arq.groupby(["data", "serie"]).sum(numeric_only=True).reset_index()
+    )
+    df_arq["patamar"] = "TOTAL"
     df_arq["valor"] *= HM3_M3S_MONTHLY_FACTOR
     __compara_sintese_nwlistop(
         df,
@@ -1466,6 +1531,10 @@ def test_sintese_qdes_uhe(test_settings):
     df, df_meta = __sintetiza_com_mock(synthesis_str)
     df_arq = Vdesviouh.read(join(DECK_TEST_DIR, "vdesviouh006.out")).valores
     # Conversão simples para conferência apenas do pat. 0
+    df_arq = (
+        df_arq.groupby(["data", "serie"]).sum(numeric_only=True).reset_index()
+    )
+    df_arq["patamar"] = "TOTAL"
     df_arq["valor"] *= HM3_M3S_MONTHLY_FACTOR
     __compara_sintese_nwlistop(
         df,
@@ -1558,6 +1627,11 @@ def test_sintese_vdef_uhe(test_settings):
     df_tur = Vturuh.read(join(DECK_TEST_DIR, "vturuh006.out")).valores
     df_ver = Vertuh.read(join(DECK_TEST_DIR, "vertuh006.out")).valores
     df_tur["valor"] += df_ver["valor"].to_numpy()
+    # Conversão simples para conferência apenas do pat. 0
+    df_tur = (
+        df_tur.groupby(["data", "serie"]).sum(numeric_only=True).reset_index()
+    )
+    df_tur["patamar"] = "TOTAL"
     __compara_sintese_nwlistop(
         df,
         df_tur,
@@ -2069,7 +2143,7 @@ def test_sintese_gter_sbm(test_settings):
 
 
 def test_sintese_gter_sin(test_settings):
-    synthesis_str = "GHID_SIN"
+    synthesis_str = "GTER_SIN"
     df, df_meta = __sintetiza_com_mock(synthesis_str)
     df_arq = Gttotsin.read(join(DECK_TEST_DIR, "gttotsin.out")).valores
     __compara_sintese_nwlistop(
@@ -2079,7 +2153,7 @@ def test_sintese_gter_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
-    __valida_metadata("GTER_SIN", df_meta, False)
+    __valida_metadata(synthesis_str, df_meta, False)
 
 
 def test_sintese_everr_ree(test_settings):
@@ -2437,14 +2511,14 @@ def test_sintese_eevap_sin(test_settings):
 def test_sintese_qafl_uhe(test_settings):
     synthesis_str = "QAFL_UHE"
     df, df_meta = __sintetiza_com_mock(synthesis_str)
-    df_arq = Qafluh.read(join(DECK_TEST_DIR, "qafluh001.out")).valores
+    df_arq = Qafluh.read(join(DECK_TEST_DIR, "qafluh088.out")).valores
     __compara_sintese_nwlistop(
         df,
         df_arq,
         dataInicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        usina=["CAMARGOS"],
+        usina=["SAO ROQUE"],
     )
     __valida_metadata("QAFL_UHE", df_meta, False)
 
@@ -2909,13 +2983,13 @@ def test_sintese_vnegevap_uhe(test_settings):
 
 def test_sintese_wildcard_1match(test_settings):
     synthesis_str = "CMO_*"
-    df, df_meta = __sintetiza_com_mock(synthesis_str)
+    df_meta = __sintetiza_com_mock_wildcard(synthesis_str)
     __valida_metadata("CMO_SBM", df_meta, False)
 
 
 def test_sintese_wildcard_Nmatches(test_settings):
     synthesis_str = "GTER_*"
-    df, df_meta = __sintetiza_com_mock(synthesis_str)
+    df_meta = __sintetiza_com_mock_wildcard(synthesis_str)
     __valida_metadata("GTER_UTE", df_meta, False)
     __valida_metadata("GTER_SBM", df_meta, False)
     __valida_metadata("GTER_SIN", df_meta, False)

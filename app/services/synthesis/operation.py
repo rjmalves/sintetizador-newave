@@ -749,7 +749,7 @@ class OperationSynthetizer:
             arr = df_block_0[VALUE_COL].to_numpy()
             n_linhas = arr.shape[0]
             n_elementos_distintos = n_linhas // n_blocks
-            df_base[VALUE_COL] = arr.reshape((n_elementos_distintos, -1)).mean(
+            df_base[VALUE_COL] = arr.reshape((n_elementos_distintos, -1)).sum(
                 axis=1
             )
             df_block_0 = pd.concat(
@@ -1035,7 +1035,6 @@ class OperationSynthetizer:
             spatial_resolution=SpatialResolution.USINA_HIDROELETRICA,
         )
         volume_df = cls._get_from_cache(volume_synthesis)
-
         return volume_df
 
     @classmethod
@@ -2481,7 +2480,7 @@ class OperationSynthetizer:
                     res.sorting_synthesis_df_columns
                 ).reset_index(drop=True)
                 uow.export.synthetize_df(
-                    df,  f"{OPERATION_SYNTHESIS_STATS_ROOT}_{res.value}"
+                    df, f"{OPERATION_SYNTHESIS_STATS_ROOT}_{res.value}"
                 )
 
     @classmethod

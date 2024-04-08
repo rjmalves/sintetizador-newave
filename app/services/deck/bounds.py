@@ -54,6 +54,7 @@ class OperationVariableBounds:
         "pee",
         "usina",
         "patamar",
+        "duracaoPatamar",
         "cenario",
     ]
 
@@ -1564,7 +1565,7 @@ class OperationVariableBounds:
 
         df_group = (
             df.groupby(cols_group)[
-                ["duracaoPatamar", "valor", "limiteInferior", "limiteSuperior"]
+                ["valor", "limiteInferior", "limiteSuperior"]
             ]
             .sum(engine="numba")
             .reset_index()
@@ -1584,7 +1585,6 @@ class OperationVariableBounds:
         de volume, mas a síntese desejada é em unidade de vazão.
         """
         df_group = cls._agrega_variaveis_uhe(df, col_grp)
-
         # Converte volume para vazão
         for c in ["valor", "limiteInferior", "limiteSuperior"]:
             df_group[c] = (
