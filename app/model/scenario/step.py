@@ -43,8 +43,8 @@ class Step(Enum):
     @property
     def entity_df_columns(self) -> List[str]:
         col_maps: Dict[Step, List[str]] = {
-            Step.FORWARD: [ITERATION_COL, SCENARIO_COL],
-            Step.BACKWARD: [ITERATION_COL, SCENARIO_COL, SPAN_COL],
-            Step.FINAL_SIMULATION: [SCENARIO_COL],
+            Step.FORWARD: [ITERATION_COL],
+            Step.BACKWARD: [ITERATION_COL, SPAN_COL],
+            Step.FINAL_SIMULATION: [],
         }
         return col_maps.get(self, [])

@@ -1692,8 +1692,38 @@ class RawFilesRepository(AbstractFilesRepository):
     def get_engnat(self) -> Optional[Engnat]:
         if self.__engnat is None:
             try:
+                dger = self.get_dger()
+                if dger is None:
+                    raise RuntimeError(
+                        "dger.dat não encontrado para síntese"
+                        + " dos cenários"
+                    )
+                ano_inicio_historico = self._validate_data(
+                    dger.ano_inicial_historico, int
+                )
+                pmo = self.get_pmo()
+                if pmo is None:
+                    raise RuntimeError(
+                        "pmo.dat não encontrado para síntese" + " dos cenários"
+                    )
+                df_configuracoes = self._validate_data(
+                    pmo.configuracoes_qualquer_modificacao, pd.DataFrame
+                )
+                arq_rees = self.get_ree()
+                if arq_rees is None:
+                    raise RuntimeError(
+                        "ree.dat não encontrado para síntese" + " dos cenários"
+                    )
+                n_rees = self._validate_data(
+                    arq_rees.rees, pd.DataFrame
+                ).shape[0]
                 self.__engnat = Engnat.read(
                     join(self.__tmppath, "engnat.dat"),
+                    ano_inicio_historico=ano_inicio_historico,
+                    numero_rees=n_rees,
+                    numero_configuracoes=df_configuracoes["valor"]
+                    .unique()
+                    .shape[0],
                 )
             except Exception:
                 pass

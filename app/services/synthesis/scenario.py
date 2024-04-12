@@ -497,7 +497,7 @@ class ScenarioSynthetizer:
             starting_year = Deck.ano_inicio_estudo(uow)
             history_final_year = starting_year - 1
             energy_history = energy_history.loc[
-                energy_history["data"].dt.year <= history_final_year
+                energy_history["data"].dt.year < history_final_year
             ]
             return energy_history.copy()
 
@@ -538,8 +538,10 @@ class ScenarioSynthetizer:
             eer_submarket_map = (
                 Deck.hydro_eer_submarket_map(uow)
                 .drop_duplicates(subset=[EER_CODE_COL])
-                .reset_index(drop=True)
+                .set_index(EER_CODE_COL)
             )
+            eer_order = Deck.eer_code_order(uow)
+            eer_submarket_map = eer_submarket_map.loc[eer_order].reset_index()
             lta_model_df = cls._model_dataframe_for_eer_lta(uow)
             lta_eer_dfs: List[pd.DataFrame] = []
             for idx, map_line in eer_submarket_map.iterrows():
@@ -1191,7 +1193,7 @@ class ScenarioSynthetizer:
         :return: Os dados como um DataFrame.
         :rtype: pd.DataFrame
         """
-        cls._log("Obtendo energias forward da simulação final")
+        cls._log("Obtendo energias da simulação final")
         with time_and_log(
             message_root="Tempo para obter energias da simulacao final",
             logger=cls.logger,
@@ -1342,7 +1344,6 @@ class ScenarioSynthetizer:
 
         df = df.sort_values(_df_sorting_columns(df, filter_col))
         lta_df = lta_df.sort_values(_lta_df_sorting_columns(filter_col))
-
         num_scenarios = len(df[SCENARIO_COL].unique())
         stages = df[STAGE_COL].unique()
         num_iterations = (
@@ -1353,27 +1354,13 @@ class ScenarioSynthetizer:
         num_spans = len(df[SPAN_COL].unique()) if SPAN_COL in df.columns else 1
         elements = df[filter_col].unique() if filter_col is not None else []
 
-        lta_dfs_elements: List[pd.DataFrame] = []
-        for stage in stages:
-            if len(elements) > 0:
-                for element in elements:
-                    lta_dfs_elements.append(
-                        lta_df.loc[
-                            (lta_df[filter_col] == element)
-                            & (lta_df[STAGE_COL] == stage),
-                            LTA_COL,
-                        ]
-                    )
-            else:
-                lta_dfs_elements.append(
-                    lta_df.loc[
-                        (lta_df[STAGE_COL] == stage),
-                        LTA_COL,
-                    ]
-                )
+        lta_df = lta_df.loc[lta_df[STAGE_COL].isin(stages)].copy()
+        if len(elements) > 0:
+            lta_df = lta_df.loc[lta_df[filter_col].isin(elements)].copy()
+        sorted_ltas = np.repeat(
+            lta_df[LTA_COL].to_numpy(), num_scenarios * num_spans
+        )
 
-        ltas = pd.concat(lta_dfs_elements, ignore_index=True)
-        sorted_ltas = np.repeat(ltas.to_numpy(), num_scenarios * num_spans)
         df[LTA_COL] = np.tile(sorted_ltas, num_iterations)
         df[LTA_VALUE_COL] = df[VALUE_COL] / df[LTA_COL]
         df.replace([np.inf, -np.inf], 0, inplace=True)
@@ -1406,6 +1393,7 @@ class ScenarioSynthetizer:
             synthesis.spatial_resolution,
             uow,
         )
+
         FILTER_MAP = {
             SpatialResolution.USINA_HIDROELETRICA: HYDRO_NAME_COL,
             SpatialResolution.RESERVATORIO_EQUIVALENTE: EER_NAME_COL,
@@ -1438,8 +1426,15 @@ class ScenarioSynthetizer:
         RESOLUTION_MAP: Dict[SpatialResolution, List[str]] = {
             SpatialResolution.SISTEMA_INTERLIGADO: [],
             SpatialResolution.SUBMERCADO: [SUBMARKET_NAME_COL],
-            SpatialResolution.RESERVATORIO_EQUIVALENTE: [EER_NAME_COL],
-            SpatialResolution.USINA_HIDROELETRICA: [HYDRO_NAME_COL],
+            SpatialResolution.RESERVATORIO_EQUIVALENTE: [
+                EER_NAME_COL,
+                SUBMARKET_NAME_COL,
+            ],
+            SpatialResolution.USINA_HIDROELETRICA: [
+                HYDRO_NAME_COL,
+                EER_NAME_COL,
+                SUBMARKET_NAME_COL,
+            ],
         }
         df = cls._get_cached_variable(synthesis.variable, synthesis.step, uow)
         df = cls._resolve_group(
@@ -1626,6 +1621,10 @@ class ScenarioSynthetizer:
             scenarios_df = df.loc[df[SCENARIO_COL].isin(scenarios)]
             scenarios_df = scenarios_df.astype({SCENARIO_COL: int})
             stats_df = df.drop(index=scenarios_df.index).reset_index(drop=True)
+            scenarios_df = scenarios_df.sort_values(
+                s.sorting_synthesis_df_columns
+            ).reset_index(drop=True)
+
             if stats_df.empty:
                 stats_df = cls._calc_statistics(scenarios_df)
             cls._add_synthesis_stats(s, stats_df)
