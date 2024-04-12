@@ -74,9 +74,7 @@ def __obtem_dados_sintese_mock(
 def test_sintese_enaa_ree_for(test_settings):
     synthesis_str = "ENAA_REE_FOR"
     df, df_meta = __sintetiza_com_mock(synthesis_str)
-    print("\n")
-    print(df)
-    df.to_csv("teste.csv")
+
     __valida_metadata(synthesis_str, df_meta)
 
 
@@ -139,7 +137,6 @@ def test_sintese_enaa_sin_sf(test_settings):
 def test_sintese_qinc_uhe_for(test_settings):
     synthesis_str = "QINC_UHE_FOR"
     df, df_meta = __sintetiza_com_mock(synthesis_str)
-
     __valida_metadata(synthesis_str, df_meta)
 
 
