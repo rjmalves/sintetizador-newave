@@ -1,11 +1,11 @@
 from enum import Enum
 from typing import Dict, List
 from app.internal.constants import (
-    HYDRO_COL,
-    THERMAL_COL,
-    EER_COL,
+    HYDRO_NAME_COL,
+    THERMAL_NAME_COL,
+    EER_NAME_COL,
     EEP_COL,
-    SUBMARKET_COL,
+    SUBMARKET_NAME_COL,
     EXCHANGE_SOURCE_COL,
     EXCHANGE_TARGET_COL,
     START_DATE_COL,
@@ -52,21 +52,24 @@ class SpatialResolution(Enum):
     def entity_df_columns(self) -> List[str]:
         col_maps: Dict[SpatialResolution, List[str]] = {
             SpatialResolution.SISTEMA_INTERLIGADO: [],
-            SpatialResolution.SUBMERCADO: [SUBMARKET_COL],
+            SpatialResolution.SUBMERCADO: [SUBMARKET_NAME_COL],
             SpatialResolution.RESERVATORIO_EQUIVALENTE: [
-                EER_COL,
-                SUBMARKET_COL,
+                EER_NAME_COL,
+                SUBMARKET_NAME_COL,
             ],
             SpatialResolution.PARQUE_EOLICO_EQUIVALENTE: [
                 EEP_COL,
-                SUBMARKET_COL,
+                SUBMARKET_NAME_COL,
             ],
             SpatialResolution.USINA_HIDROELETRICA: [
-                HYDRO_COL,
-                EER_COL,
-                SUBMARKET_COL,
+                HYDRO_NAME_COL,
+                EER_NAME_COL,
+                SUBMARKET_NAME_COL,
             ],
-            SpatialResolution.USINA_TERMELETRICA: [THERMAL_COL, SUBMARKET_COL],
+            SpatialResolution.USINA_TERMELETRICA: [
+                THERMAL_NAME_COL,
+                SUBMARKET_NAME_COL,
+            ],
             SpatialResolution.PAR_SUBMERCADOS: [
                 EXCHANGE_SOURCE_COL,
                 EXCHANGE_TARGET_COL,

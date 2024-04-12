@@ -145,9 +145,6 @@ def __compara_sintese_nwlistop(
     assert len(dados_sintese) > 0
     assert len(dados_nwlistop) > 0
 
-    # print(dados_sintese)
-    # print(dados_nwlistop)
-
     assert np.allclose(
         dados_sintese,
         dados_nwlistop,

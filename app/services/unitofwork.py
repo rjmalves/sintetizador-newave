@@ -21,6 +21,7 @@ from app.adapters.repository.export import (
 class AbstractUnitOfWork(ABC):
     def __init__(self, q: Queue) -> None:
         self._queue = q
+        self._subdir = ""
 
     def __enter__(self) -> "AbstractUnitOfWork":
         return self
@@ -46,6 +47,14 @@ class AbstractUnitOfWork(ABC):
     def queue(self) -> Queue:
         return self._queue
 
+    @property
+    def subdir(self) -> str:
+        return self._subdir
+
+    @subdir.setter
+    def subdir(self, subdir: str):
+        self._subdir = subdir
+
 
 class FSUnitOfWork(AbstractUnitOfWork):
     def __init__(self, directory: str, q: Queue):
@@ -61,8 +70,10 @@ class FSUnitOfWork(AbstractUnitOfWork):
                 Settings().file_repository, str(self._path)
             )
         if self._exporter is None:
-            synthesis_outdir = Path(self._path).joinpath(
-                Settings().synthesis_dir
+            synthesis_outdir = (
+                Path(self._path)
+                .joinpath(Settings().synthesis_dir)
+                .joinpath(self._subdir)
             )
             synthesis_outdir.mkdir(parents=True, exist_ok=True)
             self._exporter = export_factory(

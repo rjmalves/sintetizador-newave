@@ -1,5 +1,10 @@
 from enum import Enum
-from typing import Dict
+from typing import Dict, List
+from app.internal.constants import (
+    ITERATION_COL,
+    SCENARIO_COL,
+    SPAN_COL,
+)
 
 
 class Step(Enum):
@@ -34,3 +39,12 @@ class Step(Enum):
             "SF": "Simulação Final",
         }
         return LONG_NAMES.get(self.value)
+
+    @property
+    def entity_df_columns(self) -> List[str]:
+        col_maps: Dict[Step, List[str]] = {
+            Step.FORWARD: [ITERATION_COL, SCENARIO_COL],
+            Step.BACKWARD: [ITERATION_COL, SCENARIO_COL, SPAN_COL],
+            Step.FINAL_SIMULATION: [SCENARIO_COL],
+        }
+        return col_maps.get(self, [])

@@ -9,18 +9,41 @@ from inewave.newave import (
     Patamar,
     Shist,
     Pmo,
+    Vazoes,
+    Engnat,
+    Energiaf,
+    Enavazf,
+    Vazaof,
+    Energiab,
+    Enavazb,
+    Vazaob,
+    Energias,
+    # Enavazs,
+    Vazaos,
 )
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 import pandas as pd  # type: ignore
 from typing import Any, Optional, TypeVar, Type, List
 
 from app.services.unitofwork import AbstractUnitOfWork
-from app.internal.constants import STRING_DF_TYPE
+from app.internal.constants import (
+    STRING_DF_TYPE,
+    HYDRO_CODE_COL,
+    HYDRO_NAME_COL,
+    EER_CODE_COL,
+    EER_NAME_COL,
+    SUBMARKET_CODE_COL,
+    SUBMARKET_NAME_COL,
+)
 
 
 class Deck:
+    """
+    Armazena as informações dos principais arquivos que
+    são utilizados para o processo de síntese.
+    """
 
     T = TypeVar("T")
     logger: Optional[logging.Logger] = None
@@ -93,6 +116,19 @@ class Deck:
             return hidr
 
     @classmethod
+    def _get_vazoes(cls, uow: AbstractUnitOfWork) -> Vazoes:
+        with uow:
+            vazoes = uow.files.get_vazoes()
+            if vazoes is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do vazoes.dat para"
+                        + " síntese da operação"
+                    )
+                raise RuntimeError()
+            return vazoes
+
+    @classmethod
     def _get_conft(cls, uow: AbstractUnitOfWork) -> Conft:
         with uow:
             conft = uow.files.get_conft()
@@ -158,6 +194,85 @@ class Deck:
             return pmo
 
     @classmethod
+    def _get_engnat(cls, uow: AbstractUnitOfWork) -> Engnat:
+        with uow:
+            engnat = uow.files.get_engnat()
+            if engnat is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do engnat.dat para"
+                        + " síntese dos cenários"
+                    )
+                raise RuntimeError()
+            return engnat
+
+    @classmethod
+    def _get_energiaf(
+        cls, iteracao: int, uow: AbstractUnitOfWork
+    ) -> Optional[Energiaf]:
+        with uow:
+            energiaf = uow.files.get_energiaf(iteracao)
+            return energiaf
+
+    @classmethod
+    def _get_enavazf(
+        cls, iteracao: int, uow: AbstractUnitOfWork
+    ) -> Optional[Enavazf]:
+        with uow:
+            enavazf = uow.files.get_enavazf(iteracao)
+            return enavazf
+
+    @classmethod
+    def _get_vazaof(
+        cls, iteracao: int, uow: AbstractUnitOfWork
+    ) -> Optional[Vazaof]:
+        with uow:
+            vazaof = uow.files.get_vazaof(iteracao)
+            return vazaof
+
+    @classmethod
+    def _get_energiab(
+        cls, iteracao: int, uow: AbstractUnitOfWork
+    ) -> Optional[Energiab]:
+        with uow:
+            energiab = uow.files.get_energiab(iteracao)
+            return energiab
+
+    @classmethod
+    def _get_enavazb(
+        cls, iteracao: int, uow: AbstractUnitOfWork
+    ) -> Optional[Enavazb]:
+        with uow:
+            enavazb = uow.files.get_enavazb(iteracao)
+            return enavazb
+
+    @classmethod
+    def _get_vazaob(
+        cls, iteracao: int, uow: AbstractUnitOfWork
+    ) -> Optional[Vazaob]:
+        with uow:
+            vazaob = uow.files.get_vazaob(iteracao)
+            return vazaob
+
+    @classmethod
+    def _get_energias(cls, uow: AbstractUnitOfWork) -> Optional[Energias]:
+        with uow:
+            energias = uow.files.get_energias()
+            return energias
+
+    @classmethod
+    def _get_enavazs(cls, uow: AbstractUnitOfWork) -> Optional[Energias]:
+        with uow:
+            enavazs = uow.files.get_enavazs()
+            return enavazs
+
+    @classmethod
+    def _get_vazaos(cls, uow: AbstractUnitOfWork) -> Optional[Vazaos]:
+        with uow:
+            vazaos = uow.files.get_vazaos()
+            return vazaos
+
+    @classmethod
     def _validate_data(cls, data, type: Type[T], msg: str = "dados") -> T:
         if not isinstance(data, type):
             if cls.logger is not None:
@@ -188,6 +303,126 @@ class Deck:
             )
             cls.DECK_DATA_CACHING["pmo"] = pmo
         return pmo
+
+    @classmethod
+    def engnat(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        engnat = cls.DECK_DATA_CACHING.get("engnat")
+        if engnat is None:
+            engnat = cls._validate_data(
+                cls._get_engnat(uow).series,
+                pd.DataFrame,
+                "engnat",
+            )
+            cls.DECK_DATA_CACHING["engnat"] = engnat
+        return engnat
+
+    @classmethod
+    def energiaf(cls, iteracao: int, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        arq_energiaf = cls._get_energiaf(iteracao, uow)
+        if arq_energiaf is not None:
+            df = arq_energiaf.series
+            if df is None:
+                return pd.DataFrame()
+            else:
+                return df
+        else:
+            return pd.DataFrame()
+
+    @classmethod
+    def enavazf(cls, iteracao: int, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        arq_enavaz = cls._get_enavazf(iteracao, uow)
+        if arq_enavaz is not None:
+            df = arq_enavaz.series
+            if df is None:
+                return pd.DataFrame()
+            else:
+                return df
+        else:
+            return pd.DataFrame()
+
+    @classmethod
+    def vazaof(cls, iteracao: int, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        arq_vazaof = cls._get_vazaof(iteracao, uow)
+        if arq_vazaof is not None:
+            df = arq_vazaof.series
+            if df is None:
+                return pd.DataFrame()
+            else:
+                return df
+        else:
+            return pd.DataFrame()
+
+    @classmethod
+    def energiab(cls, iteracao: int, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        arq_energiab = cls._get_energiab(iteracao, uow)
+        if arq_energiab is not None:
+            df = arq_energiab.series
+            if df is None:
+                return pd.DataFrame()
+            else:
+                return df
+        else:
+            return pd.DataFrame()
+
+    @classmethod
+    def enavazb(cls, iteracao: int, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        arq_enavaz = cls._get_enavazb(iteracao, uow)
+        if arq_enavaz is not None:
+            df = arq_enavaz.series
+            if df is None:
+                return pd.DataFrame()
+            else:
+                return df
+        else:
+            return pd.DataFrame()
+
+    @classmethod
+    def vazaob(cls, iteracao: int, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        arq_vazaob = cls._get_vazaob(iteracao, uow)
+        if arq_vazaob is not None:
+            df = arq_vazaob.series
+            if df is None:
+                return pd.DataFrame()
+            else:
+                return df
+        else:
+            return pd.DataFrame()
+
+    @classmethod
+    def energias(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        arq_energias = cls._get_energias(uow)
+        if arq_energias is not None:
+            df = arq_energias.series
+            if df is None:
+                return pd.DataFrame()
+            else:
+                return df
+        else:
+            return pd.DataFrame()
+
+    @classmethod
+    def enavazs(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        arq_enavaz = cls._get_enavazs(uow)
+        if arq_enavaz is not None:
+            df = arq_enavaz.series
+            if df is None:
+                return pd.DataFrame()
+            else:
+                return df
+        else:
+            return pd.DataFrame()
+
+    @classmethod
+    def vazaos(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        arq_vazaos = cls._get_vazaos(uow)
+        if arq_vazaos is not None:
+            df = arq_vazaos.series
+            if df is None:
+                return pd.DataFrame()
+            else:
+                return df
+        else:
+            return pd.DataFrame()
 
     @classmethod
     def mes_inicio_estudo(cls, uow: AbstractUnitOfWork) -> int:
@@ -330,13 +565,75 @@ class Deck:
         return numero_cenarios_simulacao_final
 
     @classmethod
+    def num_estagios_individualizados_politica(
+        cls, uow: AbstractUnitOfWork
+    ) -> int:
+        num_estagios_individualizados_politica = cls.DECK_DATA_CACHING.get(
+            "num_estagios_individualizados_politica"
+        )
+        if num_estagios_individualizados_politica is None:
+            ano_inicio = cls.ano_inicio_estudo(uow)
+            mes_inicio = cls.mes_inicio_estudo(uow)
+            rees = cls.rees(uow)
+            mes_fim_hib = rees["mes_fim_individualizado"].iloc[0]
+            ano_fim_hib = rees["ano_fim_individualizado"].iloc[0]
+
+            if mes_fim_hib is not None and ano_fim_hib is not None:
+                data_inicio_estudo = datetime(
+                    year=ano_inicio,
+                    month=mes_inicio,
+                    day=1,
+                )
+                data_fim_individualizado = datetime(
+                    year=int(ano_fim_hib),
+                    month=int(mes_fim_hib),
+                    day=1,
+                )
+                tempo_individualizado = (
+                    data_fim_individualizado - data_inicio_estudo
+                )
+                num_estagios_individualizados_politica = int(
+                    round(tempo_individualizado / timedelta(days=30))
+                )
+            else:
+                num_estagios_individualizados_politica = 0
+            cls.DECK_DATA_CACHING["num_estagios_individualizados_politica"] = (
+                num_estagios_individualizados_politica
+            )
+        return num_estagios_individualizados_politica
+
+    @classmethod
+    def num_estagios_individualizados_sf(cls, uow: AbstractUnitOfWork) -> int:
+        num_estagios_individualizados_sf = cls.DECK_DATA_CACHING.get(
+            "num_estagios_individualizados_sf"
+        )
+        if num_estagios_individualizados_sf is None:
+            agregacao = cls.agregacao_simulacao_final(uow)
+            mes_inicio = cls.mes_inicio_estudo(uow)
+            anos_estudo = cls.num_anos_estudo(uow)
+            anos_pos_sf = cls.num_anos_pos_sim_final(uow)
+            if agregacao == 1:
+                num_estagios_individualizados_sf = (
+                    anos_estudo + anos_pos_sf
+                ) * 12 - (mes_inicio - 1)
+            else:
+                num_estagios_individualizados_sf = (
+                    cls.num_estagios_individualizados_politica(uow)
+                )
+
+            cls.DECK_DATA_CACHING["num_estagios_individualizados_sf"] = (
+                num_estagios_individualizados_sf
+            )
+        return num_estagios_individualizados_sf
+
+    @classmethod
     def considera_geracao_eolica(cls, uow: AbstractUnitOfWork) -> int:
         considera_geracao_eolica = cls.DECK_DATA_CACHING.get(
             "considera_geracao_eolica"
         )
         if considera_geracao_eolica is None:
             considera_geracao_eolica = cls._validate_data(
-                cls.dger(uow).considera_geracao_eolica,
+                cls.dger(uow).considera_geracao_eolica != 0,
                 int,
                 "consideração da geração eólica",
             )
@@ -344,6 +641,121 @@ class Deck:
                 considera_geracao_eolica
             )
         return considera_geracao_eolica
+
+    @classmethod
+    def consideracao_media_anual_afluencias(
+        cls, uow: AbstractUnitOfWork
+    ) -> int:
+        consideracao_media_anual_afluencias = cls.DECK_DATA_CACHING.get(
+            "consideracao_media_anual_afluencias"
+        )
+        if consideracao_media_anual_afluencias is None:
+            consideracao_media_anual_afluencias = cls._validate_data(
+                cls.dger(uow).consideracao_media_anual_afluencias,
+                int,
+                "opção do modelo PAR(p)",
+            )
+            cls.DECK_DATA_CACHING["consideracao_media_anual_afluencias"] = (
+                consideracao_media_anual_afluencias
+            )
+        return consideracao_media_anual_afluencias
+
+    @classmethod
+    def ordem_maxima_parp(cls, uow: AbstractUnitOfWork) -> int:
+        ordem_maxima_parp = cls.DECK_DATA_CACHING.get("ordem_maxima_parp")
+        if ordem_maxima_parp is None:
+            ordem_maxima_parp = cls._validate_data(
+                cls.dger(uow).ordem_maxima_parp,
+                int,
+                "ordem máxima do modelo PAR(p)",
+            )
+            cls.DECK_DATA_CACHING["ordem_maxima_parp"] = ordem_maxima_parp
+        return ordem_maxima_parp
+
+    @classmethod
+    def num_estagios_tendencia_hidrologica(
+        cls, uow: AbstractUnitOfWork
+    ) -> int:
+        scenario_model = cls.consideracao_media_anual_afluencias(uow)
+        maximum_model_order = cls.ordem_maxima_parp(uow)
+        past_stages = 12 if scenario_model != 0 else maximum_model_order
+        return past_stages
+
+    @classmethod
+    def data_inicio_com_tendencia_hidrologica(
+        cls, uow: AbstractUnitOfWork
+    ) -> datetime:
+        starting_year = cls.ano_inicio_estudo(uow)
+        past_stages = cls.num_estagios_tendencia_hidrologica(uow)
+        starting_date_with_tendency = datetime(
+            year=starting_year, month=1, day=1
+        ) - relativedelta(months=past_stages)
+        return starting_date_with_tendency
+
+    @classmethod
+    def data_fim_com_pos_estudo(cls, uow: AbstractUnitOfWork) -> datetime:
+        starting_year = cls.ano_inicio_estudo(uow)
+        study_years = cls.num_anos_estudo(uow)
+        post_study_years_in_simulation = cls.num_anos_pos_sim_final(uow)
+        ending_date_with_post_study_years = datetime(
+            year=starting_year
+            + study_years
+            + post_study_years_in_simulation
+            - 1,
+            month=12,
+            day=1,
+        )
+        return ending_date_with_post_study_years
+
+    @classmethod
+    def datas_inicio_estagios_internos_politica(
+        cls, uow: AbstractUnitOfWork
+    ) -> List[datetime]:
+        datas_inicio_estagios_internos_politica = cls.DECK_DATA_CACHING.get(
+            "datas_inicio_estagios_internos_politica"
+        )
+        if datas_inicio_estagios_internos_politica is None:
+            datas_inicio_estagios_internos_politica = pd.date_range(
+                datetime(cls.ano_inicio_estudo(uow), 1, 1),
+                datetime(
+                    cls.ano_inicio_estudo(uow) + cls.num_anos_estudo(uow) - 1,
+                    12,
+                    1,
+                ),
+                freq="MS",
+            ).tolist()
+            cls.DECK_DATA_CACHING[
+                "datas_inicio_estagios_internos_politica"
+            ] = datas_inicio_estagios_internos_politica
+        return datas_inicio_estagios_internos_politica
+
+    @classmethod
+    def datas_inicio_estagios_internos_politica_com_tendencia(
+        cls, uow: AbstractUnitOfWork
+    ) -> List[datetime]:
+        datas_inicio_estagios_internos_politica_com_tendencia = (
+            cls.DECK_DATA_CACHING.get(
+                "datas_inicio_estagios_internos_politica_com_tendencia"
+            )
+        )
+        if datas_inicio_estagios_internos_politica_com_tendencia is None:
+            datas_inicio_estagios_internos_politica_com_tendencia = (
+                pd.date_range(
+                    datetime(cls.ano_inicio_estudo(uow) - 1, 1, 1),
+                    datetime(
+                        cls.ano_inicio_estudo(uow)
+                        + cls.num_anos_estudo(uow)
+                        - 1,
+                        12,
+                        1,
+                    ),
+                    freq="MS",
+                ).tolist()
+            )
+            cls.DECK_DATA_CACHING[
+                "datas_inicio_estagios_internos_politica_com_tendencia"
+            ] = datas_inicio_estagios_internos_politica_com_tendencia
+        return datas_inicio_estagios_internos_politica_com_tendencia
 
     @classmethod
     def datas_inicio_estagios_internos_sim_final(
@@ -427,6 +839,48 @@ class Deck:
         return data_fim_estagios_individualizados_sim_final
 
     @classmethod
+    def configuracoes(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        configuracoes = cls.DECK_DATA_CACHING.get("configuracoes")
+        if configuracoes is None:
+            pmo = cls.pmo(uow)
+            configuracoes = cls._validate_data(
+                pmo.configuracoes_qualquer_modificacao,
+                pd.DataFrame,
+                "configuracoes",
+            )
+
+            cls.DECK_DATA_CACHING["configuracoes"] = configuracoes
+        return configuracoes.copy()
+
+    @classmethod
+    def convergencia(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        convergencia = cls.DECK_DATA_CACHING.get("convergencia")
+        if convergencia is None:
+            pmo = cls.pmo(uow)
+            convergencia = cls._validate_data(
+                pmo.convergencia,
+                pd.DataFrame,
+                "convergencia",
+            )
+
+            cls.DECK_DATA_CACHING["convergencia"] = convergencia
+        return convergencia.copy()
+
+    @classmethod
+    def num_iteracoes(cls, uow: AbstractUnitOfWork) -> int:
+        num_iteracoes = cls.DECK_DATA_CACHING.get("num_iteracoes")
+        if num_iteracoes is None:
+            df = cls.convergencia(uow)
+            num_iteracoes = cls._validate_data(
+                int(df["iteracao"].max()),
+                int,
+                "num_iteracoes",
+            )
+
+            cls.DECK_DATA_CACHING["num_iteracoes"] = num_iteracoes
+        return num_iteracoes
+
+    @classmethod
     def submercados(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         submercados = cls.DECK_DATA_CACHING.get("submercados")
         if submercados is None:
@@ -452,6 +906,20 @@ class Deck:
         return rees.copy()
 
     @classmethod
+    def politica_hibrida(cls, uow: AbstractUnitOfWork) -> bool:
+        politica_hibrida = cls.DECK_DATA_CACHING.get("politica_hibrida")
+        if politica_hibrida is None:
+            rees = cls.rees(uow)
+            val = bool(rees["ano_fim_individualizado"].isna().sum() == 0)
+            politica_hibrida = cls._validate_data(
+                val,
+                bool,
+                "REEs",
+            )
+            cls.DECK_DATA_CACHING["politica_hibrida"] = politica_hibrida
+        return politica_hibrida
+
+    @classmethod
     def uhes(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         uhes = cls.DECK_DATA_CACHING.get("uhes")
         if uhes is None:
@@ -470,6 +938,16 @@ class Deck:
             )
             cls.DECK_DATA_CACHING["hidr"] = hidr
         return hidr.copy()
+
+    @classmethod
+    def vazoes(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        vazoes = cls.DECK_DATA_CACHING.get("vazoes")
+        if vazoes is None:
+            vazoes = cls._validate_data(
+                cls._get_vazoes(uow).vazoes, pd.DataFrame, "vazoes"
+            )
+            cls.DECK_DATA_CACHING["vazoes"] = vazoes
+        return vazoes.copy()
 
     @classmethod
     def utes(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
@@ -557,10 +1035,24 @@ class Deck:
         return volume_armazenado_inicial
 
     @classmethod
-    def uhes_rees_submercados_map(
-        cls, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
-        df_aux = cls.DECK_DATA_CACHING.get("uhes_rees_submercados_map")
+    def eer_code_order(cls, uow: AbstractUnitOfWork) -> List[int]:
+        eer_code_order = cls.DECK_DATA_CACHING.get("eer_code_order")
+        if eer_code_order is None:
+            eer_code_order = cls.rees(uow)["codigo"].tolist()
+            cls.DECK_DATA_CACHING["eer_code_order"] = eer_code_order
+        return eer_code_order
+
+    @classmethod
+    def hydro_code_order(cls, uow: AbstractUnitOfWork) -> List[int]:
+        hydro_code_order = cls.DECK_DATA_CACHING.get("hydro_code_order")
+        if hydro_code_order is None:
+            hydro_code_order = cls.uhes(uow)["codigo_usina"].tolist()
+            cls.DECK_DATA_CACHING["hydro_code_order"] = hydro_code_order
+        return hydro_code_order
+
+    @classmethod
+    def hydro_eer_submarket_map(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        df_aux = cls.DECK_DATA_CACHING.get("hydro_eer_submarket_map")
         if df_aux is None:
             confhd = cls.uhes(uow).astype({"nome_usina": STRING_DF_TYPE})
             confhd = confhd.set_index("nome_usina")
@@ -572,18 +1064,24 @@ class Deck:
             sistema = sistema.drop_duplicates(
                 ["codigo_submercado", "nome_submercado"]
             ).set_index("codigo_submercado")
-            df_aux = pd.DataFrame(data={"uhes": confhd.index.tolist()})
-            df_aux["ree"] = df_aux["uhes"].apply(
+            df_aux = pd.DataFrame(data={HYDRO_NAME_COL: confhd.index.tolist()})
+            df_aux[HYDRO_CODE_COL] = df_aux[HYDRO_NAME_COL].apply(
+                lambda u: confhd.at[u, "codigo_usina"]
+            )
+            df_aux[EER_CODE_COL] = df_aux[HYDRO_NAME_COL].apply(
+                lambda u: confhd.at[u, "ree"]
+            )
+            df_aux[EER_NAME_COL] = df_aux[HYDRO_NAME_COL].apply(
                 lambda u: rees.at[confhd.at[u, "ree"], "nome"]
             )
-            df_aux["codigo_submercado"] = df_aux["uhes"].apply(
+            df_aux[SUBMARKET_CODE_COL] = df_aux[HYDRO_NAME_COL].apply(
                 lambda u: rees.at[confhd.at[u, "ree"], "submercado"]
             )
-            df_aux["submercado"] = df_aux["codigo_submercado"].apply(
+            df_aux[SUBMARKET_NAME_COL] = df_aux[SUBMARKET_CODE_COL].apply(
                 lambda c: sistema.at[c, "nome_submercado"]
             )
-            df_aux = df_aux.set_index("uhes")
-            cls.DECK_DATA_CACHING["uhes_rees_submercados_map"] = df_aux
+            df_aux = df_aux.set_index(HYDRO_NAME_COL)
+            cls.DECK_DATA_CACHING["hydro_eer_submarket_map"] = df_aux
         return df_aux.copy()
 
     @classmethod

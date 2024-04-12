@@ -27,7 +27,7 @@ class Variable(Enum):
     @property
     def long_name(self):
         LONG_NAMES: Dict[str, str] = {
-            "CMO": "Energia Natural Afluente",
+            "ENAA": "Energia Natural Afluente",
             "QINC": "Vazão Natural Incremental",
         }
         return LONG_NAMES.get(self.value)
