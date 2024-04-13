@@ -81,6 +81,8 @@ SCENARIO_SYNTHESIS_METADATA_OUTPUT = "METADADOS_CENARIOS"
 SCENARIO_SYNTHESIS_STATS_ROOT = "CENARIOS"
 SCENARIO_SYNTHESIS_SUBDIR = "cenarios"
 
+QUANTILES_FOR_STATISTICS = [0.05 * i for i in range(21)]
+
 import pandas  # type: ignore # noqa: E402
 
 __has_numba = True

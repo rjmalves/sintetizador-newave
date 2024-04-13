@@ -3,7 +3,7 @@ import pandas as pd  # type: ignore
 import numpy as np
 import logging
 from datetime import datetime
-import traceback
+from traceback import print_exc
 from logging import INFO, WARNING, ERROR
 from multiprocessing import Pool
 from app.utils.graph import Graph
@@ -47,6 +47,7 @@ from app.internal.constants import (
     OPERATION_SYNTHESIS_METADATA_OUTPUT,
     OPERATION_SYNTHESIS_STATS_ROOT,
     OPERATION_SYNTHESIS_SUBDIR,
+    QUANTILES_FOR_STATISTICS,
 )
 
 
@@ -2055,9 +2056,11 @@ class OperationSynthetizer:
         quantile_df = quantile_df.drop(columns=[SCENARIO_COL]).rename(
             columns={level_column[0]: SCENARIO_COL}
         )
-        quantile_df[SCENARIO_COL] = quantile_df[SCENARIO_COL].apply(
-            quantile_map
+        num_entities = quantile_df.shape[0] // len(quantiles)
+        quantile_labels = np.tile(
+            np.array([quantile_map(q) for q in quantiles]), num_entities
         )
+        quantile_df[SCENARIO_COL] = quantile_labels
         return quantile_df
 
     @classmethod
@@ -2068,7 +2071,7 @@ class OperationSynthetizer:
         estatísticas como quantis e média para cada variável, em cada
         estágio e patamar.
         """
-        df_q = cls._calc_quantiles(df, [0.05 * i for i in range(21)])
+        df_q = cls._calc_quantiles(df, QUANTILES_FOR_STATISTICS)
         df_m = cls._calc_mean_std(df)
         df_stats = pd.concat([df_q, df_m], ignore_index=True)
         return df_stats
@@ -2465,7 +2468,7 @@ class OperationSynthetizer:
         Realiza a exportação dos dados de estatísticas de síntese
         da operação. As estatísticas são exportadas para um arquivo
         único por agregação espacial, de nome
-        `ESTATISTICAS_OPERACAO_{agregacao}`.
+        `OPERACAO_{agregacao}`.
         """
         for res, dfs in cls.SYNTHESIS_STATS.items():
             with uow:
@@ -2492,17 +2495,25 @@ class OperationSynthetizer:
         filtrando as válidas para o caso em questão e adicionando dependências
         caso a síntese de operação de uma variável dependa de outra.
         """
-        if len(variables) == 0:
-            synthesis_variables = cls._default_args()
-        else:
-            all_variables = cls._match_wildcards(variables)
-            synthesis_variables = cls._process_variable_arguments(
-                all_variables
+        try:
+            if len(variables) == 0:
+                synthesis_variables = cls._default_args()
+            else:
+                all_variables = cls._match_wildcards(variables)
+                synthesis_variables = cls._process_variable_arguments(
+                    all_variables
+                )
+            valid_synthesis = cls._filter_valid_variables(
+                synthesis_variables, uow
             )
-        valid_synthesis = cls._filter_valid_variables(synthesis_variables, uow)
-        synthesis_with_dependencies = cls._add_synthesis_dependencies(
-            valid_synthesis
-        )
+            synthesis_with_dependencies = cls._add_synthesis_dependencies(
+                valid_synthesis
+            )
+        except Exception as e:
+            print_exc()
+            cls._log(str(e), ERROR)
+            cls._log("Erro no pré-processamento das variáveis", ERROR)
+            synthesis_with_dependencies = []
         return synthesis_with_dependencies
 
     @classmethod
@@ -2540,7 +2551,7 @@ class OperationSynthetizer:
                     )
                 return None
             except Exception as e:
-                traceback.print_exc()
+                print_exc()
                 cls._log(str(e), ERROR)
                 cls._log(
                     f"Nao foi possível realizar a sintese de: {filename}",

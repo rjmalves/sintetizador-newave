@@ -46,6 +46,7 @@ from app.internal.constants import (
     VARIABLE_COL,
     SCENARIO_SYNTHESIS_STATS_ROOT,
     SCENARIO_SYNTHESIS_SUBDIR,
+    QUANTILES_FOR_STATISTICS,
 )
 
 
@@ -313,6 +314,7 @@ class ScenarioSynthetizer:
         def _calc_hydro_lta_df(
             hydro_code: int, lta_model_df: pd.DataFrame, map_line: pd.Series
         ) -> pd.DataFrame:
+            # TODO - substituir pelo uso do bfs com grafo
             inflow = cls._generate_hydro_incremental_inflow_dataframe(
                 hydro_code, uow
             )
@@ -991,17 +993,15 @@ class ScenarioSynthetizer:
             uow
         )
         dates = Deck.datas_inicio_estagios_internos_politica_com_tendencia(uow)
-        with time_and_log(
-            "Tempo para adicionar informacoes das energias", logger
-        ):
-            return cls._post_resolve_energy_iteration(
-                generated_energy_df,
-                converted_energy_df,
-                uow,
-                hydro_simulation_stages,
-                dates,
-                it,
-            )
+
+        return cls._post_resolve_energy_iteration(
+            generated_energy_df,
+            converted_energy_df,
+            uow,
+            hydro_simulation_stages,
+            dates,
+            it,
+        )
 
     @classmethod
     def _post_resolve(
@@ -1061,10 +1061,7 @@ class ScenarioSynthetizer:
         )
         logger.info(f"Obtendo vazões forward da it. {it}")
         inflow_df = Deck.vazaof(it, uow)
-        with time_and_log(
-            "Tempo para adicionar informacoes das vazoes", logger
-        ):
-            return cls._post_resolve_inflow_iteration(inflow_df, uow, it)
+        return cls._post_resolve_inflow_iteration(inflow_df, uow, it)
 
     @classmethod
     def _resolve_forward_inflow(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
@@ -1115,17 +1112,15 @@ class ScenarioSynthetizer:
             uow
         )
         dates = Deck.datas_inicio_estagios_internos_politica(uow)
-        with time_and_log(
-            "Tempo para adicionar informacoes das energias", logger
-        ):
-            return cls._post_resolve_energy_iteration(
-                generated_energy_df,
-                converted_energy_df,
-                uow,
-                hydro_simulation_stages,
-                dates,
-                it,
-            )
+
+        return cls._post_resolve_energy_iteration(
+            generated_energy_df,
+            converted_energy_df,
+            uow,
+            hydro_simulation_stages,
+            dates,
+            it,
+        )
 
     @classmethod
     def _resolve_backward_energy(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
@@ -1171,10 +1166,8 @@ class ScenarioSynthetizer:
         )
         logger.info(f"Obtendo vazões backward da it. {it}")
         inflow_df = Deck.vazaob(it, uow)
-        with time_and_log(
-            "Tempo para adicionar informacoes das vazoes", logger
-        ):
-            return cls._post_resolve_inflow_iteration(inflow_df, uow, it)
+
+        return cls._post_resolve_inflow_iteration(inflow_df, uow, it)
 
     @classmethod
     def _resolve_backward_inflow(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
@@ -1220,17 +1213,15 @@ class ScenarioSynthetizer:
             converted_energy_df = Deck.enavazs(uow)
         hydro_simulation_stages = Deck.num_estagios_individualizados_sf(uow)
         dates = Deck.datas_inicio_estagios_internos_politica_com_tendencia(uow)
-        with time_and_log(
-            "Tempo para adicionar informacoes das energias", cls.logger
-        ):
-            df = cls._post_resolve_energy_iteration(
-                generated_energy_df,
-                converted_energy_df,
-                uow,
-                hydro_simulation_stages,
-                dates,
-                it=None,
-            )
+
+        df = cls._post_resolve_energy_iteration(
+            generated_energy_df,
+            converted_energy_df,
+            uow,
+            hydro_simulation_stages,
+            dates,
+            it=None,
+        )
         return cls._post_resolve({0: df})
 
     @classmethod
@@ -1249,14 +1240,12 @@ class ScenarioSynthetizer:
             logger=cls.logger,
         ):
             inflow_df = Deck.vazaos(uow)
-        with time_and_log(
-            "Tempo para adicionar informacoes das vazoes", cls.logger
-        ):
-            df = cls._post_resolve_inflow_iteration(
-                inflow_df,
-                uow,
-                it=None,
-            )
+
+        df = cls._post_resolve_inflow_iteration(
+            inflow_df,
+            uow,
+            it=None,
+        )
         return cls._post_resolve({0: df})
 
     @classmethod
@@ -1466,7 +1455,7 @@ class ScenarioSynthetizer:
     def _calc_mean_std(cls, df: pd.DataFrame) -> pd.DataFrame:
         """
         Realiza o pós-processamento para calcular o valor médio e o desvio
-        padrão de uma variável operativa dentre todos os estágios e patamares,
+        padrão de uma variável dentre todos os estágios e patamares,
         agrupando de acordo com as demais colunas.
         """
         value_columns = [SCENARIO_COL, VALUE_COL]
@@ -1507,7 +1496,7 @@ class ScenarioSynthetizer:
     ) -> pd.DataFrame:
         """
         Realiza o pós-processamento para calcular uma lista de quantis
-        de uma variável operativa dentre todos os estágios e patamares,
+        de uma variável dentre todos os estágios e patamares,
         agrupando de acordo com as demais colunas.
         """
         value_columns = [SCENARIO_COL, VALUE_COL]
@@ -1537,9 +1526,11 @@ class ScenarioSynthetizer:
         quantile_df = quantile_df.drop(columns=[SCENARIO_COL]).rename(
             columns={level_column[0]: SCENARIO_COL}
         )
-        quantile_df[SCENARIO_COL] = quantile_df[SCENARIO_COL].apply(
-            quantile_map
+        num_entities = quantile_df.shape[0] // len(quantiles)
+        quantile_labels = np.tile(
+            np.array([quantile_map(q) for q in quantiles]), num_entities
         )
+        quantile_df[SCENARIO_COL] = quantile_labels
         return quantile_df
 
     @classmethod
@@ -1550,7 +1541,7 @@ class ScenarioSynthetizer:
         estatísticas como quantis e média para cada variável, em cada
         estágio e patamar.
         """
-        df_q = cls._calc_quantiles(df, [0.05 * i for i in range(21)])
+        df_q = cls._calc_quantiles(df, QUANTILES_FOR_STATISTICS)
         df_m = cls._calc_mean_std(df)
         df_stats = pd.concat([df_q, df_m], ignore_index=True)
         return df_stats
@@ -1606,7 +1597,7 @@ class ScenarioSynthetizer:
     def _add_synthesis_stats(cls, s: ScenarioSynthesis, df: pd.DataFrame):
         """
         Adiciona um DataFrame com estatísticas de uma síntese ao
-        DataFrame de estatísticas da agregação espacial em questão.
+        DataFrame de estatísticas da agregação espacial e etapa em questão.
         """
         df[VARIABLE_COL] = s.variable.value
 
@@ -1622,10 +1613,10 @@ class ScenarioSynthetizer:
         cls, s: ScenarioSynthesis, df: pd.DataFrame, uow: AbstractUnitOfWork
     ):
         """
-        Realiza a exportação dos dados para uma síntese da
-        operação desejada. Opcionalmente, os dados são armazenados
+        Realiza a exportação dos dados para uma síntese dos
+        cenários desejada. Opcionalmente, os dados são armazenados
         em cache para uso futuro e as estatísticas são adicionadas
-        ao DataFrame de estatísticas da agregação espacial em questão.
+        ao DataFrame de estatísticas da agregação espacial e etapa em questão.
         """
         filename = str(s)
         with time_and_log(
@@ -1659,8 +1650,8 @@ class ScenarioSynthetizer:
         """
         Realiza a exportação dos dados de estatísticas de síntese
         da operação. As estatísticas são exportadas para um arquivo
-        único por agregação espacial, de nome
-        `ESTATISTICAS_OPERACAO_{agregacao}`.
+        único por agregação espacial e etapa, de nome
+        `CENARIOS_{agregacao}_{etapa}`.
         """
         for (res, step), dfs in cls.SYNTHESIS_STATS.items():
             with uow:
@@ -1684,14 +1675,22 @@ class ScenarioSynthetizer:
         Realiza o pré-processamento das variáveis de síntese fornecidas,
         filtrando as válidas para o caso em questão.
         """
-        if len(variables) == 0:
-            synthesis_variables = cls._default_args()
-        else:
-            all_variables = cls._match_wildcards(variables)
-            synthesis_variables = cls._process_variable_arguments(
-                all_variables
+        try:
+            if len(variables) == 0:
+                synthesis_variables = cls._default_args()
+            else:
+                all_variables = cls._match_wildcards(variables)
+                synthesis_variables = cls._process_variable_arguments(
+                    all_variables
+                )
+            valid_synthesis = cls.filter_valid_variables(
+                synthesis_variables, uow
             )
-        valid_synthesis = cls.filter_valid_variables(synthesis_variables, uow)
+        except Exception as e:
+            print_exc()
+            cls._log(str(e), level=ERROR)
+            cls._log("Erro no pré-processamento das variáveis", ERROR)
+            valid_synthesis = []
         return valid_synthesis
 
     @classmethod
@@ -1726,6 +1725,12 @@ class ScenarioSynthetizer:
 
     @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
+        """
+        Realiza a síntese dos cenários para as variáveis fornecidas,
+        na agregação desejada e para a etapa escolhida. As variáveis são
+        pré-processadas para filtrar as válidas para o caso em questão,
+        e então são resolvidas de acordo com a síntese.
+        """
         cls.logger = logging.getLogger("main")
         uow.subdir = SCENARIO_SYNTHESIS_SUBDIR
         with time_and_log(
