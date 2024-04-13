@@ -508,6 +508,7 @@ class ScenarioSynthetizer:
             map_line: pd.Series,
         ) -> pd.DataFrame:
             eer_lta = np.zeros((lta_model_df.shape[0],))
+            # TODO - substituir por ordenacao e repeticao posicional
             for eer_idx, lta_line in lta_model_df.iterrows():
                 eer_lta[eer_idx] = energy_history_df.loc[
                     (energy_history_df["configuracao"] == lta_line[CONFIG_COL])
@@ -749,13 +750,15 @@ class ScenarioSynthetizer:
             num_scenarios: int,
             num_eers: int,
         ) -> pd.DataFrame:
-            sorted_dates: np.ndarray = np.repeat(
+            end_dates = [d + relativedelta(months=1) for d in dates]
+            sorted_start_dates: np.ndarray = np.repeat(
                 np.array(dates), num_scenarios * num_eers
             )
-            energy_df[START_DATE_COL] = sorted_dates
-            energy_df[END_DATE_COL] = [
-                d + relativedelta(months=1) for d in sorted_dates
-            ]
+            sorted_end_dates: np.ndarray = np.repeat(
+                np.array(end_dates), num_scenarios * num_eers
+            )
+            energy_df[START_DATE_COL] = sorted_start_dates
+            energy_df[END_DATE_COL] = sorted_end_dates
             return energy_df
 
         # Extrai dimensões para repetir vetores
@@ -865,11 +868,11 @@ class ScenarioSynthetizer:
                 ending_date,
                 freq="MS",
             )
-            sorted_dates = np.repeat(dates, num_scenarios * num_hydros)
-            inflow_df[START_DATE_COL] = sorted_dates
-            inflow_df[END_DATE_COL] = [
-                d + relativedelta(months=1) for d in sorted_dates
-            ]
+            end_dates = [d + relativedelta(months=1) for d in dates]
+            sorted_start_dates = np.repeat(dates, num_scenarios * num_hydros)
+            sorted_end_dates = np.repeat(end_dates, num_scenarios * num_hydros)
+            inflow_df[START_DATE_COL] = sorted_start_dates
+            inflow_df[END_DATE_COL] = sorted_end_dates
             return inflow_df
 
         # Extrai dimensões para repetir vetores
