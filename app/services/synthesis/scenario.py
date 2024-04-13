@@ -988,25 +988,31 @@ class ScenarioSynthetizer:
             uow
         )
         dates = Deck.datas_inicio_estagios_internos_politica_com_tendencia(uow)
-        return cls._post_resolve_energy_iteration(
-            generated_energy_df,
-            converted_energy_df,
-            uow,
-            hydro_simulation_stages,
-            dates,
-            it,
-        )
+        with time_and_log(
+            "Tempo para adicionar informacoes das energias", logger
+        ):
+            return cls._post_resolve_energy_iteration(
+                generated_energy_df,
+                converted_energy_df,
+                uow,
+                hydro_simulation_stages,
+                dates,
+                it,
+            )
 
     @classmethod
     def _post_resolve(
         cls, resolve_responses: Dict[int, pd.DataFrame]
     ) -> pd.DataFrame:
-        valid_dfs = [df for df in resolve_responses.values() if df is not None]
-        if len(valid_dfs) > 0:
-            df = pd.concat(valid_dfs, ignore_index=True)
-        else:
-            df = pd.DataFrame()
-        return df
+        with time_and_log("Tempo para compactacao dos dados", cls.logger):
+            valid_dfs = [
+                df for df in resolve_responses.values() if df is not None
+            ]
+            if len(valid_dfs) > 0:
+                df = pd.concat(valid_dfs, ignore_index=True)
+            else:
+                df = pd.DataFrame()
+            return df
 
     @classmethod
     def _resolve_forward_energy(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
@@ -1052,7 +1058,10 @@ class ScenarioSynthetizer:
         )
         logger.info(f"Obtendo vazões forward da it. {it}")
         inflow_df = Deck.vazaof(it, uow)
-        return cls._post_resolve_inflow_iteration(inflow_df, uow, it)
+        with time_and_log(
+            "Tempo para adicionar informacoes das vazoes", logger
+        ):
+            return cls._post_resolve_inflow_iteration(inflow_df, uow, it)
 
     @classmethod
     def _resolve_forward_inflow(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
@@ -1103,14 +1112,17 @@ class ScenarioSynthetizer:
             uow
         )
         dates = Deck.datas_inicio_estagios_internos_politica(uow)
-        return cls._post_resolve_energy_iteration(
-            generated_energy_df,
-            converted_energy_df,
-            uow,
-            hydro_simulation_stages,
-            dates,
-            it,
-        )
+        with time_and_log(
+            "Tempo para adicionar informacoes das energias", logger
+        ):
+            return cls._post_resolve_energy_iteration(
+                generated_energy_df,
+                converted_energy_df,
+                uow,
+                hydro_simulation_stages,
+                dates,
+                it,
+            )
 
     @classmethod
     def _resolve_backward_energy(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
@@ -1156,7 +1168,10 @@ class ScenarioSynthetizer:
         )
         logger.info(f"Obtendo vazões backward da it. {it}")
         inflow_df = Deck.vazaob(it, uow)
-        return cls._post_resolve_inflow_iteration(inflow_df, uow, it)
+        with time_and_log(
+            "Tempo para adicionar informacoes das vazoes", logger
+        ):
+            return cls._post_resolve_inflow_iteration(inflow_df, uow, it)
 
     @classmethod
     def _resolve_backward_inflow(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
@@ -1200,12 +1215,11 @@ class ScenarioSynthetizer:
         ):
             generated_energy_df = Deck.energias(uow)
             converted_energy_df = Deck.enavazs(uow)
-            hydro_simulation_stages = Deck.num_estagios_individualizados_sf(
-                uow
-            )
-            dates = Deck.datas_inicio_estagios_internos_politica_com_tendencia(
-                uow
-            )
+        hydro_simulation_stages = Deck.num_estagios_individualizados_sf(uow)
+        dates = Deck.datas_inicio_estagios_internos_politica_com_tendencia(uow)
+        with time_and_log(
+            "Tempo para adicionar informacoes das energias", cls.logger
+        ):
             df = cls._post_resolve_energy_iteration(
                 generated_energy_df,
                 converted_energy_df,
@@ -1214,7 +1228,7 @@ class ScenarioSynthetizer:
                 dates,
                 it=None,
             )
-            return cls._post_resolve({0: df})
+        return cls._post_resolve({0: df})
 
     @classmethod
     def _resolve_final_simulation_inflow(
@@ -1232,12 +1246,15 @@ class ScenarioSynthetizer:
             logger=cls.logger,
         ):
             inflow_df = Deck.vazaos(uow)
+        with time_and_log(
+            "Tempo para adicionar informacoes das vazoes", cls.logger
+        ):
             df = cls._post_resolve_inflow_iteration(
                 inflow_df,
                 uow,
                 it=None,
             )
-            return cls._post_resolve({0: df})
+        return cls._post_resolve({0: df})
 
     @classmethod
     def _get_cached_variable(
