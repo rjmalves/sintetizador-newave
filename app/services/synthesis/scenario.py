@@ -11,6 +11,7 @@ from app.services.unitofwork import AbstractUnitOfWork
 from app.utils.log import Log
 from app.utils.timing import time_and_log
 from app.utils.regex import match_variables_with_wildcards
+from app.utils.operations import fast_group_df
 from app.model.settings import Settings
 from app.services.deck.deck import Deck
 from app.model.scenario.variable import Variable
@@ -41,7 +42,6 @@ from app.internal.constants import (
     SUBMARKET_CODE_COL,
     SUBMARKET_NAME_COL,
     NULL_INFLOW_STATION,
-    PANDAS_GROUPING_ENGINE,
     STRING_DF_TYPE,
     VARIABLE_COL,
     SCENARIO_SYNTHESIS_STATS_ROOT,
@@ -64,16 +64,6 @@ class ScenarioSynthetizer:
         SPAN_COL,
     ]
 
-    IDENTIFICATION_COLUMNS = [
-        START_DATE_COL,
-        END_DATE_COL,
-        STAGE_COL,
-        HYDRO_NAME_COL,
-        EER_NAME_COL,
-        SUBMARKET_NAME_COL,
-        ITERATION_COL,
-    ]
-
     CACHED_SYNTHESIS: Dict[Tuple[Variable, Step], pd.DataFrame] = {}
 
     CACHED_MLT_VALUES: Dict[
@@ -91,7 +81,7 @@ class ScenarioSynthetizer:
     @classmethod
     def clear_cache(cls):
         """
-        Limpa o cache de síntese de operação.
+        Limpa o cache de síntese de cenários.
         """
         cls.CACHED_SYNTHESIS.clear()
         cls.CACHED_MLT_VALUES.clear()
@@ -386,6 +376,11 @@ class ScenarioSynthetizer:
     def _generate_model_dataframe_month_column(
         cls, uow: AbstractUnitOfWork
     ) -> np.ndarray:
+        """
+        Gera uma coluna com os meses de cada estágio do caso a ser
+        utilizada nos DataFrames com valores da MLT para cada síntese,
+        em formato previamente conhecido.
+        """
         starting_date_with_tendency = (
             Deck.data_inicio_com_tendencia_hidrologica(uow)
         )
@@ -401,6 +396,11 @@ class ScenarioSynthetizer:
     def _generate_model_dataframe_stage_column(
         cls, uow: AbstractUnitOfWork, num_stages: int
     ) -> np.ndarray:
+        """
+        Gera uma coluna com os estágios do caso a ser
+        utilizada nos DataFrames com valores da MLT para cada síntese,
+        em formato previamente conhecido.
+        """
         past_stages = Deck.num_estagios_tendencia_hidrologica(uow)
         stages_with_past_tendency = np.arange(
             -past_stages + 1, num_stages - past_stages + 1, dtype=np.int64
@@ -558,7 +558,11 @@ class ScenarioSynthetizer:
     def _agg_lta_hydro_inflow_series(
         cls, variable: Variable, col: Optional[str], uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-        hydro_lta = cls._get_cached_lta_df(
+        """
+        Realiza a agregaçao da MLT de vazões incrementais para
+        todas as UHEs segundo uma coluna desejada.
+        """
+        hydro_lta = cls._get_lta_df(
             variable,
             SpatialResolution.USINA_HIDROELETRICA,
             uow,
@@ -575,7 +579,11 @@ class ScenarioSynthetizer:
     def _agg_lta_eer_energy_series(
         cls, col: Optional[str], uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-        eer_lta = cls._get_cached_lta_df(
+        """
+        Realiza a agregaçao da MLT de energias para
+        todos os REEs segundo uma coluna desejada.
+        """
+        eer_lta = cls._get_lta_df(
             Variable.ENA_ABSOLUTA,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
             uow,
@@ -640,12 +648,17 @@ class ScenarioSynthetizer:
             )
 
     @classmethod
-    def _get_cached_lta_df(
+    def _get_lta_df(
         cls,
         variable: Variable,
         spatial_resolution: SpatialResolution,
         uow: AbstractUnitOfWork,
     ) -> pd.DataFrame:
+        """
+        Obtém um DataFrame com dados de MLT para uma variável
+        desejada, aproveitando informações da cache ou calculando
+        se for necessário.
+        """
         CACHING_FUNCTION_MAP: Dict[
             Tuple[Variable, SpatialResolution], Callable
         ] = {
@@ -690,6 +703,11 @@ class ScenarioSynthetizer:
     def _format_scenario_data(
         cls, data: np.ndarray, num_scenarios: int, num_stages: int
     ) -> np.ndarray:
+        """
+        Formata um conjunto de dados com a repetição adequada
+        para ser adicionado a uma coluna de um DataFrame com formato
+        previamente conhecido.
+        """
         return np.tile(np.repeat(data, num_scenarios), (num_stages,))
 
     @classmethod
@@ -922,6 +940,10 @@ class ScenarioSynthetizer:
         dates: List[datetime],
         it: Optional[int] = None,
     ) -> pd.DataFrame:
+        """
+        Realiza o pós-processamento para cálculo de estatísticas e adição
+        de dados de submercado aos dados de energias lidos.
+        """
         if not converted_energy_df.empty and not generated_energy_df.empty:
             energy_df = pd.concat(
                 [
@@ -957,6 +979,10 @@ class ScenarioSynthetizer:
         uow: AbstractUnitOfWork,
         it: Optional[int] = None,
     ) -> pd.DataFrame:
+        """
+        Realiza o pós-processamento para cálculo de estatísticas e adição
+        de dados de REE e submercado aos dados de vazão lidos.
+        """
         if not inflow_df.empty:
             inflow_df = inflow_df.rename(
                 columns={"uhe": HYDRO_CODE_COL, "serie": SCENARIO_COL}
@@ -1007,6 +1033,10 @@ class ScenarioSynthetizer:
     def _post_resolve(
         cls, resolve_responses: Dict[int, pd.DataFrame]
     ) -> pd.DataFrame:
+        """
+        Realiza o pós-processamento para agregação dos dados de todos os
+        DataFrames lidos de um conjunto de arquivos.
+        """
         with time_and_log("Tempo para compactacao dos dados", cls.logger):
             valid_dfs = [
                 df for df in resolve_responses.values() if df is not None
@@ -1397,7 +1427,7 @@ class ScenarioSynthetizer:
         """
         # Descobre o valor em MLT
         df = df.copy()
-        lta_df = cls._get_cached_lta_df(
+        lta_df = cls._get_lta_df(
             synthesis.variable,
             synthesis.spatial_resolution,
             uow,
@@ -1460,32 +1490,15 @@ class ScenarioSynthetizer:
         """
         value_columns = [SCENARIO_COL, VALUE_COL]
         grouping_columns = [c for c in df.columns if c not in value_columns]
-        try:
-            df_mean = (
-                df.groupby(grouping_columns, sort=False)[[VALUE_COL]]
-                .mean(engine=PANDAS_GROUPING_ENGINE)
-                .reset_index()
-            )
-        except ZeroDivisionError:
-            df_mean = (
-                df.groupby(grouping_columns, sort=False)[[VALUE_COL]]
-                .mean(engine="cython")
-                .reset_index()
-            )
+        extract_columns = [VALUE_COL]
+        df_mean = fast_group_df(
+            df, grouping_columns, extract_columns, "mean", reset_index=True
+        )
         df_mean[SCENARIO_COL] = "mean"
 
-        try:
-            df_std = (
-                df.groupby(grouping_columns, sort=False)[[VALUE_COL]]
-                .std(engine=PANDAS_GROUPING_ENGINE)
-                .reset_index()
-            )
-        except ZeroDivisionError:
-            df_std = (
-                df.groupby(grouping_columns, sort=False)[[VALUE_COL]]
-                .std(engine="cython")
-                .reset_index()
-            )
+        df_std = fast_group_df(
+            df, grouping_columns, extract_columns, "std", reset_index=True
+        )
         df_std[SCENARIO_COL] = "std"
 
         return pd.concat([df_mean, df_std], ignore_index=True)

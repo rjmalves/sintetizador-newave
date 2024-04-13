@@ -10,6 +10,7 @@ from app.utils.graph import Graph
 from app.utils.log import Log
 from app.utils.timing import time_and_log
 from app.utils.regex import match_variables_with_wildcards
+from app.utils.operations import fast_group_df
 from app.model.settings import Settings
 from app.services.deck.bounds import OperationVariableBounds
 from app.services.deck.deck import Deck
@@ -1990,32 +1991,15 @@ class OperationSynthetizer:
         """
         value_columns = [SCENARIO_COL, VALUE_COL]
         grouping_columns = [c for c in df.columns if c not in value_columns]
-        try:
-            df_mean = (
-                df.groupby(grouping_columns, sort=False)[[VALUE_COL]]
-                .mean(engine=PANDAS_GROUPING_ENGINE)
-                .reset_index()
-            )
-        except ZeroDivisionError:
-            df_mean = (
-                df.groupby(grouping_columns, sort=False)[[VALUE_COL]]
-                .mean(engine="cython")
-                .reset_index()
-            )
+        extract_columns = [VALUE_COL]
+        df_mean = fast_group_df(
+            df, grouping_columns, extract_columns, "mean", reset_index=True
+        )
         df_mean[SCENARIO_COL] = "mean"
 
-        try:
-            df_std = (
-                df.groupby(grouping_columns, sort=False)[[VALUE_COL]]
-                .std(engine=PANDAS_GROUPING_ENGINE)
-                .reset_index()
-            )
-        except ZeroDivisionError:
-            df_std = (
-                df.groupby(grouping_columns, sort=False)[[VALUE_COL]]
-                .std(engine="cython")
-                .reset_index()
-            )
+        df_std = fast_group_df(
+            df, grouping_columns, extract_columns, "std", reset_index=True
+        )
         df_std[SCENARIO_COL] = "std"
 
         return pd.concat([df_mean, df_std], ignore_index=True)
