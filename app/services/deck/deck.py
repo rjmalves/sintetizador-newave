@@ -1014,7 +1014,7 @@ class Deck:
             cls.DECK_DATA_CACHING["energia_armazenada_inicial"] = (
                 energia_armazenada_inicial
             )
-        return energia_armazenada_inicial
+        return energia_armazenada_inicial.copy()
 
     @classmethod
     def volume_armazenado_inicial(
@@ -1032,7 +1032,7 @@ class Deck:
             cls.DECK_DATA_CACHING["volume_armazenado_inicial"] = (
                 volume_armazenado_inicial
             )
-        return volume_armazenado_inicial
+        return volume_armazenado_inicial.copy()
 
     @classmethod
     def eer_code_order(cls, uow: AbstractUnitOfWork) -> List[int]:
