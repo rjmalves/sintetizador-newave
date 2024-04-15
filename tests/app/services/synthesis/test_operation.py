@@ -113,9 +113,9 @@ uow = factory("FS", DECK_TEST_DIR, q)
 def __compara_sintese_nwlistop(
     df_sintese: pd.DataFrame, df_nwlistop: pd.DataFrame, *args, **kwargs
 ):
-    data = kwargs.get("dataInicio", datetime(2023, 10, 1))
+    data = kwargs.get("data_inicio", datetime(2023, 10, 1))
     cenario = kwargs.get("cenario", 1)
-    filtros_sintese = (df_sintese["dataInicio"] == data) & (
+    filtros_sintese = (df_sintese["data_inicio"] == data) & (
         df_sintese["cenario"] == cenario
     )
     filtros_nwlistop = (df_nwlistop["data"] == data) & (
@@ -126,7 +126,7 @@ def __compara_sintese_nwlistop(
     # Processa argumentos adicionais
     for col, val in kwargs.items():
         if col in df_sintese.columns:
-            if col not in ["dataInicio", "cenario"]:
+            if col not in ["data_inicio", "cenario"]:
                 filtros_sintese = filtros_sintese & (df_sintese[col].isin(val))
         if col in df_nwlistop.columns:
             if col == "patamar":
@@ -145,10 +145,35 @@ def __compara_sintese_nwlistop(
     assert len(dados_sintese) > 0
     assert len(dados_nwlistop) > 0
 
-    assert np.allclose(
-        dados_sintese,
-        dados_nwlistop,
-    )
+    try:
+        assert np.allclose(
+            dados_sintese,
+            dados_nwlistop,
+        )
+    except AssertionError:
+        print("Síntese:")
+        print(df_sintese.loc[filtros_sintese])
+        print("NWLISTOP:")
+        print(df_nwlistop.loc[filtros_nwlistop])
+        raise
+
+
+def __valida_limites(df: pd.DataFrame, tol: float = 0.2):
+    num_amostras = df.shape[0]
+    try:
+        assert (
+            df["valor"] <= (df["limite_superior"] + tol)
+        ).sum() == num_amostras
+    except AssertionError:
+        print(df.loc[df["valor"] > (df["limite_superior"] + tol)])
+        raise
+    try:
+        assert (
+            df["valor"] >= (df["limite_inferior"] - tol)
+        ).sum() == num_amostras
+    except AssertionError:
+        print(df.loc[df["valor"] < (df["limite_inferior"] - tol)])
+        raise
 
 
 def __valida_metadata(chave: str, df_metadata: pd.DataFrame, calculated: bool):
@@ -241,11 +266,12 @@ def test_calcula_patamar_medio_soma(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         usina=["CAMARGOS"],
     )
+    __valida_limites(df)
     __valida_metadata(synthesis_str, df_meta, False)
 
 
@@ -272,13 +298,13 @@ def test_calcula_patamar_medio_soma_gter_ute(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         usina=["ANGRA 1"],
         classe=[1],
     )
-
+    __valida_limites(df)
     __valida_metadata(synthesis_str, df_meta, False)
 
 
@@ -291,7 +317,7 @@ def test_sintese_cmo_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq_pat,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         submercado=["SUDESTE"],
         patamar=[1, 2, 3],
@@ -300,7 +326,7 @@ def test_sintese_cmo_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq_med,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         submercado=["SUDESTE"],
         patamar=[0],
@@ -324,7 +350,7 @@ def test_sintese_ever_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_evert,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         ree=["PARANA"],
         patamar=[0],
@@ -341,7 +367,7 @@ def test_sintese_ever_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_evert,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         submercado=["SUDESTE"],
         patamar=[0],
@@ -358,7 +384,7 @@ def test_sintese_ever_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_evert,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -470,7 +496,7 @@ def test_sintese_varmf_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_ree,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         ree=["SUL"],
         patamar=[0],
@@ -508,7 +534,7 @@ def test_sintese_varmf_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_sbm,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         submercado=["SUL"],
         patamar=[0],
@@ -542,7 +568,7 @@ def test_sintese_varmf_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_sin,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -571,7 +597,7 @@ def test_sintese_vafl_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_ree,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         ree=["SUL"],
         patamar=[0],
@@ -606,7 +632,7 @@ def test_sintese_vafl_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_sbm,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         submercado=["SUL"],
         patamar=[0],
@@ -636,7 +662,7 @@ def test_sintese_vafl_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_sin,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -664,7 +690,7 @@ def test_sintese_qafl_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_ree,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         ree=["SUL"],
         patamar=[0],
@@ -696,7 +722,7 @@ def test_sintese_qafl_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_sbm,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         submercado=["SUL"],
         patamar=[0],
@@ -723,7 +749,7 @@ def test_sintese_qafl_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_sin,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -751,7 +777,7 @@ def test_sintese_vinc_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_ree,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         ree=["SUL"],
         patamar=[0],
@@ -785,7 +811,7 @@ def test_sintese_vinc_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_sbm,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         submercado=["SUL"],
         patamar=[0],
@@ -814,7 +840,7 @@ def test_sintese_vinc_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_sin,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -841,7 +867,7 @@ def test_sintese_qinc_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_ree,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         ree=["SUL"],
         patamar=[0],
@@ -873,7 +899,7 @@ def test_sintese_qinc_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_sbm,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         submercado=["SUL"],
         patamar=[0],
@@ -900,7 +926,7 @@ def test_sintese_qinc_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_sin,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -927,7 +953,7 @@ def test_sintese_vtur_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_ree,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         ree=["SUL"],
         patamar=[1],
@@ -960,7 +986,7 @@ def test_sintese_vtur_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_sbm,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         submercado=["SUL"],
         patamar=[1],
@@ -988,7 +1014,7 @@ def test_sintese_vtur_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_sin,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[1],
     )
@@ -1020,7 +1046,7 @@ def test_sintese_qtur_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_ree,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         ree=["SUL"],
         patamar=[0],
@@ -1058,7 +1084,7 @@ def test_sintese_qtur_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_sbm,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         submercado=["SUL"],
         patamar=[0],
@@ -1091,7 +1117,7 @@ def test_sintese_qtur_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_sin,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -1118,7 +1144,7 @@ def test_sintese_vver_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_ree,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         ree=["SUL"],
         patamar=[1],
@@ -1151,7 +1177,7 @@ def test_sintese_vver_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_sbm,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         submercado=["SUL"],
         patamar=[1],
@@ -1179,7 +1205,7 @@ def test_sintese_vver_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_sin,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[1],
     )
@@ -1211,7 +1237,7 @@ def test_sintese_qver_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_ree,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         ree=["SUL"],
         patamar=[0],
@@ -1249,7 +1275,7 @@ def test_sintese_qver_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_sbm,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         submercado=["SUL"],
         patamar=[0],
@@ -1282,7 +1308,7 @@ def test_sintese_qver_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_sin,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -1301,7 +1327,7 @@ def test_sintese_evmin_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_mevmin,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         ree=["PARANA"],
         patamar=[0],
@@ -1318,7 +1344,7 @@ def test_sintese_evmin_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_mevmin,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         submercado=["SUDESTE"],
         patamar=[0],
@@ -1335,7 +1361,7 @@ def test_sintese_evmin_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_mevmin,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -1395,7 +1421,7 @@ def test_sintese_hjus_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -1452,7 +1478,7 @@ def test_sintese_hliq_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -1476,7 +1502,7 @@ def test_sintese_qtur_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -1497,7 +1523,7 @@ def test_sintese_qver_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -1515,7 +1541,7 @@ def test_sintese_qret_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -1536,7 +1562,7 @@ def test_sintese_qdes_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -1556,7 +1582,7 @@ def test_sintese_vafl_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -1573,7 +1599,7 @@ def test_sintese_vinc_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -1610,7 +1636,7 @@ def test_sintese_qdef_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_tur,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -1632,7 +1658,7 @@ def test_sintese_vdef_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_tur,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -1656,7 +1682,7 @@ def test_sintese_vevap_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq_pos,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -1675,7 +1701,7 @@ def test_sintese_vagua_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         ree=["PARANA"],
         patamar=[0],
@@ -1690,7 +1716,7 @@ def test_sintese_vagua_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -1705,7 +1731,7 @@ def test_sintese_vaguai_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -1720,7 +1746,7 @@ def test_sintese_cter_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         submercado=["SUDESTE"],
         patamar=[0],
@@ -1735,7 +1761,7 @@ def test_sintese_cter_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -1749,7 +1775,7 @@ def test_sintese_coper_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -1763,7 +1789,7 @@ def test_sintese_enaa_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -1778,7 +1804,7 @@ def test_sintese_enaa_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -1793,7 +1819,7 @@ def test_sintese_enaa_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -1807,7 +1833,7 @@ def test_sintese_enaar_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -1822,7 +1848,7 @@ def test_sintese_enaar_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -1837,7 +1863,7 @@ def test_sintese_enaar_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -1851,7 +1877,7 @@ def test_sintese_enaaf_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -1866,7 +1892,7 @@ def test_sintese_enaaf_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -1881,7 +1907,7 @@ def test_sintese_enaaf_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -1895,7 +1921,7 @@ def test_sintese_earpf_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -1910,7 +1936,7 @@ def test_sintese_earpf_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -1925,7 +1951,7 @@ def test_sintese_earpf_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -1939,7 +1965,7 @@ def test_sintese_earmf_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -1954,7 +1980,7 @@ def test_sintese_earmf_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -1969,7 +1995,7 @@ def test_sintese_earmf_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -1983,7 +2009,7 @@ def test_sintese_ghidr_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -1998,7 +2024,7 @@ def test_sintese_ghidr_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -2013,7 +2039,7 @@ def test_sintese_ghidr_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -2027,7 +2053,7 @@ def test_sintese_ghidf_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -2042,7 +2068,7 @@ def test_sintese_ghidf_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -2057,7 +2083,7 @@ def test_sintese_ghidf_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -2071,7 +2097,7 @@ def test_sintese_ghid_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -2086,7 +2112,7 @@ def test_sintese_ghid_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -2101,7 +2127,7 @@ def test_sintese_ghid_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -2115,7 +2141,7 @@ def test_sintese_gter_ute(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[1],
         classe=[1],
@@ -2131,7 +2157,7 @@ def test_sintese_gter_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -2146,7 +2172,7 @@ def test_sintese_gter_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -2160,7 +2186,7 @@ def test_sintese_everr_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -2175,7 +2201,7 @@ def test_sintese_everr_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -2190,7 +2216,7 @@ def test_sintese_everr_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -2204,7 +2230,7 @@ def test_sintese_everf_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -2219,7 +2245,7 @@ def test_sintese_everf_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -2234,7 +2260,7 @@ def test_sintese_everf_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -2248,7 +2274,7 @@ def test_sintese_everft_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -2263,7 +2289,7 @@ def test_sintese_everft_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -2278,7 +2304,7 @@ def test_sintese_everft_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -2292,7 +2318,7 @@ def test_sintese_edesr_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -2307,7 +2333,7 @@ def test_sintese_edesr_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -2322,7 +2348,7 @@ def test_sintese_edesr_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -2336,7 +2362,7 @@ def test_sintese_edesf_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -2351,7 +2377,7 @@ def test_sintese_edesf_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -2366,7 +2392,7 @@ def test_sintese_edesf_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -2380,7 +2406,7 @@ def test_sintese_mevmin_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -2395,7 +2421,7 @@ def test_sintese_mevmin_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -2410,7 +2436,7 @@ def test_sintese_mevmin_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -2424,7 +2450,7 @@ def test_sintese_evmor_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -2439,7 +2465,7 @@ def test_sintese_evmor_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -2454,7 +2480,7 @@ def test_sintese_evmor_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -2468,7 +2494,7 @@ def test_sintese_eevap_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         ree=["SUDESTE"],
@@ -2483,7 +2509,7 @@ def test_sintese_eevap_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -2498,7 +2524,7 @@ def test_sintese_eevap_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -2512,7 +2538,7 @@ def test_sintese_qafl_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         usina=["SAO ROQUE"],
@@ -2527,7 +2553,7 @@ def test_sintese_qinc_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         usina=["CAMARGOS"],
@@ -2542,7 +2568,7 @@ def test_sintese_vtur_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[1],
         usina=["CAMARGOS"],
@@ -2557,7 +2583,7 @@ def test_sintese_vver_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[1],
         usina=["CAMARGOS"],
@@ -2577,7 +2603,7 @@ def test_sintese_varmf_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         usina=["CAMARGOS"],
@@ -2592,7 +2618,7 @@ def test_sintese_varpf_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         usina=["CAMARGOS"],
@@ -2607,7 +2633,7 @@ def test_sintese_ghid_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[1],
         usina=["CAMARGOS"],
@@ -2625,7 +2651,7 @@ def test_sintese_def_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -2640,7 +2666,7 @@ def test_sintese_def_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -2654,7 +2680,7 @@ def test_sintese_exc_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -2669,7 +2695,7 @@ def test_sintese_exc_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -2683,11 +2709,11 @@ def test_sintese_int_sbp(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        submercadoDe=["SUDESTE"],
-        submercadoPara=["SUL"],
+        submercado_de=["SUDESTE"],
+        submercado_para=["SUL"],
     )
     __valida_metadata("INT_SBP", df_meta, False)
 
@@ -2699,7 +2725,7 @@ def test_sintese_cdef_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -2714,7 +2740,7 @@ def test_sintese_cdef_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -2728,7 +2754,7 @@ def test_sintese_merl_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
         submercado=["SUDESTE"],
@@ -2743,7 +2769,7 @@ def test_sintese_merl_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -2757,7 +2783,7 @@ def test_sintese_vfpha_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[1],
@@ -2772,7 +2798,7 @@ def test_sintese_vevmin_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         ree=["SUDESTE"],
         patamar=[0],
@@ -2787,7 +2813,7 @@ def test_sintese_vevmin_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         submercado=["SUDESTE"],
         patamar=[0],
@@ -2802,7 +2828,7 @@ def test_sintese_vevmin_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -2816,7 +2842,7 @@ def test_sintese_vret_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -2831,7 +2857,7 @@ def test_sintese_vdes_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[1],
@@ -2846,7 +2872,7 @@ def test_sintese_vghmin_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[1],
@@ -2861,7 +2887,7 @@ def test_sintese_vghmin_ree(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         ree=["SUDESTE"],
         patamar=[0],
@@ -2876,7 +2902,7 @@ def test_sintese_vghmin_sbm(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         submercado=["SUDESTE"],
         patamar=[0],
@@ -2891,7 +2917,7 @@ def test_sintese_vghmin_sin(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
     )
@@ -2905,7 +2931,7 @@ def test_sintese_hmon_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -2920,7 +2946,7 @@ def test_sintese_vevp_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -2953,7 +2979,7 @@ def test_sintese_vposevap_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],
@@ -2970,7 +2996,7 @@ def test_sintese_vnegevap_uhe(test_settings):
     __compara_sintese_nwlistop(
         df,
         df_arq,
-        dataInicio=datetime(2023, 10, 1),
+        data_inicio=datetime(2023, 10, 1),
         cenario=1,
         usina=["FURNAS"],
         patamar=[0],

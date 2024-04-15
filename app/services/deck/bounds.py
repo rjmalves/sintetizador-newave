@@ -7,7 +7,28 @@ from app.model.operation.spatialresolution import SpatialResolution
 from app.model.operation.operationsynthesis import OperationSynthesis
 from app.services.unitofwork import AbstractUnitOfWork
 from app.services.deck.deck import Deck
-from app.internal.constants import STATS_OR_SCENARIO_COL
+from app.internal.constants import (
+    START_DATE_COL,
+    END_DATE_COL,
+    STAGE_COL,
+    HYDRO_CODE_COL,
+    HYDRO_NAME_COL,
+    EER_CODE_COL,
+    EER_NAME_COL,
+    THERMAL_CODE_COL,
+    THERMAL_NAME_COL,
+    SUBMARKET_CODE_COL,
+    SUBMARKET_NAME_COL,
+    EXCHANGE_SOURCE_COL,
+    EXCHANGE_TARGET_COL,
+    BLOCK_COL,
+    BLOCK_DURATION_COL,
+    SCENARIO_COL,
+    STATS_OR_SCENARIO_COL,
+    UPPER_BOUND_COL,
+    LOWER_BOUND_COL,
+    VALUE_COL,
+)
 from inewave.newave import (
     Dger,
     Hidr,
@@ -44,18 +65,20 @@ class OperationVariableBounds:
     """
 
     IDENTIFICATION_COLUMNS = [
-        "dataInicio",
-        "dataFim",
-        "estagio",
-        "submercado",
-        "submercadoDe",
-        "submercadoPara",
-        "ree",
-        "pee",
-        "usina",
-        "patamar",
-        "duracaoPatamar",
-        "cenario",
+        START_DATE_COL,
+        END_DATE_COL,
+        STAGE_COL,
+        SUBMARKET_CODE_COL,
+        SUBMARKET_NAME_COL,
+        EXCHANGE_SOURCE_COL,
+        EXCHANGE_TARGET_COL,
+        HYDRO_CODE_COL,
+        HYDRO_NAME_COL,
+        EER_CODE_COL,
+        EER_NAME_COL,
+        BLOCK_COL,
+        BLOCK_DURATION_COL,
+        SCENARIO_COL,
         STATS_OR_SCENARIO_COL,
     ]
 
@@ -147,13 +170,13 @@ class OperationVariableBounds:
             Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
-            df, col_grp="ree"
+            df, col_grp="codigo_ree"
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
             SpatialResolution.SUBMERCADO,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
-            df, col_grp="submercado"
+            df, col_grp="codigo_submercado"
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
@@ -171,13 +194,13 @@ class OperationVariableBounds:
             Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
-            df, col_grp="ree"
+            df, col_grp="codigo_ree"
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
             SpatialResolution.SUBMERCADO,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
-            df, col_grp="submercado"
+            df, col_grp="codigo_submercado"
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
@@ -195,13 +218,13 @@ class OperationVariableBounds:
             Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_absoluto_percentual(
-            df, col_grp="ree"
+            df, col_grp="codigo_ree"
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
             SpatialResolution.SUBMERCADO,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_absoluto_percentual(
-            df, col_grp="submercado"
+            df, col_grp="codigo_submercado"
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
@@ -219,13 +242,13 @@ class OperationVariableBounds:
             Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_absoluto_percentual(
-            df, col_grp="ree"
+            df, col_grp="codigo_ree"
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
             SpatialResolution.SUBMERCADO,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_absoluto_percentual(
-            df, col_grp="submercado"
+            df, col_grp="codigo_submercado"
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
@@ -243,13 +266,13 @@ class OperationVariableBounds:
             Variable.VOLUME_AFLUENTE,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
-            df, col_grp="ree"
+            df, col_grp="codigo_ree"
         ),
         OperationSynthesis(
             Variable.VOLUME_AFLUENTE,
             SpatialResolution.SUBMERCADO,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
-            df, col_grp="submercado"
+            df, col_grp="codigo_submercado"
         ),
         OperationSynthesis(
             Variable.VOLUME_AFLUENTE,
@@ -267,13 +290,13 @@ class OperationVariableBounds:
             Variable.VAZAO_AFLUENTE,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
-            df, col_grp="ree"
+            df, col_grp="codigo_ree"
         ),
         OperationSynthesis(
             Variable.VAZAO_AFLUENTE,
             SpatialResolution.SUBMERCADO,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
-            df, col_grp="submercado"
+            df, col_grp="codigo_submercado"
         ),
         OperationSynthesis(
             Variable.VAZAO_AFLUENTE,
@@ -291,13 +314,13 @@ class OperationVariableBounds:
             Variable.VOLUME_INCREMENTAL,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
-            df, col_grp="ree"
+            df, col_grp="codigo_ree"
         ),
         OperationSynthesis(
             Variable.VOLUME_INCREMENTAL,
             SpatialResolution.SUBMERCADO,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
-            df, col_grp="submercado"
+            df, col_grp="codigo_submercado"
         ),
         OperationSynthesis(
             Variable.VOLUME_INCREMENTAL,
@@ -315,13 +338,13 @@ class OperationVariableBounds:
             Variable.VAZAO_INCREMENTAL,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
-            df, col_grp="ree"
+            df, col_grp="codigo_ree"
         ),
         OperationSynthesis(
             Variable.VAZAO_INCREMENTAL,
             SpatialResolution.SUBMERCADO,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
-            df, col_grp="submercado"
+            df, col_grp="codigo_submercado"
         ),
         OperationSynthesis(
             Variable.VAZAO_INCREMENTAL,
@@ -339,13 +362,13 @@ class OperationVariableBounds:
             Variable.VOLUME_TURBINADO,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
-            df, col_grp="ree"
+            df, col_grp="codigo_ree"
         ),
         OperationSynthesis(
             Variable.VOLUME_TURBINADO,
             SpatialResolution.SUBMERCADO,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
-            df, col_grp="submercado"
+            df, col_grp="codigo_submercado"
         ),
         OperationSynthesis(
             Variable.VOLUME_TURBINADO,
@@ -363,13 +386,13 @@ class OperationVariableBounds:
             Variable.VAZAO_TURBINADA,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
-            df, col_grp="ree"
+            df, col_grp="codigo_ree"
         ),
         OperationSynthesis(
             Variable.VAZAO_TURBINADA,
             SpatialResolution.SUBMERCADO,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
-            df, col_grp="submercado"
+            df, col_grp="codigo_submercado"
         ),
         OperationSynthesis(
             Variable.VAZAO_TURBINADA,
@@ -387,13 +410,13 @@ class OperationVariableBounds:
             Variable.VOLUME_VERTIDO,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
-            df, col_grp="ree"
+            df, col_grp="codigo_ree"
         ),
         OperationSynthesis(
             Variable.VOLUME_VERTIDO,
             SpatialResolution.SUBMERCADO,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
-            df, col_grp="submercado"
+            df, col_grp="codigo_submercado"
         ),
         OperationSynthesis(
             Variable.VOLUME_VERTIDO,
@@ -411,13 +434,13 @@ class OperationVariableBounds:
             Variable.VAZAO_VERTIDA,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
-            df, col_grp="ree"
+            df, col_grp="codigo_ree"
         ),
         OperationSynthesis(
             Variable.VAZAO_VERTIDA,
             SpatialResolution.SUBMERCADO,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
-            df, col_grp="submercado"
+            df, col_grp="codigo_submercado"
         ),
         OperationSynthesis(
             Variable.VAZAO_VERTIDA,
@@ -435,13 +458,13 @@ class OperationVariableBounds:
             Variable.VOLUME_DEFLUENTE,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
-            df, col_grp="ree"
+            df, col_grp="codigo_ree"
         ),
         OperationSynthesis(
             Variable.VOLUME_DEFLUENTE,
             SpatialResolution.SUBMERCADO,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
-            df, col_grp="submercado"
+            df, col_grp="codigo_submercado"
         ),
         OperationSynthesis(
             Variable.VOLUME_DEFLUENTE,
@@ -459,13 +482,13 @@ class OperationVariableBounds:
             Variable.VAZAO_DEFLUENTE,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
-            df, col_grp="ree"
+            df, col_grp="codigo_ree"
         ),
         OperationSynthesis(
             Variable.VAZAO_DEFLUENTE,
             SpatialResolution.SUBMERCADO,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
-            df, col_grp="submercado"
+            df, col_grp="codigo_submercado"
         ),
         OperationSynthesis(
             Variable.VAZAO_DEFLUENTE,
@@ -483,13 +506,13 @@ class OperationVariableBounds:
             Variable.VOLUME_RETIRADO,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
-            df, col_grp="ree"
+            df, col_grp="codigo_ree"
         ),
         OperationSynthesis(
             Variable.VOLUME_RETIRADO,
             SpatialResolution.SUBMERCADO,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
-            df, col_grp="submercado"
+            df, col_grp="codigo_submercado"
         ),
         OperationSynthesis(
             Variable.VOLUME_RETIRADO,
@@ -507,13 +530,13 @@ class OperationVariableBounds:
             Variable.VAZAO_RETIRADA,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
-            df, col_grp="ree"
+            df, col_grp="codigo_ree"
         ),
         OperationSynthesis(
             Variable.VAZAO_RETIRADA,
             SpatialResolution.SUBMERCADO,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
-            df, col_grp="submercado"
+            df, col_grp="codigo_submercado"
         ),
         OperationSynthesis(
             Variable.VAZAO_RETIRADA,
@@ -531,13 +554,13 @@ class OperationVariableBounds:
             Variable.VOLUME_DESVIADO,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
-            df, col_grp="ree"
+            df, col_grp="codigo_ree"
         ),
         OperationSynthesis(
             Variable.VOLUME_DESVIADO,
             SpatialResolution.SUBMERCADO,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
-            df, col_grp="submercado"
+            df, col_grp="codigo_submercado"
         ),
         OperationSynthesis(
             Variable.VOLUME_DESVIADO,
@@ -555,13 +578,13 @@ class OperationVariableBounds:
             Variable.VAZAO_DESVIADA,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
-            df, col_grp="ree"
+            df, col_grp="codigo_ree"
         ),
         OperationSynthesis(
             Variable.VAZAO_DESVIADA,
             SpatialResolution.SUBMERCADO,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
-            df, col_grp="submercado"
+            df, col_grp="codigo_submercado"
         ),
         OperationSynthesis(
             Variable.VAZAO_DESVIADA,
@@ -579,13 +602,13 @@ class OperationVariableBounds:
             Variable.VOLUME_EVAPORADO,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
-            df, col_grp="ree"
+            df, col_grp="codigo_ree"
         ),
         OperationSynthesis(
             Variable.VOLUME_EVAPORADO,
             SpatialResolution.SUBMERCADO,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe(
-            df, col_grp="submercado"
+            df, col_grp="codigo_submercado"
         ),
         OperationSynthesis(
             Variable.VOLUME_EVAPORADO,
@@ -603,13 +626,13 @@ class OperationVariableBounds:
             Variable.VAZAO_EVAPORADA,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
-            df, col_grp="ree"
+            df, col_grp="codigo_ree"
         ),
         OperationSynthesis(
             Variable.VAZAO_EVAPORADA,
             SpatialResolution.SUBMERCADO,
         ): lambda df, _: OperationVariableBounds._agrega_variaveis_uhe_volume_vazao(
-            df, col_grp="submercado"
+            df, col_grp="codigo_submercado"
         ),
         OperationSynthesis(
             Variable.VAZAO_EVAPORADA,
@@ -1037,11 +1060,11 @@ class OperationVariableBounds:
         Armazenada Percentual (EARP) para cada REE.
         """
         # Obtem REEs do DF na ordem em que aparecem
-        datas_inicio = df["dataInicio"].unique().tolist()
+        datas_inicio = df[START_DATE_COL].unique().tolist()
         rees_df = df["ree"].unique().tolist()
         n_rees = len(rees_df)
         n_estagios = len(datas_inicio)
-        n_cenarios = len(df["cenario"].unique())
+        n_cenarios = len(df[SCENARIO_COL].unique())
         n_patamares = len(df["patamar"].unique())
 
         cols_agrupar = ["nome_ree", "data"]
@@ -1079,9 +1102,9 @@ class OperationVariableBounds:
             limites_superiores, n_rees, n_estagios, n_cenarios, n_patamares
         )
         n_casas = 1 if unidade_sintese == "'%'" else 0
-        df["valor"] = np.round(df["valor"], n_casas)
-        df["limiteInferior"] = np.round(limites_inferiores_cenarios, n_casas)
-        df["limiteSuperior"] = np.round(limites_superiores_cenarios, n_casas)
+        df[VALUE_COL] = np.round(df[VALUE_COL], n_casas)
+        df[LOWER_BOUND_COL] = np.round(limites_inferiores_cenarios, n_casas)
+        df[UPPER_BOUND_COL] = np.round(limites_superiores_cenarios, n_casas)
         return df
 
     @classmethod
@@ -1093,11 +1116,11 @@ class OperationVariableBounds:
         para a variável de Energia Armazenada Absoluta (EARM) para cada SBM.
         """
         # Obtem SBMs do DF na ordem em que aparecem
-        datas_inicio = df["dataInicio"].unique().tolist()
+        datas_inicio = df[START_DATE_COL].unique().tolist()
         sbms_df = df["submercado"].unique().tolist()
         n_sbms = len(sbms_df)
         n_estagios = len(datas_inicio)
-        n_cenarios = len(df["cenario"].unique())
+        n_cenarios = len(df[SCENARIO_COL].unique())
         n_patamares = len(df["patamar"].unique())
 
         cols_agrupar = ["nome_submercado", "data"]
@@ -1137,9 +1160,9 @@ class OperationVariableBounds:
             limites_superiores, n_sbms, n_estagios, n_cenarios, n_patamares
         )
         n_casas = 1 if unidade_sintese == "'%'" else 0
-        df["valor"] = np.round(df["valor"], n_casas)
-        df["limiteInferior"] = np.round(limites_inferiores_cenarios, n_casas)
-        df["limiteSuperior"] = np.round(limites_superiores_cenarios, n_casas)
+        df[VALUE_COL] = np.round(df[VALUE_COL], n_casas)
+        df[LOWER_BOUND_COL] = np.round(limites_inferiores_cenarios, n_casas)
+        df[UPPER_BOUND_COL] = np.round(limites_superiores_cenarios, n_casas)
         return df
 
     @classmethod
@@ -1152,9 +1175,9 @@ class OperationVariableBounds:
         Armazeada Percetual (EARP) para o SIN.
         """
         # Obtem REEs do DF na ordem em que aparecem
-        datas_inicio = df["dataInicio"].unique().tolist()
+        datas_inicio = df[START_DATE_COL].unique().tolist()
         n_estagios = len(datas_inicio)
-        n_cenarios = len(df["cenario"].unique())
+        n_cenarios = len(df[SCENARIO_COL].unique())
         n_patamares = len(df["patamar"].unique())
 
         cols_agrupar = ["data"]
@@ -1185,9 +1208,9 @@ class OperationVariableBounds:
             limites_superiores, 1, n_estagios, n_cenarios, n_patamares
         )
         n_casas = 1 if unidade_sintese == "'%'" else 0
-        df["valor"] = np.round(df["valor"], n_casas)
-        df["limiteInferior"] = np.round(limites_inferiores_cenarios, n_casas)
-        df["limiteSuperior"] = np.round(limites_superiores_cenarios, n_casas)
+        df[VALUE_COL] = np.round(df[VALUE_COL], n_casas)
+        df[LOWER_BOUND_COL] = np.round(limites_inferiores_cenarios, n_casas)
+        df[UPPER_BOUND_COL] = np.round(limites_superiores_cenarios, n_casas)
         return df
 
     @classmethod
@@ -1234,8 +1257,8 @@ class OperationVariableBounds:
         Retorna as durações dos patamares em cada estágio, na ordem em que aparecem
         no DataFrame da síntese em processamento.
         """
-        ex = df["cenario"].unique().tolist()[0]
-        return df.loc[df["cenario"] == ex, "duracaoPatamar"].to_numpy()
+        ex = df[SCENARIO_COL].unique().tolist()[0]
+        return df.loc[df[SCENARIO_COL] == ex, BLOCK_DURATION_COL].to_numpy()
 
     @classmethod
     def _dado_cadastral_hidr_uhes(
@@ -1543,12 +1566,32 @@ class OperationVariableBounds:
         tem como requisito que as variáveis fornecidas sejam em unidades
         cuja agregação seja possível apenas pela soma.
         """
-        cols_grp_validas = ["usina", "ree", "submercado", "sin"]
+        cols_grp_validas = [
+            HYDRO_CODE_COL,
+            HYDRO_NAME_COL,
+            EER_CODE_COL,
+            EER_NAME_COL,
+            SUBMARKET_CODE_COL,
+            SUBMARKET_NAME_COL,
+            "sin",
+        ]
 
         col_grp_map: Dict[str, List[str]] = {
-            "usina": ["usina", "ree", "submercado"],
-            "ree": ["ree", "submercado"],
-            "submercado": ["submercado"],
+            HYDRO_CODE_COL: [
+                HYDRO_CODE_COL,
+                HYDRO_NAME_COL,
+                EER_CODE_COL,
+                EER_NAME_COL,
+                SUBMARKET_CODE_COL,
+                SUBMARKET_NAME_COL,
+            ],
+            EER_CODE_COL: [
+                EER_CODE_COL,
+                EER_NAME_COL,
+                SUBMARKET_CODE_COL,
+                SUBMARKET_NAME_COL,
+            ],
+            SUBMARKET_CODE_COL: [SUBMARKET_CODE_COL, SUBMARKET_NAME_COL],
             "sin": [],
         }
 
@@ -1565,12 +1608,11 @@ class OperationVariableBounds:
         ]
 
         df_group = (
-            df.groupby(cols_group)[
-                ["valor", "limiteInferior", "limiteSuperior"]
-            ]
+            df.groupby(cols_group)[["valor", LOWER_BOUND_COL, UPPER_BOUND_COL]]
             .sum(engine="numba")
             .reset_index()
         )
+
         return df_group
 
     @classmethod
@@ -1587,11 +1629,11 @@ class OperationVariableBounds:
         """
         df_group = cls._agrega_variaveis_uhe(df, col_grp)
         # Converte volume para vazão
-        for c in ["valor", "limiteInferior", "limiteSuperior"]:
+        for c in ["valor", LOWER_BOUND_COL, UPPER_BOUND_COL]:
             df_group[c] = (
                 df_group[c]
                 * (cls.STAGE_DURATION_HOURS * cls.HM3_M3S_FACTOR)
-                / df_group["duracaoPatamar"]
+                / df_group[BLOCK_DURATION_COL]
             )
 
         return df_group
@@ -1613,14 +1655,14 @@ class OperationVariableBounds:
         # Obter dados cadastrais para cada UHE, desconsiderando modif.dat
 
         # Converte volume de absoluto para percentual
-        df_group["valor"] -= df_group["limiteInferior"]
+        df_group["valor"] -= df_group[LOWER_BOUND_COL]
         df_group["valor_util"] = (
-            df_group["limiteSuperior"] - df_group["limiteInferior"]
+            df_group[UPPER_BOUND_COL] - df_group[LOWER_BOUND_COL]
         )
         df_group["valor"] = 100 * df_group["valor"] / df_group["valor_util"]
         df_group["valor"] = df_group["valor"].fillna(0.0)
-        df_group["limiteInferior"] = 0.0
-        df_group["limiteSuperior"] = 100.0
+        df_group[LOWER_BOUND_COL] = 0.0
+        df_group[UPPER_BOUND_COL] = 100.0
 
         return df_group
 
@@ -1636,10 +1678,10 @@ class OperationVariableBounds:
         para as variáveis de Volume Armazenado Absoluto (VARM) e Volume
         Armazenado Percentual (VARP) para cada UHE.
         """
-        datas_inicio = df["dataInicio"].unique().tolist()
+        datas_inicio = df[START_DATE_COL].unique().tolist()
         n_usinas = len(df["usina"].unique())
         n_estagios = len(datas_inicio)
-        n_cenarios = len(df["cenario"].unique())
+        n_cenarios = len(df[SCENARIO_COL].unique())
         n_patamares = len(df["patamar"].unique())
         # Lê hidr.dat
         arq_hidr = cls._get_hidr(uow)
@@ -1648,7 +1690,7 @@ class OperationVariableBounds:
         arq_modif = cls._get_modif(uow)
 
         possui_limites = (
-            "limiteInferior" in df.columns and "limiteSuperior" in df.columns
+            LOWER_BOUND_COL in df.columns and UPPER_BOUND_COL in df.columns
         )
 
         # Obtem usinas do df na ordem em que aparecem e durações dos patamares
@@ -1780,13 +1822,13 @@ class OperationVariableBounds:
             limites_superiores, n_usinas, n_estagios, n_cenarios, n_patamares
         )
         # Adiciona ao df e retorna
-        df["limiteInferior"] = np.round(limites_inferiores_cenarios, 2)
-        df["limiteSuperior"] = np.round(limites_superiores_cenarios, 2)
-        df["valor"] = np.round(df["valor"], 2)
+        df[LOWER_BOUND_COL] = np.round(limites_inferiores_cenarios, 2)
+        df[UPPER_BOUND_COL] = np.round(limites_superiores_cenarios, 2)
+        df[VALUE_COL] = np.round(df[VALUE_COL], 2)
         # Específico do VARM: soma o limite inferior cadastral, pois o representado
         # nos arquivos de saída é em volume útil (hm3).
         if unidade_sintese == "'h'" and not possui_limites:
-            df["valor"] += limites_inferiores_cenarios
+            df[VALUE_COL] += limites_inferiores_cenarios
 
         return df
 
@@ -1799,10 +1841,10 @@ class OperationVariableBounds:
         para as variáveis de Volume Defluente (VDEF) e Vazão Defluente (QDEF)
         para cada UHE.
         """
-        datas_inicio = df["dataInicio"].unique().tolist()
+        datas_inicio = df[START_DATE_COL].unique().tolist()
         n_usinas = len(df["usina"].unique())
         n_estagios = len(datas_inicio)
-        n_cenarios = len(df["cenario"].unique())
+        n_cenarios = len(df[SCENARIO_COL].unique())
         n_patamares = len(df["patamar"].unique())
         # Lê hidr.dat
         arq_hidr = cls._get_hidr(uow)
@@ -1904,9 +1946,9 @@ class OperationVariableBounds:
             limites_superiores, n_usinas, n_estagios, n_cenarios, n_patamares
         )
         # Adiciona ao df e retorna
-        df["valor"] = np.round(df["valor"], 2)
-        df["limiteInferior"] = np.round(limites_inferiores_cenarios, 2)
-        df["limiteSuperior"] = np.round(limites_superiores_cenarios, 2)
+        df[VALUE_COL] = np.round(df[VALUE_COL], 2)
+        df[LOWER_BOUND_COL] = np.round(limites_inferiores_cenarios, 2)
+        df[UPPER_BOUND_COL] = np.round(limites_superiores_cenarios, 2)
         return df
 
     @classmethod
@@ -1922,10 +1964,10 @@ class OperationVariableBounds:
         entradas de máquinas no meio do horizonte.
 
         """
-        datas_inicio = df["dataInicio"].unique().tolist()
+        datas_inicio = df[START_DATE_COL].unique().tolist()
         n_usinas = len(df["usina"].unique())
         n_estagios = len(datas_inicio)
-        n_cenarios = len(df["cenario"].unique())
+        n_cenarios = len(df[SCENARIO_COL].unique())
         n_patamares = len(df["patamar"].unique())
         # Lê hidr.dat
         arq_hidr = cls._get_hidr(uow)
@@ -2060,9 +2102,9 @@ class OperationVariableBounds:
             limites_inferiores, n_usinas, n_estagios, n_cenarios, n_patamares
         )
         # Adiciona ao df e retorna
-        df["valor"] = np.round(df["valor"], 2)
-        df["limiteInferior"] = np.round(limites_inferiores_cenarios, 2)
-        df["limiteSuperior"] = np.round(limites_superiores_cenarios, 2)
+        df[VALUE_COL] = np.round(df[VALUE_COL], 2)
+        df[LOWER_BOUND_COL] = np.round(limites_inferiores_cenarios, 2)
+        df[UPPER_BOUND_COL] = np.round(limites_superiores_cenarios, 2)
         return df
 
     @classmethod
@@ -2074,9 +2116,9 @@ class OperationVariableBounds:
         para as variáveis de Volume Vertido (VVER) e Vazão Vertida (QVER)
         para cada UHE.
         """
-        df["valor"] = np.round(df["valor"], 2)
-        df["limiteInferior"] = 0.0
-        df["limiteSuperior"] = float("inf")
+        df[VALUE_COL] = np.round(df[VALUE_COL], 2)
+        df[LOWER_BOUND_COL] = 0.0
+        df[UPPER_BOUND_COL] = float("inf")
         return df
 
     @classmethod
@@ -2088,9 +2130,9 @@ class OperationVariableBounds:
         para as variáveis de Volume Afluente (VAFL) e Vazão Afluente (QAFL)
         para cada UHE.
         """
-        df["valor"] = np.round(df["valor"], 2)
-        df["limiteInferior"] = 0.0
-        df["limiteSuperior"] = float("inf")
+        df[VALUE_COL] = np.round(df[VALUE_COL], 2)
+        df[LOWER_BOUND_COL] = 0.0
+        df[UPPER_BOUND_COL] = float("inf")
         return df
 
     @classmethod
@@ -2102,9 +2144,9 @@ class OperationVariableBounds:
         para as variáveis de Volume Incremental (VINC) e Vazão Incremental (QINC)
         para cada UHE.
         """
-        df["valor"] = np.round(df["valor"], 2)
-        df["limiteInferior"] = -float("inf")
-        df["limiteSuperior"] = float("inf")
+        df[VALUE_COL] = np.round(df[VALUE_COL], 2)
+        df[LOWER_BOUND_COL] = -float("inf")
+        df[UPPER_BOUND_COL] = float("inf")
         return df
 
     @classmethod
@@ -2116,9 +2158,9 @@ class OperationVariableBounds:
         para as variáveis de Volume Retirado (VRET) e Vazão Retirada (QRET)
         para cada UHE.
         """
-        df["valor"] = np.round(df["valor"], 2)
-        df["limiteInferior"] = -float("inf")
-        df["limiteSuperior"] = float("inf")
+        df[VALUE_COL] = np.round(df[VALUE_COL], 2)
+        df[LOWER_BOUND_COL] = -float("inf")
+        df[UPPER_BOUND_COL] = float("inf")
         return df
 
     @classmethod
@@ -2131,8 +2173,8 @@ class OperationVariableBounds:
         para cada UHE.
         """
         # TODO - Procurar limite superior no modif.dat
-        df["limiteInferior"] = 0.0
-        df["limiteSuperior"] = float("inf")
+        df[LOWER_BOUND_COL] = 0.0
+        df[UPPER_BOUND_COL] = float("inf")
         return df
 
     @classmethod
@@ -2144,8 +2186,8 @@ class OperationVariableBounds:
         para as variáveis de Volume Evaporado (VEVP) e Vazão Evaporada (QEVP)
         para cada UHE.
         """
-        df["limiteInferior"] = 0.0
-        df["limiteSuperior"] = float("inf")
+        df[LOWER_BOUND_COL] = 0.0
+        df[UPPER_BOUND_COL] = float("inf")
         return df
 
     @classmethod
@@ -2253,13 +2295,13 @@ class OperationVariableBounds:
         par de submercados e o sentido do intercâmbio, sendo um deles
         sempre <= 0.
         """
-        datas_inicio = df["dataInicio"].unique().tolist()
+        datas_inicio = df[START_DATE_COL].unique().tolist()
         n_estagios = len(datas_inicio)
-        n_cenarios = len(df["cenario"].unique())
+        n_cenarios = len(df[SCENARIO_COL].unique())
         n_patamares = len(df["patamar"].unique())
         # Filtra os pares de submercados de limites dentre os
         # que existem no df
-        df["par_sbm"] = df["submercadoDe"] + "-" + df["submercadoPara"]
+        df["par_sbm"] = df[EXCHANGE_SOURCE_COL] + "-" + df[EXCHANGE_TARGET_COL]
         df_limites_pat["par_sbm"] = (
             df_limites_pat["submercado_de"]
             + "-"
@@ -2281,8 +2323,8 @@ class OperationVariableBounds:
         pares_sbm_limites = df_limites_pat["par_sbm"].unique().tolist()
 
         # Inicializa limites com valores default
-        df["limiteInferior"] = -float("inf")
-        df["limiteSuperior"] = float("inf")
+        df[LOWER_BOUND_COL] = -float("inf")
+        df[UPPER_BOUND_COL] = float("inf")
         # Aplica os limites, considerando o par de submercados
         # e o sentido reverso como sinal negativo
         for p in pares_sbm_df:
@@ -2296,7 +2338,7 @@ class OperationVariableBounds:
                     n_cenarios,
                     n_patamares,
                 )
-                df.loc[df["par_sbm"] == p, "limiteInferior"] = lims
+                df.loc[df["par_sbm"] == p, LOWER_BOUND_COL] = lims
             if p in pares_sbm_limites:
                 lims = cls._expande_dados_para_cenarios(
                     df_limites_pat.loc[
@@ -2307,10 +2349,10 @@ class OperationVariableBounds:
                     n_cenarios,
                     n_patamares,
                 )
-                df.loc[df["par_sbm"] == p, "limiteSuperior"] = lims
+                df.loc[df["par_sbm"] == p, UPPER_BOUND_COL] = lims
 
-        df["limiteInferior"] = np.round(df["limiteInferior"], 1)
-        df["limiteSuperior"] = np.round(df["limiteSuperior"], 1)
+        df[LOWER_BOUND_COL] = np.round(df[LOWER_BOUND_COL], 1)
+        df[UPPER_BOUND_COL] = np.round(df[UPPER_BOUND_COL], 1)
 
         return df.drop(columns=["par_sbm"])
 
@@ -2431,7 +2473,7 @@ class OperationVariableBounds:
         (n_patamares * n_cenarios) vezes como se existisse apenas 1
         patamar e a conversão para MWmes é feita posterioremente.
         """
-        n_cenarios = len(df["cenario"].unique())
+        n_cenarios = len(df[SCENARIO_COL].unique())
         n_patamares = len(df["patamar"].unique())
         lim_inf = np.repeat(
             df_gtmin["valor_MWmed"].to_numpy(), n_cenarios * n_patamares
@@ -2439,8 +2481,8 @@ class OperationVariableBounds:
         lim_sup = np.repeat(
             df_gtmax["valor_MWmed"].to_numpy(), n_cenarios * n_patamares
         )
-        df["limiteInferior"] = lim_inf
-        df["limiteSuperior"] = lim_sup
+        df[LOWER_BOUND_COL] = lim_inf
+        df[UPPER_BOUND_COL] = lim_sup
         return df
 
     @classmethod
@@ -2463,9 +2505,9 @@ class OperationVariableBounds:
         (n_patamares * n_cenarios) vezes como se existisse apenas 1
         patamar e a conversão para MWmes é feita posterioremente.
         """
-        datas_inicio = df["dataInicio"].unique().tolist()
+        datas_inicio = df[START_DATE_COL].unique().tolist()
         n_estagios = len(datas_inicio)
-        n_cenarios = len(df["cenario"].unique())
+        n_cenarios = len(df[SCENARIO_COL].unique())
         n_patamares = len(df["patamar"].unique())
         if col_grp != "sin":
             for u in ordem_sintese:
@@ -2478,7 +2520,7 @@ class OperationVariableBounds:
                     n_cenarios * n_patamares,
                     1,
                 )
-                df.loc[df[col_grp] == u, "limiteInferior"] = lim_inf
+                df.loc[df[col_grp] == u, LOWER_BOUND_COL] = lim_inf
                 lim_sup = cls._expande_dados_para_cenarios(
                     df_gtmax.loc[
                         df_gtmax[col_grp] == u, "valor_MWmed"
@@ -2488,7 +2530,7 @@ class OperationVariableBounds:
                     n_cenarios * n_patamares,
                     1,
                 )
-                df.loc[df[col_grp] == u, "limiteSuperior"] = lim_sup
+                df.loc[df[col_grp] == u, UPPER_BOUND_COL] = lim_sup
         else:
             lim_inf = cls._expande_dados_para_cenarios(
                 df_gtmin["valor_MWmed"].to_numpy(),
@@ -2497,7 +2539,7 @@ class OperationVariableBounds:
                 n_cenarios * n_patamares,
                 1,
             )
-            df["limiteInferior"] = lim_inf
+            df[LOWER_BOUND_COL] = lim_inf
             lim_sup = cls._expande_dados_para_cenarios(
                 df_gtmax["valor_MWmed"].to_numpy(),
                 1,
@@ -2505,7 +2547,7 @@ class OperationVariableBounds:
                 n_cenarios * n_patamares,
                 1,
             )
-            df["limiteSuperior"] = lim_sup
+            df[UPPER_BOUND_COL] = lim_sup
         return df
 
     @classmethod
@@ -2540,7 +2582,7 @@ class OperationVariableBounds:
             df_gtmax, mapa_ute_sbm
         )
         # Agrupa os limites, se necessário
-        datas_sintese = df["dataInicio"].unique().tolist()
+        datas_sintese = df[START_DATE_COL].unique().tolist()
         ordem_sintese = (
             df[col_grp].unique().tolist() if col_grp != "sin" else None
         )
@@ -2555,11 +2597,15 @@ class OperationVariableBounds:
             df, df_gtmin, df_gtmax, col_grp, ordem_sintese
         )
         # Converte os limites para MWmes
-        df["limiteInferior"] *= df["duracaoPatamar"] / cls.STAGE_DURATION_HOURS
-        df["limiteSuperior"] *= df["duracaoPatamar"] / cls.STAGE_DURATION_HOURS
+        df[LOWER_BOUND_COL] *= (
+            df[BLOCK_DURATION_COL] / cls.STAGE_DURATION_HOURS
+        )
+        df[UPPER_BOUND_COL] *= (
+            df[BLOCK_DURATION_COL] / cls.STAGE_DURATION_HOURS
+        )
 
-        df["limiteInferior"] = np.round(df["limiteInferior"], 1)
-        df["limiteSuperior"] = np.round(df["limiteSuperior"], 1)
+        df[LOWER_BOUND_COL] = np.round(df[LOWER_BOUND_COL], 1)
+        df[UPPER_BOUND_COL] = np.round(df[UPPER_BOUND_COL], 1)
 
         return df
 
@@ -2578,9 +2624,16 @@ class OperationVariableBounds:
         return s in cls.MAPPINGS
 
     @classmethod
+    def _apply_unbounded(cls, df: pd.DataFrame) -> pd.DataFrame:
+        df[LOWER_BOUND_COL] = -float("inf")
+        df[UPPER_BOUND_COL] = float("inf")
+        return df
+
+    @classmethod
     def resolve_bounds(
         cls, s: OperationSynthesis, df: pd.DataFrame, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         if cls.is_bounded(s):
             return cls.MAPPINGS[s](df, uow)
-        return df
+        else:
+            return cls._apply_unbounded(df)

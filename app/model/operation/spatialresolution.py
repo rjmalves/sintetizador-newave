@@ -1,10 +1,14 @@
 from enum import Enum
-from typing import Dict, List
+from typing import Dict, List, Optional
 from app.internal.constants import (
+    HYDRO_CODE_COL,
     HYDRO_NAME_COL,
+    THERMAL_CODE_COL,
     THERMAL_NAME_COL,
+    EER_CODE_COL,
     EER_NAME_COL,
     EEP_COL,
+    SUBMARKET_CODE_COL,
     SUBMARKET_NAME_COL,
     EXCHANGE_SOURCE_COL,
     EXCHANGE_TARGET_COL,
@@ -13,7 +17,8 @@ from app.internal.constants import (
     BLOCK_DURATION_COL,
     VALUE_COL,
     OPERATION_SYNTHESIS_COMMON_COLUMNS as COLUMNS,
-    STATS_OR_SCENARIO_COL,
+    LOWER_BOUND_COL,
+    UPPER_BOUND_COL,
 )
 
 
@@ -53,22 +58,33 @@ class SpatialResolution(Enum):
     def entity_df_columns(self) -> List[str]:
         col_maps: Dict[SpatialResolution, List[str]] = {
             SpatialResolution.SISTEMA_INTERLIGADO: [],
-            SpatialResolution.SUBMERCADO: [SUBMARKET_NAME_COL],
+            SpatialResolution.SUBMERCADO: [
+                SUBMARKET_CODE_COL,
+                SUBMARKET_NAME_COL,
+            ],
             SpatialResolution.RESERVATORIO_EQUIVALENTE: [
+                EER_CODE_COL,
                 EER_NAME_COL,
+                SUBMARKET_CODE_COL,
                 SUBMARKET_NAME_COL,
             ],
             SpatialResolution.PARQUE_EOLICO_EQUIVALENTE: [
                 EEP_COL,
+                SUBMARKET_CODE_COL,
                 SUBMARKET_NAME_COL,
             ],
             SpatialResolution.USINA_HIDROELETRICA: [
+                HYDRO_CODE_COL,
                 HYDRO_NAME_COL,
+                EER_CODE_COL,
                 EER_NAME_COL,
+                SUBMARKET_CODE_COL,
                 SUBMARKET_NAME_COL,
             ],
             SpatialResolution.USINA_TERMELETRICA: [
+                THERMAL_CODE_COL,
                 THERMAL_NAME_COL,
+                SUBMARKET_CODE_COL,
                 SUBMARKET_NAME_COL,
             ],
             SpatialResolution.PAR_SUBMERCADOS: [
@@ -79,31 +95,25 @@ class SpatialResolution(Enum):
         return col_maps.get(self, [])
 
     @property
-    def main_entity_synthesis_df_column(self) -> List[str]:
+    def main_entity_synthesis_df_column(self) -> Optional[str]:
         col_maps: Dict[SpatialResolution, List[str]] = {
-            SpatialResolution.SISTEMA_INTERLIGADO: [],
-            SpatialResolution.SUBMERCADO: [SUBMARKET_NAME_COL],
-            SpatialResolution.RESERVATORIO_EQUIVALENTE: [
-                EER_NAME_COL,
-            ],
-            SpatialResolution.PARQUE_EOLICO_EQUIVALENTE: [
-                EEP_COL,
-            ],
-            SpatialResolution.USINA_HIDROELETRICA: [
-                HYDRO_NAME_COL,
-            ],
-            SpatialResolution.USINA_TERMELETRICA: [
-                THERMAL_NAME_COL,
-            ],
-            SpatialResolution.PAR_SUBMERCADOS: [
-                EXCHANGE_SOURCE_COL,
-            ],
+            SpatialResolution.SISTEMA_INTERLIGADO: None,
+            SpatialResolution.SUBMERCADO: SUBMARKET_CODE_COL,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE: EER_CODE_COL,
+            SpatialResolution.PARQUE_EOLICO_EQUIVALENTE: EEP_COL,
+            SpatialResolution.USINA_HIDROELETRICA: HYDRO_CODE_COL,
+            SpatialResolution.USINA_TERMELETRICA: THERMAL_CODE_COL,
+            SpatialResolution.PAR_SUBMERCADOS: EXCHANGE_SOURCE_COL,
         }
         return col_maps.get(self, [])
 
     @property
     def all_synthesis_df_columns(self) -> List[str]:
-        return self.entity_df_columns + COLUMNS
+        return (
+            self.entity_df_columns
+            + COLUMNS
+            + [LOWER_BOUND_COL, UPPER_BOUND_COL]
+        )
 
     @property
     def entity_synthesis_df_columns(self) -> List[str]:
@@ -114,7 +124,8 @@ class SpatialResolution(Enum):
 
     @property
     def sorting_synthesis_df_columns(self) -> List[str]:
-        all_columns = self.main_entity_synthesis_df_column + COLUMNS
+        main_column = self.main_entity_synthesis_df_column
+        all_columns = [main_column] + COLUMNS if main_column else COLUMNS
         return [
             c
             for c in all_columns

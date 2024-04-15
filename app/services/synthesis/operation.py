@@ -34,9 +34,13 @@ from app.internal.constants import (
     BLOCK_DURATION_COL,
     VALUE_COL,
     OPERATION_SYNTHESIS_COMMON_COLUMNS,
+    EER_CODE_COL,
     EER_NAME_COL,
+    SUBMARKET_CODE_COL,
     SUBMARKET_NAME_COL,
+    HYDRO_CODE_COL,
     HYDRO_NAME_COL,
+    THERMAL_CODE_COL,
     THERMAL_NAME_COL,
     VARIABLE_COL,
     GROUPING_TMP_COL,
@@ -246,8 +250,13 @@ class OperationSynthetizer:
         df = cls._resolve_temporal_resolution(df, uow)
         for col, val in entity_column_values.items():
             df[col] = val
-            df = df.astype({col: STRING_DF_TYPE})
-        df = df[spatial_res.all_synthesis_df_columns]
+            if col in [
+                HYDRO_NAME_COL,
+                THERMAL_NAME_COL,
+                EER_NAME_COL,
+                SUBMARKET_NAME_COL,
+            ]:
+                df = df.astype({col: STRING_DF_TYPE})
         df = cls._resolve_starting_stage(df, uow)
         if s.variable in internal_stubs:
             df = internal_stubs[s.variable](df, uow)
@@ -293,7 +302,7 @@ class OperationSynthetizer:
 
             entity_columns_order = cls._get_unique_column_values_in_order(
                 df,
-                spatial_resolution.entity_synthesis_df_columns,
+                spatial_resolution.sorting_synthesis_df_columns,
             )
             other_columns_order = cls._get_unique_column_values_in_order(
                 valid_dfs[0],
@@ -473,9 +482,8 @@ class OperationSynthetizer:
             df,
             synthesis,
             {
-                synthesis.spatial_resolution.entity_synthesis_df_columns[
-                    0
-                ]: sbm_name
+                SUBMARKET_CODE_COL: sbm_index,
+                SUBMARKET_NAME_COL: sbm_name,
             },
             uow,
         )
@@ -638,9 +646,11 @@ class OperationSynthetizer:
             df,
             synthesis,
             {
-                synthesis.spatial_resolution.entity_synthesis_df_columns[
-                    0
-                ]: ree_name,
+                EER_CODE_COL: ree_index,
+                EER_NAME_COL: ree_name,
+                SUBMARKET_CODE_COL: aux_df.loc[
+                    aux_df[EER_NAME_COL] == ree_name, SUBMARKET_CODE_COL
+                ].iloc[0],
                 SUBMARKET_NAME_COL: aux_df.loc[
                     aux_df[EER_NAME_COL] == ree_name, SUBMARKET_NAME_COL
                 ].iloc[0],
@@ -787,10 +797,11 @@ class OperationSynthetizer:
             df,
             synthesis,
             {
-                synthesis.spatial_resolution.entity_synthesis_df_columns[
-                    0
-                ]: uhe_name,
+                HYDRO_CODE_COL: uhe_index,
+                HYDRO_NAME_COL: uhe_name,
+                EER_CODE_COL: aux_df.at[uhe_name, EER_CODE_COL],
                 EER_NAME_COL: aux_df.at[uhe_name, EER_NAME_COL],
+                SUBMARKET_CODE_COL: aux_df.at[uhe_name, SUBMARKET_CODE_COL],
                 SUBMARKET_NAME_COL: aux_df.at[uhe_name, SUBMARKET_NAME_COL],
             },
             uow,
@@ -1222,7 +1233,7 @@ class OperationSynthetizer:
             uow: AbstractUnitOfWork,
             entities: dict,
         ) -> np.ndarray:
-            hydros = entities[HYDRO_NAME_COL]
+            hydros = entities[HYDRO_CODE_COL]
             initial_storage_data = Deck.volume_armazenado_inicial(uow)
             value_column = (
                 "valor_hm3"
@@ -1230,23 +1241,23 @@ class OperationSynthetizer:
                 else "valor_percentual"
             )
             if synthesis.variable == varmi:
-                hidr = Deck.hidr(uow).set_index("nome_usina")
+                hidr = Deck.hidr(uow)
                 initial_storage_data[value_column] += hidr.loc[
-                    initial_storage_data["nome_usina"].to_numpy(),
+                    initial_storage_data[HYDRO_CODE_COL].to_numpy(),
                     "volume_minimo",
                 ].to_numpy()
             initial_storage_data = initial_storage_data.loc[
-                initial_storage_data["nome_usina"].isin(hydros)
+                initial_storage_data[HYDRO_CODE_COL].isin(hydros)
             ]
             initial_storage_values = (
-                initial_storage_data.set_index("nome_usina")
+                initial_storage_data.set_index(HYDRO_CODE_COL)
                 .loc[hydros, value_column]
                 .to_numpy()
             )
             return initial_storage_values
 
         def _get_initial_stage_indices(entities: dict) -> np.ndarray:
-            hydros = entities[HYDRO_NAME_COL]
+            hydros = entities[HYDRO_CODE_COL]
             num_hydros = len(hydros)
             scenarios = [
                 s for s in entities[SCENARIO_COL] if str(s).isnumeric()
@@ -1320,11 +1331,11 @@ class OperationSynthetizer:
         hydro_df = Deck.uhes(uow)
         # Monta a lista de arestas e constroi o grafo
         # direcionado das usinas (JUSANTE -> MONTANTE)
-        uhes = entities[HYDRO_NAME_COL]
+        uhes = entities[HYDRO_CODE_COL]
         np_edges = list(
             hydro_df.loc[
-                hydro_df["nome_usina"].isin(uhes),
-                ["codigo_usina_jusante", "codigo_usina"],
+                hydro_df[HYDRO_CODE_COL].isin(uhes),
+                ["codigo_usina_jusante", HYDRO_CODE_COL],
             ].to_numpy()
         )
         edges = [tuple(e) for e in np_edges]
@@ -1333,23 +1344,24 @@ class OperationSynthetizer:
         # como nó de origem o 0 (MAR).
         for hydro_code in hydro_nodes_bfs:
             hydro_name = hydro_df.loc[
-                hydro_df["codigo_usina"] == hydro_code, "nome_usina"
+                hydro_df[HYDRO_CODE_COL] == hydro_code, HYDRO_CODE_COL
             ].iloc[0]
             cls._log(f"Calculando prodt. acumulada para {hydro_name}...")
             downstream_hydro_code = hydro_df.loc[
-                hydro_df["codigo_usina"] == hydro_code,
+                hydro_df[HYDRO_CODE_COL] == hydro_code,
                 "codigo_usina_jusante",
             ].iloc[0]
             if downstream_hydro_code == 0:
                 continue
             downstream_hydro_name = hydro_df.loc[
-                hydro_df["codigo_usina"] == downstream_hydro_code, "nome_usina"
+                hydro_df[HYDRO_CODE_COL] == downstream_hydro_code,
+                HYDRO_CODE_COL,
             ].iloc[0]
             hydro_productivity = df.loc[
-                df[HYDRO_NAME_COL] == hydro_name, PRODUCTIVITY_TMP_COL
+                df[HYDRO_CODE_COL] == hydro_name, PRODUCTIVITY_TMP_COL
             ]
             downstream_productivity = df.loc[
-                df[HYDRO_NAME_COL] == downstream_hydro_name,
+                df[HYDRO_CODE_COL] == downstream_hydro_name,
                 PRODUCTIVITY_TMP_COL,
             ].to_numpy()
             if (
@@ -1379,17 +1391,12 @@ class OperationSynthetizer:
             net_drop_df: pd.DataFrame, net_drop_entities: dict
         ) -> pd.DataFrame:
             hidr = Deck.hidr(uow)
-            hydro_names = net_drop_entities[HYDRO_NAME_COL]
+            hydro_codes = net_drop_entities[HYDRO_CODE_COL]
             num_entries_by_hydro = net_drop_df.loc[
-                net_drop_df[HYDRO_NAME_COL] == hydro_names[0]
+                net_drop_df[HYDRO_CODE_COL] == hydro_codes[0]
             ].shape[0]
-            hydro_hidr_data = hidr.loc[
-                hidr["nome_usina"].isin(hydro_names)
-            ].set_index("nome_usina")
             specific_productivity = np.repeat(
-                hydro_hidr_data.loc[
-                    hydro_names, "produtibilidade_especifica"
-                ].to_numpy(),
+                hidr.loc[hydro_codes, "produtibilidade_especifica"].to_numpy(),
                 num_entries_by_hydro,
             )
             specific_productivity *= HM3_M3S_MONTHLY_FACTOR
@@ -1402,18 +1409,18 @@ class OperationSynthetizer:
             net_drop_df: pd.DataFrame,
             stored_volume_entities: dict,
         ) -> pd.DataFrame:
-            stored_volume_hydro_names = stored_volume_entities[HYDRO_NAME_COL]
+            stored_volume_hydro_codes = stored_volume_entities[HYDRO_CODE_COL]
             stored_volume_hydro_blocks = stored_volume_entities[BLOCK_COL]
             net_drop_df = net_drop_df.loc[
-                net_drop_df[HYDRO_NAME_COL].isin(stored_volume_hydro_names)
+                net_drop_df[HYDRO_CODE_COL].isin(stored_volume_hydro_codes)
                 & net_drop_df[BLOCK_COL].isin(stored_volume_hydro_blocks)
             ].copy()
 
             net_drop_df = net_drop_df.sort_values(
-                [HYDRO_NAME_COL, STAGE_COL, BLOCK_COL]
+                [HYDRO_CODE_COL, STAGE_COL, BLOCK_COL]
             )
             stored_volume_df = stored_volume_df.sort_values(
-                [HYDRO_NAME_COL, STAGE_COL, BLOCK_COL]
+                [HYDRO_CODE_COL, STAGE_COL, BLOCK_COL]
             )
 
             stored_volume_df[VALUE_COL] = (
@@ -1509,11 +1516,7 @@ class OperationSynthetizer:
         return cls._post_resolve_entity(
             df,
             synthesis,
-            {
-                synthesis.spatial_resolution.entity_synthesis_df_columns[
-                    0
-                ]: sbm_name
-            },
+            {SUBMARKET_CODE_COL: sbm_index, SUBMARKET_NAME_COL: sbm_name},
             uow,
         )
 
@@ -1714,17 +1717,17 @@ class OperationSynthetizer:
                 columns={
                     "data": START_DATE_COL,
                     "serie": SCENARIO_COL,
-                    "classe": THERMAL_NAME_COL,
+                    "classe": THERMAL_CODE_COL,
                 }
             ).copy()
             df = df.sort_values(
-                [THERMAL_NAME_COL, START_DATE_COL, SCENARIO_COL, BLOCK_COL],
+                [THERMAL_CODE_COL, START_DATE_COL, SCENARIO_COL, BLOCK_COL],
             ).reset_index(drop=True)
             num_stages = df[START_DATE_COL].unique().shape[0]
             num_scenarios = Deck.numero_cenarios_simulacao_final(uow)
             blocks = df[BLOCK_COL].unique().tolist()
             num_blocks = len(blocks)
-            thermals = df[THERMAL_NAME_COL].unique().tolist()
+            thermals = df[THERMAL_CODE_COL].unique().tolist()
             num_thermals = len(thermals)
             start_dates = Deck.datas_inicio_estagios_internos_sim_final(uow)[
                 :num_stages
@@ -1752,9 +1755,7 @@ class OperationSynthetizer:
                 blocks,
                 start_dates,
             )
-            return df[
-                SpatialResolution.USINA_TERMELETRICA.all_synthesis_df_columns
-            ]
+            return df
 
         if df is None:
             return None
@@ -1806,6 +1807,7 @@ class OperationSynthetizer:
                 submercado=sbm_index,
             )
         if df is not None:
+            df[SUBMARKET_CODE_COL] = sbm_index
             df[SUBMARKET_NAME_COL] = sbm_name
         return cls._post_resolve_GTER_UTE_entity(df, uow)
 
@@ -1826,13 +1828,13 @@ class OperationSynthetizer:
                 s.spatial_resolution.sorting_synthesis_df_columns
             ).reset_index(drop=True)
             conft = Deck.utes(uow)
-            thermals_in_data = df[THERMAL_NAME_COL].unique().tolist()
+            thermals_in_data = df[THERMAL_CODE_COL].unique().tolist()
             thermals_names = [
                 conft.loc[conft["codigo_usina"] == c, "nome_usina"].iloc[0]
                 for c in thermals_in_data
             ]
             lines_by_thermal = df.loc[
-                df[THERMAL_NAME_COL] == thermals_in_data[0]
+                df[THERMAL_CODE_COL] == thermals_in_data[0]
             ].shape[0]
             df[THERMAL_NAME_COL] = np.repeat(thermals_names, lines_by_thermal)
             df = df.astype({THERMAL_NAME_COL: STRING_DF_TYPE})
@@ -2072,9 +2074,10 @@ class OperationSynthetizer:
         max_column = "earmax"
 
         initial_stored_energy_df = Deck.energia_armazenada_inicial(uow)
+        initial_stored_energy_df[EER_CODE_COL] = Deck.eer_code_order(uow)
         if s.spatial_resolution == SpatialResolution.RESERVATORIO_EQUIVALENTE:
             return initial_stored_energy_df.rename(
-                columns={"nome_ree": GROUPING_TMP_COL}
+                columns={EER_CODE_COL: GROUPING_TMP_COL}
             )
 
         initial_stored_energy_df[max_column] = (
@@ -2090,7 +2093,7 @@ class OperationSynthetizer:
                     lambda linha: eers_submarkets_map.loc[
                         eers_submarkets_map[EER_NAME_COL]
                         == linha["nome_ree"].strip(),
-                        SUBMARKET_NAME_COL,
+                        SUBMARKET_CODE_COL,
                     ].iloc[0],
                     axis=1,
                 )
@@ -2438,6 +2441,9 @@ class OperationSynthetizer:
                 scenarios_df = scenarios_df.drop(
                     columns=[STATS_OR_SCENARIO_COL]
                 )
+                scenarios_df = scenarios_df[
+                    s.spatial_resolution.all_synthesis_df_columns
+                ]
                 uow.export.synthetize_df(scenarios_df, filename)
 
     @classmethod
