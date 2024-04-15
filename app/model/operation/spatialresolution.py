@@ -78,6 +78,29 @@ class SpatialResolution(Enum):
         return col_maps.get(self, [])
 
     @property
+    def main_entity_synthesis_df_column(self) -> List[str]:
+        col_maps: Dict[SpatialResolution, List[str]] = {
+            SpatialResolution.SISTEMA_INTERLIGADO: [],
+            SpatialResolution.SUBMERCADO: [SUBMARKET_NAME_COL],
+            SpatialResolution.RESERVATORIO_EQUIVALENTE: [
+                EER_NAME_COL,
+            ],
+            SpatialResolution.PARQUE_EOLICO_EQUIVALENTE: [
+                EEP_COL,
+            ],
+            SpatialResolution.USINA_HIDROELETRICA: [
+                HYDRO_NAME_COL,
+            ],
+            SpatialResolution.USINA_TERMELETRICA: [
+                THERMAL_NAME_COL,
+            ],
+            SpatialResolution.PAR_SUBMERCADOS: [
+                EXCHANGE_SOURCE_COL,
+            ],
+        }
+        return col_maps.get(self, [])
+
+    @property
     def all_synthesis_df_columns(self) -> List[str]:
         return self.entity_df_columns + COLUMNS
 
@@ -90,7 +113,7 @@ class SpatialResolution(Enum):
 
     @property
     def sorting_synthesis_df_columns(self) -> List[str]:
-        all_columns = self.all_synthesis_df_columns
+        all_columns = self.main_entity_synthesis_df_column + COLUMNS
         return [
             c
             for c in all_columns
