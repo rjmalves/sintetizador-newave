@@ -2425,12 +2425,8 @@ class OperationSynthetizer:
             message_root="Tempo para preparacao para exportacao",
             logger=cls.logger,
         ):
-            stats_df = df.loc[df[STATS_OR_SCENARIO_COL]].drop(
-                columns=[STATS_OR_SCENARIO_COL]
-            )
-            scenarios_df = df.loc[~df[STATS_OR_SCENARIO_COL]].drop(
-                columns=[STATS_OR_SCENARIO_COL]
-            )
+            scenarios_df = df.loc[~df[STATS_OR_SCENARIO_COL]]
+            stats_df = df.loc[df[STATS_OR_SCENARIO_COL]]
             scenarios_df = scenarios_df.astype({SCENARIO_COL: int})
             stats_df = stats_df.reset_index(drop=True)
 
@@ -2439,7 +2435,9 @@ class OperationSynthetizer:
                     s.spatial_resolution.sorting_synthesis_df_columns
                 ).reset_index(drop=True)
                 stats_df = cls._calc_statistics(scenarios_df)
+            stats_df = stats_df.drop(columns=[STATS_OR_SCENARIO_COL])
             cls._add_synthesis_stats(s, stats_df)
+            scenarios_df = scenarios_df.drop(columns=[STATS_OR_SCENARIO_COL])
             cls.__store_in_cache_if_needed(s, scenarios_df)
         with time_and_log(
             message_root="Tempo para exportacao dos dados", logger=cls.logger
