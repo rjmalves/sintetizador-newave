@@ -30,3 +30,18 @@ def fast_group_df(
     if reset_index:
         grouped_df = grouped_df.reset_index()
     return grouped_df
+
+
+def quantile_scenario_labels(q: float) -> str:
+    """
+    Obtem um rótulo para um cenário baseado no quantil.
+    """
+    if q == 0:
+        label = "min"
+    elif q == 1:
+        label = "max"
+    elif q == 0.5:
+        label = "median"
+    else:
+        label = f"p{int(100 * q)}"
+    return label

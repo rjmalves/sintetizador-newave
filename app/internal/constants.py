@@ -37,6 +37,8 @@ MONTH_COL = "mes"
 DATE_COL = "data"
 CONFIG_COL = "configuracao"
 
+STATS_OR_SCENARIO_COL = "estatisticaOuCenario"
+
 SYNTHESIS_IDENTIFICATION_COLUMNS = [
     START_DATE_COL,
     END_DATE_COL,

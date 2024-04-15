@@ -10,7 +10,7 @@ from app.utils.graph import Graph
 from app.utils.log import Log
 from app.utils.timing import time_and_log
 from app.utils.regex import match_variables_with_wildcards
-from app.utils.operations import fast_group_df
+from app.utils.operations import fast_group_df, quantile_scenario_labels
 from app.model.settings import Settings
 from app.services.deck.bounds import OperationVariableBounds
 from app.services.deck.deck import Deck
@@ -48,6 +48,7 @@ from app.internal.constants import (
     OPERATION_SYNTHESIS_STATS_ROOT,
     OPERATION_SYNTHESIS_SUBDIR,
     QUANTILES_FOR_STATISTICS,
+    STATS_OR_SCENARIO_COL,
 )
 
 
@@ -257,6 +258,8 @@ class OperationSynthetizer:
         if s.variable in internal_stubs:
             df = internal_stubs[s.variable](df, uow)
         df_stats = cls._calc_statistics(df)
+        df[STATS_OR_SCENARIO_COL] = False
+        df_stats[STATS_OR_SCENARIO_COL] = True
         df = pd.concat([df, df_stats], ignore_index=True)
         df = df.astype({SCENARIO_COL: STRING_DF_TYPE})
         return df
@@ -1776,6 +1779,8 @@ class OperationSynthetizer:
         df = cls._resolve_temporal_resolution_GTER_UTE(df, uow)
         df = cls._resolve_starting_stage(df, uow)
         df_stats = cls._calc_statistics(df)
+        df[STATS_OR_SCENARIO_COL] = False
+        df_stats[STATS_OR_SCENARIO_COL] = True
         df = pd.concat([df, df_stats], ignore_index=True)
         df = df.astype({SCENARIO_COL: STRING_DF_TYPE})
         return df
@@ -2026,17 +2031,6 @@ class OperationSynthetizer:
             .reset_index()
         )
 
-        def quantile_map(q: float) -> str:
-            if q == 0:
-                label = "min"
-            elif q == 1:
-                label = "max"
-            elif q == 0.5:
-                label = "median"
-            else:
-                label = f"p{int(100 * q)}"
-            return label
-
         level_column = [c for c in quantile_df.columns if "level_" in c]
         if len(level_column) != 1:
             cls._log("Erro no cálculo dos quantis", ERROR)
@@ -2047,7 +2041,8 @@ class OperationSynthetizer:
         )
         num_entities = quantile_df.shape[0] // len(quantiles)
         quantile_labels = np.tile(
-            np.array([quantile_map(q) for q in quantiles]), num_entities
+            np.array([quantile_scenario_labels(q) for q in quantiles]),
+            num_entities,
         )
         quantile_df[SCENARIO_COL] = quantile_labels
         return quantile_df
@@ -2430,39 +2425,12 @@ class OperationSynthetizer:
             message_root="Tempo para preparacao para exportacao",
             logger=cls.logger,
         ):
-            # num_scenarios = Deck.numero_cenarios_simulacao_final(uow)
-            # scenarios = pd.Series(
-            #     [str(i) for i in np.arange(1, num_scenarios + 1)],
-            #     dtype=STRING_DF_TYPE,
-            # )
-            scenarios = [
-                "mean",
-                "std",
-                "min",
-                "p5",
-                "p10",
-                "p15",
-                "p20",
-                "p25",
-                "p30",
-                "p35",
-                "p40",
-                "p45",
-                "median",
-                "p55",
-                "p60",
-                "p65",
-                "p70",
-                "p75",
-                "p80",
-                "p85",
-                "p90",
-                "p95",
-                "max",
-            ]
-            df = df.astype({SCENARIO_COL: str})
-            stats_df = df.loc[df[SCENARIO_COL].isin(scenarios)]
-            scenarios_df = df.drop(index=stats_df.index).reset_index(drop=True)
+            stats_df = df.loc[df[STATS_OR_SCENARIO_COL]].drop(
+                columns=[STATS_OR_SCENARIO_COL]
+            )
+            scenarios_df = df.loc[~df[STATS_OR_SCENARIO_COL]].drop(
+                columns=[STATS_OR_SCENARIO_COL]
+            )
             scenarios_df = scenarios_df.astype({SCENARIO_COL: int})
             stats_df = stats_df.reset_index(drop=True)
 
