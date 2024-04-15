@@ -2427,7 +2427,8 @@ class OperationSynthetizer:
         """
         filename = str(s)
         with time_and_log(
-            message_root="Tempo para exportacao dos dados", logger=cls.logger
+            message_root="Tempo para preparacao para exportacao",
+            logger=cls.logger,
         ):
             num_scenarios = Deck.numero_cenarios_simulacao_final(uow)
             scenarios = pd.Series(
@@ -2445,6 +2446,9 @@ class OperationSynthetizer:
                 stats_df = cls._calc_statistics(scenarios_df)
             cls._add_synthesis_stats(s, stats_df)
             cls.__store_in_cache_if_needed(s, scenarios_df)
+        with time_and_log(
+            message_root="Tempo para exportacao dos dados", logger=cls.logger
+        ):
             with uow:
                 uow.export.synthetize_df(scenarios_df, filename)
 
