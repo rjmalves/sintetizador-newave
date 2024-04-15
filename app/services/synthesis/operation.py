@@ -2429,7 +2429,6 @@ class OperationSynthetizer:
             stats_df = df.loc[df[STATS_OR_SCENARIO_COL]]
             scenarios_df = scenarios_df.astype({SCENARIO_COL: int})
             stats_df = stats_df.reset_index(drop=True)
-
             if stats_df.empty:
                 scenarios_df = scenarios_df.sort_values(
                     s.spatial_resolution.sorting_synthesis_df_columns
@@ -2437,12 +2436,14 @@ class OperationSynthetizer:
                 stats_df = cls._calc_statistics(scenarios_df)
             stats_df = stats_df.drop(columns=[STATS_OR_SCENARIO_COL])
             cls._add_synthesis_stats(s, stats_df)
-            scenarios_df = scenarios_df.drop(columns=[STATS_OR_SCENARIO_COL])
             cls.__store_in_cache_if_needed(s, scenarios_df)
         with time_and_log(
             message_root="Tempo para exportacao dos dados", logger=cls.logger
         ):
             with uow:
+                scenarios_df = scenarios_df.drop(
+                    columns=[STATS_OR_SCENARIO_COL]
+                )
                 uow.export.synthetize_df(scenarios_df, filename)
 
     @classmethod
