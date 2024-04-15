@@ -7,7 +7,7 @@ from app.model.operation.spatialresolution import SpatialResolution
 from app.model.operation.operationsynthesis import OperationSynthesis
 from app.services.unitofwork import AbstractUnitOfWork
 from app.services.deck.deck import Deck
-
+from app.internal.constants import STATS_OR_SCENARIO_COL
 from inewave.newave import (
     Dger,
     Hidr,
@@ -56,6 +56,7 @@ class OperationVariableBounds:
         "patamar",
         "duracaoPatamar",
         "cenario",
+        STATS_OR_SCENARIO_COL,
     ]
 
     STAGE_DURATION_HOURS = 730.0

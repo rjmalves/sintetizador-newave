@@ -9,6 +9,7 @@ from inewave.newave import (
     Patamar,
     Shist,
     Pmo,
+    Newavetim,
     Vazoes,
     Engnat,
     Energiaf,
@@ -194,6 +195,19 @@ class Deck:
             return pmo
 
     @classmethod
+    def _get_newavetim(cls, uow: AbstractUnitOfWork) -> Newavetim:
+        with uow:
+            newavetim = uow.files.get_newavetim()
+            if newavetim is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do newave.tim para"
+                        + " síntese da operação"
+                    )
+                raise RuntimeError()
+            return newavetim
+
+    @classmethod
     def _get_engnat(cls, uow: AbstractUnitOfWork) -> Engnat:
         with uow:
             engnat = uow.files.get_engnat()
@@ -303,6 +317,18 @@ class Deck:
             )
             cls.DECK_DATA_CACHING["pmo"] = pmo
         return pmo
+
+    @classmethod
+    def newavetim(cls, uow: AbstractUnitOfWork) -> Newavetim:
+        newavetim = cls.DECK_DATA_CACHING.get("newavetim")
+        if newavetim is None:
+            newavetim = cls._validate_data(
+                cls._get_newavetim(uow),
+                Pmo,
+                "newavetim",
+            )
+            cls.DECK_DATA_CACHING["newavetim"] = newavetim
+        return newavetim
 
     @classmethod
     def engnat(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
@@ -867,6 +893,20 @@ class Deck:
         return convergencia.copy()
 
     @classmethod
+    def custos(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        custos = cls.DECK_DATA_CACHING.get("custos")
+        if custos is None:
+            pmo = cls.pmo(uow)
+            custos = cls._validate_data(
+                pmo.custo_operacao_series_simuladas,
+                pd.DataFrame,
+                "custos",
+            )
+
+            cls.DECK_DATA_CACHING["custos"] = custos
+        return custos.copy()
+
+    @classmethod
     def num_iteracoes(cls, uow: AbstractUnitOfWork) -> int:
         num_iteracoes = cls.DECK_DATA_CACHING.get("num_iteracoes")
         if num_iteracoes is None:
@@ -879,6 +919,20 @@ class Deck:
 
             cls.DECK_DATA_CACHING["num_iteracoes"] = num_iteracoes
         return num_iteracoes
+
+    @classmethod
+    def tempos_etapas(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        tempos_etapas = cls.DECK_DATA_CACHING.get("tempos_etapas")
+        if tempos_etapas is None:
+            arq = cls.newavetim(uow)
+            tempos_etapas = cls._validate_data(
+                arq.tempos_etapas,
+                pd.DataFrame,
+                "tempos_etapas",
+            )
+
+            cls.DECK_DATA_CACHING["tempos_etapas"] = tempos_etapas
+        return tempos_etapas
 
     @classmethod
     def submercados(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:

@@ -52,12 +52,6 @@ from app.internal.constants import (
 )
 
 
-# TODO - implement async writing in separate process
-# TODO - clear cached synthesis data after writing
-# if the data is not going to be used again
-# TODO -
-
-
 class OperationSynthetizer:
 
     T = TypeVar("T")

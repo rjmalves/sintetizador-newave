@@ -13,6 +13,7 @@ from app.internal.constants import (
     BLOCK_DURATION_COL,
     VALUE_COL,
     OPERATION_SYNTHESIS_COMMON_COLUMNS as COLUMNS,
+    STATS_OR_SCENARIO_COL,
 )
 
 

@@ -1,15 +1,19 @@
 from typing import Callable, Dict, List, Optional, TypeVar, Type
 import pandas as pd  # type: ignore
-import pathlib
-import socket
 import logging
 from traceback import print_exc
 
 from app.services.unitofwork import AbstractUnitOfWork
-from app.utils.fs import set_directory
+from app.utils.timing import time_and_log
+from logging import INFO, ERROR
 from app.utils.regex import match_variables_with_wildcards
 from app.model.execution.variable import Variable
 from app.model.execution.executionsynthesis import ExecutionSynthesis
+from app.services.deck.deck import Deck
+
+from app.internal.constants import (
+    EXECUTION_SYNTHESIS_SUBDIR,
+)
 
 
 class ExecutionSynthetizer:
@@ -18,8 +22,6 @@ class ExecutionSynthetizer:
         "CONVERGENCIA",
         "TEMPO",
         "CUSTOS",
-        "RECURSOS_JOB",
-        "RECURSOS_CLUSTER",
     ]
 
     T = TypeVar("T")
@@ -27,12 +29,9 @@ class ExecutionSynthetizer:
     logger: Optional[logging.Logger] = None
 
     @classmethod
-    def _validate_data(cls, data, type: Type[T], msg: str = "dados") -> T:
-        if not isinstance(data, type):
-            if cls.logger is not None:
-                cls.logger.error(f"Erro na leitura de {msg}")
-            raise RuntimeError()
-        return data
+    def _log(cls, msg: str, level: int = INFO):
+        if cls.logger is not None:
+            cls.logger.log(level, msg)
 
     @classmethod
     def _default_args(cls) -> List[ExecutionSynthesis]:
@@ -58,6 +57,31 @@ class ExecutionSynthetizer:
         return valid_args
 
     @classmethod
+    def _preprocess_synthesis_variables(
+        cls, variables: List[str], uow: AbstractUnitOfWork
+    ) -> List[ExecutionSynthesis]:
+        """
+        Realiza o pré-processamento das variáveis de síntese fornecidas,
+        filtrando as válidas para o caso em questão.
+        """
+        try:
+            if len(variables) == 0:
+                synthesis_variables = ExecutionSynthetizer._default_args()
+            else:
+                all_variables = cls._match_wildcards(variables)
+                synthesis_variables = (
+                    ExecutionSynthetizer._process_variable_arguments(
+                        all_variables
+                    )
+                )
+        except Exception as e:
+            print_exc()
+            cls._log(str(e), ERROR)
+            cls._log("Erro no pré-processamento das variáveis", ERROR)
+            synthesis_variables = []
+        return synthesis_variables
+
+    @classmethod
     def _resolve(
         cls, synthesis: ExecutionSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
@@ -66,8 +90,6 @@ class ExecutionSynthetizer:
             Variable.CONVERGENCIA: cls._resolve_convergence,
             Variable.COMPOSICAO_CUSTOS: cls._resolve_cost,
             Variable.TEMPO_EXECUCAO: cls._resolve_runtime,
-            Variable.RECURSOS_JOB: cls._resolve_job_resources,
-            Variable.RECURSOS_CLUSTER: cls._resolve_cluster_resources,
         }
         return RULES[synthesis.variable](uow)
 
@@ -77,126 +99,36 @@ class ExecutionSynthetizer:
 
     @classmethod
     def _resolve_convergence(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        with uow:
-            arq_pmo = uow.files.get_pmo()
-            if arq_pmo is None:
-                if cls.logger is not None:
-                    cls.logger.error(
-                        "Erro no processamento do pmo.dat para"
-                        + " síntese da execução"
-                    )
-                raise RuntimeError()
-            df = arq_pmo.convergencia
-            if df is None:
-                return pd.DataFrame()
-            df_processed = pd.DataFrame(
-                data={
-                    "iter": df["iteracao"][2::3].to_numpy(),
-                    "zinf": df["zinf"][2::3].to_numpy(),
-                    "dZinf": df["delta_zinf"][2::3].to_numpy(),
-                    "zsup": df["zsup_iteracao"][2::3].to_numpy(),
-                    "tempo": df["tempo"][::3].dt.total_seconds().to_numpy(),
-                }
-            )
-            df_processed = df_processed.astype({"tempo": int})
-            return df_processed
+        df = Deck.convergencia(uow)
+        processed_d = pd.DataFrame(
+            data={
+                "iter": df["iteracao"][2::3].to_numpy(),
+                "zinf": df["zinf"][2::3].to_numpy(),
+                "dZinf": df["delta_zinf"][2::3].to_numpy(),
+                "zsup": df["zsup_iteracao"][2::3].to_numpy(),
+                "tempo": df["tempo"][::3].dt.total_seconds().to_numpy(),
+            }
+        )
+        processed_d = processed_d.astype({"tempo": int})
+        return processed_d
 
     @classmethod
     def _resolve_cost(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        with uow:
-            arq_pmo = uow.files.get_pmo()
-            if arq_pmo is None:
-                if cls.logger is not None:
-                    cls.logger.error(
-                        "Erro no processamento do pmo.dat para"
-                        + " síntese da execução"
-                    )
-                raise RuntimeError()
-            df = arq_pmo.custo_operacao_series_simuladas
-            if df is None:
-                return pd.DataFrame()
-            df_processed = df.rename(
-                columns={
-                    "parcela": "parcela",
-                    "valor_esperado": "mean",
-                    "desvio_padrao": "std",
-                }
-            )
-            return df_processed[["parcela", "mean", "std"]]
+        df = Deck.custos(uow)
+        processed_d = df.rename(
+            columns={
+                "parcela": "parcela",
+                "valor_esperado": "mean",
+                "desvio_padrao": "std",
+            }
+        )
+        return processed_d[["parcela", "mean", "std"]]
 
     @classmethod
     def _resolve_runtime(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        with uow:
-            tim = uow.files.get_newavetim()
-            if tim is None:
-                return pd.DataFrame()
-            df = tim.tempos_etapas
-            if df is None:
-                return pd.DataFrame()
-            df["tempo"] = df["tempo"].dt.total_seconds()
-            return df
-
-    @classmethod
-    def _resolve_job_resources(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        # REGRA DE NEGOCIO: arquivos do hpc-job-monitor
-        # monitor-job.parquet.gzip
-        with uow:
-            file = "monitor-job.parquet.gzip"
-            if pathlib.Path(file).exists():
-                try:
-                    df = pd.read_parquet(file)
-                except Exception as e:
-                    if cls.logger is not None:
-                        cls.logger.info(
-                            f"Erro ao acessar arquivo {file}: {str(e)}"
-                        )
-                    return None
-                return df
-            return None
-
-    @classmethod
-    def _resolve_cluster_resources(
-        cls, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
-        # Le o do job para saber tempo inicial e final
-        df_job = None
-        with uow:
-            file = "monitor-job.parquet.gzip"
-            if pathlib.Path(file).exists():
-                try:
-                    df_job = pd.read_parquet(file)
-                except Exception as e:
-                    if cls.logger is not None:
-                        cls.logger.info(
-                            f"Erro ao acessar arquivo {file}: {str(e)}"
-                        )
-                    return None
-        if df_job is None:
-            return None
-        jobTimeInstants = pd.to_datetime(
-            df_job["timeInstant"], format="ISO8601"
-        ).tolist()
-        # REGRA DE NEGOCIO: arquivos do hpc-job-monitor
-        # monitor-(hostname).parquet.gzip
-        with set_directory(str(pathlib.Path.home())):
-            file = f"monitor-{socket.gethostname()}.parquet.gzip"
-            if pathlib.Path(file).exists():
-                try:
-                    df = pd.read_parquet(file)
-                except Exception as e:
-                    if cls.logger is not None:
-                        cls.logger.info(
-                            f"Erro ao acessar arquivo {file}: {str(e)}"
-                        )
-                    return None
-                df["timeInstant"] = pd.to_datetime(
-                    df["timeInstant"], format="ISO8601"
-                )
-                return df.loc[
-                    (df["timeInstant"] >= jobTimeInstants[0])
-                    & (df["timeInstant"] <= jobTimeInstants[-1])
-                ]
-        return None
+        df = Deck.tempos_etapas(uow)
+        df["tempo"] = df["tempo"].dt.total_seconds()
+        return df
 
     @classmethod
     def _export_metadata(
@@ -221,28 +153,55 @@ class ExecutionSynthetizer:
             uow.export.synthetize_df(metadata_df, "METADADOS_EXECUCAO")
 
     @classmethod
-    def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
-        cls.logger = logging.getLogger("main")
-        if len(variables) == 0:
-            synthesis_variables = ExecutionSynthetizer._default_args()
-        else:
-            all_variables = cls._match_wildcards(variables)
-            synthesis_variables = (
-                ExecutionSynthetizer._process_variable_arguments(all_variables)
-            )
-        success_synthesis: List[ExecutionSynthesis] = []
-        for s in synthesis_variables:
+    def _synthetize_single_variable(
+        cls, s: ExecutionSynthesis, uow: AbstractUnitOfWork
+    ) -> Optional[ExecutionSynthesis]:
+        """
+        Realiza a síntese de execução para uma variável
+        fornecida.
+        """
+        filename = str(s)
+        with time_and_log(
+            message_root=f"Tempo para sintese de {filename}",
+            logger=cls.logger,
+        ):
             try:
-                filename = str(s)
-                if cls.logger is not None:
-                    cls.logger.info(f"Realizando síntese de {filename}")
+                cls._log(f"Realizando síntese de {filename}")
                 df = cls._resolve(s, uow)
                 if df is not None:
                     with uow:
                         uow.export.synthetize_df(df, filename)
-                        success_synthesis.append(s)
+                        return s
+                return None
             except Exception as e:
                 print_exc()
                 cls.logger.error(str(e))
+                return None
 
-        cls._export_metadata(success_synthesis, uow)
+    @classmethod
+    def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
+        cls.logger = logging.getLogger("main")
+        uow.subdir = EXECUTION_SYNTHESIS_SUBDIR
+        with time_and_log(
+            message_root="Tempo para sintese da execucao",
+            logger=cls.logger,
+        ):
+            synthesis_variables = cls._preprocess_synthesis_variables(
+                variables, uow
+            )
+            success_synthesis: List[ExecutionSynthesis] = []
+            for s in synthesis_variables:
+                try:
+                    filename = str(s)
+                    if cls.logger is not None:
+                        cls.logger.info(f"Realizando síntese de {filename}")
+                    df = cls._resolve(s, uow)
+                    if df is not None:
+                        with uow:
+                            uow.export.synthetize_df(df, filename)
+                            success_synthesis.append(s)
+                except Exception as e:
+                    print_exc()
+                    cls.logger.error(str(e))
+
+            cls._export_metadata(success_synthesis, uow)
