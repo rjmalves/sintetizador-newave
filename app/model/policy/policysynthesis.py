@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, List
 from app.model.policy.variable import Variable
 
 
@@ -15,3 +15,9 @@ class PolicySynthesis:
         return cls(
             Variable.factory(synthesis),
         )
+
+
+SUPPORTED_SYNTHESIS: List[str] = [
+    "CORTES",
+    "ESTADOS",
+]

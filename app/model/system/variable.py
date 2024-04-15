@@ -9,7 +9,6 @@ class Variable(Enum):
     REE = "REE"
     UTE = "UTE"
     UHE = "UHE"
-    PEE = "PEE"
 
     @classmethod
     def factory(cls, val: str) -> "Variable":
@@ -30,7 +29,6 @@ class Variable(Enum):
             "REE": "REE",
             "UTE": "UTE",
             "UHE": "UHE",
-            "PEE": "PEE",
         }
         return SHORT_NAMES.get(self.value)
 
@@ -43,6 +41,5 @@ class Variable(Enum):
             "REE": "Reservatórios Equivalentes",
             "UTE": "Usinas Termelétricas",
             "UHE": "Usinas Hidroelétricas",
-            "PEE": "Parques Eólicos Equivalentes",
         }
         return LONG_NAMES.get(self.value)

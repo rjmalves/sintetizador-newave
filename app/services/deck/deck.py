@@ -451,6 +451,19 @@ class Deck:
             return pd.DataFrame()
 
     @classmethod
+    def mes_inicio_pre_estudo(cls, uow: AbstractUnitOfWork) -> int:
+        mes_inicio_pre_estudo = cls.DECK_DATA_CACHING.get("mes_inicio_pre_estudo")
+        if mes_inicio_pre_estudo is None:
+            dger = cls.dger(uow)
+            mes_inicio_pre_estudo = cls._validate_data(
+                dger.mes_inicio_pre_estudo,
+                int,
+                "mês de início do estudo",
+            )
+            cls.DECK_DATA_CACHING["mes_inicio_pre_estudo"] = mes_inicio_pre_estudo
+        return mes_inicio_pre_estudo
+
+    @classmethod
     def mes_inicio_estudo(cls, uow: AbstractUnitOfWork) -> int:
         mes_inicio_estudo = cls.DECK_DATA_CACHING.get("mes_inicio_estudo")
         if mes_inicio_estudo is None:

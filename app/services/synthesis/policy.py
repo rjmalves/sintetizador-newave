@@ -1,21 +1,33 @@
 from typing import Callable, Dict, List, Type, TypeVar, Optional
 import pandas as pd  # type: ignore
 import logging
+from app.utils.timing import time_and_log
+from logging import INFO, ERROR
+from traceback import print_exc
 from app.utils.regex import match_variables_with_wildcards
 from app.services.unitofwork import AbstractUnitOfWork
 from app.model.policy.variable import Variable
-from app.model.policy.policysynthesis import PolicySynthesis
+from app.model.policy.policysynthesis import (
+    PolicySynthesis,
+    SUPPORTED_SYNTHESIS,
+)
+from app.internal.constants import (
+    POLICY_SYNTHESIS_SUBDIR,
+    POLICY_SYNTHESIS_METADATA_OUTPUT,
+)
 
 
 class PolicySynthetizer:
-    DEFAULT_POLICY_SYNTHESIS_ARGS: List[str] = [
-        "CORTES",
-        "ESTADOS",
-    ]
+    DEFAULT_POLICY_SYNTHESIS_ARGS: List[str] = SUPPORTED_SYNTHESIS
 
     T = TypeVar("T")
 
     logger: Optional[logging.Logger] = None
+
+    @classmethod
+    def _log(cls, msg: str, level: int = INFO):
+        if cls.logger is not None:
+            cls.logger.log(level, msg)
 
     @classmethod
     def _default_args(cls) -> List[PolicySynthesis]:
@@ -41,6 +53,29 @@ class PolicySynthetizer:
         return valid_args
 
     @classmethod
+    def _preprocess_synthesis_variables(
+        cls, variables: List[str], uow: AbstractUnitOfWork
+    ) -> List[PolicySynthesis]:
+        """
+        Realiza o pré-processamento das variáveis de síntese fornecidas,
+        filtrando as válidas para o caso em questão.
+        """
+        try:
+            if len(variables) == 0:
+                synthesis_variables = cls._default_args()
+            else:
+                all_variables = cls._match_wildcards(variables)
+                synthesis_variables = cls._process_variable_arguments(
+                    all_variables
+                )
+        except Exception as e:
+            print_exc()
+            cls._log(str(e), ERROR)
+            cls._log("Erro no pré-processamento das variáveis", ERROR)
+            synthesis_variables = []
+        return synthesis_variables
+
+    @classmethod
     def _resolve(
         cls, synthesis: PolicySynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
@@ -49,14 +84,6 @@ class PolicySynthetizer:
             Variable.ESTADOS: cls._resolve_estados,
         }
         return RULES[synthesis.variable](uow)
-
-    @classmethod
-    def _validate_data(cls, data, type: Type[T], msg: str = "dados") -> T:
-        if not isinstance(data, type):
-            if cls.logger is not None:
-                cls.logger.error(f"Erro na leitura de {msg}")
-            raise RuntimeError()
-        return data
 
     @classmethod
     def _resolve_cortes(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
@@ -96,29 +123,51 @@ class PolicySynthetizer:
                 s.variable.long_name,
             ]
         with uow:
-            uow.export.synthetize_df(metadata_df, "METADADOS_POLITICA")
+            uow.export.synthetize_df(
+                metadata_df, POLICY_SYNTHESIS_METADATA_OUTPUT
+            )
 
     @classmethod
-    def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
-        cls.logger = logging.getLogger("main")
-        if len(variables) == 0:
-            synthesis_variables = PolicySynthetizer._default_args()
-        else:
-            all_variables = cls._match_wildcards(variables)
-            synthesis_variables = (
-                PolicySynthetizer._process_variable_arguments(all_variables)
-            )
-        success_synthesis: List[PolicySynthesis] = []
-        for s in synthesis_variables:
+    def _synthetize_single_variable(
+        cls, s: PolicySynthesis, uow: AbstractUnitOfWork
+    ) -> Optional[PolicySynthesis]:
+        """
+        Realiza a síntese de política para uma variável
+        fornecida.
+        """
+        filename = str(s)
+        with time_and_log(
+            message_root=f"Tempo para sintese de {filename}",
+            logger=cls.logger,
+        ):
             try:
-                filename = str(s)
-                cls.logger.info(f"Realizando síntese de {filename}")
+                cls._log(f"Realizando síntese de {filename}")
                 df = cls._resolve(s, uow)
                 if df is not None:
                     with uow:
                         uow.export.synthetize_df(df, filename)
-                        success_synthesis.append(s)
+                        return s
+                return None
             except Exception as e:
+                print_exc()
                 cls.logger.error(str(e))
+                return None
 
-        cls._export_metadata(success_synthesis, uow)
+    @classmethod
+    def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
+        cls.logger = logging.getLogger("main")
+        uow.subdir = POLICY_SYNTHESIS_SUBDIR
+        with time_and_log(
+            message_root="Tempo para sintese da politica",
+            logger=cls.logger,
+        ):
+            synthesis_variables = cls._preprocess_synthesis_variables(
+                variables, uow
+            )
+            success_synthesis: List[PolicySynthesis] = []
+            for s in synthesis_variables:
+                r = cls._synthetize_single_variable(s, uow)
+                if r:
+                    success_synthesis.append(r)
+
+            cls._export_metadata(success_synthesis, uow)

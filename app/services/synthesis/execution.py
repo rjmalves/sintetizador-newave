@@ -1,4 +1,4 @@
-from typing import Callable, Dict, List, Optional, TypeVar, Type
+from typing import Callable, Dict, List, Optional, TypeVar
 import pandas as pd  # type: ignore
 import logging
 from traceback import print_exc
@@ -8,21 +8,20 @@ from app.utils.timing import time_and_log
 from logging import INFO, ERROR
 from app.utils.regex import match_variables_with_wildcards
 from app.model.execution.variable import Variable
-from app.model.execution.executionsynthesis import ExecutionSynthesis
+from app.model.execution.executionsynthesis import (
+    ExecutionSynthesis,
+    SUPPORTED_SYNTHESIS,
+)
 from app.services.deck.deck import Deck
 
 from app.internal.constants import (
     EXECUTION_SYNTHESIS_SUBDIR,
+    EXECUTION_SYNTHESIS_METADATA_OUTPUT,
 )
 
 
 class ExecutionSynthetizer:
-    DEFAULT_EXECUTION_SYNTHESIS_ARGS: List[str] = [
-        "PROGRAMA",
-        "CONVERGENCIA",
-        "TEMPO",
-        "CUSTOS",
-    ]
+    DEFAULT_EXECUTION_SYNTHESIS_ARGS: List[str] = SUPPORTED_SYNTHESIS
 
     T = TypeVar("T")
 
@@ -66,13 +65,11 @@ class ExecutionSynthetizer:
         """
         try:
             if len(variables) == 0:
-                synthesis_variables = ExecutionSynthetizer._default_args()
+                synthesis_variables = cls._default_args()
             else:
                 all_variables = cls._match_wildcards(variables)
-                synthesis_variables = (
-                    ExecutionSynthetizer._process_variable_arguments(
-                        all_variables
-                    )
+                synthesis_variables = cls._process_variable_arguments(
+                    all_variables
                 )
         except Exception as e:
             print_exc()
@@ -150,7 +147,9 @@ class ExecutionSynthetizer:
                 s.variable.long_name,
             ]
         with uow:
-            uow.export.synthetize_df(metadata_df, "METADADOS_EXECUCAO")
+            uow.export.synthetize_df(
+                metadata_df, EXECUTION_SYNTHESIS_METADATA_OUTPUT
+            )
 
     @classmethod
     def _synthetize_single_variable(
@@ -191,17 +190,8 @@ class ExecutionSynthetizer:
             )
             success_synthesis: List[ExecutionSynthesis] = []
             for s in synthesis_variables:
-                try:
-                    filename = str(s)
-                    if cls.logger is not None:
-                        cls.logger.info(f"Realizando síntese de {filename}")
-                    df = cls._resolve(s, uow)
-                    if df is not None:
-                        with uow:
-                            uow.export.synthetize_df(df, filename)
-                            success_synthesis.append(s)
-                except Exception as e:
-                    print_exc()
-                    cls.logger.error(str(e))
+                r = cls._synthetize_single_variable(s, uow)
+                if r:
+                    success_synthesis.append(r)
 
             cls._export_metadata(success_synthesis, uow)

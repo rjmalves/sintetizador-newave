@@ -1,20 +1,23 @@
-from typing import Callable, Dict, List, Type, TypeVar, Optional
+from typing import Callable, Dict, List, TypeVar, Optional
 import pandas as pd  # type: ignore
 import numpy as np  # type: ignore
 import logging
 from inewave.config import MESES_DF
-from inewave.newave import Dger, Ree, Confhd, Conft, Sistema
-from inewave.libs.modelos.eolica import RegistroPEECadastro
-from datetime import datetime
 from dateutil.relativedelta import relativedelta  # type: ignore
+from app.utils.timing import time_and_log
+from logging import INFO, ERROR
+from traceback import print_exc
 from app.utils.regex import match_variables_with_wildcards
+from app.services.deck.deck import Deck
 from app.services.unitofwork import AbstractUnitOfWork
 from app.model.system.variable import Variable
 from app.model.system.systemsynthesis import SystemSynthesis
 
-
-FATOR_HM3_M3S = 1.0 / 2.63
-HORAS_MES_NW = 730.0
+from app.internal.constants import (
+    SYSTEM_SYNTHESIS_SUBDIR,
+    SYSTEM_SYNTHESIS_METADATA_OUTPUT,
+    STAGE_DURATION_HOURS,
+)
 
 
 class SystemSynthetizer:
@@ -44,6 +47,11 @@ class SystemSynthetizer:
     logger: Optional[logging.Logger] = None
 
     @classmethod
+    def _log(cls, msg: str, level: int = INFO):
+        if cls.logger is not None:
+            cls.logger.log(level, msg)
+
+    @classmethod
     def _default_args(cls) -> List[SystemSynthesis]:
         args = [
             SystemSynthesis.factory(a)
@@ -67,96 +75,34 @@ class SystemSynthetizer:
         return valid_args
 
     @classmethod
-    def _validate_data(cls, data, type: Type[T], msg: str = "dados") -> T:
-        if not isinstance(data, type):
-            if cls.logger is not None:
-                cls.logger.error(f"Erro na leitura de {msg}")
-            raise RuntimeError()
-        return data
-
-    @classmethod
-    def _get_dger(cls, uow: AbstractUnitOfWork) -> Dger:
-        with uow:
-            dger = uow.files.get_dger()
-            if dger is None:
-                raise RuntimeError(
-                    "Erro no processamento do dger.dat para"
-                    + " síntese do sistema"
+    def _preprocess_synthesis_variables(
+        cls, variables: List[str], uow: AbstractUnitOfWork
+    ) -> List[SystemSynthesis]:
+        """
+        Realiza o pré-processamento das variáveis de síntese fornecidas,
+        filtrando as válidas para o caso em questão.
+        """
+        try:
+            if len(variables) == 0:
+                synthesis_variables = cls._default_args()
+            else:
+                all_variables = cls._match_wildcards(variables)
+                synthesis_variables = cls._process_variable_arguments(
+                    all_variables
                 )
-            return dger
-
-    @classmethod
-    def _get_ree(cls, uow: AbstractUnitOfWork) -> Ree:
-        with uow:
-            ree = uow.files.get_ree()
-            if ree is None:
-                raise RuntimeError(
-                    "Erro no processamento do ree.dat para"
-                    + " síntese do sistema"
-                )
-            return ree
-
-    @classmethod
-    def _get_confhd(cls, uow: AbstractUnitOfWork) -> Confhd:
-        with uow:
-            confhd = uow.files.get_confhd()
-            if confhd is None:
-                raise RuntimeError(
-                    "Erro no processamento do confhd.dat para"
-                    + " síntese do sistema"
-                )
-            return confhd
-
-    @classmethod
-    def _get_conft(cls, uow: AbstractUnitOfWork) -> Conft:
-        with uow:
-            conft = uow.files.get_conft()
-            if conft is None:
-                raise RuntimeError(
-                    "Erro no processamento do conft.dat para"
-                    + " síntese do sistema"
-                )
-            return conft
-
-    @classmethod
-    def _get_sistema(cls, uow: AbstractUnitOfWork) -> Sistema:
-        with uow:
-            sist = uow.files.get_sistema()
-            if sist is None:
-                if cls.logger is not None:
-                    cls.logger.error(
-                        "Erro no processamento do sistema.dat para"
-                        + " síntese dos cenários"
-                    )
-                raise RuntimeError()
-            return sist
+        except Exception as e:
+            print_exc()
+            cls._log(str(e), ERROR)
+            cls._log("Erro no pré-processamento das variáveis", ERROR)
+            synthesis_variables = []
+        return synthesis_variables
 
     @classmethod
     def filter_valid_variables(
         cls, variables: List[SystemSynthesis], uow: AbstractUnitOfWork
     ) -> List[SystemSynthesis]:
-        dger = cls._get_dger(uow)
-        ree = cls._get_ree(uow)
-
-        rees = cls._validate_data(ree.rees, pd.DataFrame, "REEs")
-        geracao_eolica = cls._validate_data(
-            dger.considera_geracao_eolica, int, "dger"
-        )
-
-        valid_variables: List[SystemSynthesis] = []
-        indiv = rees["mes_fim_individualizado"].isna().sum() == 0
-        eolica = geracao_eolica != 0
-        if cls.logger is not None:
-            cls.logger.info(
-                f"Caso com geração de cenários de eólica: {eolica}"
-            )
-            cls.logger.info(f"Caso com modelagem híbrida: {indiv}")
-        for v in variables:
-            if v.variable in [Variable.PEE] and not eolica:
-                continue
-            valid_variables.append(v)
-        if cls.logger is not None:
-            cls.logger.info(f"Variáveis: {valid_variables}")
+        valid_variables = variables
+        cls._log(f"Variáveis: {valid_variables}")
         return valid_variables
 
     @classmethod
@@ -170,33 +116,12 @@ class SystemSynthetizer:
             Variable.REE: cls.__resolve_REE,
             Variable.UTE: cls.__resolve_UTE,
             Variable.UHE: cls.__resolve_UHE,
-            Variable.PEE: cls.__resolve_PEE,
         }
         return RULES[synthesis.variable](uow)
 
     @classmethod
     def __resolve_EST(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        dger = cls._get_dger(uow)
-        ano_inicial = cls._validate_data(
-            dger.ano_inicio_estudo,
-            int,
-            "dger",
-        )
-        mes_inicial = cls._validate_data(
-            dger.mes_inicio_estudo,
-            int,
-            "dger",
-        )
-        n_anos = cls._validate_data(
-            dger.num_anos_estudo,
-            int,
-            "dger",
-        )
-        datas_iniciais = pd.date_range(
-            datetime(year=ano_inicial, month=mes_inicial, day=1),
-            datetime(year=ano_inicial + n_anos - 1, month=12, day=1),
-            freq="MS",
-        ).tolist()
+        datas_iniciais = Deck.datas_inicio_estagios_internos_politica(uow)
         datas_finais = [d + relativedelta(months=1) for d in datas_iniciais]
         return pd.DataFrame(
             data={
@@ -208,44 +133,11 @@ class SystemSynthetizer:
 
     @classmethod
     def __resolve_PAT(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        dger = cls._get_dger(uow)
-        if dger is None:
-            raise RuntimeError(
-                "Erro no processamento do dger.dat para"
-                + " síntese do sistema"
-            )
-        pat = uow.files.get_patamar()
-        if pat is None:
-            raise RuntimeError(
-                "Erro no processamento do patamar.dat para"
-                + " síntese do sistema"
-            )
-        num_patamares = cls._validate_data(
-            pat.numero_patamares,
-            int,
-            "patamares",
-        )
-
-        duracao_patamares = cls._validate_data(
-            pat.duracao_mensal_patamares,
-            pd.DataFrame,
-            "patamares",
-        )
-        mes_inicio = cls._validate_data(
-            dger.mes_inicio_estudo,
-            int,
-            "dger",
-        )
-        mes_inicio_pre = cls._validate_data(
-            dger.mes_inicio_pre_estudo,
-            int,
-            "dger",
-        )
-        anos_estudo = cls._validate_data(
-            dger.num_anos_estudo,
-            int,
-            "dger",
-        )
+        num_patamares = Deck.numero_patamares(uow)
+        duracao_patamares = Deck.duracao_mensal_patamares(uow)
+        mes_inicio = Deck.mes_inicio_estudo(uow)
+        mes_inicio_pre = Deck.mes_inicio_pre_estudo(uow)
+        anos_estudo = Deck.num_anos_estudo(uow)
 
         meses_pre = mes_inicio - mes_inicio_pre
         estagios = (
@@ -264,7 +156,7 @@ class SystemSynthetizer:
         pats = np.tile(
             np.repeat(patamares, len(MESES_DF)), anos_estudo
         ).flatten()
-        horas = HORAS_MES_NW * (
+        horas = STAGE_DURATION_HOURS * (
             duracao_patamares[MESES_DF].to_numpy().flatten()
         )
         df = pd.DataFrame(
@@ -278,17 +170,7 @@ class SystemSynthetizer:
 
     @classmethod
     def __resolve_SBM(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        arq_sistema = cls._get_sistema(uow)
-        if arq_sistema is None:
-            raise RuntimeError(
-                "Erro no processamento do sistema.dat para"
-                + " síntese do sistema"
-            )
-        sistema = cls._validate_data(
-            arq_sistema.custo_deficit,
-            pd.DataFrame,
-            "submercados",
-        )
+        sistema = Deck.submercados(uow)
         df = sistema[["codigo_submercado", "nome_submercado"]]
         df = df.rename(
             columns={"codigo_submercado": "id", "nome_submercado": "nome"}
@@ -297,12 +179,7 @@ class SystemSynthetizer:
 
     @classmethod
     def __resolve_REE(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        arq_ree = cls._get_ree(uow)
-        if arq_ree is None:
-            raise RuntimeError(
-                "Erro no processamento do ree.dat para" + " síntese do sistema"
-            )
-        rees = cls._validate_data(arq_ree.rees, pd.DataFrame, "REEs")
+        rees = Deck.rees(uow)
         df = rees[["codigo", "nome", "submercado"]]
         df = df.rename(
             columns={
@@ -315,10 +192,7 @@ class SystemSynthetizer:
 
     @classmethod
     def __resolve_UTE(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        arq_conft = cls._get_conft(uow)
-        conft = cls._validate_data(arq_conft.usinas, pd.DataFrame, "UTEs")
-
-        df = conft[["codigo_usina", "nome_usina", "submercado"]]
+        df = Deck.utes(uow)
         df = df.rename(
             columns={
                 "codigo_usina": "id",
@@ -330,14 +204,7 @@ class SystemSynthetizer:
 
     @classmethod
     def __resolve_UHE(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        arq_confhd = uow.files.get_confhd()
-        if arq_confhd is None:
-            raise RuntimeError(
-                "Erro no processamento do confhd.dat para"
-                + " síntese do sistema"
-            )
-        confhd = cls._validate_data(arq_confhd.usinas, pd.DataFrame, "UHEs")
-
+        confhd = Deck.uhes(uow)
         df = confhd[
             [
                 "codigo_usina",
@@ -359,29 +226,6 @@ class SystemSynthetizer:
         return df[["id", "idREE", "nome", "posto", "volumeInicial"]]
 
     @classmethod
-    def __resolve_PEE(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        eolica = uow.files.get_eolica()
-        if eolica is None:
-            raise RuntimeError(
-                "Erro no processamento do eolica-cadastro.csv para"
-                + " síntese do sistema"
-            )
-
-        pees = eolica.pee_cad()
-        if isinstance(pees, list):
-            codigos = [p.codigo_pee for p in pees]
-            nomes = [p.nome_pee for p in pees]
-        elif isinstance(pees, RegistroPEECadastro):
-            codigos = [pees.codigo_pee]
-            nomes = [pees.nome_pee]
-        else:
-            if cls.logger is not None:
-                cls.logger.error("Erro na leitura de PEEs")
-                raise RuntimeError()
-        df = pd.DataFrame(data={"id": codigos, "nome": nomes})
-        return df
-
-    @classmethod
     def _export_metadata(
         cls,
         success_synthesis: List[SystemSynthesis],
@@ -401,31 +245,51 @@ class SystemSynthetizer:
                 s.variable.long_name,
             ]
         with uow:
-            uow.export.synthetize_df(metadata_df, "METADADOS_SISTEMA")
+            uow.export.synthetize_df(
+                metadata_df, SYSTEM_SYNTHESIS_METADATA_OUTPUT
+            )
+
+    @classmethod
+    def _synthetize_single_variable(
+        cls, s: SystemSynthesis, uow: AbstractUnitOfWork
+    ) -> Optional[SystemSynthesis]:
+        """
+        Realiza a síntese de sistema para uma variável
+        fornecida.
+        """
+        filename = str(s)
+        with time_and_log(
+            message_root=f"Tempo para sintese de {filename}",
+            logger=cls.logger,
+        ):
+            try:
+                cls._log(f"Realizando síntese de {filename}")
+                df = cls._resolve(s, uow)
+                if df is not None:
+                    with uow:
+                        uow.export.synthetize_df(df, filename)
+                        return s
+                return None
+            except Exception as e:
+                print_exc()
+                cls.logger.error(str(e))
+                return None
 
     @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
         cls.logger = logging.getLogger("main")
-        if len(variables) == 0:
-            synthesis_variables = SystemSynthetizer._default_args()
-        else:
-            all_variables = cls._match_wildcards(variables)
-            synthesis_variables = (
-                SystemSynthetizer._process_variable_arguments(all_variables)
+        uow.subdir = SYSTEM_SYNTHESIS_SUBDIR
+        with time_and_log(
+            message_root="Tempo para sintese da sistema",
+            logger=cls.logger,
+        ):
+            synthesis_variables = cls._preprocess_synthesis_variables(
+                variables, uow
             )
-        valid_synthesis = SystemSynthetizer.filter_valid_variables(
-            synthesis_variables, uow
-        )
-        success_synthesis: List[SystemSynthesis] = []
-        for s in valid_synthesis:
-            try:
-                filename = str(s)
-                cls.logger.info(f"Realizando síntese de {filename}")
-                df = cls._resolve(s, uow)
-                with uow:
-                    uow.export.synthetize_df(df, filename)
-                    success_synthesis.append(s)
-            except Exception as e:
-                cls.logger.error(str(e))
+            success_synthesis: List[SystemSynthesis] = []
+            for s in synthesis_variables:
+                r = cls._synthetize_single_variable(s, uow)
+                if r:
+                    success_synthesis.append(r)
 
-        cls._export_metadata(success_synthesis, uow)
+            cls._export_metadata(success_synthesis, uow)

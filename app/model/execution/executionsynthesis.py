@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, List
 from app.model.execution.variable import Variable
 
 
@@ -15,3 +15,11 @@ class ExecutionSynthesis:
         return cls(
             Variable.factory(synthesis),
         )
+
+
+SUPPORTED_SYNTHESIS: List[str] = [
+    "PROGRAMA",
+    "CONVERGENCIA",
+    "TEMPO",
+    "CUSTOS",
+]
