@@ -1255,38 +1255,6 @@ class OperationVariableBounds:
             df[UPPER_BOUND_COL] = np.round(df[UPPER_BOUND_COL], num_digits)
             return df
 
-        def _modificacoes_cadastro_uhes(
-            df_hidr: pd.DataFrame,
-            arq_modif: Modif,
-            codigos_usinas: np.ndarray,
-        ) -> pd.DataFrame:
-            """
-            Realiza a extração de modificações cadastrais de volumes de usinas
-            hidrelétricas a partir do arquivo modif.dat, atualizando os cadastros
-            conforme as declarações de modificações são encontradas.
-            """
-            for u in codigos_usinas:
-                modificacoes_usina = arq_modif.modificacoes_usina(u)
-                if modificacoes_usina is not None:
-                    regs_numcnj = [
-                        r for r in modificacoes_usina if isinstance(r, NUMCNJ)
-                    ]
-                    if len(regs_numcnj) > 0:
-                        reg_numcnj = regs_numcnj[-1]
-                        df_hidr.at[u, "numero_conjuntos_maquinas"] = (
-                            reg_numcnj.numero
-                        )
-                    regs_nummaq = [
-                        r for r in modificacoes_usina if isinstance(r, NUMMAQ)
-                    ]
-                    for reg_nummaq in regs_nummaq:
-                        df_hidr.at[
-                            u, f"maquinas_conjunto_{reg_nummaq.conjunto}"
-                        ] = reg_nummaq.numero_maquinas
-                    df_hidr = df_hidr.copy()
-
-            return df_hidr
-
         entity_column_list = [entity_column] if entity_column else []
         grouping_columns = entity_column_list + [START_DATE_COL, BLOCK_COL]
         sorting_columns = entity_column_list + [
@@ -1632,8 +1600,6 @@ class OperationVariableBounds:
         df: pd.DataFrame,
         df_gtmin: pd.DataFrame,
         df_gtmax: pd.DataFrame,
-        grouping_col: str,
-        ordem_sintese: list,
     ) -> pd.DataFrame:
         """
         Expande os dados da síntese de geração térmica
@@ -1698,9 +1664,7 @@ class OperationVariableBounds:
             df_gtmax, grouping_col, ordem_sintese, datas_sintese
         )
         # Repete os limites para todos os estágios e cenarios
-        df = cls._expande_dados_cenarios_gter(
-            df, df_gtmin, df_gtmax, grouping_col, ordem_sintese
-        )
+        df = cls._expande_dados_cenarios_gter(df, df_gtmin, df_gtmax)
         # Converte os limites para MWmes
         df[LOWER_BOUND_COL] *= (
             df[BLOCK_DURATION_COL] / cls.STAGE_DURATION_HOURS

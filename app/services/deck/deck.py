@@ -1602,13 +1602,75 @@ class Deck:
         no tempo.
         """
 
+        def _apply_changes_to_hydro_data(
+            df: pd.DataFrame, uow: AbstractUnitOfWork
+        ):
+            modif = cls.modif(uow)
+            for idx in df.index:
+                hydro_changes = modif.modificacoes_usina(idx)
+                if hydro_changes is not None:
+                    num_groups_registers = [
+                        r for r in hydro_changes if isinstance(r, NUMCNJ)
+                    ]
+                    if len(num_groups_registers) > 0:
+                        num_groups_register = num_groups_registers[-1]
+                        df.at[idx, "numero_conjuntos_maquinas"] = (
+                            num_groups_register.numero
+                        )
+                    num_units_registers = [
+                        r for r in hydro_changes if isinstance(r, NUMMAQ)
+                    ]
+                    for num_units_register in num_units_registers:
+                        df.at[
+                            idx,
+                            f"maquinas_conjunto_{num_units_register.conjunto}",
+                        ] = num_units_register.numero_maquinas
+            return df
+
+        def _calc_turbined_flow_bounds(line: pd.Series) -> float:
+            num_groups = line["numero_conjuntos_maquinas"]
+            num_units_per_group = [
+                f"maquinas_conjunto_{i}" for i in range(1, num_groups + 1)
+            ]
+            max_flow_per_unit = [
+                f"vazao_nominal_conjunto_{i}" for i in range(1, num_groups + 1)
+            ]
+            num_units = line[num_units_per_group].to_numpy()
+            flow_units = line[max_flow_per_unit].to_numpy()
+            return np.sum(num_units * flow_units, dtype=np.float64)
+
+        def _get_hydro_data(uow: AbstractUnitOfWork) -> pd.DataFrame:
+            df = cls.hidr(uow).reset_index()
+            hydro_codes = cls.hydro_code_order(uow)
+            df = _apply_changes_to_hydro_data(df, uow)
+            df[UPPER_BOUND_COL] = df.apply(
+                lambda line: _calc_turbined_flow_bounds(line), axis=1
+            )
+            df[LOWER_BOUND_COL] = 0.0
+            df = df.loc[
+                df[HYDRO_CODE_COL].isin(hydro_codes),
+                [HYDRO_CODE_COL, LOWER_BOUND_COL, UPPER_BOUND_COL],
+            ].set_index(HYDRO_CODE_COL)
+            df[LOWER_BOUND_UNIT_COL] = Unit.m3s.value
+            df[UPPER_BOUND_UNIT_COL] = Unit.m3s.value
+            return df
+
         hydro_turbined_flow_bounds_with_changes = cls.DECK_DATA_CACHING.get(
             "hydro_turbined_flow_bounds_with_changes"
         )
         if hydro_turbined_flow_bounds_with_changes is None:
-            # TODO - analisar exph.dat e modif.dat
-            df = cls.hydro_turbined_flow_bounds(uow)
-            hydro_turbined_flow_bounds_with_changes = df
+            hydro_turbined_flow_bounds = _get_hydro_data(uow)
+            entities = (
+                cls.hydro_eer_submarket_map(uow)
+                .reset_index()
+                .set_index(HYDRO_CODE_COL)
+            )
+            hydro_turbined_flow_bounds = hydro_turbined_flow_bounds.join(
+                entities
+            )
+            hydro_turbined_flow_bounds_with_changes = (
+                hydro_turbined_flow_bounds
+            )
             cls.DECK_DATA_CACHING[
                 "hydro_turbined_flow_bounds_with_changes"
             ] = hydro_turbined_flow_bounds_with_changes
@@ -1651,6 +1713,8 @@ class Deck:
                 df, UPPER_BOUND_COL, UPPER_BOUND_UNIT_COL, TURBMAXT, uow
             )
             return df
+
+        # TODO - analisar exph.dat
 
         hydro_turbined_flow_bounds_in_stages = cls.DECK_DATA_CACHING.get(
             "hydro_turbined_flow_bounds_in_stages"
