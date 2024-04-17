@@ -158,22 +158,26 @@ def __compara_sintese_nwlistop(
         raise
 
 
-def __valida_limites(df: pd.DataFrame, tol: float = 0.2):
+def __valida_limites(
+    df: pd.DataFrame, tol: float = 0.2, lower=True, upper=True
+):
     num_amostras = df.shape[0]
-    try:
-        assert (
-            df["valor"] <= (df["limite_superior"] + tol)
-        ).sum() == num_amostras
-    except AssertionError:
-        print(df.loc[df["valor"] > (df["limite_superior"] + tol)])
-        raise
-    try:
-        assert (
-            df["valor"] >= (df["limite_inferior"] - tol)
-        ).sum() == num_amostras
-    except AssertionError:
-        print(df.loc[df["valor"] < (df["limite_inferior"] - tol)])
-        raise
+    if upper:
+        try:
+            assert (
+                df["valor"] <= (df["limite_superior"] + tol)
+            ).sum() == num_amostras
+        except AssertionError:
+            print(df.loc[df["valor"] > (df["limite_superior"] + tol)])
+            raise
+    if lower:
+        try:
+            assert (
+                df["valor"] >= (df["limite_inferior"] - tol)
+            ).sum() == num_amostras
+        except AssertionError:
+            print(df.loc[df["valor"] < (df["limite_inferior"] - tol)])
+            raise
 
 
 def __valida_metadata(chave: str, df_metadata: pd.DataFrame, calculated: bool):
@@ -395,6 +399,7 @@ def test_sintese_earmi_ree(test_settings):
     synthesis_str = "EARMI_REE"
     df, df_meta = __sintetiza_com_mock(synthesis_str)
     # TODO - implementar validação
+    __valida_limites(df, lower=False)
     __valida_metadata(synthesis_str, df_meta, True)
 
 
@@ -410,6 +415,7 @@ def test_sintese_earmi_sbm(test_settings):
     synthesis_str = "EARMI_SBM"
     df, df_meta = __sintetiza_com_mock(synthesis_str)
     # TODO - implementar validação
+    __valida_limites(df, lower=False)
     __valida_metadata(synthesis_str, df_meta, True)
 
 
@@ -424,6 +430,7 @@ def test_sintese_earmi_sin(test_settings):
     synthesis_str = "EARMI_SIN"
     df, df_meta = __sintetiza_com_mock(synthesis_str)
     # TODO - implementar validação
+    __valida_limites(df, lower=False)
     __valida_metadata(synthesis_str, df_meta, True)
 
 
@@ -438,6 +445,7 @@ def test_sintese_varmi_uhe(test_settings):
     synthesis_str = "VARMI_UHE"
     df, df_meta = __sintetiza_com_mock(synthesis_str)
     # TODO - implementar validação
+    __valida_limites(df)
     __valida_metadata(synthesis_str, df_meta, True)
 
 
@@ -501,7 +509,7 @@ def test_sintese_varmf_ree(test_settings):
         ree=["SUL"],
         patamar=[0],
     )
-
+    __valida_limites(df)
     __valida_metadata(synthesis_str, df_meta, True)
 
 
@@ -539,7 +547,7 @@ def test_sintese_varmf_sbm(test_settings):
         submercado=["SUL"],
         patamar=[0],
     )
-
+    __valida_limites(df)
     __valida_metadata(synthesis_str, df_meta, True)
 
 
@@ -572,7 +580,7 @@ def test_sintese_varmf_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
-
+    __valida_limites(df)
     __valida_metadata("VARMF_SIN", df_meta, True)
 
 
@@ -1970,6 +1978,7 @@ def test_sintese_earmf_ree(test_settings):
         patamar=[0],
         ree=["SUDESTE"],
     )
+    __valida_limites(df, tol=2.0, lower=False)
     __valida_metadata("EARMF_REE", df_meta, False)
 
 
@@ -1985,6 +1994,7 @@ def test_sintese_earmf_sbm(test_settings):
         patamar=[0],
         submercado=["SUDESTE"],
     )
+    __valida_limites(df, tol=2.0, lower=False)
     __valida_metadata("EARMF_SBM", df_meta, False)
 
 
@@ -1999,6 +2009,7 @@ def test_sintese_earmf_sin(test_settings):
         cenario=1,
         patamar=[0],
     )
+    __valida_limites(df, tol=2.0, lower=False)
     __valida_metadata("EARMF_SIN", df_meta, False)
 
 
@@ -2147,6 +2158,7 @@ def test_sintese_gter_ute(test_settings):
         classe=[1],
         usina=["ANGRA 1"],
     )
+    __valida_limites(df)
     __valida_metadata("GTER_UTE", df_meta, False)
 
 
@@ -2594,12 +2606,13 @@ def test_sintese_vver_uhe(test_settings):
 def test_sintese_varmf_uhe(test_settings):
     synthesis_str = "VARMF_UHE"
     df, df_meta = __sintetiza_com_mock(synthesis_str)
-    # Somente para VARM: subtrai volume mínimo para comparação com nwlistop,
-    # que imprime somente volume útil.
     with uow:
         df_hidr = uow.files.get_hidr().cadastro
-    df["valor"] -= df_hidr.at[1, "volume_minimo"]
     df_arq = Varmuh.read(join(DECK_TEST_DIR, "varmuh001.out")).valores
+    __valida_limites(df)
+    # Somente para VARM: subtrai volume mínimo para comparação com nwlistop,
+    # que imprime somente volume útil.
+    df["valor"] -= df_hidr.at[1, "volume_minimo"]
     __compara_sintese_nwlistop(
         df,
         df_arq,
@@ -2715,6 +2728,7 @@ def test_sintese_int_sbp(test_settings):
         submercado_de=["SUDESTE"],
         submercado_para=["SUL"],
     )
+    __valida_limites(df)
     __valida_metadata("INT_SBP", df_meta, False)
 
 

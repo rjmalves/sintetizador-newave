@@ -10,8 +10,10 @@ from app.internal.constants import (
     EEP_COL,
     SUBMARKET_CODE_COL,
     SUBMARKET_NAME_COL,
-    EXCHANGE_SOURCE_COL,
-    EXCHANGE_TARGET_COL,
+    EXCHANGE_SOURCE_CODE_COL,
+    EXCHANGE_SOURCE_NAME_COL,
+    EXCHANGE_TARGET_CODE_COL,
+    EXCHANGE_TARGET_NAME_COL,
     START_DATE_COL,
     END_DATE_COL,
     BLOCK_DURATION_COL,
@@ -88,8 +90,10 @@ class SpatialResolution(Enum):
                 SUBMARKET_NAME_COL,
             ],
             SpatialResolution.PAR_SUBMERCADOS: [
-                EXCHANGE_SOURCE_COL,
-                EXCHANGE_TARGET_COL,
+                EXCHANGE_SOURCE_CODE_COL,
+                EXCHANGE_SOURCE_NAME_COL,
+                EXCHANGE_TARGET_CODE_COL,
+                EXCHANGE_TARGET_NAME_COL,
             ],
         }
         return col_maps.get(self, [])
@@ -103,7 +107,7 @@ class SpatialResolution(Enum):
             SpatialResolution.PARQUE_EOLICO_EQUIVALENTE: EEP_COL,
             SpatialResolution.USINA_HIDROELETRICA: HYDRO_CODE_COL,
             SpatialResolution.USINA_TERMELETRICA: THERMAL_CODE_COL,
-            SpatialResolution.PAR_SUBMERCADOS: EXCHANGE_SOURCE_COL,
+            SpatialResolution.PAR_SUBMERCADOS: EXCHANGE_SOURCE_CODE_COL,
         }
         return col_maps.get(self, [])
 

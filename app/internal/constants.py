@@ -13,8 +13,10 @@ EER_NAME_COL = "ree"
 EEP_COL = "pee"
 SUBMARKET_CODE_COL = "codigo_submercado"
 SUBMARKET_NAME_COL = "submercado"
-EXCHANGE_SOURCE_COL = "submercado_de"
-EXCHANGE_TARGET_COL = "submercado_para"
+EXCHANGE_SOURCE_CODE_COL = "codigo_submercado_de"
+EXCHANGE_SOURCE_NAME_COL = "submercado_de"
+EXCHANGE_TARGET_CODE_COL = "codigo_submercado_para"
+EXCHANGE_TARGET_NAME_COL = "submercado_para"
 STAGE_COL = "estagio"
 START_DATE_COL = "data_inicio"
 END_DATE_COL = "data_fim"
@@ -27,7 +29,11 @@ UPPER_BOUND_COL = "limite_superior"
 VARIABLE_COL = "variavel"
 
 GROUPING_TMP_COL = "group"
+SYSTEM_GROUPING_COL = "sin"
 PRODUCTIVITY_TMP_COL = "prod"
+LOWER_BOUND_UNIT_COL = "unidade_limite_inferior"
+UPPER_BOUND_UNIT_COL = "unidade_limite_superior"
+UNIT_COL = "unidade"
 
 ITERATION_COL = "iteracao"
 SPAN_COL = "abertura"
@@ -45,8 +51,8 @@ SYNTHESIS_IDENTIFICATION_COLUMNS = [
     END_DATE_COL,
     STAGE_COL,
     SUBMARKET_NAME_COL,
-    EXCHANGE_SOURCE_COL,
-    EXCHANGE_TARGET_COL,
+    EXCHANGE_SOURCE_NAME_COL,
+    EXCHANGE_TARGET_NAME_COL,
     EER_NAME_COL,
     EEP_COL,
     HYDRO_NAME_COL,

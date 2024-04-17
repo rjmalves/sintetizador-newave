@@ -1,4 +1,4 @@
-from typing import Callable, Dict, List, Type, TypeVar, Optional
+from typing import Callable, Dict, List, TypeVar, Optional
 import pandas as pd  # type: ignore
 import logging
 from app.utils.timing import time_and_log

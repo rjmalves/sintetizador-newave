@@ -42,6 +42,10 @@ from app.internal.constants import (
     HYDRO_NAME_COL,
     THERMAL_CODE_COL,
     THERMAL_NAME_COL,
+    EXCHANGE_SOURCE_CODE_COL,
+    EXCHANGE_SOURCE_NAME_COL,
+    EXCHANGE_TARGET_CODE_COL,
+    EXCHANGE_TARGET_NAME_COL,
     VARIABLE_COL,
     GROUPING_TMP_COL,
     PRODUCTIVITY_TMP_COL,
@@ -246,7 +250,6 @@ class OperationSynthetizer:
         """
         if df is None:
             return df
-        spatial_res = s.spatial_resolution
         df = cls._resolve_temporal_resolution(df, uow)
         for col, val in entity_column_values.items():
             df[col] = val
@@ -563,12 +566,10 @@ class OperationSynthetizer:
             df,
             synthesis,
             {
-                synthesis.spatial_resolution.entity_synthesis_df_columns[
-                    0
-                ]: sbm1_name,
-                synthesis.spatial_resolution.entity_synthesis_df_columns[
-                    1
-                ]: sbm2_name,
+                EXCHANGE_SOURCE_CODE_COL: sbm1_index,
+                EXCHANGE_SOURCE_NAME_COL: sbm1_name,
+                EXCHANGE_TARGET_CODE_COL: sbm2_index,
+                EXCHANGE_TARGET_NAME_COL: sbm2_name,
             },
             uow,
         )
@@ -2339,7 +2340,12 @@ class OperationSynthetizer:
             message_root="Tempo para calculo dos limites",
             logger=cls.logger,
         ):
-            df = OperationVariableBounds.resolve_bounds(s, df, uow)
+            df = OperationVariableBounds.resolve_bounds(
+                s,
+                df,
+                cls._get_ordered_entities(s),
+                uow,
+            )
 
         return df
 

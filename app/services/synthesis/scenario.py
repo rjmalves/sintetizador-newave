@@ -443,12 +443,15 @@ class ScenarioSynthetizer:
             additional_tendency_configurations = np.array([1] * past_stages)
             configurations = (
                 configurations_df.loc[
-                    (configurations_df["data"] >= starting_date_with_tendency)
+                    (
+                        configurations_df[START_DATE_COL]
+                        >= starting_date_with_tendency
+                    )
                     & (
-                        configurations_df["data"]
+                        configurations_df[START_DATE_COL]
                         <= ending_date_with_post_study_years
                     ),
-                    "valor",
+                    VALUE_COL,
                 ]
                 .to_numpy()
                 .flatten()
@@ -718,8 +721,8 @@ class ScenarioSynthetizer:
         dates: List[datetime],
     ) -> pd.DataFrame:
         """
-        Adiciona dados de do REE aos dados de energia
-        lidos do arquivo binário `energiab.dat`.
+        Adiciona dados do REE aos dados de energia
+        lidos dos arquivos binários.
 
         - estagio (`int`)
         - data (`datetime`)

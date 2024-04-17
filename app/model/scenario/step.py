@@ -2,7 +2,6 @@ from enum import Enum
 from typing import Dict, List
 from app.internal.constants import (
     ITERATION_COL,
-    SCENARIO_COL,
     SPAN_COL,
 )
 
