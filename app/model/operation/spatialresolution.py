@@ -100,7 +100,7 @@ class SpatialResolution(Enum):
 
     @property
     def main_entity_synthesis_df_column(self) -> Optional[str]:
-        col_maps: Dict[SpatialResolution, List[str]] = {
+        col_maps: Dict[SpatialResolution, Optional[str]] = {
             SpatialResolution.SISTEMA_INTERLIGADO: None,
             SpatialResolution.SUBMERCADO: SUBMARKET_CODE_COL,
             SpatialResolution.RESERVATORIO_EQUIVALENTE: EER_CODE_COL,
@@ -109,7 +109,7 @@ class SpatialResolution(Enum):
             SpatialResolution.USINA_TERMELETRICA: THERMAL_CODE_COL,
             SpatialResolution.PAR_SUBMERCADOS: EXCHANGE_SOURCE_CODE_COL,
         }
-        return col_maps.get(self, [])
+        return col_maps.get(self)
 
     @property
     def all_synthesis_df_columns(self) -> List[str]:

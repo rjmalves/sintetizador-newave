@@ -57,6 +57,8 @@ from app.internal.constants import (
     EER_NAME_COL,
     SUBMARKET_CODE_COL,
     SUBMARKET_NAME_COL,
+    EXCHANGE_SOURCE_CODE_COL,
+    EXCHANGE_TARGET_CODE_COL,
     VALUE_COL,
     CONFIG_COL,
     START_DATE_COL,
@@ -106,7 +108,7 @@ class Deck:
             return shist
 
     @classmethod
-    def _get_curva(cls, uow: AbstractUnitOfWork) -> Ree:
+    def _get_curva(cls, uow: AbstractUnitOfWork) -> Curva:
         with uow:
             curva = uow.files.get_curva()
             if curva is None:
@@ -390,7 +392,7 @@ class Deck:
         if newavetim is None:
             newavetim = cls._validate_data(
                 cls._get_newavetim(uow),
-                Pmo,
+                Newavetim,
                 "newavetim",
             )
             cls.DECK_DATA_CACHING["newavetim"] = newavetim
@@ -1147,6 +1149,148 @@ class Deck:
         return convergencia.copy()
 
     @classmethod
+    def thermal_generation_bounds(
+        cls, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+
+        def _add_submarket_data(
+            df: pd.DataFrame, uow: AbstractUnitOfWork
+        ) -> pd.DataFrame:
+            map = cls.thermal_submarket_map(uow)
+            df = df.rename(
+                columns={
+                    "nome_usina": THERMAL_NAME_COL,
+                    "codigo_usina": THERMAL_CODE_COL,
+                }
+            )
+            df = df.join(
+                map[[SUBMARKET_CODE_COL, SUBMARKET_NAME_COL]],
+                on=THERMAL_CODE_COL,
+            )
+            return df
+
+        thermal_generation_bounds = cls.DECK_DATA_CACHING.get(
+            "thermal_generation_bounds"
+        )
+        if thermal_generation_bounds is None:
+            pmo = cls.pmo(uow)
+            bounds_df = cls._validate_data(
+                pmo.geracao_minima_usinas_termicas,
+                pd.DataFrame,
+                "geracao_minima_usinas_termicas",
+            )
+            bounds_df = bounds_df.rename(
+                columns={
+                    "data": START_DATE_COL,
+                    "valor_MWmed": LOWER_BOUND_COL,
+                }
+            )
+            bounds_df[UPPER_BOUND_COL] = cls._validate_data(
+                pmo.geracao_maxima_usinas_termicas,
+                pd.DataFrame,
+                "geracao_maxima_usinas_termicas",
+            )["valor_MWmed"].to_numpy()
+            bounds_df = _add_submarket_data(bounds_df, uow)
+            thermal_generation_bounds = bounds_df
+            cls.DECK_DATA_CACHING["thermal_generation_bounds"] = (
+                thermal_generation_bounds
+            )
+        return thermal_generation_bounds.copy()
+
+    @classmethod
+    def exchange_bounds(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+
+        def _drops_exchange_direction_flag(
+            bounds_df: pd.DataFrame,
+        ) -> pd.DataFrame:
+            """
+            Inverte as colunas submercado_de e submercado_para a
+            partir do valor da coluna sentido, aplicada apenas para
+            o DataFrame de limites de intercâmbio do sistema.dat.
+            """
+            filtro = bounds_df["sentido"] == 1
+            (
+                bounds_df.loc[filtro, EXCHANGE_SOURCE_CODE_COL],
+                bounds_df.loc[filtro, EXCHANGE_TARGET_CODE_COL],
+            ) = (
+                bounds_df.loc[filtro, EXCHANGE_TARGET_CODE_COL],
+                bounds_df.loc[filtro, EXCHANGE_SOURCE_CODE_COL],
+            )
+            return bounds_df.drop(columns=["sentido"])
+
+        def _cast_exchange_bounds_to_MWmes(
+            exchange_block_bounds_df: pd.DataFrame,
+            exchange_average_bounds_df: pd.DataFrame,
+            block_length_df: pd.DataFrame,
+        ) -> pd.DataFrame:
+            """
+            Obtem limites de intercâmbio em MWmes a partir de limites
+            em MWmed e P.U. e das durações de cada patamar. Estes limites
+            são compatíveis com o visto no nwlistop.
+            """
+            exchange_block_bounds_df[VALUE_COL] = (
+                exchange_block_bounds_df.apply(
+                    lambda linha: exchange_average_bounds_df.loc[
+                        (
+                            exchange_average_bounds_df[
+                                EXCHANGE_SOURCE_CODE_COL
+                            ]
+                            == linha[EXCHANGE_SOURCE_CODE_COL]
+                        )
+                        & (
+                            exchange_average_bounds_df[
+                                EXCHANGE_TARGET_CODE_COL
+                            ]
+                            == linha[EXCHANGE_TARGET_CODE_COL]
+                        )
+                        & (
+                            exchange_average_bounds_df[START_DATE_COL]
+                            == linha[START_DATE_COL]
+                        ),
+                        VALUE_COL,
+                    ].iloc[0]
+                    * linha[VALUE_COL],
+                    axis=1,
+                )
+            )
+            block_length_df = block_length_df.sort_values(["data", "patamar"])
+            n_pares_limites = exchange_block_bounds_df.drop_duplicates(
+                [EXCHANGE_SOURCE_CODE_COL, EXCHANGE_TARGET_CODE_COL]
+            ).shape[0]
+            exchange_block_bounds_df[VALUE_COL] *= np.tile(
+                block_length_df[VALUE_COL].to_numpy(), n_pares_limites
+            )
+
+            return exchange_block_bounds_df
+
+        exchange_bounds = cls.DECK_DATA_CACHING.get("exchange_bounds")
+        if exchange_bounds is None:
+            exchange_average_bounds_df = cls._validate_data(
+                cls._get_sistema(uow).limites_intercambio,
+                pd.DataFrame,
+                "limites de intercâmbio",
+            )
+            exchange_average_bounds_df = exchange_average_bounds_df.rename(
+                columns={
+                    "submercado_de": EXCHANGE_SOURCE_CODE_COL,
+                    "submercado_para": EXCHANGE_TARGET_CODE_COL,
+                    "data": START_DATE_COL,
+                }
+            )
+            exchange_average_bounds_df = _drops_exchange_direction_flag(
+                exchange_average_bounds_df
+            )
+            exchange_block_bounds_df = cls.limites_intercambio_patamares(uow)
+            block_length_df = cls.duracao_mensal_patamares(uow)
+            exchange_bounds = _cast_exchange_bounds_to_MWmes(
+                exchange_block_bounds_df,
+                exchange_average_bounds_df,
+                block_length_df,
+            )
+            cls.DECK_DATA_CACHING["exchange_bounds"] = exchange_bounds
+        return exchange_bounds.copy()
+
+    @classmethod
     def custos(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         custos = cls.DECK_DATA_CACHING.get("custos")
         if custos is None:
@@ -1465,7 +1609,7 @@ class Deck:
         ) -> pd.DataFrame:
             df = df.reset_index()
             num_hydros = df.shape[0]
-            dates = cls.datas_inicio_estagios_sim_final(uow)
+            dates = np.array(cls.datas_inicio_estagios_sim_final(uow))
             num_stages = len(dates)
             df = pd.concat([df] * num_stages, ignore_index=True)
             df[START_DATE_COL] = np.repeat(dates, num_hydros)
@@ -1691,7 +1835,7 @@ class Deck:
         ) -> pd.DataFrame:
             df = df.reset_index()
             num_hydros = df.shape[0]
-            dates = cls.datas_inicio_estagios_sim_final(uow)
+            dates = np.array(cls.datas_inicio_estagios_sim_final(uow))
             num_stages = len(dates)
             num_blocks = cls.numero_patamares(uow) + 1
             df = pd.concat([df] * num_stages * num_blocks, ignore_index=True)
@@ -1817,7 +1961,7 @@ class Deck:
         ) -> pd.DataFrame:
             df = df.reset_index()
             num_hydros = df.shape[0]
-            dates = cls.datas_inicio_estagios_sim_final(uow)
+            dates = np.array(cls.datas_inicio_estagios_sim_final(uow))
             num_stages = len(dates)
             num_blocks = cls.numero_patamares(uow) + 1
             df = pd.concat([df] * num_stages * num_blocks, ignore_index=True)
@@ -1908,6 +2052,53 @@ class Deck:
                 duracao_mensal_patamares
             )
         return duracao_mensal_patamares.copy()
+
+    @classmethod
+    def limites_intercambio_patamares(
+        cls, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+
+        def __eval_pat0(df_pat: pd.DataFrame) -> pd.DataFrame:
+            df_pat_0 = df_pat.loc[df_pat[BLOCK_COL] == 1].copy()
+            df_pat_0[BLOCK_COL] = 0
+            df_pat_0[VALUE_COL] = 1.0
+            df_pat = pd.concat([df_pat, df_pat_0], ignore_index=True)
+            df_pat.sort_values(
+                [
+                    EXCHANGE_SOURCE_CODE_COL,
+                    EXCHANGE_TARGET_CODE_COL,
+                    START_DATE_COL,
+                    BLOCK_COL,
+                ],
+                inplace=True,
+            )
+            return df_pat
+
+        limites_intercambio_patamares = cls.DECK_DATA_CACHING.get(
+            "limites_intercambio_patamares"
+        )
+        if limites_intercambio_patamares is None:
+            limites_intercambio_patamares = cls._validate_data(
+                cls._get_patamar(uow).intercambio_patamares,
+                pd.DataFrame,
+                "limites de intercâmbio dos patamares",
+            )
+            limites_intercambio_patamares = (
+                limites_intercambio_patamares.rename(
+                    columns={
+                        "submercado_de": EXCHANGE_SOURCE_CODE_COL,
+                        "submercado_para": EXCHANGE_TARGET_CODE_COL,
+                        "data": START_DATE_COL,
+                    }
+                )
+            )
+            limites_intercambio_patamares = __eval_pat0(
+                limites_intercambio_patamares
+            )
+            cls.DECK_DATA_CACHING["limites_intercambio_patamares"] = (
+                limites_intercambio_patamares
+            )
+        return limites_intercambio_patamares.copy()
 
     @classmethod
     def energia_armazenada_inicial(

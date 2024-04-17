@@ -150,7 +150,7 @@ class PolicySynthetizer:
                 return None
             except Exception as e:
                 print_exc()
-                cls.logger.error(str(e))
+                cls._log(str(e), ERROR)
                 return None
 
     @classmethod

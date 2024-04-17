@@ -31,17 +31,13 @@ from app.internal.constants import (
     LOWER_BOUND_COL,
     VALUE_COL,
     SYSTEM_GROUPING_COL,
+    STAGE_DURATION_HOURS,
+    HM3_M3S_MONTHLY_FACTOR,
 )
 from app.utils.operations import fast_group_df
 from inewave.newave import (
-    Modif,
     Sistema,
     Patamar,
-    Conft,
-)
-from inewave.newave.modelos.modif import (
-    NUMCNJ,
-    NUMMAQ,
 )
 
 
@@ -73,9 +69,6 @@ class OperationVariableBounds:
         SCENARIO_COL,
         STATS_OR_SCENARIO_COL,
     ]
-
-    STAGE_DURATION_HOURS = 730.0
-    HM3_M3S_FACTOR = 1 / 2.63
 
     T = TypeVar("T")
 
@@ -754,25 +747,40 @@ class OperationVariableBounds:
             Variable.INTERCAMBIO,
             SpatialResolution.PAR_SUBMERCADOS,
         ): lambda df, uow, entities: OperationVariableBounds._exchange_bounds(
-            df, uow
+            df,
+            uow,
+            synthesis_unit=Unit.MWmes.value,
+            ordered_entities=entities,
         ),
         OperationSynthesis(
             Variable.GERACAO_TERMICA,
             SpatialResolution.USINA_TERMELETRICA,
         ): lambda df, uow, entities: OperationVariableBounds._thermal_generation_bounds(
-            df, uow, THERMAL_NAME_COL
+            df,
+            uow,
+            synthesis_unit=Unit.MWmes.value,
+            ordered_entities=entities,
+            entity_column=THERMAL_CODE_COL,
         ),
         OperationSynthesis(
             Variable.GERACAO_TERMICA,
             SpatialResolution.SUBMERCADO,
         ): lambda df, uow, entities: OperationVariableBounds._thermal_generation_bounds(
-            df, uow, SUBMARKET_CODE_COL
+            df,
+            uow,
+            synthesis_unit=Unit.MWmes.value,
+            ordered_entities=entities,
+            entity_column=SUBMARKET_CODE_COL,
         ),
         OperationSynthesis(
             Variable.GERACAO_TERMICA,
             SpatialResolution.SISTEMA_INTERLIGADO,
         ): lambda df, uow, entities: OperationVariableBounds._thermal_generation_bounds(
-            df, uow, SYSTEM_GROUPING_COL
+            df,
+            uow,
+            synthesis_unit=Unit.MWmes.value,
+            ordered_entities=entities,
+            entity_column=None,
         ),
     }
 
@@ -791,14 +799,6 @@ class OperationVariableBounds:
             if patamar is None:
                 raise RuntimeError("Erro na leitura do arquivo patamar.dat")
             return patamar
-
-    @classmethod
-    def _get_conft(cls, uow: AbstractUnitOfWork) -> Conft:
-        with uow:
-            conft = uow.files.get_conft()
-            if conft is None:
-                raise RuntimeError("Erro na leitura do arquivo conft.dat")
-            return conft
 
     @classmethod
     def _validate_data(cls, data, type: Type[T]) -> T:
@@ -844,7 +844,9 @@ class OperationVariableBounds:
             lower_bounds: np.ndarray,
             upper_bounds: np.ndarray,
         ) -> pd.DataFrame:
-            num_entities = len(ordered_entities.get(entity_column, [None]))
+            num_entities = (
+                len(ordered_entities[entity_column]) if entity_column else 1
+            )
             num_stages = len(ordered_entities[STAGE_COL])
             num_scenarios = len(ordered_entities[SCENARIO_COL])
             num_blocks = len(ordered_entities[BLOCK_COL])
@@ -905,6 +907,37 @@ class OperationVariableBounds:
         return data_cenarios
 
     @classmethod
+    def _repeats_data_by_scenario_and_block(
+        cls,
+        data: np.ndarray,
+        num_entities: int,
+        num_stages: int,
+        num_scenarios: int,
+        num_blocks: int,
+    ):
+        """
+        Expande os dados cadastrais para cada cenário, mantendo a ordem dos
+        patamares internamente.
+        """
+        data_cenarios = np.zeros(
+            (len(data) * num_scenarios * num_blocks,), dtype=np.float64
+        )
+        for i in range(num_entities):
+            for j in range(num_stages):
+                i_i = i * num_stages + j
+                i_f = i_i + 1
+                data_cenarios[
+                    i_i
+                    * num_scenarios
+                    * num_blocks : i_f
+                    * num_scenarios
+                    * num_blocks
+                ] = np.tile(
+                    np.repeat(data[i_i:i_f], num_blocks), num_scenarios
+                )
+        return data_cenarios
+
+    @classmethod
     def _group_hydro_df(
         cls, df: pd.DataFrame, grouping_column: Optional[str] = None
     ) -> pd.DataFrame:
@@ -939,10 +972,12 @@ class OperationVariableBounds:
                 SUBMARKET_NAME_COL,
             ],
             SUBMARKET_CODE_COL: [SUBMARKET_CODE_COL, SUBMARKET_NAME_COL],
-            None: [],
         }
 
-        grouping_columns = grouping_column_map.get(grouping_column, []) + [
+        mapped_columns = (
+            grouping_column_map[grouping_column] if grouping_column else []
+        )
+        grouping_columns = mapped_columns + [
             c
             for c in df.columns
             if c in cls.IDENTIFICATION_COLUMNS
@@ -953,6 +988,52 @@ class OperationVariableBounds:
             df,
             grouping_columns,
             [VALUE_COL, LOWER_BOUND_COL, UPPER_BOUND_COL],
+            operation="sum",
+        )
+
+        return grouped_df
+
+    @classmethod
+    def _group_thermal_df(
+        cls, df: pd.DataFrame, grouping_column: Optional[str] = None
+    ) -> pd.DataFrame:
+        """
+        Realiza a agregação de variáveis fornecidas a nível de UHE
+        para uma síntese de REEs, SBMs ou para o SIN. A agregação
+        tem como requisito que as variáveis fornecidas sejam em unidades
+        cuja agregação seja possível apenas pela soma.
+        """
+        valid_grouping_columns = [
+            THERMAL_CODE_COL,
+            THERMAL_NAME_COL,
+            SUBMARKET_CODE_COL,
+            SUBMARKET_NAME_COL,
+        ]
+
+        grouping_column_map: Dict[str, List[str]] = {
+            THERMAL_CODE_COL: [
+                THERMAL_CODE_COL,
+                THERMAL_NAME_COL,
+                SUBMARKET_CODE_COL,
+                SUBMARKET_NAME_COL,
+            ],
+            SUBMARKET_CODE_COL: [SUBMARKET_CODE_COL, SUBMARKET_NAME_COL],
+        }
+
+        mapped_columns = (
+            grouping_column_map[grouping_column] if grouping_column else []
+        )
+        grouping_columns = mapped_columns + [
+            c
+            for c in df.columns
+            if c in cls.IDENTIFICATION_COLUMNS
+            and c not in valid_grouping_columns
+        ]
+
+        grouped_df = fast_group_df(
+            df,
+            grouping_columns,
+            [VALUE_COL],
             operation="sum",
         )
 
@@ -974,7 +1055,7 @@ class OperationVariableBounds:
         for c in [VALUE_COL, LOWER_BOUND_COL, UPPER_BOUND_COL]:
             df_group[c] = (
                 df_group[c]
-                * (cls.STAGE_DURATION_HOURS * cls.HM3_M3S_FACTOR)
+                * (STAGE_DURATION_HOURS * HM3_M3S_MONTHLY_FACTOR)
                 / df_group[BLOCK_DURATION_COL]
             )
 
@@ -1026,7 +1107,9 @@ class OperationVariableBounds:
             lower_bounds: np.ndarray,
             upper_bounds: np.ndarray,
         ) -> pd.DataFrame:
-            num_entities = len(ordered_entities.get(entity_column, [None]))
+            num_entities = (
+                len(ordered_entities[entity_column]) if entity_column else 1
+            )
             num_stages = len(ordered_entities[STAGE_COL])
             num_scenarios = len(ordered_entities[SCENARIO_COL])
             num_blocks = len(ordered_entities[BLOCK_COL])
@@ -1116,7 +1199,9 @@ class OperationVariableBounds:
             lower_bounds: np.ndarray,
             upper_bounds: np.ndarray,
         ) -> pd.DataFrame:
-            num_entities = len(ordered_entities.get(entity_column, [None]))
+            num_entities = (
+                len(ordered_entities[entity_column]) if entity_column else 1
+            )
             num_stages = len(ordered_entities[STAGE_COL])
             num_scenarios = len(ordered_entities[SCENARIO_COL])
             num_blocks = len(ordered_entities[BLOCK_COL])
@@ -1140,7 +1225,7 @@ class OperationVariableBounds:
                     df[col] = (
                         df[col]
                         * df[BLOCK_DURATION_COL]
-                        / (cls.HM3_M3S_FACTOR * cls.STAGE_DURATION_HOURS)
+                        / (HM3_M3S_MONTHLY_FACTOR * STAGE_DURATION_HOURS)
                     )
             return df
 
@@ -1217,7 +1302,9 @@ class OperationVariableBounds:
             lower_bounds: np.ndarray,
             upper_bounds: np.ndarray,
         ) -> pd.DataFrame:
-            num_entities = len(ordered_entities.get(entity_column, [None]))
+            num_entities = (
+                len(ordered_entities[entity_column]) if entity_column else 1
+            )
             num_stages = len(ordered_entities[STAGE_COL])
             num_scenarios = len(ordered_entities[SCENARIO_COL])
             num_blocks = len(ordered_entities[BLOCK_COL])
@@ -1241,7 +1328,7 @@ class OperationVariableBounds:
                     df[col] = (
                         df[col]
                         * df[BLOCK_DURATION_COL]
-                        / (cls.HM3_M3S_FACTOR * cls.STAGE_DURATION_HOURS)
+                        / (HM3_M3S_MONTHLY_FACTOR * STAGE_DURATION_HOURS)
                     )
             return df
 
@@ -1315,318 +1402,126 @@ class OperationVariableBounds:
         return df
 
     @classmethod
-    def _considera_flag_sentido_limite_intercambio(
-        cls, df_limites: pd.DataFrame
-    ) -> pd.DataFrame:
-        """
-        Inverte as colunas submercado_de e submercado_para a
-        partir do valor da coluna sentido, aplicada apenas para
-        o DataFrame de limites de intercâmbio do sistema.dat.
-        """
-        filtro = df_limites["sentido"] == 1
-        (
-            df_limites.loc[filtro, "submercado_de"],
-            df_limites.loc[filtro, "submercado_para"],
-        ) = (
-            df_limites.loc[filtro, "submercado_para"],
-            df_limites.loc[filtro, "submercado_de"],
-        )
-        return df_limites.drop(columns=["sentido"])
-
-    @classmethod
-    def _cria_pat0_ficticio(cls, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Cria um patamar 0 fictício com 1 p.u. nos dados lidos do
-        patamar.dat.
-        """
-        df_pat0 = df.loc[df["patamar"] == 1].copy()
-        df_pat0["patamar"] = 0
-        df_pat0["valor"] = 1.0
-        df = pd.concat([df, df_pat0], ignore_index=True)
-        cols_ordenacao = [c for c in df.columns if c != "valor"]
-        return df.sort_values(cols_ordenacao)
-
-    @classmethod
-    def _converte_limites_intercambio_MWmes(
-        cls,
-        df_limites_patamar_pu: pd.DataFrame,
-        df_limites_estagios_mwmed: pd.DataFrame,
-        df_duracoes: pd.DataFrame,
-        df_submercados: pd.DataFrame,
-    ) -> pd.DataFrame:
-        """
-        Obtem limites de intercâmbio em MWmes a partir de limites
-        em MWmed e P.U. e das durações de cada patamar. Estes limites
-        são compatíveis com o visto no nwlistop.
-        """
-        # Obtem limites por patamar em MWmed
-        df_limites_pat = df_limites_patamar_pu.copy()
-        df_limites_pat["valor"] = df_limites_pat.apply(
-            lambda linha: df_limites_estagios_mwmed.loc[
-                (
-                    df_limites_estagios_mwmed["submercado_de"]
-                    == linha["submercado_de"]
-                )
-                & (
-                    df_limites_estagios_mwmed["submercado_para"]
-                    == linha["submercado_para"]
-                )
-                & (df_limites_estagios_mwmed["data"] == linha["data"]),
-                "valor",
-            ].iloc[0]
-            * linha["valor"],
-            axis=1,
-        )
-
-        # Converte para MWmes
-        df_duracoes = df_duracoes.sort_values(["data", "patamar"])
-        n_pares_limites = df_limites_pat.drop_duplicates(
-            ["submercado_de", "submercado_para"]
-        ).shape[0]
-        df_limites_pat["valor"] *= np.tile(
-            df_duracoes["valor"].to_numpy(), n_pares_limites
-        )
-        # Substitui códigos dos submercados pelos nomes
-        df_limites_pat = df_limites_pat.astype(
-            {"submercado_de": str, "submercado_para": str}
-        )
-        df_submercados = df_submercados.drop_duplicates(
-            ["nome_submercado", SUBMARKET_CODE_COL]
-        )
-        mapa_nomes_submercados = {
-            str(codigo): nome
-            for codigo, nome in zip(
-                df_submercados[SUBMARKET_CODE_COL],
-                df_submercados["nome_submercado"],
-            )
-        }
-        for col in ["submercado_de", "submercado_para"]:
-            codigos = df_limites_pat[col].unique()
-            for cod in codigos:
-                df_limites_pat.loc[df_limites_pat[col] == cod, col] = (
-                    mapa_nomes_submercados[cod]
-                )
-        return df_limites_pat
-
-    @classmethod
-    def _aplica_limites_intercambio_mwmes(
-        cls, df: pd.DataFrame, df_limites_pat: pd.DataFrame
-    ) -> pd.DataFrame:
-        """
-        Cria as colunas de limites de intercâmbio em MWmes no DataFrame
-        da síntese que foi recebido.
-        Os limites inferior e superior são aplicados de acordo com o
-        par de submercados e o sentido do intercâmbio, sendo um deles
-        sempre <= 0.
-        """
-        datas_inicio = df[START_DATE_COL].unique().tolist()
-        n_estagios = len(datas_inicio)
-        n_cenarios = len(df[SCENARIO_COL].unique())
-        n_patamares = len(df["patamar"].unique())
-        # Filtra os pares de submercados de limites dentre os
-        # que existem no df
-        df["par_sbm"] = (
-            df[EXCHANGE_SOURCE_NAME_COL] + "-" + df[EXCHANGE_TARGET_NAME_COL]
-        )
-        df_limites_pat["par_sbm"] = (
-            df_limites_pat["submercado_de"]
-            + "-"
-            + df_limites_pat["submercado_para"]
-        )
-        df_limites_pat["par_sbm_r"] = (
-            df_limites_pat["submercado_para"]
-            + "-"
-            + df_limites_pat["submercado_de"]
-        )
-        df_limites_pat = (
-            df_limites_pat.loc[df_limites_pat["data"].isin(datas_inicio)]
-            .sort_values(["submercado_de", "submercado_para", "data"])
-            .reset_index(drop=True)
-        )
-
-        pares_sbm_df = df["par_sbm"].unique().tolist()
-        pares_sbm_limites_r = df_limites_pat["par_sbm_r"].unique().tolist()
-        pares_sbm_limites = df_limites_pat["par_sbm"].unique().tolist()
-
-        # Inicializa limites com valores default
-        df[LOWER_BOUND_COL] = -float("inf")
-        df[UPPER_BOUND_COL] = float("inf")
-        # Aplica os limites, considerando o par de submercados
-        # e o sentido reverso como sinal negativo
-        for p in pares_sbm_df:
-            if p in pares_sbm_limites_r:
-                lims = -cls._repeats_data_by_scenario(
-                    df_limites_pat.loc[
-                        df_limites_pat["par_sbm_r"] == p, "valor"
-                    ].to_numpy(),
-                    1,
-                    n_estagios,
-                    n_cenarios,
-                    n_patamares,
-                )
-                df.loc[df["par_sbm"] == p, LOWER_BOUND_COL] = lims
-            if p in pares_sbm_limites:
-                lims = cls._repeats_data_by_scenario(
-                    df_limites_pat.loc[
-                        df_limites_pat["par_sbm"] == p, "valor"
-                    ].to_numpy(),
-                    1,
-                    n_estagios,
-                    n_cenarios,
-                    n_patamares,
-                )
-                df.loc[df["par_sbm"] == p, UPPER_BOUND_COL] = lims
-
-        df[LOWER_BOUND_COL] = np.round(df[LOWER_BOUND_COL], 1)
-        df[UPPER_BOUND_COL] = np.round(df[UPPER_BOUND_COL], 1)
-
-        return df.drop(columns=["par_sbm"])
-
-    @classmethod
     def _exchange_bounds(
-        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
+        cls,
+        df: pd.DataFrame,
+        uow: AbstractUnitOfWork,
+        synthesis_unit: str,
+        ordered_entities: Dict[str, list],
     ) -> pd.DataFrame:
         """
         Adiciona ao DataFrame da síntese os limites inferior e superior
         para a variável de Intercâmbio (INT) por par de submercados.
         """
+
+        def _apply_exchange_bounds_in_MWmes(
+            df: pd.DataFrame, exchange_block_bounds_df: pd.DataFrame
+        ) -> pd.DataFrame:
+            """
+            Cria as colunas de limites de intercâmbio em MWmes no DataFrame
+            da síntese que foi recebido.
+            Os limites inferior e superior são aplicados de acordo com o
+            par de submercados e o sentido do intercâmbio, sendo um deles
+            sempre <= 0.
+            """
+            start_dates = df[START_DATE_COL].unique().tolist()
+            num_stages = len(start_dates)
+            num_scenarios = len(df[SCENARIO_COL].unique())
+            num_blocks = len(df[BLOCK_COL].unique())
+            # Filtra os pares de submercados de limites dentre os
+            # que existem no df
+            PAIR_TMP_COL = "par_sim"
+            R_PAIR_TMP_COL = "par_sbm_r"
+            df[PAIR_TMP_COL] = (
+                df[EXCHANGE_SOURCE_CODE_COL].astype(str)
+                + "-"
+                + df[EXCHANGE_TARGET_CODE_COL].astype(str)
+            )
+            exchange_block_bounds_df[PAIR_TMP_COL] = (
+                exchange_block_bounds_df[EXCHANGE_SOURCE_CODE_COL].astype(str)
+                + "-"
+                + exchange_block_bounds_df[EXCHANGE_TARGET_CODE_COL].astype(
+                    str
+                )
+            )
+            exchange_block_bounds_df[R_PAIR_TMP_COL] = (
+                exchange_block_bounds_df[EXCHANGE_TARGET_CODE_COL].astype(str)
+                + "-"
+                + exchange_block_bounds_df[EXCHANGE_SOURCE_CODE_COL].astype(
+                    str
+                )
+            )
+            exchange_block_bounds_df = (
+                exchange_block_bounds_df.loc[
+                    exchange_block_bounds_df[START_DATE_COL].isin(start_dates)
+                ]
+                .sort_values(
+                    [
+                        EXCHANGE_SOURCE_CODE_COL,
+                        EXCHANGE_TARGET_CODE_COL,
+                        START_DATE_COL,
+                    ]
+                )
+                .reset_index(drop=True)
+            )
+
+            pares_sbm_df = df[PAIR_TMP_COL].unique().tolist()
+            pares_sbm_limites_r = (
+                exchange_block_bounds_df[R_PAIR_TMP_COL].unique().tolist()
+            )
+            pares_sbm_limites = (
+                exchange_block_bounds_df[PAIR_TMP_COL].unique().tolist()
+            )
+
+            # Inicializa limites com valores default
+            df[LOWER_BOUND_COL] = -float("inf")
+            df[UPPER_BOUND_COL] = float("inf")
+            # Aplica os limites, considerando o par de submercados
+            # e o sentido reverso como sinal negativo
+            for p in pares_sbm_df:
+                if p in pares_sbm_limites_r:
+                    bounds = -cls._repeats_data_by_scenario(
+                        exchange_block_bounds_df.loc[
+                            exchange_block_bounds_df[R_PAIR_TMP_COL] == p,
+                            VALUE_COL,
+                        ].to_numpy(),
+                        1,
+                        num_stages,
+                        num_scenarios,
+                        num_blocks,
+                    )
+                    df.loc[df[PAIR_TMP_COL] == p, LOWER_BOUND_COL] = bounds
+                if p in pares_sbm_limites:
+                    bounds = cls._repeats_data_by_scenario(
+                        exchange_block_bounds_df.loc[
+                            exchange_block_bounds_df[PAIR_TMP_COL] == p,
+                            VALUE_COL,
+                        ].to_numpy(),
+                        1,
+                        num_stages,
+                        num_scenarios,
+                        num_blocks,
+                    )
+                    df.loc[df[PAIR_TMP_COL] == p, UPPER_BOUND_COL] = bounds
+
+            df[LOWER_BOUND_COL] = np.round(df[LOWER_BOUND_COL], 1)
+            df[UPPER_BOUND_COL] = np.round(df[UPPER_BOUND_COL], 1)
+            return df.drop(columns=[PAIR_TMP_COL])
+
         # Lê e converte os limites de intercâmbio para MWmes,
         # pois os arquivos de entrada são em MWmed com P.U e
         # o nwlistop fornece a saída em MWmes.
-
-        # Lê sistema.dat
-        arq_sistema = cls._get_sistema(uow)
-        df_submercados = cls._validate_data(
-            arq_sistema.custo_deficit, pd.DataFrame
-        )
-        df_limites = cls._validate_data(
-            arq_sistema.limites_intercambio, pd.DataFrame
-        )
-        # Lê patamar.dat
-        arq_patamar = cls._get_patamar(uow)
-        df_pu = cls._validate_data(
-            arq_patamar.intercambio_patamares, pd.DataFrame
-        )
-        df_duracoes = cls._validate_data(
-            arq_patamar.duracao_mensal_patamares, pd.DataFrame
-        )
-        # Formata os dados lidos
-        df_limites = cls._considera_flag_sentido_limite_intercambio(df_limites)
-        df_pu = cls._cria_pat0_ficticio(df_pu)
-        df_duracoes = cls._cria_pat0_ficticio(df_duracoes)
-
-        df_limites_pat = cls._converte_limites_intercambio_MWmes(
-            df_pu, df_limites, df_duracoes, df_submercados
-        )
-        return cls._aplica_limites_intercambio_mwmes(df, df_limites_pat)
-
-    @classmethod
-    def _adiciona_submercado_limites_gter(
-        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
-        map = Deck.thermal_submarket_map(uow)
-        df = df.rename(
-            columns={
-                "nome_usina": THERMAL_NAME_COL,
-                "codigo_usina": THERMAL_CODE_COL,
-            }
-        )
-        df = df.join(
-            map[[SUBMARKET_CODE_COL, SUBMARKET_NAME_COL]], on=THERMAL_CODE_COL
-        )
-        return df
-
-    @classmethod
-    def _agrega_variaveis_limites_ute(
-        cls,
-        df: pd.DataFrame,
-        grouping_col: Optional[str] = None,
-        ordem_sintese: Optional[list] = None,
-        datas_sintese: Optional[list] = None,
-    ) -> pd.DataFrame:
-        """
-        Realiza a agregação de limites de geração de usinas
-        térmicas.
-        """
-        cols_grp_validas = [
-            THERMAL_CODE_COL,
-            THERMAL_NAME_COL,
-            SUBMARKET_CODE_COL,
-            SUBMARKET_NAME_COL,
-            SYSTEM_GROUPING_COL,
-        ]
-        if grouping_col is None:
-            return df
-
-        if grouping_col == SYSTEM_GROUPING_COL:
-            df["group"] = 1
-        elif grouping_col in cols_grp_validas:
-            df["group"] = df[grouping_col]
-        else:
-            raise RuntimeError(
-                f"Coluna de agrupamento inválida: {grouping_col}"
-            )
-
-        if datas_sintese:
-            df = df.loc[df["data"].isin(datas_sintese)].reset_index(drop=True)
-
-        cols_group = ["group", "data"]
-        df_group = (
-            df.groupby(cols_group)[["valor_MWmed"]]
-            .sum(engine="numba")
-            .reset_index()
-        )
-
-        if ordem_sintese:
-            df_group = df_group.loc[
-                df_group["group"].isin(ordem_sintese)
-            ].copy()
-            df_group["group"] = pd.Categorical(
-                df_group["group"], categories=ordem_sintese, ordered=True
-            )
-        df_group = df_group.sort_values(["group", "data"])
-        df_group["group"] = df_group["group"].astype(str)
-
-        if grouping_col:
-            df_group = df_group.rename(columns={"group": grouping_col})
-        else:
-            df_group = df_group.drop(columns=["group"])
-
-        return df_group
-
-    @classmethod
-    def _expande_dados_cenarios_gter(
-        cls,
-        df: pd.DataFrame,
-        df_gtmin: pd.DataFrame,
-        df_gtmax: pd.DataFrame,
-    ) -> pd.DataFrame:
-        """
-        Expande os dados da síntese de geração térmica
-        para o número de cenários e patamares existentes.
-
-        É um wrapper para a chamada da _repeats_data_by_scenario
-        pois existe o comportamento particular dos limites de geração
-        serem fornecidos apenas em MWmed por estágio, e por
-        questões de desempenho este são repetidos
-        (n_patamares * n_cenarios) vezes como se existisse apenas 1
-        patamar e a conversão para MWmes é feita posterioremente.
-        """
-        n_cenarios = len(df[SCENARIO_COL].unique())
-        n_patamares = len(df["patamar"].unique())
-        lim_inf = np.repeat(
-            df_gtmin["valor_MWmed"].to_numpy(), n_cenarios * n_patamares
-        )
-        lim_sup = np.repeat(
-            df_gtmax["valor_MWmed"].to_numpy(), n_cenarios * n_patamares
-        )
-        df[LOWER_BOUND_COL] = lim_inf
-        df[UPPER_BOUND_COL] = lim_sup
-        return df
+        exchange_block_bounds_df = Deck.exchange_bounds(uow)
+        return _apply_exchange_bounds_in_MWmes(df, exchange_block_bounds_df)
 
     @classmethod
     def _thermal_generation_bounds(
-        cls, df: pd.DataFrame, uow: AbstractUnitOfWork, grouping_col: str
+        cls,
+        df: pd.DataFrame,
+        uow: AbstractUnitOfWork,
+        synthesis_unit: str,
+        ordered_entities: Dict[str, list],
+        entity_column: Optional[str] = None,
     ) -> pd.DataFrame:
         """
         Realiza o cálculo dos limites de geração térmica para cada
@@ -1639,43 +1534,85 @@ class OperationVariableBounds:
         de acordo com a síntese desejada, mas os limites deverão ser
         agregados de acordo.
         """
-        # Lê os limites em MWmed do pmo.dat
-        arq_pmo = Deck.pmo(uow)
-        df_gtmin = cls._validate_data(
-            arq_pmo.geracao_minima_usinas_termicas, pd.DataFrame
-        )
-        df_gtmax = cls._validate_data(
-            arq_pmo.geracao_maxima_usinas_termicas, pd.DataFrame
-        )
-        # Adiciona informações do submercado de cada UTE
-        df_gtmin = cls._adiciona_submercado_limites_gter(df_gtmin, uow)
-        df_gtmax = cls._adiciona_submercado_limites_gter(df_gtmax, uow)
-        # Agrupa os limites, se necessário
-        datas_sintese = df[START_DATE_COL].unique().tolist()
-        ordem_sintese = (
-            df[grouping_col].unique().tolist()
-            if grouping_col != SYSTEM_GROUPING_COL
-            else None
-        )
-        df_gtmin = cls._agrega_variaveis_limites_ute(
-            df_gtmin, grouping_col, ordem_sintese, datas_sintese
-        )
-        df_gtmax = cls._agrega_variaveis_limites_ute(
-            df_gtmax, grouping_col, ordem_sintese, datas_sintese
-        )
-        # Repete os limites para todos os estágios e cenarios
-        df = cls._expande_dados_cenarios_gter(df, df_gtmin, df_gtmax)
-        # Converte os limites para MWmes
-        df[LOWER_BOUND_COL] *= (
-            df[BLOCK_DURATION_COL] / cls.STAGE_DURATION_HOURS
-        )
-        df[UPPER_BOUND_COL] *= (
-            df[BLOCK_DURATION_COL] / cls.STAGE_DURATION_HOURS
-        )
 
-        df[LOWER_BOUND_COL] = np.round(df[LOWER_BOUND_COL], 1)
-        df[UPPER_BOUND_COL] = np.round(df[UPPER_BOUND_COL], 1)
+        def _get_group_and_cast_bounds() -> Tuple[np.ndarray, np.ndarray]:
+            bounds_df = Deck.thermal_generation_bounds(uow)
+            dates = Deck.datas_inicio_estagios_sim_final(uow)
+            bounds_df = bounds_df.loc[bounds_df[START_DATE_COL] >= dates[0]]
 
+            grouped_bounds_df = bounds_df.groupby(
+                grouping_columns, as_index=False
+            ).sum(numeric_only=True)
+            grouped_bounds_df = (
+                bounds_df.groupby(grouping_columns, as_index=False)
+                .sum(numeric_only=True)[[LOWER_BOUND_COL, UPPER_BOUND_COL]]
+                .to_numpy()
+            )
+            lower_bounds = grouped_bounds_df[:, 0]
+            upper_bounds = grouped_bounds_df[:, 1]
+
+            return lower_bounds, upper_bounds
+
+        def _repeat_bounds_by_scenario_and_block(
+            df: pd.DataFrame,
+            lower_bounds: np.ndarray,
+            upper_bounds: np.ndarray,
+        ) -> pd.DataFrame:
+            num_entities = (
+                len(ordered_entities[entity_column]) if entity_column else 1
+            )
+            num_stages = len(ordered_entities[STAGE_COL])
+            num_scenarios = len(ordered_entities[SCENARIO_COL])
+            num_blocks = len(ordered_entities[BLOCK_COL])
+            df = df.sort_values(grouping_columns)
+            df[LOWER_BOUND_COL] = cls._repeats_data_by_scenario_and_block(
+                lower_bounds,
+                num_entities,
+                num_stages,
+                num_scenarios,
+                num_blocks,
+            )
+            df[UPPER_BOUND_COL] = cls._repeats_data_by_scenario_and_block(
+                upper_bounds,
+                num_entities,
+                num_stages,
+                num_scenarios,
+                num_blocks,
+            )
+            return df
+
+        def _cast_bounds(df: pd.DataFrame) -> pd.DataFrame:
+            df[LOWER_BOUND_COL] *= (
+                df[BLOCK_DURATION_COL] / STAGE_DURATION_HOURS
+            )
+            df[UPPER_BOUND_COL] *= (
+                df[BLOCK_DURATION_COL] / STAGE_DURATION_HOURS
+            )
+            return df
+
+        def _sort_and_round_bounds(
+            df: pd.DataFrame,
+        ) -> pd.DataFrame:
+            num_digits = 2
+
+            df[VALUE_COL] = np.round(df[VALUE_COL], num_digits)
+            df[LOWER_BOUND_COL] = np.round(df[LOWER_BOUND_COL], num_digits)
+            df[UPPER_BOUND_COL] = np.round(df[UPPER_BOUND_COL], num_digits)
+            return df
+
+        entity_column_list = [entity_column] if entity_column else []
+        grouping_columns = entity_column_list + [START_DATE_COL]
+        lower_bounds, upper_bounds = _get_group_and_cast_bounds()
+        if entity_column != THERMAL_CODE_COL:
+            df = cls._group_thermal_df(df, entity_column)
+
+        df = _repeat_bounds_by_scenario_and_block(
+            df,
+            lower_bounds,
+            upper_bounds,
+        )
+        df = _cast_bounds(df)
+        df = _sort_and_round_bounds(df)
         return df
 
     # TODO intercambios - também tem que pensar em alguma lógica para plotar os limites

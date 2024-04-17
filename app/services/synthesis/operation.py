@@ -1,4 +1,4 @@
-from typing import Callable, Dict, List, Tuple, Optional, TypeVar
+from typing import Callable, Dict, List, Tuple, Optional, TypeVar, Any
 import pandas as pd  # type: ignore
 import numpy as np
 import logging
@@ -240,7 +240,7 @@ class OperationSynthetizer:
         cls,
         df: Optional[pd.DataFrame],
         s: OperationSynthesis,
-        entity_column_values: Dict[str, str],
+        entity_column_values: Dict[str, Any],
         uow: AbstractUnitOfWork,
         internal_stubs: Dict[Variable, Callable] = {},
     ) -> Optional[pd.DataFrame]:
