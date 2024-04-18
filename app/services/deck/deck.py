@@ -1352,8 +1352,14 @@ class Deck:
                 pd.DataFrame,
                 "submercados",
             )
+            submercados = submercados.rename(
+                columns={
+                    "codigo_submercado": SUBMARKET_CODE_COL,
+                    "nome_submercado": SUBMARKET_NAME_COL,
+                }
+            )
             submercados = submercados.drop_duplicates(
-                subset=["codigo_submercado"]
+                subset=[SUBMARKET_CODE_COL]
             ).reset_index(drop=True)
             cls.DECK_DATA_CACHING["submercados"] = submercados
         return submercados.copy()

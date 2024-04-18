@@ -36,6 +36,7 @@ from app.internal.constants import (
     OPERATION_SYNTHESIS_COMMON_COLUMNS,
     EER_CODE_COL,
     SUBMARKET_CODE_COL,
+    SUBMARKET_NAME_COL,
     HYDRO_CODE_COL,
     THERMAL_CODE_COL,
     EXCHANGE_SOURCE_CODE_COL,
@@ -489,11 +490,11 @@ class OperationSynthetizer:
         submarkets = Deck.submercados(uow)
         real_submarkets = submarkets.loc[
             submarkets["ficticio"] == 0, :
-        ].sort_values("nome_submercado")
-        sbms_idx = real_submarkets["codigo_submercado"].unique()
+        ].sort_values(SUBMARKET_CODE_COL)
+        sbms_idx = real_submarkets[SUBMARKET_CODE_COL].unique()
         sbms_name = [
             real_submarkets.loc[
-                real_submarkets["codigo_submercado"] == s, "nome_submercado"
+                real_submarkets[SUBMARKET_CODE_COL] == s, SUBMARKET_NAME_COL
             ].iloc[0]
             for s in sbms_idx
         ]
@@ -568,10 +569,10 @@ class OperationSynthetizer:
         """
 
         submarkets = Deck.submercados(uow)
-        sbms_idx = submarkets["codigo_submercado"].unique()
+        sbms_idx = submarkets[SUBMARKET_CODE_COL].unique()
         sbms_name = [
             submarkets.loc[
-                submarkets["codigo_submercado"] == s, "nome_submercado"
+                submarkets[SUBMARKET_CODE_COL] == s, SUBMARKET_NAME_COL
             ].iloc[0]
             for s in sbms_idx
         ]
@@ -1491,12 +1492,12 @@ class OperationSynthetizer:
             submarkets = Deck.submercados(uow)
             real_submarkets = submarkets.loc[
                 submarkets["ficticio"] == 0, :
-            ].sort_values("nome_submercado")
-            sbms_idx = real_submarkets["codigo_submercado"].unique()
+            ].sort_values(SUBMARKET_CODE_COL)
+            sbms_idx = real_submarkets[SUBMARKET_CODE_COL].unique()
             sbms_name = [
                 real_submarkets.loc[
-                    real_submarkets["codigo_submercado"] == s,
-                    "nome_submercado",
+                    real_submarkets[SUBMARKET_CODE_COL] == s,
+                    SUBMARKET_NAME_COL,
                 ].iloc[0]
                 for s in sbms_idx
             ]
@@ -1758,31 +1759,22 @@ class OperationSynthetizer:
         de saída do NWLISTOP.
         """
 
-        def _replace_thermal_code_by_name(
+        def _sort_thermals(
             s: OperationSynthesis, df: pd.DataFrame, uow: AbstractUnitOfWork
         ) -> pd.DataFrame:
             df = df.sort_values(
                 s.spatial_resolution.sorting_synthesis_df_columns
             ).reset_index(drop=True)
-            conft = Deck.utes(uow)
-            thermals_in_data = df[THERMAL_CODE_COL].unique().tolist()
-            thermals_names = [
-                conft.loc[conft["codigo_usina"] == c, "nome_usina"].iloc[0]
-                for c in thermals_in_data
-            ]
-            lines_by_thermal = df.loc[
-                df[THERMAL_CODE_COL] == thermals_in_data[0]
-            ].shape[0]
             return df
 
         submarkets = Deck.submercados(uow)
         real_submarkets = submarkets.loc[
             submarkets["ficticio"] == 0, :
-        ].sort_values("nome_submercado")
-        sbms_idx = real_submarkets["codigo_submercado"].unique()
+        ].sort_values(SUBMARKET_CODE_COL)
+        sbms_idx = real_submarkets[SUBMARKET_CODE_COL].unique()
         sbms_name = [
             real_submarkets.loc[
-                real_submarkets["codigo_submercado"] == s, "nome_submercado"
+                real_submarkets[SUBMARKET_CODE_COL] == s, SUBMARKET_NAME_COL
             ].iloc[0]
             for s in sbms_idx
         ]
@@ -1810,7 +1802,7 @@ class OperationSynthetizer:
             dfs,
             synthesis,
             uow,
-            early_hooks=[_replace_thermal_code_by_name],
+            early_hooks=[_sort_thermals],
         )
         return df
 
