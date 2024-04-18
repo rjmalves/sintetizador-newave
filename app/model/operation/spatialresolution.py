@@ -62,18 +62,14 @@ class SpatialResolution(Enum):
             SpatialResolution.SISTEMA_INTERLIGADO: [],
             SpatialResolution.SUBMERCADO: [
                 SUBMARKET_CODE_COL,
-                SUBMARKET_NAME_COL,
             ],
             SpatialResolution.RESERVATORIO_EQUIVALENTE: [
                 EER_CODE_COL,
-                EER_NAME_COL,
                 SUBMARKET_CODE_COL,
-                SUBMARKET_NAME_COL,
             ],
             SpatialResolution.PARQUE_EOLICO_EQUIVALENTE: [
                 EEP_COL,
                 SUBMARKET_CODE_COL,
-                SUBMARKET_NAME_COL,
             ],
             SpatialResolution.USINA_HIDROELETRICA: [
                 HYDRO_CODE_COL,
@@ -82,15 +78,11 @@ class SpatialResolution(Enum):
             ],
             SpatialResolution.USINA_TERMELETRICA: [
                 THERMAL_CODE_COL,
-                THERMAL_NAME_COL,
                 SUBMARKET_CODE_COL,
-                SUBMARKET_NAME_COL,
             ],
             SpatialResolution.PAR_SUBMERCADOS: [
                 EXCHANGE_SOURCE_CODE_COL,
-                EXCHANGE_SOURCE_NAME_COL,
                 EXCHANGE_TARGET_CODE_COL,
-                EXCHANGE_TARGET_NAME_COL,
             ],
         }
         return col_maps.get(self, [])

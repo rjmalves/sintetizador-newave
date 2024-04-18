@@ -273,7 +273,7 @@ def test_calcula_patamar_medio_soma(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        usina=["CAMARGOS"],
+        codigo_usina=[1],
     )
     __valida_limites(df)
     __valida_metadata(synthesis_str, df_meta, False)
@@ -305,7 +305,7 @@ def test_calcula_patamar_medio_soma_gter_ute(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        usina=["ANGRA 1"],
+        codigo_usina=[1],
         classe=[1],
     )
     __valida_limites(df)
@@ -323,7 +323,7 @@ def test_sintese_cmo_sbm(test_settings):
         df_arq_pat,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        submercado=["SUDESTE"],
+        codigo_submercado=[1],
         patamar=[1, 2, 3],
     )
     # Compara CMO médio do estágio
@@ -332,7 +332,7 @@ def test_sintese_cmo_sbm(test_settings):
         df_arq_med,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        submercado=["SUDESTE"],
+        codigo_submercado=[1],
         patamar=[0],
     )
     __valida_metadata(synthesis_str, df_meta, False)
@@ -356,7 +356,7 @@ def test_sintese_ever_ree(test_settings):
         df_evert,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        ree=["PARANA"],
+        codigo_ree=[10],
         patamar=[0],
     )
     __valida_metadata(synthesis_str, df_meta, True)
@@ -373,7 +373,7 @@ def test_sintese_ever_sbm(test_settings):
         df_evert,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        submercado=["SUDESTE"],
+        codigo_submercado=[1],
         patamar=[0],
     )
     __valida_metadata(synthesis_str, df_meta, True)
@@ -506,7 +506,7 @@ def test_sintese_varmf_ree(test_settings):
         df_ree,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        ree=["SUL"],
+        codigo_ree=[2],
         patamar=[0],
     )
     __valida_limites(df)
@@ -544,7 +544,7 @@ def test_sintese_varmf_sbm(test_settings):
         df_sbm,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        submercado=["SUL"],
+        codigo_submercado=[2],
         patamar=[0],
     )
     __valida_limites(df)
@@ -607,7 +607,7 @@ def test_sintese_vafl_ree(test_settings):
         df_ree,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        ree=["SUL"],
+        codigo_ree=[2],
         patamar=[0],
     )
 
@@ -642,7 +642,7 @@ def test_sintese_vafl_sbm(test_settings):
         df_sbm,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        submercado=["SUL"],
+        codigo_submercado=[2],
         patamar=[0],
     )
 
@@ -700,7 +700,7 @@ def test_sintese_qafl_ree(test_settings):
         df_ree,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        ree=["SUL"],
+        codigo_ree=[2],
         patamar=[0],
     )
     __valida_metadata("QAFL_REE", df_meta, True)
@@ -732,7 +732,7 @@ def test_sintese_qafl_sbm(test_settings):
         df_sbm,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        submercado=["SUL"],
+        codigo_submercado=[2],
         patamar=[0],
     )
     __valida_metadata("QAFL_SBM", df_meta, True)
@@ -787,7 +787,7 @@ def test_sintese_vinc_ree(test_settings):
         df_ree,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        ree=["SUL"],
+        codigo_ree=[2],
         patamar=[0],
     )
     __valida_metadata("VINC_REE", df_meta, True)
@@ -821,7 +821,7 @@ def test_sintese_vinc_sbm(test_settings):
         df_sbm,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        submercado=["SUL"],
+        codigo_submercado=[2],
         patamar=[0],
     )
     __valida_metadata("VINC_SBM", df_meta, True)
@@ -877,7 +877,7 @@ def test_sintese_qinc_ree(test_settings):
         df_ree,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        ree=["SUL"],
+        codigo_ree=[2],
         patamar=[0],
     )
     __valida_metadata("QINC_REE", df_meta, True)
@@ -909,7 +909,7 @@ def test_sintese_qinc_sbm(test_settings):
         df_sbm,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        submercado=["SUL"],
+        codigo_submercado=[2],
         patamar=[0],
     )
     __valida_metadata("QINC_SBM", df_meta, True)
@@ -963,7 +963,7 @@ def test_sintese_vtur_ree(test_settings):
         df_ree,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        ree=["SUL"],
+        codigo_ree=[2],
         patamar=[1],
     )
     __valida_metadata("VTUR_REE", df_meta, True)
@@ -996,7 +996,7 @@ def test_sintese_vtur_sbm(test_settings):
         df_sbm,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        submercado=["SUL"],
+        codigo_submercado=[2],
         patamar=[1],
     )
     __valida_metadata("VTUR_SBM", df_meta, True)
@@ -1056,7 +1056,7 @@ def test_sintese_qtur_ree(test_settings):
         df_ree,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        ree=["SUL"],
+        codigo_ree=[2],
         patamar=[0],
     )
     __valida_metadata("QTUR_REE", df_meta, True)
@@ -1094,7 +1094,7 @@ def test_sintese_qtur_sbm(test_settings):
         df_sbm,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        submercado=["SUL"],
+        codigo_submercado=[2],
         patamar=[0],
     )
     __valida_metadata("QTUR_SBM", df_meta, True)
@@ -1154,7 +1154,7 @@ def test_sintese_vver_ree(test_settings):
         df_ree,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        ree=["SUL"],
+        codigo_ree=[2],
         patamar=[1],
     )
     __valida_metadata("VVER_REE", df_meta, True)
@@ -1187,7 +1187,7 @@ def test_sintese_vver_sbm(test_settings):
         df_sbm,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        submercado=["SUL"],
+        codigo_submercado=[2],
         patamar=[1],
     )
     __valida_metadata("VVER_SBM", df_meta, True)
@@ -1247,7 +1247,7 @@ def test_sintese_qver_ree(test_settings):
         df_ree,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        ree=["SUL"],
+        codigo_ree=[2],
         patamar=[0],
     )
     __valida_metadata("QVER_REE", df_meta, True)
@@ -1285,7 +1285,7 @@ def test_sintese_qver_sbm(test_settings):
         df_sbm,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        submercado=["SUL"],
+        codigo_submercado=[2],
         patamar=[0],
     )
     __valida_metadata("QVER_SBM", df_meta, True)
@@ -1337,7 +1337,7 @@ def test_sintese_evmin_ree(test_settings):
         df_mevmin,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        ree=["PARANA"],
+        codigo_ree=[10],
         patamar=[0],
     )
     __valida_metadata("EVMIN_REE", df_meta, True)
@@ -1354,7 +1354,7 @@ def test_sintese_evmin_sbm(test_settings):
         df_mevmin,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        submercado=["SUDESTE"],
+        codigo_submercado=[1],
         patamar=[0],
     )
     __valida_metadata("EVMIN_SBM", df_meta, True)
@@ -1431,7 +1431,7 @@ def test_sintese_hjus_uhe(test_settings):
         df_arq,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        usina=["FURNAS"],
+        codigo_usina=[6],
         patamar=[0],
     )
     __valida_metadata("HJUS_UHE", df_meta, False)
@@ -1488,7 +1488,7 @@ def test_sintese_hliq_uhe(test_settings):
         df_arq,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        usina=["FURNAS"],
+        codigo_usina=[6],
         patamar=[0],
     )
     __valida_metadata("HLIQ_UHE", df_meta, False)
@@ -1512,7 +1512,7 @@ def test_sintese_qtur_uhe(test_settings):
         df_arq,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        usina=["FURNAS"],
+        codigo_usina=[6],
         patamar=[0],
     )
     __valida_metadata("QTUR_UHE", df_meta, True)
@@ -1533,7 +1533,7 @@ def test_sintese_qver_uhe(test_settings):
         df_arq,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        usina=["FURNAS"],
+        codigo_usina=[6],
         patamar=[0],
     )
     __valida_metadata("QVER_UHE", df_meta, True)
@@ -1551,7 +1551,7 @@ def test_sintese_qret_uhe(test_settings):
         df_arq,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        usina=["FURNAS"],
+        codigo_usina=[6],
         patamar=[0],
     )
     __valida_metadata("QRET_UHE", df_meta, True)
@@ -1572,7 +1572,7 @@ def test_sintese_qdes_uhe(test_settings):
         df_arq,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        usina=["FURNAS"],
+        codigo_usina=[6],
         patamar=[0],
     )
     __valida_metadata("QDES_UHE", df_meta, True)
@@ -1592,7 +1592,7 @@ def test_sintese_vafl_uhe(test_settings):
         df_arq,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        usina=["FURNAS"],
+        codigo_usina=[6],
         patamar=[0],
     )
     __valida_metadata("VAFL_UHE", df_meta, True)
@@ -1609,7 +1609,7 @@ def test_sintese_vinc_uhe(test_settings):
         df_arq,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        usina=["FURNAS"],
+        codigo_usina=[6],
         patamar=[0],
     )
     __valida_metadata("VINC_UHE", df_meta, True)
@@ -1646,7 +1646,7 @@ def test_sintese_qdef_uhe(test_settings):
         df_tur,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        usina=["FURNAS"],
+        codigo_usina=[6],
         patamar=[0],
     )
     __valida_metadata("QDEF_UHE", df_meta, True)
@@ -1668,7 +1668,7 @@ def test_sintese_vdef_uhe(test_settings):
         df_tur,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        usina=["FURNAS"],
+        codigo_usina=[6],
         patamar=[0],
     )
     __valida_metadata("VDEF_UHE", df_meta, True)
@@ -1692,7 +1692,7 @@ def test_sintese_vevap_uhe(test_settings):
         df_arq_pos,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        usina=["FURNAS"],
+        codigo_usina=[6],
         patamar=[0],
     )
     __valida_metadata("VEVAP_UHE", df_meta, True)
@@ -1711,7 +1711,7 @@ def test_sintese_vagua_ree(test_settings):
         df_arq,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        ree=["PARANA"],
+        codigo_ree=[10],
         patamar=[0],
     )
     __valida_metadata("VAGUA_REE", df_meta, False)
@@ -1726,7 +1726,7 @@ def test_sintese_vagua_uhe(test_settings):
         df_arq,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        usina=["FURNAS"],
+        codigo_usina=[6],
         patamar=[0],
     )
     __valida_metadata("VAGUA_UHE", df_meta, False)
@@ -1741,7 +1741,7 @@ def test_sintese_vaguai_uhe(test_settings):
         df_arq,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        usina=["FURNAS"],
+        codigo_usina=[6],
         patamar=[0],
     )
     __valida_metadata("VAGUAI_UHE", df_meta, False)
@@ -1756,7 +1756,7 @@ def test_sintese_cter_sbm(test_settings):
         df_arq,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        submercado=["SUDESTE"],
+        codigo_submercado=[1],
         patamar=[0],
     )
     __valida_metadata("CTER_SBM", df_meta, False)
@@ -1800,7 +1800,7 @@ def test_sintese_enaa_ree(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        ree=["SUDESTE"],
+        codigo_ree=[1],
     )
     __valida_metadata("ENAA_REE", df_meta, False)
 
@@ -1815,7 +1815,7 @@ def test_sintese_enaa_sbm(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        submercado=["SUDESTE"],
+        codigo_submercado=[1],
     )
     __valida_metadata("ENAA_SBM", df_meta, False)
 
@@ -1844,7 +1844,7 @@ def test_sintese_enaar_ree(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        ree=["SUDESTE"],
+        codigo_ree=[1],
     )
     __valida_metadata("ENAAR_REE", df_meta, False)
 
@@ -1859,7 +1859,7 @@ def test_sintese_enaar_sbm(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        submercado=["SUDESTE"],
+        codigo_submercado=[1],
     )
     __valida_metadata("ENAAR_SBM", df_meta, False)
 
@@ -1888,7 +1888,7 @@ def test_sintese_enaaf_ree(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        ree=["SUDESTE"],
+        codigo_ree=[1],
     )
     __valida_metadata("ENAAF_REE", df_meta, False)
 
@@ -1903,7 +1903,7 @@ def test_sintese_enaaf_sbm(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        submercado=["SUDESTE"],
+        codigo_submercado=[1],
     )
     __valida_metadata("ENAAF_SBM", df_meta, False)
 
@@ -1932,7 +1932,7 @@ def test_sintese_earpf_ree(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        ree=["SUDESTE"],
+        codigo_ree=[1],
     )
     __valida_metadata("EARPF_REE", df_meta, False)
 
@@ -1947,7 +1947,7 @@ def test_sintese_earpf_sbm(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        submercado=["SUDESTE"],
+        codigo_submercado=[1],
     )
     __valida_metadata("EARPF_SBM", df_meta, False)
 
@@ -1976,7 +1976,7 @@ def test_sintese_earmf_ree(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        ree=["SUDESTE"],
+        codigo_ree=[1],
     )
     __valida_limites(df, tol=2.0, lower=False)
     __valida_metadata("EARMF_REE", df_meta, False)
@@ -1992,7 +1992,7 @@ def test_sintese_earmf_sbm(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        submercado=["SUDESTE"],
+        codigo_submercado=[1],
     )
     __valida_limites(df, tol=2.0, lower=False)
     __valida_metadata("EARMF_SBM", df_meta, False)
@@ -2023,7 +2023,7 @@ def test_sintese_ghidr_ree(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        ree=["SUDESTE"],
+        codigo_ree=[1],
     )
     __valida_metadata("GHIDR_REE", df_meta, False)
 
@@ -2038,7 +2038,7 @@ def test_sintese_ghidr_sbm(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        submercado=["SUDESTE"],
+        codigo_submercado=[1],
     )
     __valida_metadata("GHIDR_SBM", df_meta, False)
 
@@ -2067,7 +2067,7 @@ def test_sintese_ghidf_ree(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        ree=["SUDESTE"],
+        codigo_ree=[1],
     )
     __valida_metadata("GHIDF_REE", df_meta, False)
 
@@ -2082,7 +2082,7 @@ def test_sintese_ghidf_sbm(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        submercado=["SUDESTE"],
+        codigo_submercado=[1],
     )
     __valida_metadata("GHIDF_SBM", df_meta, False)
 
@@ -2111,7 +2111,7 @@ def test_sintese_ghid_ree(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        ree=["SUDESTE"],
+        codigo_ree=[1],
     )
     __valida_metadata("GHID_REE", df_meta, False)
 
@@ -2126,7 +2126,7 @@ def test_sintese_ghid_sbm(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        submercado=["SUDESTE"],
+        codigo_submercado=[1],
     )
     __valida_metadata("GHID_SBM", df_meta, False)
 
@@ -2156,7 +2156,7 @@ def test_sintese_gter_ute(test_settings):
         cenario=1,
         patamar=[1],
         classe=[1],
-        usina=["ANGRA 1"],
+        codigo_usina=[1],
     )
     __valida_limites(df)
     __valida_metadata("GTER_UTE", df_meta, False)
@@ -2172,7 +2172,7 @@ def test_sintese_gter_sbm(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        submercado=["SUDESTE"],
+        codigo_submercado=[1],
     )
     __valida_metadata("GTER_SBM", df_meta, False)
 
@@ -2201,7 +2201,7 @@ def test_sintese_everr_ree(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        ree=["SUDESTE"],
+        codigo_ree=[1],
     )
     __valida_metadata("EVERR_REE", df_meta, False)
 
@@ -2216,7 +2216,7 @@ def test_sintese_everr_sbm(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        submercado=["SUDESTE"],
+        codigo_submercado=[1],
     )
     __valida_metadata("EVERR_SBM", df_meta, False)
 
@@ -2245,7 +2245,7 @@ def test_sintese_everf_ree(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        ree=["SUDESTE"],
+        codigo_ree=[1],
     )
     __valida_metadata("EVERF_REE", df_meta, False)
 
@@ -2260,7 +2260,7 @@ def test_sintese_everf_sbm(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        submercado=["SUDESTE"],
+        codigo_submercado=[1],
     )
     __valida_metadata("EVERF_SBM", df_meta, False)
 
@@ -2289,7 +2289,7 @@ def test_sintese_everft_ree(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        ree=["SUDESTE"],
+        codigo_ree=[1],
     )
     __valida_metadata("EVERFT_REE", df_meta, False)
 
@@ -2304,7 +2304,7 @@ def test_sintese_everft_sbm(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        submercado=["SUDESTE"],
+        codigo_submercado=[1],
     )
     __valida_metadata("EVERFT_SBM", df_meta, False)
 
@@ -2333,7 +2333,7 @@ def test_sintese_edesr_ree(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        ree=["SUDESTE"],
+        codigo_ree=[1],
     )
     __valida_metadata("EDESR_REE", df_meta, False)
 
@@ -2348,7 +2348,7 @@ def test_sintese_edesr_sbm(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        submercado=["SUDESTE"],
+        codigo_submercado=[1],
     )
     __valida_metadata("EDESR_SBM", df_meta, False)
 
@@ -2377,7 +2377,7 @@ def test_sintese_edesf_ree(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        ree=["SUDESTE"],
+        codigo_ree=[1],
     )
     __valida_metadata("EDESF_REE", df_meta, False)
 
@@ -2392,7 +2392,7 @@ def test_sintese_edesf_sbm(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        submercado=["SUDESTE"],
+        codigo_submercado=[1],
     )
     __valida_metadata("EDESF_SBM", df_meta, False)
 
@@ -2421,7 +2421,7 @@ def test_sintese_mevmin_ree(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        ree=["SUDESTE"],
+        codigo_ree=[1],
     )
     __valida_metadata("MEVMIN_REE", df_meta, False)
 
@@ -2436,7 +2436,7 @@ def test_sintese_mevmin_sbm(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        submercado=["SUDESTE"],
+        codigo_submercado=[1],
     )
     __valida_metadata("MEVMIN_SBM", df_meta, False)
 
@@ -2465,7 +2465,7 @@ def test_sintese_evmor_ree(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        ree=["SUDESTE"],
+        codigo_ree=[1],
     )
     __valida_metadata("EVMOR_REE", df_meta, False)
 
@@ -2480,7 +2480,7 @@ def test_sintese_evmor_sbm(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        submercado=["SUDESTE"],
+        codigo_submercado=[1],
     )
     __valida_metadata("EVMOR_SBM", df_meta, False)
 
@@ -2509,7 +2509,7 @@ def test_sintese_eevap_ree(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        ree=["SUDESTE"],
+        codigo_ree=[1],
     )
     __valida_metadata("EEVAP_REE", df_meta, False)
 
@@ -2524,7 +2524,7 @@ def test_sintese_eevap_sbm(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        submercado=["SUDESTE"],
+        codigo_submercado=[1],
     )
     __valida_metadata("EEVAP_SBM", df_meta, False)
 
@@ -2553,7 +2553,7 @@ def test_sintese_qafl_uhe(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        usina=["SAO ROQUE"],
+        codigo_usina=[88],
     )
     __valida_metadata("QAFL_UHE", df_meta, False)
 
@@ -2568,7 +2568,7 @@ def test_sintese_qinc_uhe(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        usina=["CAMARGOS"],
+        codigo_usina=[1],
     )
     __valida_metadata("QINC_UHE", df_meta, False)
 
@@ -2583,7 +2583,7 @@ def test_sintese_vtur_uhe(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[1],
-        usina=["CAMARGOS"],
+        codigo_usina=[1],
     )
     __valida_metadata("VTUR_UHE", df_meta, False)
 
@@ -2598,7 +2598,7 @@ def test_sintese_vver_uhe(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[1],
-        usina=["CAMARGOS"],
+        codigo_usina=[1],
     )
     __valida_metadata("VVER_UHE", df_meta, False)
 
@@ -2634,7 +2634,7 @@ def test_sintese_varpf_uhe(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        usina=["CAMARGOS"],
+        codigo_usina=[1],
     )
     __valida_metadata("VARPF_UHE", df_meta, False)
 
@@ -2649,7 +2649,7 @@ def test_sintese_ghid_uhe(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[1],
-        usina=["CAMARGOS"],
+        codigo_usina=[1],
     )
     __valida_metadata("GHID_UHE", df_meta, False)
 
@@ -2667,7 +2667,7 @@ def test_sintese_def_sbm(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        submercado=["SUDESTE"],
+        codigo_submercado=[1],
     )
     __valida_metadata("DEF_SBM", df_meta, False)
 
@@ -2696,7 +2696,7 @@ def test_sintese_exc_sbm(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        submercado=["SUDESTE"],
+        codigo_submercado=[1],
     )
     __valida_metadata("EXC_SBM", df_meta, False)
 
@@ -2725,8 +2725,8 @@ def test_sintese_int_sbp(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        submercado_de=["SUDESTE"],
-        submercado_para=["SUL"],
+        codigo_submercado_de=[1],
+        codigo_submercado_para=[2],
     )
     __valida_limites(df)
     __valida_metadata("INT_SBP", df_meta, False)
@@ -2742,7 +2742,7 @@ def test_sintese_cdef_sbm(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        submercado=["SUDESTE"],
+        codigo_submercado=[1],
     )
     __valida_metadata("CDEF_SBM", df_meta, False)
 
@@ -2771,7 +2771,7 @@ def test_sintese_merl_sbm(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        submercado=["SUDESTE"],
+        codigo_submercado=[1],
     )
     __valida_metadata("MERL_SBM", df_meta, False)
 
@@ -2799,7 +2799,7 @@ def test_sintese_vfpha_uhe(test_settings):
         df_arq,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        usina=["FURNAS"],
+        codigo_usina=[6],
         patamar=[1],
     )
     __valida_metadata("VFPHA_UHE", df_meta, False)
@@ -2814,7 +2814,7 @@ def test_sintese_vevmin_ree(test_settings):
         df_arq,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        ree=["SUDESTE"],
+        codigo_ree=[1],
         patamar=[0],
     )
     __valida_metadata("VEVMIN_REE", df_meta, False)
@@ -2829,7 +2829,7 @@ def test_sintese_vevmin_sbm(test_settings):
         df_arq,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        submercado=["SUDESTE"],
+        codigo_submercado=[1],
         patamar=[0],
     )
     __valida_metadata("VEVMIN_SBM", df_meta, False)
@@ -2858,7 +2858,7 @@ def test_sintese_vret_uhe(test_settings):
         df_arq,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        usina=["FURNAS"],
+        codigo_usina=[6],
         patamar=[0],
     )
     __valida_metadata("VRET_UHE", df_meta, False)
@@ -2873,7 +2873,7 @@ def test_sintese_vdes_uhe(test_settings):
         df_arq,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        usina=["FURNAS"],
+        codigo_usina=[6],
         patamar=[1],
     )
     __valida_metadata("VDES_UHE", df_meta, False)
@@ -2888,7 +2888,7 @@ def test_sintese_vghmin_uhe(test_settings):
         df_arq,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        usina=["FURNAS"],
+        codigo_usina=[6],
         patamar=[1],
     )
     __valida_metadata("VGHMIN_UHE", df_meta, False)
@@ -2903,7 +2903,7 @@ def test_sintese_vghmin_ree(test_settings):
         df_arq,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        ree=["SUDESTE"],
+        codigo_ree=[1],
         patamar=[0],
     )
     __valida_metadata("VGHMIN_REE", df_meta, False)
@@ -2918,7 +2918,7 @@ def test_sintese_vghmin_sbm(test_settings):
         df_arq,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        submercado=["SUDESTE"],
+        codigo_submercado=[1],
         patamar=[0],
     )
     __valida_metadata("VGHMIN_SBM", df_meta, False)
@@ -2947,7 +2947,7 @@ def test_sintese_hmon_uhe(test_settings):
         df_arq,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        usina=["FURNAS"],
+        codigo_usina=[6],
         patamar=[0],
     )
     __valida_metadata("HMON_UHE", df_meta, False)
@@ -2962,7 +2962,7 @@ def test_sintese_vevp_uhe(test_settings):
         df_arq,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        usina=["FURNAS"],
+        codigo_usina=[6],
         patamar=[0],
     )
     __valida_metadata("VEVP_UHE", df_meta, False)
@@ -2995,7 +2995,7 @@ def test_sintese_vposevap_uhe(test_settings):
         df_arq,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        usina=["FURNAS"],
+        codigo_usina=[6],
         patamar=[0],
     )
     __valida_metadata("VPOSEVAP_UHE", df_meta, False)
@@ -3012,7 +3012,7 @@ def test_sintese_vnegevap_uhe(test_settings):
         df_arq,
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
-        usina=["FURNAS"],
+        codigo_usina=[6],
         patamar=[0],
     )
     __valida_metadata("VNEGEVAP_UHE", df_meta, False)

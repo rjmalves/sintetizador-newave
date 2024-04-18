@@ -35,17 +35,11 @@ from app.internal.constants import (
     VALUE_COL,
     OPERATION_SYNTHESIS_COMMON_COLUMNS,
     EER_CODE_COL,
-    EER_NAME_COL,
     SUBMARKET_CODE_COL,
-    SUBMARKET_NAME_COL,
     HYDRO_CODE_COL,
-    HYDRO_NAME_COL,
     THERMAL_CODE_COL,
-    THERMAL_NAME_COL,
     EXCHANGE_SOURCE_CODE_COL,
-    EXCHANGE_SOURCE_NAME_COL,
     EXCHANGE_TARGET_CODE_COL,
-    EXCHANGE_TARGET_NAME_COL,
     VARIABLE_COL,
     GROUPING_TMP_COL,
     PRODUCTIVITY_TMP_COL,
@@ -253,13 +247,6 @@ class OperationSynthetizer:
         df = cls._resolve_temporal_resolution(df, uow)
         for col, val in entity_column_values.items():
             df[col] = val
-            if col in [
-                HYDRO_NAME_COL,
-                THERMAL_NAME_COL,
-                EER_NAME_COL,
-                SUBMARKET_NAME_COL,
-            ]:
-                df = df.astype({col: STRING_DF_TYPE})
         df = cls._resolve_starting_stage(df, uow)
         if s.variable in internal_stubs:
             df = internal_stubs[s.variable](df, uow)
@@ -486,7 +473,6 @@ class OperationSynthetizer:
             synthesis,
             {
                 SUBMARKET_CODE_COL: sbm_index,
-                SUBMARKET_NAME_COL: sbm_name,
             },
             uow,
         )
@@ -567,9 +553,7 @@ class OperationSynthetizer:
             synthesis,
             {
                 EXCHANGE_SOURCE_CODE_COL: sbm1_index,
-                EXCHANGE_SOURCE_NAME_COL: sbm1_name,
                 EXCHANGE_TARGET_CODE_COL: sbm2_index,
-                EXCHANGE_TARGET_NAME_COL: sbm2_name,
             },
             uow,
         )
@@ -648,9 +632,7 @@ class OperationSynthetizer:
             synthesis,
             {
                 EER_CODE_COL: ree_index,
-                EER_NAME_COL: ree_name,
                 SUBMARKET_CODE_COL: aux_df.at[ree_index, SUBMARKET_CODE_COL],
-                SUBMARKET_NAME_COL: aux_df.at[ree_index, SUBMARKET_NAME_COL],
             },
             uow,
         )
@@ -663,43 +645,6 @@ class OperationSynthetizer:
         Resolve a síntese de operação para uma variável operativa
         de um REE a partir dos arquivos de saída do NWLISTOP.
         """
-
-        def _add_submarket_to_eer_synthesis(
-            s: OperationSynthesis, df: pd.DataFrame, uow: AbstractUnitOfWork
-        ) -> pd.DataFrame:
-            if SUBMARKET_CODE_COL in df.columns:
-                return df
-            else:
-                with time_and_log(
-                    message_root="Tempo para adicionar SBM dos REE",
-                    logger=cls.logger,
-                ):
-                    eer_submarket_map = Deck.eer_submarket_map(uow)
-
-                    entities = cls._get_ordered_entities(s)
-                    eer_codes = entities[EER_CODE_COL]
-                    submarket_codes = eer_submarket_map.loc[
-                        eer_codes, SUBMARKET_CODE_COL
-                    ].to_numpy()
-                    submarket_names = eer_submarket_map.loc[
-                        eer_codes, SUBMARKET_CODE_COL
-                    ].to_numpy()
-                    num_blocks = len(entities[BLOCK_COL])
-                    num_stages = len(entities[STAGE_COL])
-                    num_scenarios = len(entities[SCENARIO_COL])
-                    df[SUBMARKET_CODE_COL] = np.repeat(
-                        submarket_codes,
-                        num_scenarios * num_stages * num_blocks,
-                    )
-                    df[SUBMARKET_NAME_COL] = np.repeat(
-                        submarket_names,
-                        num_scenarios * num_stages * num_blocks,
-                    )
-                    df = df.astype({SUBMARKET_NAME_COL: STRING_DF_TYPE})
-                    return df[
-                        [EER_NAME_COL, SUBMARKET_NAME_COL]
-                        + OPERATION_SYNTHESIS_COMMON_COLUMNS
-                    ]
 
         rees = Deck.rees(uow).sort_values("nome")
         rees_idx = rees["codigo"]
@@ -795,9 +740,7 @@ class OperationSynthetizer:
             {
                 HYDRO_CODE_COL: uhe_index,
                 EER_CODE_COL: aux_df.at[uhe_index, EER_CODE_COL],
-                EER_NAME_COL: aux_df.at[uhe_index, EER_NAME_COL],
                 SUBMARKET_CODE_COL: aux_df.at[uhe_index, SUBMARKET_CODE_COL],
-                SUBMARKET_NAME_COL: aux_df.at[uhe_index, SUBMARKET_NAME_COL],
             },
             uow,
             internal_stubs=internal_stubs,
@@ -1180,8 +1123,8 @@ class OperationSynthetizer:
             earpi: earpf,
         }
         grouping_col_map = {
-            SpatialResolution.RESERVATORIO_EQUIVALENTE: EER_NAME_COL,
-            SpatialResolution.SUBMERCADO: SUBMARKET_NAME_COL,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE: EER_CODE_COL,
+            SpatialResolution.SUBMERCADO: SUBMARKET_CODE_COL,
             SpatialResolution.SISTEMA_INTERLIGADO: None,
         }
 
@@ -1511,7 +1454,7 @@ class OperationSynthetizer:
         return cls._post_resolve_entity(
             df,
             synthesis,
-            {SUBMARKET_CODE_COL: sbm_index, SUBMARKET_NAME_COL: sbm_name},
+            {SUBMARKET_CODE_COL: sbm_index},
             uow,
         )
 
@@ -1803,7 +1746,6 @@ class OperationSynthetizer:
             )
         if df is not None:
             df[SUBMARKET_CODE_COL] = sbm_index
-            df[SUBMARKET_NAME_COL] = sbm_name
         return cls._post_resolve_GTER_UTE_entity(df, uow)
 
     @classmethod
@@ -1831,8 +1773,6 @@ class OperationSynthetizer:
             lines_by_thermal = df.loc[
                 df[THERMAL_CODE_COL] == thermals_in_data[0]
             ].shape[0]
-            df[THERMAL_NAME_COL] = np.repeat(thermals_names, lines_by_thermal)
-            df = df.astype({THERMAL_NAME_COL: STRING_DF_TYPE})
             return df
 
         submarkets = Deck.submercados(uow)

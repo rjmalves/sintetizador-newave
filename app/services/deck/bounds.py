@@ -11,13 +11,9 @@ from app.internal.constants import (
     START_DATE_COL,
     STAGE_COL,
     HYDRO_CODE_COL,
-    HYDRO_NAME_COL,
     EER_CODE_COL,
-    EER_NAME_COL,
     THERMAL_CODE_COL,
-    THERMAL_NAME_COL,
     SUBMARKET_CODE_COL,
-    SUBMARKET_NAME_COL,
     EXCHANGE_SOURCE_CODE_COL,
     EXCHANGE_TARGET_CODE_COL,
     BLOCK_COL,
@@ -924,29 +920,21 @@ class OperationVariableBounds:
         """
         valid_grouping_columns = [
             HYDRO_CODE_COL,
-            HYDRO_NAME_COL,
             EER_CODE_COL,
-            EER_NAME_COL,
             SUBMARKET_CODE_COL,
-            SUBMARKET_NAME_COL,
         ]
 
         grouping_column_map: Dict[str, List[str]] = {
             HYDRO_CODE_COL: [
                 HYDRO_CODE_COL,
-                HYDRO_NAME_COL,
                 EER_CODE_COL,
-                EER_NAME_COL,
                 SUBMARKET_CODE_COL,
-                SUBMARKET_NAME_COL,
             ],
             EER_CODE_COL: [
                 EER_CODE_COL,
-                EER_NAME_COL,
                 SUBMARKET_CODE_COL,
-                SUBMARKET_NAME_COL,
             ],
-            SUBMARKET_CODE_COL: [SUBMARKET_CODE_COL, SUBMARKET_NAME_COL],
+            SUBMARKET_CODE_COL: [SUBMARKET_CODE_COL],
         }
 
         mapped_columns = (
@@ -979,19 +967,15 @@ class OperationVariableBounds:
         """
         valid_grouping_columns = [
             THERMAL_CODE_COL,
-            THERMAL_NAME_COL,
             SUBMARKET_CODE_COL,
-            SUBMARKET_NAME_COL,
         ]
 
         grouping_column_map: Dict[str, List[str]] = {
             THERMAL_CODE_COL: [
                 THERMAL_CODE_COL,
-                THERMAL_NAME_COL,
                 SUBMARKET_CODE_COL,
-                SUBMARKET_NAME_COL,
             ],
-            SUBMARKET_CODE_COL: [SUBMARKET_CODE_COL, SUBMARKET_NAME_COL],
+            SUBMARKET_CODE_COL: [SUBMARKET_CODE_COL],
         }
 
         mapped_columns = (
