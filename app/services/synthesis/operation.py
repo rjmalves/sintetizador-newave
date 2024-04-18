@@ -489,7 +489,7 @@ class OperationSynthetizer:
         de um submercado a partir dos arquivos de saída do NWLISTOP.
         """
 
-        submarkets = Deck.submercados(uow)
+        submarkets = Deck.submarkets(uow)
         real_submarkets = submarkets.loc[
             submarkets["ficticio"] == 0, :
         ].sort_values(SUBMARKET_CODE_COL)
@@ -570,7 +570,7 @@ class OperationSynthetizer:
         de um par de submercados a partir dos arquivos de saída do NWLISTOP.
         """
 
-        submarkets = Deck.submercados(uow)
+        submarkets = Deck.submarkets(uow)
         sbms_idx = submarkets[SUBMARKET_CODE_COL].unique()
         sbms_name = [
             submarkets.loc[
@@ -649,9 +649,9 @@ class OperationSynthetizer:
         de um REE a partir dos arquivos de saída do NWLISTOP.
         """
 
-        rees = Deck.rees(uow).sort_values(EER_CODE_COL)
-        rees_idx = rees[EER_CODE_COL]
-        rees_name = rees[EER_NAME_COL]
+        eers = Deck.eers(uow).sort_values(EER_CODE_COL)
+        eers_idx = eers[EER_CODE_COL]
+        eers_name = eers[EER_NAME_COL]
 
         n_procs = int(Settings().processors)
         with time_and_log(
@@ -662,7 +662,7 @@ class OperationSynthetizer:
                     idx: pool.apply_async(
                         cls._resolve_REE_entity, (uow, synthesis, idx, name)
                     )
-                    for idx, name in zip(rees_idx, rees_name)
+                    for idx, name in zip(eers_idx, eers_name)
                 }
                 dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
 
@@ -767,9 +767,9 @@ class OperationSynthetizer:
             ].reset_index(drop=True)
             return df
 
-        uhes = Deck.uhes(uow).sort_values(HYDRO_CODE_COL)
-        uhes_idx = uhes[HYDRO_CODE_COL]
-        uhes_name = uhes[HYDRO_NAME_COL]
+        hydros = Deck.hydros(uow).sort_values(HYDRO_CODE_COL)
+        hydros_idx = hydros[HYDRO_CODE_COL]
+        hydros_name = hydros[HYDRO_NAME_COL]
 
         n_procs = int(Settings().processors)
         with time_and_log(
@@ -781,7 +781,7 @@ class OperationSynthetizer:
                     name: pool.apply_async(
                         cls._resolve_UHE_entity, (uow, synthesis, idx, name)
                     )
-                    for idx, name in zip(uhes_idx, uhes_name)
+                    for idx, name in zip(hydros_idx, hydros_name)
                 }
                 dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
 
@@ -1269,13 +1269,13 @@ class OperationSynthetizer:
     def _calc_accumulated_productivity(
         cls, df: pd.DataFrame, entities: dict, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-        hydro_df = Deck.uhes(uow)
+        hydro_df = Deck.hydros(uow)
         # Monta a lista de arestas e constroi o grafo
         # direcionado das usinas (JUSANTE -> MONTANTE)
-        uhes = entities[HYDRO_CODE_COL]
+        hydro_codes = entities[HYDRO_CODE_COL]
         np_edges = list(
             hydro_df.loc[
-                hydro_df[HYDRO_CODE_COL].isin(uhes),
+                hydro_df[HYDRO_CODE_COL].isin(hydro_codes),
                 ["codigo_usina_jusante", HYDRO_CODE_COL],
             ].to_numpy()
         )
@@ -1491,7 +1491,7 @@ class OperationSynthetizer:
             synthesis: OperationSynthesis, uow: AbstractUnitOfWork
         ) -> Optional[pd.DataFrame]:
 
-            submarkets = Deck.submercados(uow)
+            submarkets = Deck.submarkets(uow)
             real_submarkets = submarkets.loc[
                 submarkets["ficticio"] == 0, :
             ].sort_values(SUBMARKET_CODE_COL)
@@ -1769,7 +1769,7 @@ class OperationSynthetizer:
             ).reset_index(drop=True)
             return df
 
-        submarkets = Deck.submercados(uow)
+        submarkets = Deck.submarkets(uow)
         real_submarkets = submarkets.loc[
             submarkets["ficticio"] == 0, :
         ].sort_values(SUBMARKET_CODE_COL)

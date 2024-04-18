@@ -704,9 +704,9 @@ class Deck:
         if num_estagios_individualizados_politica is None:
             ano_inicio = cls.ano_inicio_estudo(uow)
             mes_inicio = cls.mes_inicio_estudo(uow)
-            rees = cls.rees(uow)
-            mes_fim_hib = rees["mes_fim_individualizado"].iloc[0]
-            ano_fim_hib = rees["ano_fim_individualizado"].iloc[0]
+            eers = cls.eers(uow)
+            mes_fim_hib = eers["mes_fim_individualizado"].iloc[0]
+            ano_fim_hib = eers["ano_fim_individualizado"].iloc[0]
 
             if mes_fim_hib is not None and ano_fim_hib is not None:
                 data_inicio_estudo = datetime(
@@ -966,7 +966,7 @@ class Deck:
             )
         )
         if data_fim_estagios_individualizados_sim_final is None:
-            rees = cls.rees(uow)
+            eers = cls.eers(uow)
             ano_inicio = cls.ano_inicio_estudo(uow)
             agregacao_sim_final = cls.agregacao_simulacao_final(uow)
             anos_estudo = cls.num_anos_estudo(uow)
@@ -977,7 +977,7 @@ class Deck:
                     month=1,
                     day=1,
                 )
-            elif rees["ano_fim_individualizado"].isna().sum() > 0:
+            elif eers["ano_fim_individualizado"].isna().sum() > 0:
                 fim = datetime(
                     year=ano_inicio + anos_estudo + anos_pos_sim_final,
                     month=1,
@@ -985,8 +985,8 @@ class Deck:
                 )
             else:
                 fim = datetime(
-                    year=int(rees["ano_fim_individualizado"].iloc[0]),
-                    month=int(rees["mes_fim_individualizado"].iloc[0]),
+                    year=int(eers["ano_fim_individualizado"].iloc[0]),
+                    month=int(eers["mes_fim_individualizado"].iloc[0]),
                     day=1,
                 )
             data_fim_estagios_individualizados_sim_final = fim
@@ -1344,53 +1344,53 @@ class Deck:
         return tempos_etapas
 
     @classmethod
-    def submercados(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        submercados = cls.DECK_DATA_CACHING.get("submercados")
-        if submercados is None:
-            submercados = cls._validate_data(
+    def submarkets(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        submarkets = cls.DECK_DATA_CACHING.get("submarkets")
+        if submarkets is None:
+            submarkets = cls._validate_data(
                 cls._get_sistema(uow).custo_deficit,
                 pd.DataFrame,
-                "submercados",
+                "submarkets",
             )
-            submercados = submercados.rename(
+            submarkets = submarkets.rename(
                 columns={
                     "codigo_submercado": SUBMARKET_CODE_COL,
                     "nome_submercado": SUBMARKET_NAME_COL,
                 }
             )
-            submercados = submercados.drop_duplicates(
+            submarkets = submarkets.drop_duplicates(
                 subset=[SUBMARKET_CODE_COL]
             ).reset_index(drop=True)
-            submercados = submercados.astype(
+            submarkets = submarkets.astype(
                 {SUBMARKET_NAME_COL: STRING_DF_TYPE}
             )
-            cls.DECK_DATA_CACHING["submercados"] = submercados
-        return submercados.copy()
+            cls.DECK_DATA_CACHING["submarkets"] = submarkets
+        return submarkets.copy()
 
     @classmethod
-    def rees(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        rees = cls.DECK_DATA_CACHING.get("rees")
-        if rees is None:
-            rees = cls._validate_data(
-                cls._get_ree(uow).rees, pd.DataFrame, "REEs"
+    def eers(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        eers = cls.DECK_DATA_CACHING.get("eers")
+        if eers is None:
+            eers = cls._validate_data(
+                cls._get_ree(uow).rees, pd.DataFrame, "eers"
             )
-            rees = rees.rename(
+            eers = eers.rename(
                 columns={
                     "codigo": EER_CODE_COL,
                     "nome": EER_NAME_COL,
                     "submercado": SUBMARKET_CODE_COL,
                 }
             )
-            rees = rees.astype({EER_NAME_COL: STRING_DF_TYPE})
-            cls.DECK_DATA_CACHING["rees"] = rees
-        return rees.copy()
+            eers = eers.astype({EER_NAME_COL: STRING_DF_TYPE})
+            cls.DECK_DATA_CACHING["eers"] = eers
+        return eers.copy()
 
     @classmethod
     def politica_hibrida(cls, uow: AbstractUnitOfWork) -> bool:
         politica_hibrida = cls.DECK_DATA_CACHING.get("politica_hibrida")
         if politica_hibrida is None:
-            rees = cls.rees(uow)
-            val = bool(rees["ano_fim_individualizado"].isna().sum() == 0)
+            eers = cls.eers(uow)
+            val = bool(eers["ano_fim_individualizado"].isna().sum() == 0)
             politica_hibrida = cls._validate_data(
                 val,
                 bool,
@@ -1400,22 +1400,22 @@ class Deck:
         return politica_hibrida
 
     @classmethod
-    def uhes(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        uhes = cls.DECK_DATA_CACHING.get("uhes")
-        if uhes is None:
-            uhes = cls._validate_data(
-                cls._get_confhd(uow).usinas, pd.DataFrame, "UHEs"
+    def hydros(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        hydros = cls.DECK_DATA_CACHING.get("hydros")
+        if hydros is None:
+            hydros = cls._validate_data(
+                cls._get_confhd(uow).usinas, pd.DataFrame, "hydros"
             )
-            uhes = uhes.rename(
+            hydros = hydros.rename(
                 columns={
                     "codigo_usina": HYDRO_CODE_COL,
                     "nome_usina": HYDRO_NAME_COL,
                     "ree": EER_CODE_COL,
                 }
             )
-            uhes = uhes.astype({HYDRO_NAME_COL: STRING_DF_TYPE})
-            cls.DECK_DATA_CACHING["uhes"] = uhes
-        return uhes.copy()
+            hydros = hydros.astype({HYDRO_NAME_COL: STRING_DF_TYPE})
+            cls.DECK_DATA_CACHING["hydros"] = hydros
+        return hydros.copy()
 
     @classmethod
     def modif(cls, uow: AbstractUnitOfWork) -> Modif:
@@ -2025,23 +2025,23 @@ class Deck:
         return vazoes.copy()
 
     @classmethod
-    def utes(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        utes = cls.DECK_DATA_CACHING.get("utes")
-        if utes is None:
-            utes = cls._validate_data(
+    def thermals(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        thermals = cls.DECK_DATA_CACHING.get("thermals")
+        if thermals is None:
+            thermals = cls._validate_data(
                 cls._get_conft(uow).usinas, pd.DataFrame, "UTEs"
             )
-            utes = utes.drop(columns="codigo_usina")
-            utes = utes.rename(
+            thermals = thermals.drop(columns="codigo_usina")
+            thermals = thermals.rename(
                 columns={
                     "classe": THERMAL_CODE_COL,
                     "nome_usina": THERMAL_NAME_COL,
                     "submercado": SUBMARKET_CODE_COL,
                 }
             )
-            utes = utes.astype({THERMAL_NAME_COL: STRING_DF_TYPE})
-            cls.DECK_DATA_CACHING["utes"] = utes
-        return utes.copy()
+            thermals = thermals.astype({THERMAL_NAME_COL: STRING_DF_TYPE})
+            cls.DECK_DATA_CACHING["thermals"] = thermals
+        return thermals.copy()
 
     @classmethod
     def numero_patamares(cls, uow: AbstractUnitOfWork) -> int:
@@ -2172,7 +2172,7 @@ class Deck:
     def eer_code_order(cls, uow: AbstractUnitOfWork) -> List[int]:
         eer_code_order = cls.DECK_DATA_CACHING.get("eer_code_order")
         if eer_code_order is None:
-            eer_code_order = cls.rees(uow)[EER_CODE_COL].tolist()
+            eer_code_order = cls.eers(uow)[EER_CODE_COL].tolist()
             cls.DECK_DATA_CACHING["eer_code_order"] = eer_code_order
         return eer_code_order
 
@@ -2180,7 +2180,7 @@ class Deck:
     def hydro_code_order(cls, uow: AbstractUnitOfWork) -> List[int]:
         hydro_code_order = cls.DECK_DATA_CACHING.get("hydro_code_order")
         if hydro_code_order is None:
-            hydro_code_order = cls.uhes(uow)[HYDRO_CODE_COL].tolist()
+            hydro_code_order = cls.hydros(uow)[HYDRO_CODE_COL].tolist()
             cls.DECK_DATA_CACHING["hydro_code_order"] = hydro_code_order
         return hydro_code_order
 
@@ -2188,15 +2188,15 @@ class Deck:
     def hydro_eer_submarket_map(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         aux_df = cls.DECK_DATA_CACHING.get("hydro_eer_submarket_map")
         if aux_df is None:
-            confhd = cls.uhes(uow).set_index(HYDRO_CODE_COL)
-            rees = cls.rees(uow).set_index(EER_CODE_COL)
-            sistema = cls.submercados(uow).set_index(SUBMARKET_CODE_COL)
-            aux_df = confhd[[HYDRO_NAME_COL, EER_CODE_COL]].copy()
+            hydros = cls.hydros(uow).set_index(HYDRO_CODE_COL)
+            eers = cls.eers(uow).set_index(EER_CODE_COL)
+            submarkets = cls.submarkets(uow).set_index(SUBMARKET_CODE_COL)
+            aux_df = hydros[[HYDRO_NAME_COL, EER_CODE_COL]].copy()
             aux_df = aux_df.join(
-                rees[[EER_NAME_COL, SUBMARKET_CODE_COL]], on=EER_CODE_COL
+                eers[[EER_NAME_COL, SUBMARKET_CODE_COL]], on=EER_CODE_COL
             )
             aux_df = aux_df.join(
-                sistema[[SUBMARKET_NAME_COL]], on=SUBMARKET_CODE_COL
+                submarkets[[SUBMARKET_NAME_COL]], on=SUBMARKET_CODE_COL
             )
             cls.DECK_DATA_CACHING["hydro_eer_submarket_map"] = aux_df
         return aux_df.copy()
@@ -2224,19 +2224,19 @@ class Deck:
     def thermal_submarket_map(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         aux_df = cls.DECK_DATA_CACHING.get("thermal_submarket_map")
         if aux_df is None:
-            utes = Deck.utes(uow)
-            utes = utes.set_index(THERMAL_NAME_COL)
-            sistema = cls.submercados(uow).set_index(SUBMARKET_CODE_COL)
+            thermals = Deck.thermals(uow)
+            thermals = thermals.set_index(THERMAL_NAME_COL)
+            submarkets = cls.submarkets(uow).set_index(SUBMARKET_CODE_COL)
 
             aux_df = pd.DataFrame(
                 data={
-                    THERMAL_CODE_COL: utes[THERMAL_CODE_COL].tolist(),
-                    THERMAL_NAME_COL: utes.index.tolist(),
-                    SUBMARKET_CODE_COL: utes[SUBMARKET_CODE_COL].tolist(),
+                    THERMAL_CODE_COL: thermals[THERMAL_CODE_COL].tolist(),
+                    THERMAL_NAME_COL: thermals.index.tolist(),
+                    SUBMARKET_CODE_COL: thermals[SUBMARKET_CODE_COL].tolist(),
                 }
             )
             aux_df[SUBMARKET_NAME_COL] = aux_df[SUBMARKET_CODE_COL].apply(
-                lambda c: sistema.at[c, SUBMARKET_NAME_COL]
+                lambda c: submarkets.at[c, SUBMARKET_NAME_COL]
             )
             aux_df = aux_df.set_index(THERMAL_CODE_COL)
             cls.DECK_DATA_CACHING["thermal_submarket_map"] = aux_df

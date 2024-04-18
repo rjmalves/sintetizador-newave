@@ -138,7 +138,7 @@ class SystemSynthetizer:
 
     @classmethod
     def __resolve_SBM(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        df = Deck.submercados(uow)
+        df = Deck.submarkets(uow)
         return df[[SUBMARKET_CODE_COL, SUBMARKET_NAME_COL]]
 
     @classmethod

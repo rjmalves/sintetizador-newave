@@ -173,23 +173,23 @@ class ScenarioSynthetizer:
         :return: A tabela como um DataFrame
         :rtype: pd.DataFrame | None
         """
-        uhes = Deck.uhes(uow)
+        hydros = Deck.hydros(uow)
         vazoes = Deck.vazoes(uow)
-        inflow_station = uhes.loc[
-            uhes["codigo_usina"] == hydro_code, "posto"
+        inflow_station = hydros.loc[
+            hydros["codigo_usina"] == hydro_code, "posto"
         ].iloc[0]
         natural_inflow = vazoes[inflow_station].to_numpy()
         null_station = inflow_station == NULL_INFLOW_STATION
         if not null_station:
-            upstream_hydro_codes = uhes.loc[
-                uhes["codigo_usina_jusante"] == hydro_code, "codigo_usina"
+            upstream_hydro_codes = hydros.loc[
+                hydros["codigo_usina_jusante"] == hydro_code, "codigo_usina"
             ].tolist()
             upstream_hydro_codes = [u for u in upstream_hydro_codes if u != 0]
             upstream_inflow_stations = list(
                 set(
                     [
-                        uhes.loc[
-                            uhes["codigo_usina"] == uhe_montante, "posto"
+                        hydros.loc[
+                            hydros["codigo_usina"] == uhe_montante, "posto"
                         ].iloc[0]
                         for uhe_montante in upstream_hydro_codes
                     ]
@@ -200,13 +200,13 @@ class ScenarioSynthetizer:
                     natural_inflow - vazoes[upstream_station].to_numpy()
                 )
         history_starting_year = int(
-            uhes.loc[
-                uhes["codigo_usina"] == hydro_code, "ano_inicio_historico"
+            hydros.loc[
+                hydros["codigo_usina"] == hydro_code, "ano_inicio_historico"
             ].iloc[0]
         )
         history_ending_year = int(
-            uhes.loc[
-                uhes["codigo_usina"] == hydro_code, "ano_fim_historico"
+            hydros.loc[
+                hydros["codigo_usina"] == hydro_code, "ano_fim_historico"
             ].iloc[0]
         )
         dates = pd.date_range(
