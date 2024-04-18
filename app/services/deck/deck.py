@@ -1361,6 +1361,7 @@ class Deck:
             submercados = submercados.drop_duplicates(
                 subset=[SUBMARKET_CODE_COL]
             ).reset_index(drop=True)
+            submercados = submercados.astype({SUBMARKET_NAME_COL: STRING_DF_TYPE})
             cls.DECK_DATA_CACHING["submercados"] = submercados
         return submercados.copy()
 
@@ -1371,6 +1372,10 @@ class Deck:
             rees = cls._validate_data(
                 cls._get_ree(uow).rees, pd.DataFrame, "REEs"
             )
+            rees = rees.rename(
+                columns={"codigo": EER_CODE_COL, "nome": EER_NAME_COL}
+            )
+            rees = rees.astype({EER_NAME_COL: STRING_DF_TYPE})
             cls.DECK_DATA_CACHING["rees"] = rees
         return rees.copy()
 
@@ -1395,6 +1400,14 @@ class Deck:
             uhes = cls._validate_data(
                 cls._get_confhd(uow).usinas, pd.DataFrame, "UHEs"
             )
+            uhes = uhes.rename(
+                columns={
+                    "codigo_usina": HYDRO_CODE_COL,
+                    "nome_usina": HYDRO_NAME_COL,
+                    "ree": EER_CODE_COL,
+                }
+            )
+            uhes = uhes.astype({HYDRO_NAME_COL: STRING_DF_TYPE})
             cls.DECK_DATA_CACHING["uhes"] = uhes
         return uhes.copy()
 
@@ -2012,6 +2025,15 @@ class Deck:
             utes = cls._validate_data(
                 cls._get_conft(uow).usinas, pd.DataFrame, "UTEs"
             )
+            utes = utes.drop(columns="codigo_usina")
+            utes = utes.rename(
+                columns={
+                    "classe": THERMAL_CODE_COL,
+                    "nome_usina": THERMAL_NAME_COL,
+                    "submercado": SUBMARKET_CODE_COL,
+                }
+            )
+            utes = utes.astype({THERMAL_NAME_COL: STRING_DF_TYPE})
             cls.DECK_DATA_CACHING["utes"] = utes
         return utes.copy()
 
@@ -2144,7 +2166,7 @@ class Deck:
     def eer_code_order(cls, uow: AbstractUnitOfWork) -> List[int]:
         eer_code_order = cls.DECK_DATA_CACHING.get("eer_code_order")
         if eer_code_order is None:
-            eer_code_order = cls.rees(uow)["codigo"].tolist()
+            eer_code_order = cls.rees(uow)[EER_CODE_COL].tolist()
             cls.DECK_DATA_CACHING["eer_code_order"] = eer_code_order
         return eer_code_order
 
@@ -2152,7 +2174,7 @@ class Deck:
     def hydro_code_order(cls, uow: AbstractUnitOfWork) -> List[int]:
         hydro_code_order = cls.DECK_DATA_CACHING.get("hydro_code_order")
         if hydro_code_order is None:
-            hydro_code_order = cls.uhes(uow)["codigo_usina"].tolist()
+            hydro_code_order = cls.uhes(uow)[HYDRO_CODE_COL].tolist()
             cls.DECK_DATA_CACHING["hydro_code_order"] = hydro_code_order
         return hydro_code_order
 
@@ -2160,31 +2182,26 @@ class Deck:
     def hydro_eer_submarket_map(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         aux_df = cls.DECK_DATA_CACHING.get("hydro_eer_submarket_map")
         if aux_df is None:
-            confhd = cls.uhes(uow).astype({"nome_usina": STRING_DF_TYPE})
-            confhd = confhd.set_index("nome_usina")
-            rees = cls.rees(uow).astype({"nome": STRING_DF_TYPE})
-            rees = rees.set_index("codigo")
-            sistema = cls.submercados(uow).astype(
-                {"nome_submercado": STRING_DF_TYPE}
+            confhd = cls.uhes(uow).set_index(HYDRO_CODE_COL)
+            rees = cls.rees(uow).set_index(EER_CODE_COL)
+            sistema = cls.submercados(uow).set_index(SUBMARKET_CODE_COL)
+            aux_df = pd.DataFrame(data={HYDRO_CODE_COL: confhd.index.tolist()})
+            aux_df[HYDRO_NAME_COL] = aux_df[HYDRO_CODE_COL].apply(
+                lambda u: confhd.at[u, HYDRO_NAME_COL]
             )
-            sistema = sistema.drop_duplicates(
-                ["codigo_submercado", "nome_submercado"]
-            ).set_index("codigo_submercado")
-            aux_df = pd.DataFrame(data={HYDRO_NAME_COL: confhd.index.tolist()})
-            aux_df[HYDRO_CODE_COL] = aux_df[HYDRO_NAME_COL].apply(
-                lambda u: confhd.at[u, "codigo_usina"]
+            aux_df[EER_CODE_COL] = aux_df[HYDRO_CODE_COL].apply(
+                lambda u: confhd.at[u, EER_CODE_COL]
             )
-            aux_df[EER_CODE_COL] = aux_df[HYDRO_NAME_COL].apply(
-                lambda u: confhd.at[u, "ree"]
+            aux_df[EER_NAME_COL] = aux_df[HYDRO_CODE_COL].apply(
+                lambda u: rees.at[confhd.at[u, EER_CODE_COL], EER_NAME_COL]
             )
-            aux_df[EER_NAME_COL] = aux_df[HYDRO_NAME_COL].apply(
-                lambda u: rees.at[confhd.at[u, "ree"], "nome"]
-            )
-            aux_df[SUBMARKET_CODE_COL] = aux_df[HYDRO_NAME_COL].apply(
-                lambda u: rees.at[confhd.at[u, "ree"], "submercado"]
+            aux_df[SUBMARKET_CODE_COL] = aux_df[HYDRO_CODE_COL].apply(
+                lambda u: rees.at[
+                    confhd.at[u, EER_CODE_COL], SUBMARKET_CODE_COL
+                ]
             )
             aux_df[SUBMARKET_NAME_COL] = aux_df[SUBMARKET_CODE_COL].apply(
-                lambda c: sistema.at[c, "nome_submercado"]
+                lambda c: sistema.at[c, SUBMARKET_NAME_COL]
             )
             aux_df = aux_df.set_index(HYDRO_CODE_COL)
             cls.DECK_DATA_CACHING["hydro_eer_submarket_map"] = aux_df
@@ -2213,23 +2230,19 @@ class Deck:
     def thermal_submarket_map(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         aux_df = cls.DECK_DATA_CACHING.get("thermal_submarket_map")
         if aux_df is None:
-            utes = Deck.utes(uow).astype({"nome_usina": STRING_DF_TYPE})
-            utes = utes.set_index("nome_usina")
-            sistema = cls.submercados(uow).astype(
-                {"nome_submercado": STRING_DF_TYPE}
-            )
-            sistema = sistema.drop_duplicates(
-                ["codigo_submercado", "nome_submercado"]
-            ).set_index("codigo_submercado")
+            utes = Deck.utes(uow)
+            utes = utes.set_index(THERMAL_NAME_COL)
+            sistema = cls.submercados(uow).set_index(SUBMARKET_CODE_COL)
+
             aux_df = pd.DataFrame(
                 data={
-                    THERMAL_CODE_COL: utes["classe"].tolist(),
+                    THERMAL_CODE_COL: utes[THERMAL_CODE_COL].tolist(),
                     THERMAL_NAME_COL: utes.index.tolist(),
-                    SUBMARKET_CODE_COL: utes["submercado"].tolist(),
+                    SUBMARKET_CODE_COL: utes[SUBMARKET_CODE_COL].tolist(),
                 }
             )
-            aux_df[SUBMARKET_NAME_COL] = aux_df["codigo_submercado"].apply(
-                lambda c: sistema.at[c, "nome_submercado"]
+            aux_df[SUBMARKET_NAME_COL] = aux_df[SUBMARKET_CODE_COL].apply(
+                lambda c: sistema.at[c, SUBMARKET_NAME_COL]
             )
             aux_df = aux_df.set_index(THERMAL_CODE_COL)
             cls.DECK_DATA_CACHING["thermal_submarket_map"] = aux_df

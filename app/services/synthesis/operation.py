@@ -35,9 +35,11 @@ from app.internal.constants import (
     VALUE_COL,
     OPERATION_SYNTHESIS_COMMON_COLUMNS,
     EER_CODE_COL,
+    EER_NAME_COL,
     SUBMARKET_CODE_COL,
     SUBMARKET_NAME_COL,
     HYDRO_CODE_COL,
+    HYDRO_NAME_COL,
     THERMAL_CODE_COL,
     EXCHANGE_SOURCE_CODE_COL,
     EXCHANGE_TARGET_CODE_COL,
@@ -647,9 +649,9 @@ class OperationSynthetizer:
         de um REE a partir dos arquivos de saída do NWLISTOP.
         """
 
-        rees = Deck.rees(uow).sort_values("nome")
-        rees_idx = rees["codigo"]
-        rees_name = rees["nome"]
+        rees = Deck.rees(uow).sort_values(EER_CODE_COL)
+        rees_idx = rees[EER_CODE_COL]
+        rees_name = rees[EER_NAME_COL]
 
         n_procs = int(Settings().processors)
         with time_and_log(
@@ -765,9 +767,9 @@ class OperationSynthetizer:
             ].reset_index(drop=True)
             return df
 
-        uhes = Deck.uhes(uow).sort_values("nome_usina")
-        uhes_idx = uhes["codigo_usina"]
-        uhes_name = uhes["nome_usina"]
+        uhes = Deck.uhes(uow).sort_values(HYDRO_CODE_COL)
+        uhes_idx = uhes[HYDRO_CODE_COL]
+        uhes_name = uhes[HYDRO_NAME_COL]
 
         n_procs = int(Settings().processors)
         with time_and_log(
