@@ -77,11 +77,8 @@ class SpatialResolution(Enum):
             ],
             SpatialResolution.USINA_HIDROELETRICA: [
                 HYDRO_CODE_COL,
-                HYDRO_NAME_COL,
                 EER_CODE_COL,
-                EER_NAME_COL,
                 SUBMARKET_CODE_COL,
-                SUBMARKET_NAME_COL,
             ],
             SpatialResolution.USINA_TERMELETRICA: [
                 THERMAL_CODE_COL,

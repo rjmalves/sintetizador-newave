@@ -2619,7 +2619,7 @@ def test_sintese_varmf_uhe(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        usina=["CAMARGOS"],
+        codigo_usina=[1],
     )
     __valida_metadata("VARMF_UHE", df_meta, False)
 

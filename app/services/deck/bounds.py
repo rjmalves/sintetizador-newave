@@ -9,7 +9,6 @@ from app.services.unitofwork import AbstractUnitOfWork
 from app.services.deck.deck import Deck
 from app.internal.constants import (
     START_DATE_COL,
-    END_DATE_COL,
     STAGE_COL,
     HYDRO_CODE_COL,
     HYDRO_NAME_COL,
@@ -20,19 +19,17 @@ from app.internal.constants import (
     SUBMARKET_CODE_COL,
     SUBMARKET_NAME_COL,
     EXCHANGE_SOURCE_CODE_COL,
-    EXCHANGE_SOURCE_NAME_COL,
     EXCHANGE_TARGET_CODE_COL,
-    EXCHANGE_TARGET_NAME_COL,
     BLOCK_COL,
     BLOCK_DURATION_COL,
     SCENARIO_COL,
-    STATS_OR_SCENARIO_COL,
     UPPER_BOUND_COL,
     LOWER_BOUND_COL,
     VALUE_COL,
     SYSTEM_GROUPING_COL,
     STAGE_DURATION_HOURS,
     HM3_M3S_MONTHLY_FACTOR,
+    IDENTIFICATION_COLUMNS,
 )
 from app.utils.operations import fast_group_df
 from inewave.newave import (
@@ -47,28 +44,6 @@ class OperationVariableBounds:
     existentes nos arquivos de saída do NEWAVE, que são processadas no
     processo de síntese da operação.
     """
-
-    IDENTIFICATION_COLUMNS = [
-        START_DATE_COL,
-        END_DATE_COL,
-        STAGE_COL,
-        SUBMARKET_CODE_COL,
-        SUBMARKET_NAME_COL,
-        EXCHANGE_SOURCE_CODE_COL,
-        EXCHANGE_SOURCE_NAME_COL,
-        EXCHANGE_TARGET_CODE_COL,
-        EXCHANGE_TARGET_NAME_COL,
-        HYDRO_CODE_COL,
-        HYDRO_NAME_COL,
-        THERMAL_CODE_COL,
-        THERMAL_NAME_COL,
-        EER_CODE_COL,
-        EER_NAME_COL,
-        BLOCK_COL,
-        BLOCK_DURATION_COL,
-        SCENARIO_COL,
-        STATS_OR_SCENARIO_COL,
-    ]
 
     T = TypeVar("T")
 
@@ -980,8 +955,7 @@ class OperationVariableBounds:
         grouping_columns = mapped_columns + [
             c
             for c in df.columns
-            if c in cls.IDENTIFICATION_COLUMNS
-            and c not in valid_grouping_columns
+            if c in IDENTIFICATION_COLUMNS and c not in valid_grouping_columns
         ]
 
         grouped_df = fast_group_df(
@@ -1026,8 +1000,7 @@ class OperationVariableBounds:
         grouping_columns = mapped_columns + [
             c
             for c in df.columns
-            if c in cls.IDENTIFICATION_COLUMNS
-            and c not in valid_grouping_columns
+            if c in IDENTIFICATION_COLUMNS and c not in valid_grouping_columns
         ]
 
         grouped_df = fast_group_df(

@@ -339,11 +339,7 @@ class ScenarioSynthetizer:
         with time_and_log(
             "Tempo para calculo da MLT por UHE", logger=cls.logger
         ):
-            hydro_eer_submarket_map = (
-                Deck.hydro_eer_submarket_map(uow)
-                .reset_index()
-                .set_index(HYDRO_CODE_COL)
-            )
+            hydro_eer_submarket_map = Deck.hydro_eer_submarket_map(uow)
             lta_model_df = cls._model_dataframe_for_hydro_lta(uow)
             lta_hydro_dfs: List[pd.DataFrame] = []
             for hydro_code, map_line in hydro_eer_submarket_map.iterrows():
@@ -541,11 +537,7 @@ class ScenarioSynthetizer:
             "Tempo para calculo da MLT por REE", logger=cls.logger
         ):
             energy_history = _energy_history_df(uow)
-            eer_submarket_map = (
-                Deck.hydro_eer_submarket_map(uow)
-                .drop_duplicates(subset=[EER_CODE_COL])
-                .set_index(EER_CODE_COL)
-            )
+            eer_submarket_map = Deck.eer_submarket_map(uow)
             eer_order = Deck.eer_code_order(uow)
             eer_submarket_map = eer_submarket_map.loc[eer_order].reset_index()
             lta_model_df = cls._model_dataframe_for_eer_lta(uow)
@@ -745,11 +737,7 @@ class ScenarioSynthetizer:
             num_stages: int,
             uow: AbstractUnitOfWork,
         ) -> pd.DataFrame:
-            eer_submarket_map = (
-                Deck.hydro_eer_submarket_map(uow)
-                .drop_duplicates(subset=[EER_CODE_COL])
-                .set_index(EER_CODE_COL)
-            )
+            eer_submarket_map = Deck.eer_submarket_map(uow)
             eer_order = Deck.eer_code_order(uow)
             eer_submarket_map = eer_submarket_map.loc[eer_order].reset_index()
             for col in [
@@ -851,11 +839,7 @@ class ScenarioSynthetizer:
             num_stages: int,
             uow: AbstractUnitOfWork,
         ) -> pd.DataFrame:
-            hydro_eer_submarket_map = (
-                Deck.hydro_eer_submarket_map(uow)
-                .reset_index()
-                .set_index(HYDRO_CODE_COL)
-            )
+            hydro_eer_submarket_map = Deck.hydro_eer_submarket_map(uow)
             hydro_order = Deck.hydro_code_order(uow)
             hydro_eer_submarket_map = hydro_eer_submarket_map.loc[
                 hydro_order

@@ -1033,12 +1033,7 @@ class Deck:
             return df
 
         def _add_entity_data(df: pd.DataFrame) -> pd.DataFrame:
-            entity_map = cls.hydro_eer_submarket_map(uow)
-            entity_map = (
-                entity_map.reset_index()
-                .drop_duplicates(subset=[EER_CODE_COL])
-                .set_index(EER_CODE_COL)
-            )
+            entity_map = cls.eer_submarket_map(uow)
             return df.join(entity_map, on=EER_CODE_COL)
 
         eer_stored_energy_lower_bounds = cls.DECK_DATA_CACHING.get(
@@ -1080,12 +1075,7 @@ class Deck:
             num_configs = df.shape[0]
             df = pd.concat([df] * len(eers), ignore_index=True)
             df[EER_CODE_COL] = np.repeat(eers, num_configs)
-            entity_map = cls.hydro_eer_submarket_map(uow)
-            entity_map = (
-                entity_map.reset_index()
-                .drop_duplicates(subset=[EER_CODE_COL])
-                .set_index(EER_CODE_COL)
-            )
+            entity_map = cls.eer_submarket_map(uow)
             return df.join(entity_map, on=EER_CODE_COL)
 
         def _add_values(
@@ -1520,11 +1510,7 @@ class Deck:
         hydro_volume_bounds = cls.DECK_DATA_CACHING.get("hydro_volume_bounds")
         if hydro_volume_bounds is None:
             hydro_volume_bounds = _get_hydro_data(uow)
-            entities = (
-                cls.hydro_eer_submarket_map(uow)
-                .reset_index()
-                .set_index(HYDRO_CODE_COL)
-            )
+            entities = cls.hydro_eer_submarket_map(uow)
             hydro_volume_bounds = hydro_volume_bounds.join(entities)
             cls.DECK_DATA_CACHING["hydro_volume_bounds"] = hydro_volume_bounds
         return hydro_volume_bounds.copy()
@@ -1723,11 +1709,7 @@ class Deck:
         )
         if hydro_turbined_flow_bounds is None:
             hydro_turbined_flow_bounds = _get_hydro_data(uow)
-            entities = (
-                cls.hydro_eer_submarket_map(uow)
-                .reset_index()
-                .set_index(HYDRO_CODE_COL)
-            )
+            entities = cls.hydro_eer_submarket_map(uow)
             hydro_turbined_flow_bounds = hydro_turbined_flow_bounds.join(
                 entities
             )
@@ -1804,11 +1786,7 @@ class Deck:
         )
         if hydro_turbined_flow_bounds_with_changes is None:
             hydro_turbined_flow_bounds = _get_hydro_data(uow)
-            entities = (
-                cls.hydro_eer_submarket_map(uow)
-                .reset_index()
-                .set_index(HYDRO_CODE_COL)
-            )
+            entities = cls.hydro_eer_submarket_map(uow)
             hydro_turbined_flow_bounds = hydro_turbined_flow_bounds.join(
                 entities
             )
@@ -1903,11 +1881,7 @@ class Deck:
         )
         if hydro_outflow_bounds is None:
             hydro_outflow_bounds = _get_hydro_data(uow)
-            entities = (
-                cls.hydro_eer_submarket_map(uow)
-                .reset_index()
-                .set_index(HYDRO_CODE_COL)
-            )
+            entities = cls.hydro_eer_submarket_map(uow)
             hydro_outflow_bounds = hydro_outflow_bounds.join(entities)
             cls.DECK_DATA_CACHING["hydro_outflow_bounds"] = (
                 hydro_outflow_bounds
@@ -2154,8 +2128,8 @@ class Deck:
 
     @classmethod
     def hydro_eer_submarket_map(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        df_aux = cls.DECK_DATA_CACHING.get("hydro_eer_submarket_map")
-        if df_aux is None:
+        aux_df = cls.DECK_DATA_CACHING.get("hydro_eer_submarket_map")
+        if aux_df is None:
             confhd = cls.uhes(uow).astype({"nome_usina": STRING_DF_TYPE})
             confhd = confhd.set_index("nome_usina")
             rees = cls.rees(uow).astype({"nome": STRING_DF_TYPE})
@@ -2166,30 +2140,49 @@ class Deck:
             sistema = sistema.drop_duplicates(
                 ["codigo_submercado", "nome_submercado"]
             ).set_index("codigo_submercado")
-            df_aux = pd.DataFrame(data={HYDRO_NAME_COL: confhd.index.tolist()})
-            df_aux[HYDRO_CODE_COL] = df_aux[HYDRO_NAME_COL].apply(
+            aux_df = pd.DataFrame(data={HYDRO_NAME_COL: confhd.index.tolist()})
+            aux_df[HYDRO_CODE_COL] = aux_df[HYDRO_NAME_COL].apply(
                 lambda u: confhd.at[u, "codigo_usina"]
             )
-            df_aux[EER_CODE_COL] = df_aux[HYDRO_NAME_COL].apply(
+            aux_df[EER_CODE_COL] = aux_df[HYDRO_NAME_COL].apply(
                 lambda u: confhd.at[u, "ree"]
             )
-            df_aux[EER_NAME_COL] = df_aux[HYDRO_NAME_COL].apply(
+            aux_df[EER_NAME_COL] = aux_df[HYDRO_NAME_COL].apply(
                 lambda u: rees.at[confhd.at[u, "ree"], "nome"]
             )
-            df_aux[SUBMARKET_CODE_COL] = df_aux[HYDRO_NAME_COL].apply(
+            aux_df[SUBMARKET_CODE_COL] = aux_df[HYDRO_NAME_COL].apply(
                 lambda u: rees.at[confhd.at[u, "ree"], "submercado"]
             )
-            df_aux[SUBMARKET_NAME_COL] = df_aux[SUBMARKET_CODE_COL].apply(
+            aux_df[SUBMARKET_NAME_COL] = aux_df[SUBMARKET_CODE_COL].apply(
                 lambda c: sistema.at[c, "nome_submercado"]
             )
-            df_aux = df_aux.set_index(HYDRO_NAME_COL)
-            cls.DECK_DATA_CACHING["hydro_eer_submarket_map"] = df_aux
-        return df_aux.copy()
+            aux_df = aux_df.set_index(HYDRO_CODE_COL)
+            cls.DECK_DATA_CACHING["hydro_eer_submarket_map"] = aux_df
+        return aux_df.copy()
+
+    @classmethod
+    def eer_submarket_map(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        aux_df = cls.DECK_DATA_CACHING.get("eer_submarket_map")
+        if aux_df is None:
+            aux_df = cls.hydro_eer_submarket_map(uow)
+            aux_df = aux_df.drop_duplicates(subset=[EER_CODE_COL]).reset_index(
+                drop=True
+            )[
+                [
+                    EER_CODE_COL,
+                    EER_NAME_COL,
+                    SUBMARKET_CODE_COL,
+                    SUBMARKET_NAME_COL,
+                ]
+            ]
+            aux_df = aux_df.set_index(EER_CODE_COL)
+            cls.DECK_DATA_CACHING["eer_submarket_map"] = aux_df
+        return aux_df.copy()
 
     @classmethod
     def thermal_submarket_map(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        df_aux = cls.DECK_DATA_CACHING.get("thermal_submarket_map")
-        if df_aux is None:
+        aux_df = cls.DECK_DATA_CACHING.get("thermal_submarket_map")
+        if aux_df is None:
             utes = Deck.utes(uow).astype({"nome_usina": STRING_DF_TYPE})
             utes = utes.set_index("nome_usina")
             sistema = cls.submercados(uow).astype(
@@ -2198,16 +2191,16 @@ class Deck:
             sistema = sistema.drop_duplicates(
                 ["codigo_submercado", "nome_submercado"]
             ).set_index("codigo_submercado")
-            df_aux = pd.DataFrame(
+            aux_df = pd.DataFrame(
                 data={
                     THERMAL_CODE_COL: utes["classe"].tolist(),
                     THERMAL_NAME_COL: utes.index.tolist(),
                     SUBMARKET_CODE_COL: utes["submercado"].tolist(),
                 }
             )
-            df_aux[SUBMARKET_NAME_COL] = df_aux["codigo_submercado"].apply(
+            aux_df[SUBMARKET_NAME_COL] = aux_df["codigo_submercado"].apply(
                 lambda c: sistema.at[c, "nome_submercado"]
             )
-            df_aux = df_aux.set_index(THERMAL_CODE_COL)
-            cls.DECK_DATA_CACHING["thermal_submarket_map"] = df_aux
-        return df_aux.copy()
+            aux_df = aux_df.set_index(THERMAL_CODE_COL)
+            cls.DECK_DATA_CACHING["thermal_submarket_map"] = aux_df
+        return aux_df.copy()

@@ -641,7 +641,7 @@ class OperationSynthetizer:
                 ree=ree_index,
             )
 
-        aux_df = Deck.hydro_eer_submarket_map(uow)
+        aux_df = Deck.eer_submarket_map(uow)
 
         return cls._post_resolve_entity(
             df,
@@ -649,12 +649,8 @@ class OperationSynthetizer:
             {
                 EER_CODE_COL: ree_index,
                 EER_NAME_COL: ree_name,
-                SUBMARKET_CODE_COL: aux_df.loc[
-                    aux_df[EER_NAME_COL] == ree_name, SUBMARKET_CODE_COL
-                ].iloc[0],
-                SUBMARKET_NAME_COL: aux_df.loc[
-                    aux_df[EER_NAME_COL] == ree_name, SUBMARKET_NAME_COL
-                ].iloc[0],
+                SUBMARKET_CODE_COL: aux_df.at[ree_index, SUBMARKET_CODE_COL],
+                SUBMARKET_NAME_COL: aux_df.at[ree_index, SUBMARKET_NAME_COL],
             },
             uow,
         )
@@ -671,32 +667,32 @@ class OperationSynthetizer:
         def _add_submarket_to_eer_synthesis(
             s: OperationSynthesis, df: pd.DataFrame, uow: AbstractUnitOfWork
         ) -> pd.DataFrame:
-            if SUBMARKET_NAME_COL in df.columns:
+            if SUBMARKET_CODE_COL in df.columns:
                 return df
             else:
                 with time_and_log(
                     message_root="Tempo para adicionar SBM dos REE",
                     logger=cls.logger,
                 ):
-                    eers = Deck.rees(uow).set_index("nome")
-                    submarkets = Deck.submercados(uow)
-                    submarkets = submarkets.drop_duplicates(
-                        ["codigo_submercado", "nome_submercado"]
-                    ).set_index("codigo_submercado")
+                    eer_submarket_map = Deck.eer_submarket_map(uow)
+
                     entities = cls._get_ordered_entities(s)
-                    eers_df = entities[EER_NAME_COL]
-                    submarkets_codes_df = [
-                        eers.at[r, "submercado"] for r in eers_df
-                    ]
-                    submarkets_names_df = [
-                        submarkets.at[c, "nome_submercado"]
-                        for c in submarkets_codes_df
-                    ]
+                    eer_codes = entities[EER_CODE_COL]
+                    submarket_codes = eer_submarket_map.loc[
+                        eer_codes, SUBMARKET_CODE_COL
+                    ].to_numpy()
+                    submarket_names = eer_submarket_map.loc[
+                        eer_codes, SUBMARKET_CODE_COL
+                    ].to_numpy()
                     num_blocks = len(entities[BLOCK_COL])
                     num_stages = len(entities[STAGE_COL])
                     num_scenarios = len(entities[SCENARIO_COL])
+                    df[SUBMARKET_CODE_COL] = np.repeat(
+                        submarket_codes,
+                        num_scenarios * num_stages * num_blocks,
+                    )
                     df[SUBMARKET_NAME_COL] = np.repeat(
-                        submarkets_names_df,
+                        submarket_names,
                         num_scenarios * num_stages * num_blocks,
                     )
                     df = df.astype({SUBMARKET_NAME_COL: STRING_DF_TYPE})
@@ -726,7 +722,6 @@ class OperationSynthetizer:
             dfs,
             synthesis,
             uow,
-            late_hooks=[_add_submarket_to_eer_synthesis],
         )
         return df
 
@@ -752,7 +747,7 @@ class OperationSynthetizer:
             de uma UHE.
             """
             n_blocks = Deck.numero_patamares(uow)
-            unique_cols_for_block_0 = [HYDRO_NAME_COL, STAGE_COL, SCENARIO_COL]
+            unique_cols_for_block_0 = [HYDRO_CODE_COL, STAGE_COL, SCENARIO_COL]
             df_block_0 = df.copy()
             df_block_0[VALUE_COL] = (
                 df_block_0[VALUE_COL] * df_block_0[BLOCK_DURATION_COL]
@@ -799,11 +794,10 @@ class OperationSynthetizer:
             synthesis,
             {
                 HYDRO_CODE_COL: uhe_index,
-                HYDRO_NAME_COL: uhe_name,
-                EER_CODE_COL: aux_df.at[uhe_name, EER_CODE_COL],
-                EER_NAME_COL: aux_df.at[uhe_name, EER_NAME_COL],
-                SUBMARKET_CODE_COL: aux_df.at[uhe_name, SUBMARKET_CODE_COL],
-                SUBMARKET_NAME_COL: aux_df.at[uhe_name, SUBMARKET_NAME_COL],
+                EER_CODE_COL: aux_df.at[uhe_index, EER_CODE_COL],
+                EER_NAME_COL: aux_df.at[uhe_index, EER_NAME_COL],
+                SUBMARKET_CODE_COL: aux_df.at[uhe_index, SUBMARKET_CODE_COL],
+                SUBMARKET_NAME_COL: aux_df.at[uhe_index, SUBMARKET_NAME_COL],
             },
             uow,
             internal_stubs=internal_stubs,
@@ -2087,15 +2081,14 @@ class OperationSynthetizer:
             / initial_stored_energy_df["valor_percentual"]
         )
         if s.spatial_resolution == SpatialResolution.SUBMERCADO:
-            eers_submarkets_map = Deck.hydro_eer_submarket_map(uow)
+            eers_submarkets_map = Deck.eer_submarket_map(uow)
             initial_stored_energy_df.dropna(inplace=True)
             initial_stored_energy_df[GROUPING_TMP_COL] = (
                 initial_stored_energy_df.apply(
-                    lambda linha: eers_submarkets_map.loc[
-                        eers_submarkets_map[EER_NAME_COL]
-                        == linha["nome_ree"].strip(),
+                    lambda line: eers_submarkets_map.at[
+                        line[EER_CODE_COL],
                         SUBMARKET_CODE_COL,
-                    ].iloc[0],
+                    ],
                     axis=1,
                 )
             )
