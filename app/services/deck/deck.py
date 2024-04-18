@@ -67,6 +67,7 @@ from app.internal.constants import (
     LOWER_BOUND_UNIT_COL,
     UPPER_BOUND_UNIT_COL,
     BLOCK_COL,
+    SCENARIO_COL
 )
 
 
@@ -418,7 +419,7 @@ class Deck:
             if df is None:
                 return pd.DataFrame()
             else:
-                return df
+                return df.rename(columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL})
         else:
             return pd.DataFrame()
 
@@ -430,7 +431,7 @@ class Deck:
             if df is None:
                 return pd.DataFrame()
             else:
-                return df
+                return df.rename(columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL})
         else:
             return pd.DataFrame()
 
@@ -442,7 +443,7 @@ class Deck:
             if df is None:
                 return pd.DataFrame()
             else:
-                return df
+                return df.rename(columns={"uhe": HYDRO_CODE_COL, "serie": SCENARIO_COL})
         else:
             return pd.DataFrame()
 
@@ -454,7 +455,7 @@ class Deck:
             if df is None:
                 return pd.DataFrame()
             else:
-                return df
+                return df.rename(columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL})
         else:
             return pd.DataFrame()
 
@@ -466,7 +467,7 @@ class Deck:
             if df is None:
                 return pd.DataFrame()
             else:
-                return df
+                return df.rename(columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL})
         else:
             return pd.DataFrame()
 
@@ -478,7 +479,7 @@ class Deck:
             if df is None:
                 return pd.DataFrame()
             else:
-                return df
+                return df.rename(columns={"uhe": HYDRO_CODE_COL, "serie": SCENARIO_COL})
         else:
             return pd.DataFrame()
 
@@ -490,7 +491,7 @@ class Deck:
             if df is None:
                 return pd.DataFrame()
             else:
-                return df
+                return df.rename(columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL})
         else:
             return pd.DataFrame()
 
@@ -502,7 +503,7 @@ class Deck:
             if df is None:
                 return pd.DataFrame()
             else:
-                return df
+                return df.rename(columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL})
         else:
             return pd.DataFrame()
 
@@ -514,7 +515,7 @@ class Deck:
             if df is None:
                 return pd.DataFrame()
             else:
-                return df
+                return df.rename(columns={"uhe": HYDRO_CODE_COL, "serie": SCENARIO_COL})
         else:
             return pd.DataFrame()
 

@@ -870,12 +870,12 @@ class ScenarioSynthetizer:
             inflow_df, num_scenarios * num_spans, num_hydros, num_stages, uow
         )
         inflow_df = cls._resolve_starting_stage(inflow_df, uow)
-        inflow_df.drop(columns=[HYDRO_CODE_COL], inplace=True)
         inflow_df_columns = [
             STAGE_COL,
             START_DATE_COL,
             END_DATE_COL,
             SCENARIO_COL,
+            HYDRO_CODE_COL,
             EER_CODE_COL,
             SUBMARKET_CODE_COL,
             VALUE_COL,
@@ -916,9 +916,6 @@ class ScenarioSynthetizer:
         else:
             energy_df = generated_energy_df
         if not energy_df.empty:
-            energy_df = energy_df.rename(
-                columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL}
-            )
             energy_df = cls._add_energy_eer_data(uow, energy_df, dates)
             if it is not None:
                 energy_df[ITERATION_COL] = it
@@ -939,9 +936,6 @@ class ScenarioSynthetizer:
         de dados de REE e submercado aos dados de vazão lidos.
         """
         if not inflow_df.empty:
-            inflow_df = inflow_df.rename(
-                columns={"uhe": HYDRO_CODE_COL, "serie": SCENARIO_COL}
-            )
             inflow_df = cls._add_inflow_hydro_data(uow, inflow_df)
             if it is not None:
                 inflow_df[ITERATION_COL] = it
@@ -1296,7 +1290,7 @@ class ScenarioSynthetizer:
                 c for c in cls.COMMON_COLUMNS if c in df.columns
             ]
             grouped_df = df.groupby(cols).sum(numeric_only=True).reset_index()
-            return grouped_df[cols + ["valor"]]
+            return grouped_df[cols + [VALUE_COL]]
         else:
             return df
 
