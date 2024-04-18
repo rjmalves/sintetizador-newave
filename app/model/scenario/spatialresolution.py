@@ -1,9 +1,9 @@
 from enum import Enum
 from typing import Dict, List
 from app.internal.constants import (
-    HYDRO_NAME_COL,
-    EER_NAME_COL,
-    SUBMARKET_NAME_COL,
+    HYDRO_CODE_COL,
+    EER_CODE_COL,
+    SUBMARKET_CODE_COL,
 )
 
 
@@ -47,15 +47,15 @@ class SpatialResolution(Enum):
     def entity_df_columns(self) -> List[str]:
         col_maps: Dict[SpatialResolution, List[str]] = {
             SpatialResolution.SISTEMA_INTERLIGADO: [],
-            SpatialResolution.SUBMERCADO: [SUBMARKET_NAME_COL],
+            SpatialResolution.SUBMERCADO: [SUBMARKET_CODE_COL],
             SpatialResolution.RESERVATORIO_EQUIVALENTE: [
-                EER_NAME_COL,
-                SUBMARKET_NAME_COL,
+                EER_CODE_COL,
+                SUBMARKET_CODE_COL,
             ],
             SpatialResolution.USINA_HIDROELETRICA: [
-                HYDRO_NAME_COL,
-                EER_NAME_COL,
-                SUBMARKET_NAME_COL,
+                HYDRO_CODE_COL,
+                EER_CODE_COL,
+                SUBMARKET_CODE_COL,
             ],
         }
         return col_maps.get(self, [])

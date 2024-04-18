@@ -10,7 +10,9 @@ from app.utils.graph import Graph
 from app.utils.log import Log
 from app.utils.timing import time_and_log
 from app.utils.regex import match_variables_with_wildcards
-from app.utils.operations import fast_group_df, quantile_scenario_labels
+from app.utils.operations import (
+    calc_statistics
+)
 from app.model.settings import Settings
 from app.services.deck.bounds import OperationVariableBounds
 from app.services.deck.deck import Deck
@@ -250,7 +252,7 @@ class OperationSynthetizer:
         df = cls._resolve_starting_stage(df, uow)
         if s.variable in internal_stubs:
             df = internal_stubs[s.variable](df, uow)
-        df_stats = cls._calc_statistics(df)
+        df_stats = calc_statistics(df)
         df[STATS_OR_SCENARIO_COL] = False
         df_stats[STATS_OR_SCENARIO_COL] = True
         df = pd.concat([df, df_stats], ignore_index=True)
@@ -306,9 +308,9 @@ class OperationSynthetizer:
                 df = c(s, df, uow)
         return df
 
-    @classmethod
+    @staticmethod
     def _resolve_temporal_resolution(
-        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
+        df: pd.DataFrame, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         """
         Adiciona informação temporal a um DataFrame de síntese, utilizando
@@ -1711,7 +1713,7 @@ class OperationSynthetizer:
             return df
         df = cls._resolve_temporal_resolution_GTER_UTE(df, uow)
         df = cls._resolve_starting_stage(df, uow)
-        df_stats = cls._calc_statistics(df)
+        df_stats = calc_statistics(df)
         df[STATS_OR_SCENARIO_COL] = False
         df_stats[STATS_OR_SCENARIO_COL] = True
         df = pd.concat([df, df_stats], ignore_index=True)
@@ -1907,9 +1909,9 @@ class OperationSynthetizer:
         res = solver(synthesis, uow)
         return res if res is not None else pd.DataFrame()
 
-    @classmethod
+    @staticmethod
     def _resolve_starting_stage(
-        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
+        df: pd.DataFrame, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         """
         Adiciona a informação do estágio inicial do caso aos dados,
@@ -1922,74 +1924,6 @@ class OperationSynthetizer:
         df.loc[:, STAGE_COL] -= Deck.mes_inicio_estudo(uow) - 1
         df = df.loc[df[STAGE_COL] > 0]
         return df
-
-    @classmethod
-    def _calc_mean_std(cls, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Realiza o pós-processamento para calcular o valor médio e o desvio
-        padrão de uma variável operativa dentre todos os estágios e patamares,
-        agrupando de acordo com as demais colunas.
-        """
-        value_columns = [SCENARIO_COL, VALUE_COL]
-        grouping_columns = [c for c in df.columns if c not in value_columns]
-        extract_columns = [VALUE_COL]
-        df_mean = fast_group_df(
-            df, grouping_columns, extract_columns, "mean", reset_index=True
-        )
-        df_mean[SCENARIO_COL] = "mean"
-
-        df_std = fast_group_df(
-            df, grouping_columns, extract_columns, "std", reset_index=True
-        )
-        df_std[SCENARIO_COL] = "std"
-
-        return pd.concat([df_mean, df_std], ignore_index=True)
-
-    @classmethod
-    def _calc_quantiles(
-        cls, df: pd.DataFrame, quantiles: List[float]
-    ) -> pd.DataFrame:
-        """
-        Realiza o pós-processamento para calcular uma lista de quantis
-        de uma variável operativa dentre todos os estágios e patamares,
-        agrupando de acordo com as demais colunas.
-        """
-        value_columns = [SCENARIO_COL, VALUE_COL]
-        grouping_columns = [c for c in df.columns if c not in value_columns]
-        quantile_df = (
-            df.groupby(grouping_columns, sort=False)[[SCENARIO_COL, VALUE_COL]]
-            .quantile(quantiles)
-            .reset_index()
-        )
-
-        level_column = [c for c in quantile_df.columns if "level_" in c]
-        if len(level_column) != 1:
-            cls._log("Erro no cálculo dos quantis", ERROR)
-            raise RuntimeError()
-
-        quantile_df = quantile_df.drop(columns=[SCENARIO_COL]).rename(
-            columns={level_column[0]: SCENARIO_COL}
-        )
-        num_entities = quantile_df.shape[0] // len(quantiles)
-        quantile_labels = np.tile(
-            np.array([quantile_scenario_labels(q) for q in quantiles]),
-            num_entities,
-        )
-        quantile_df[SCENARIO_COL] = quantile_labels
-        return quantile_df
-
-    @classmethod
-    def _calc_statistics(cls, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Realiza o pós-processamento de um DataFrame com dados da
-        síntese da operação de uma determinada variável, calculando
-        estatísticas como quantis e média para cada variável, em cada
-        estágio e patamar.
-        """
-        df_q = cls._calc_quantiles(df, QUANTILES_FOR_STATISTICS)
-        df_m = cls._calc_mean_std(df)
-        df_stats = pd.concat([df_q, df_m], ignore_index=True)
-        return df_stats
 
     @classmethod
     def _initial_stored_energy_df(
@@ -2369,7 +2303,7 @@ class OperationSynthetizer:
                 scenarios_df = scenarios_df.sort_values(
                     s.spatial_resolution.sorting_synthesis_df_columns
                 ).reset_index(drop=True)
-                stats_df = cls._calc_statistics(scenarios_df)
+                stats_df = calc_statistics(scenarios_df)
             stats_df = stats_df.drop(columns=[STATS_OR_SCENARIO_COL])
             cls._add_synthesis_stats(s, stats_df)
             cls.__store_in_cache_if_needed(s, scenarios_df)

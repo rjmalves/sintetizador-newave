@@ -11,7 +11,7 @@ from app.services.unitofwork import AbstractUnitOfWork
 from app.utils.log import Log
 from app.utils.timing import time_and_log
 from app.utils.regex import match_variables_with_wildcards
-from app.utils.operations import fast_group_df
+from app.utils.operations import calc_statistics
 from app.model.settings import Settings
 from app.services.deck.deck import Deck
 from app.model.scenario.variable import Variable
@@ -36,17 +36,13 @@ from app.internal.constants import (
     SPAN_COL,
     SCENARIO_COL,
     HYDRO_CODE_COL,
-    HYDRO_NAME_COL,
     EER_CODE_COL,
-    EER_NAME_COL,
     SUBMARKET_CODE_COL,
-    SUBMARKET_NAME_COL,
     NULL_INFLOW_STATION,
     STRING_DF_TYPE,
     VARIABLE_COL,
     SCENARIO_SYNTHESIS_STATS_ROOT,
     SCENARIO_SYNTHESIS_SUBDIR,
-    QUANTILES_FOR_STATISTICS,
 )
 
 
@@ -313,12 +309,6 @@ class ScenarioSynthetizer:
                 pd.DataFrame(
                     data={
                         HYDRO_CODE_COL: [hydro_code] * len(lta_inflow),
-                        HYDRO_NAME_COL: [
-                            hydro_eer_submarket_map.at[
-                                hydro_code, HYDRO_NAME_COL
-                            ]
-                        ]
-                        * len(lta_inflow),
                         MONTH_COL: lta_inflow[MONTH_COL],
                         LTA_COL: lta_inflow[VALUE_COL].to_numpy(),
                     }
@@ -327,13 +317,9 @@ class ScenarioSynthetizer:
             )
             for col in [
                 EER_CODE_COL,
-                EER_NAME_COL,
                 SUBMARKET_CODE_COL,
-                SUBMARKET_NAME_COL,
             ]:
                 lta_hydro_df[col] = map_line[col]
-            for col in [HYDRO_NAME_COL, EER_NAME_COL, SUBMARKET_NAME_COL]:
-                lta_hydro_df = lta_hydro_df.astype({col: STRING_DF_TYPE})
             return lta_hydro_df
 
         with time_and_log(
@@ -524,13 +510,9 @@ class ScenarioSynthetizer:
             lta_eer_df[LTA_COL] = eer_lta
             for col in [
                 EER_CODE_COL,
-                EER_NAME_COL,
                 SUBMARKET_CODE_COL,
-                SUBMARKET_NAME_COL,
             ]:
                 lta_eer_df[col] = map_line[col]
-            for col in [EER_NAME_COL, SUBMARKET_NAME_COL]:
-                lta_eer_df = lta_eer_df.astype({col: STRING_DF_TYPE})
             return lta_eer_df
 
         with time_and_log(
@@ -598,7 +580,7 @@ class ScenarioSynthetizer:
         with time_and_log(
             "Tempo para agregação da MLT de ENAA - SBM", logger=cls.logger
         ):
-            return cls._agg_lta_eer_energy_series(SUBMARKET_NAME_COL, uow)
+            return cls._agg_lta_eer_energy_series(SUBMARKET_CODE_COL, uow)
 
     @classmethod
     def _resolve_lta_sin_energy_series(
@@ -617,7 +599,7 @@ class ScenarioSynthetizer:
             "Tempo para agregação da MLT de QINC - REE", logger=cls.logger
         ):
             return cls._agg_lta_hydro_inflow_series(
-                Variable.VAZAO_INCREMENTAL, EER_NAME_COL, uow
+                Variable.VAZAO_INCREMENTAL, EER_CODE_COL, uow
             )
 
     @classmethod
@@ -628,7 +610,7 @@ class ScenarioSynthetizer:
             "Tempo para agregação da MLT de QINC - SBM", logger=cls.logger
         ):
             return cls._agg_lta_hydro_inflow_series(
-                Variable.VAZAO_INCREMENTAL, SUBMARKET_NAME_COL, uow
+                Variable.VAZAO_INCREMENTAL, SUBMARKET_CODE_COL, uow
             )
 
     @classmethod
@@ -742,17 +724,13 @@ class ScenarioSynthetizer:
             eer_submarket_map = eer_submarket_map.loc[eer_order].reset_index()
             for col in [
                 EER_CODE_COL,
-                EER_NAME_COL,
                 SUBMARKET_CODE_COL,
-                SUBMARKET_NAME_COL,
             ]:
                 energy_df[col] = cls._format_scenario_data(
                     eer_submarket_map[col].to_numpy(),
                     num_scenarios,
                     num_stages,
                 )
-            for col in [EER_NAME_COL, SUBMARKET_NAME_COL]:
-                energy_df = energy_df.astype({col: STRING_DF_TYPE})
             return energy_df
 
         def _add_dates(
@@ -791,9 +769,7 @@ class ScenarioSynthetizer:
         energy_df = cls._resolve_starting_stage(energy_df, uow)
         energy_df_columns = [
             EER_CODE_COL,
-            EER_NAME_COL,
             SUBMARKET_CODE_COL,
-            SUBMARKET_NAME_COL,
             STAGE_COL,
             START_DATE_COL,
             END_DATE_COL,
@@ -846,19 +822,14 @@ class ScenarioSynthetizer:
             ].reset_index()
             for col in [
                 HYDRO_CODE_COL,
-                HYDRO_NAME_COL,
                 EER_CODE_COL,
-                EER_NAME_COL,
                 SUBMARKET_CODE_COL,
-                SUBMARKET_NAME_COL,
             ]:
                 inflow_df[col] = cls._format_scenario_data(
                     hydro_eer_submarket_map[col].to_numpy(),
                     num_scenarios,
                     num_stages,
                 )
-            for col in [HYDRO_NAME_COL, EER_NAME_COL, SUBMARKET_NAME_COL]:
-                inflow_df = inflow_df.astype({col: STRING_DF_TYPE})
             return inflow_df
 
         def _add_dates(
@@ -905,11 +876,8 @@ class ScenarioSynthetizer:
             START_DATE_COL,
             END_DATE_COL,
             SCENARIO_COL,
-            HYDRO_NAME_COL,
             EER_CODE_COL,
-            EER_NAME_COL,
             SUBMARKET_CODE_COL,
-            SUBMARKET_NAME_COL,
             VALUE_COL,
         ]
         inflow_df_columns += (
@@ -954,7 +922,7 @@ class ScenarioSynthetizer:
             energy_df = cls._add_energy_eer_data(uow, energy_df, dates)
             if it is not None:
                 energy_df[ITERATION_COL] = it
-            df_stats = cls._calc_statistics(energy_df)
+            df_stats = calc_statistics(energy_df)
             energy_df = pd.concat([energy_df, df_stats], ignore_index=True)
             energy_df = energy_df.astype({SCENARIO_COL: STRING_DF_TYPE})
         return energy_df
@@ -977,7 +945,7 @@ class ScenarioSynthetizer:
             inflow_df = cls._add_inflow_hydro_data(uow, inflow_df)
             if it is not None:
                 inflow_df[ITERATION_COL] = it
-            df_stats = cls._calc_statistics(inflow_df)
+            df_stats = calc_statistics(inflow_df)
             inflow_df = pd.concat([inflow_df, df_stats], ignore_index=True)
             inflow_df = inflow_df.astype({SCENARIO_COL: STRING_DF_TYPE})
         return inflow_df
@@ -1421,9 +1389,9 @@ class ScenarioSynthetizer:
         )
 
         FILTER_MAP = {
-            SpatialResolution.USINA_HIDROELETRICA: HYDRO_NAME_COL,
-            SpatialResolution.RESERVATORIO_EQUIVALENTE: EER_NAME_COL,
-            SpatialResolution.SUBMERCADO: SUBMARKET_NAME_COL,
+            SpatialResolution.USINA_HIDROELETRICA: HYDRO_CODE_COL,
+            SpatialResolution.RESERVATORIO_EQUIVALENTE: EER_CODE_COL,
+            SpatialResolution.SUBMERCADO: SUBMARKET_CODE_COL,
             SpatialResolution.SISTEMA_INTERLIGADO: None,
         }
         filter_col = FILTER_MAP[synthesis.spatial_resolution]
@@ -1451,15 +1419,15 @@ class ScenarioSynthetizer:
         """
         RESOLUTION_MAP: Dict[SpatialResolution, List[str]] = {
             SpatialResolution.SISTEMA_INTERLIGADO: [],
-            SpatialResolution.SUBMERCADO: [SUBMARKET_NAME_COL],
+            SpatialResolution.SUBMERCADO: [SUBMARKET_CODE_COL],
             SpatialResolution.RESERVATORIO_EQUIVALENTE: [
-                EER_NAME_COL,
-                SUBMARKET_NAME_COL,
+                EER_CODE_COL,
+                SUBMARKET_CODE_COL,
             ],
             SpatialResolution.USINA_HIDROELETRICA: [
-                HYDRO_NAME_COL,
-                EER_NAME_COL,
-                SUBMARKET_NAME_COL,
+                HYDRO_CODE_COL,
+                EER_CODE_COL,
+                SUBMARKET_CODE_COL,
             ],
         }
         df = cls._get_cached_variable(synthesis.variable, synthesis.step, uow)
@@ -1467,84 +1435,6 @@ class ScenarioSynthetizer:
             RESOLUTION_MAP[synthesis.spatial_resolution], df
         )
         return cls._resolve_lta(synthesis, df, uow)
-
-    @classmethod
-    def _calc_mean_std(cls, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Realiza o pós-processamento para calcular o valor médio e o desvio
-        padrão de uma variável dentre todos os estágios e patamares,
-        agrupando de acordo com as demais colunas.
-        """
-        value_columns = [SCENARIO_COL, VALUE_COL]
-        grouping_columns = [c for c in df.columns if c not in value_columns]
-        extract_columns = [VALUE_COL]
-        df_mean = fast_group_df(
-            df, grouping_columns, extract_columns, "mean", reset_index=True
-        )
-        df_mean[SCENARIO_COL] = "mean"
-
-        df_std = fast_group_df(
-            df, grouping_columns, extract_columns, "std", reset_index=True
-        )
-        df_std[SCENARIO_COL] = "std"
-
-        return pd.concat([df_mean, df_std], ignore_index=True)
-
-    @classmethod
-    def _calc_quantiles(
-        cls, df: pd.DataFrame, quantiles: List[float]
-    ) -> pd.DataFrame:
-        """
-        Realiza o pós-processamento para calcular uma lista de quantis
-        de uma variável dentre todos os estágios e patamares,
-        agrupando de acordo com as demais colunas.
-        """
-        value_columns = [SCENARIO_COL, VALUE_COL]
-        grouping_columns = [c for c in df.columns if c not in value_columns]
-        quantile_df = (
-            df.groupby(grouping_columns, sort=False)[[SCENARIO_COL, VALUE_COL]]
-            .quantile(quantiles)
-            .reset_index()
-        )
-
-        def quantile_map(q: float) -> str:
-            if q == 0:
-                label = "min"
-            elif q == 1:
-                label = "max"
-            elif q == 0.5:
-                label = "median"
-            else:
-                label = f"p{int(100 * q)}"
-            return label
-
-        level_column = [c for c in quantile_df.columns if "level_" in c]
-        if len(level_column) != 1:
-            cls._log("Erro no cálculo dos quantis", ERROR)
-            raise RuntimeError()
-
-        quantile_df = quantile_df.drop(columns=[SCENARIO_COL]).rename(
-            columns={level_column[0]: SCENARIO_COL}
-        )
-        num_entities = quantile_df.shape[0] // len(quantiles)
-        quantile_labels = np.tile(
-            np.array([quantile_map(q) for q in quantiles]), num_entities
-        )
-        quantile_df[SCENARIO_COL] = quantile_labels
-        return quantile_df
-
-    @classmethod
-    def _calc_statistics(cls, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Realiza o pós-processamento de um DataFrame com dados da
-        síntese da operação de uma determinada variável, calculando
-        estatísticas como quantis e média para cada variável, em cada
-        estágio e patamar.
-        """
-        df_q = cls._calc_quantiles(df, QUANTILES_FOR_STATISTICS)
-        df_m = cls._calc_mean_std(df)
-        df_stats = pd.concat([df_q, df_m], ignore_index=True)
-        return df_stats
 
     @classmethod
     def _export_metadata(
