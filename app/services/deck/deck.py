@@ -1361,7 +1361,9 @@ class Deck:
             submercados = submercados.drop_duplicates(
                 subset=[SUBMARKET_CODE_COL]
             ).reset_index(drop=True)
-            submercados = submercados.astype({SUBMARKET_NAME_COL: STRING_DF_TYPE})
+            submercados = submercados.astype(
+                {SUBMARKET_NAME_COL: STRING_DF_TYPE}
+            )
             cls.DECK_DATA_CACHING["submercados"] = submercados
         return submercados.copy()
 
@@ -1373,7 +1375,11 @@ class Deck:
                 cls._get_ree(uow).rees, pd.DataFrame, "REEs"
             )
             rees = rees.rename(
-                columns={"codigo": EER_CODE_COL, "nome": EER_NAME_COL}
+                columns={
+                    "codigo": EER_CODE_COL,
+                    "nome": EER_NAME_COL,
+                    "submercado": SUBMARKET_CODE_COL,
+                }
             )
             rees = rees.astype({EER_NAME_COL: STRING_DF_TYPE})
             cls.DECK_DATA_CACHING["rees"] = rees
@@ -2185,25 +2191,13 @@ class Deck:
             confhd = cls.uhes(uow).set_index(HYDRO_CODE_COL)
             rees = cls.rees(uow).set_index(EER_CODE_COL)
             sistema = cls.submercados(uow).set_index(SUBMARKET_CODE_COL)
-            aux_df = pd.DataFrame(data={HYDRO_CODE_COL: confhd.index.tolist()})
-            aux_df[HYDRO_NAME_COL] = aux_df[HYDRO_CODE_COL].apply(
-                lambda u: confhd.at[u, HYDRO_NAME_COL]
+            aux_df = confhd[[HYDRO_NAME_COL, EER_CODE_COL]].copy()
+            aux_df = aux_df.join(
+                rees[[EER_NAME_COL, SUBMARKET_CODE_COL]], on=EER_CODE_COL
             )
-            aux_df[EER_CODE_COL] = aux_df[HYDRO_CODE_COL].apply(
-                lambda u: confhd.at[u, EER_CODE_COL]
+            aux_df = aux_df.join(
+                sistema[[SUBMARKET_NAME_COL]], on=SUBMARKET_CODE_COL
             )
-            aux_df[EER_NAME_COL] = aux_df[HYDRO_CODE_COL].apply(
-                lambda u: rees.at[confhd.at[u, EER_CODE_COL], EER_NAME_COL]
-            )
-            aux_df[SUBMARKET_CODE_COL] = aux_df[HYDRO_CODE_COL].apply(
-                lambda u: rees.at[
-                    confhd.at[u, EER_CODE_COL], SUBMARKET_CODE_COL
-                ]
-            )
-            aux_df[SUBMARKET_NAME_COL] = aux_df[SUBMARKET_CODE_COL].apply(
-                lambda c: sistema.at[c, SUBMARKET_NAME_COL]
-            )
-            aux_df = aux_df.set_index(HYDRO_CODE_COL)
             cls.DECK_DATA_CACHING["hydro_eer_submarket_map"] = aux_df
         return aux_df.copy()
 
