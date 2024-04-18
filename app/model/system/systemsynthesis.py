@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, List
 from app.model.system.variable import Variable
 
 
@@ -15,3 +15,13 @@ class SystemSynthesis:
         return cls(
             Variable.factory(synthesis),
         )
+
+
+SUPPORTED_SYNTHESIS: List[str] = [
+    "EST",
+    "PAT",
+    "SBM",
+    "REE",
+    "UTE",
+    "UHE",
+]

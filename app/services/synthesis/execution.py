@@ -19,6 +19,9 @@ from app.internal.constants import (
     EXECUTION_SYNTHESIS_METADATA_OUTPUT,
 )
 
+# TODO - rever nomes das colunas
+# TODO - tirar tempo total
+
 
 class ExecutionSynthetizer:
     DEFAULT_EXECUTION_SYNTHESIS_ARGS: List[str] = SUPPORTED_SYNTHESIS
@@ -99,9 +102,9 @@ class ExecutionSynthetizer:
         df = Deck.convergencia(uow)
         processed_d = pd.DataFrame(
             data={
-                "iter": df["iteracao"][2::3].to_numpy(),
+                "iteracao": df["iteracao"][2::3].to_numpy(),
                 "zinf": df["zinf"][2::3].to_numpy(),
-                "dZinf": df["delta_zinf"][2::3].to_numpy(),
+                "delta_zinf": df["delta_zinf"][2::3].to_numpy(),
                 "zsup": df["zsup_iteracao"][2::3].to_numpy(),
                 "tempo": df["tempo"][::3].dt.total_seconds().to_numpy(),
             }
@@ -112,19 +115,13 @@ class ExecutionSynthetizer:
     @classmethod
     def _resolve_cost(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         df = Deck.custos(uow)
-        processed_d = df.rename(
-            columns={
-                "parcela": "parcela",
-                "valor_esperado": "mean",
-                "desvio_padrao": "std",
-            }
-        )
-        return processed_d[["parcela", "mean", "std"]]
+        return df[["parcela", "valor_esperado", "desvio_padrao"]]
 
     @classmethod
     def _resolve_runtime(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         df = Deck.tempos_etapas(uow)
         df["tempo"] = df["tempo"].dt.total_seconds()
+        df = df.loc[df["etapa"] != "Tempo Total"]
         return df
 
     @classmethod

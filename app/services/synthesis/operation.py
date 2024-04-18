@@ -4,15 +4,13 @@ import numpy as np
 import logging
 from datetime import datetime
 from traceback import print_exc
-from logging import INFO, WARNING, ERROR
+from logging import INFO, WARNING, ERROR, DEBUG
 from multiprocessing import Pool
 from app.utils.graph import Graph
 from app.utils.log import Log
 from app.utils.timing import time_and_log
 from app.utils.regex import match_variables_with_wildcards
-from app.utils.operations import (
-    calc_statistics
-)
+from app.utils.operations import calc_statistics
 from app.model.settings import Settings
 from app.services.deck.bounds import OperationVariableBounds
 from app.services.deck.deck import Deck
@@ -377,7 +375,7 @@ class OperationSynthetizer:
             data_block_size = num_scenarios * num_blocks
             for i, d in enumerate(start_dates):
                 date_durations = df_block_lengths.loc[
-                    df_block_lengths["data"] == d, "valor"
+                    df_block_lengths[START_DATE_COL] == d, VALUE_COL
                 ].to_numpy()
                 i_i = i * data_block_size
                 i_f = i_i + data_block_size
@@ -462,7 +460,7 @@ class OperationSynthetizer:
             uow.queue, logger_name, sbm_index
         )
         with uow:
-            logger.info(
+            logger.debug(
                 f"Processando arquivo do submercado: {sbm_index} - {sbm_name}"
             )
             df = uow.files.get_nwlistop(
@@ -541,7 +539,7 @@ class OperationSynthetizer:
             uow.queue, logger_name, sbm1_index + 10 * sbm2_index
         )
         with uow:
-            logger.info(
+            logger.debug(
                 "Processando arquivo do par de submercados:"
                 + f" {sbm1_index}[{sbm1_name}] - {sbm2_index}[{sbm2_name}]"
             )
@@ -618,7 +616,7 @@ class OperationSynthetizer:
             uow.queue, logger_name, ree_index
         )
         with uow:
-            logger.info(
+            logger.debug(
                 f"Processando arquivo do REE: {ree_index} - {ree_name}"
             )
             df = uow.files.get_nwlistop(
@@ -722,7 +720,7 @@ class OperationSynthetizer:
         )
 
         with uow:
-            logger.info(
+            logger.debug(
                 f"Processando arquivo da UHE: {uhe_index} - {uhe_name}"
             )
             df = uow.files.get_nwlistop(
@@ -1444,7 +1442,7 @@ class OperationSynthetizer:
             uow.queue, logger_name, sbm_index
         )
         with uow:
-            logger.info(
+            logger.debug(
                 f"Processando arquivo do submercado: {sbm_index} - {sbm_name}"
             )
             df = uow.files.get_nwlistop(
@@ -1628,7 +1626,7 @@ class OperationSynthetizer:
             """
             df_block_lengths = Deck.duracao_mensal_patamares(uow)
             df_block_lengths = df_block_lengths.loc[
-                df_block_lengths["patamar"].isin(blocks)
+                df_block_lengths[BLOCK_COL].isin(blocks)
             ]
             block_durations = np.zeros(
                 (num_scenarios * num_blocks * num_stages,), dtype=np.float64
@@ -1636,7 +1634,7 @@ class OperationSynthetizer:
             data_block_size = num_scenarios * num_blocks
             for i, d in enumerate(start_dates):
                 date_durations = df_block_lengths.loc[
-                    df_block_lengths["data"] == d, "valor"
+                    df_block_lengths[START_DATE_COL] == d, VALUE_COL
                 ].to_numpy()
                 i_i = i * data_block_size
                 i_f = i_i + data_block_size
@@ -1738,7 +1736,7 @@ class OperationSynthetizer:
         )
 
         with uow:
-            logger.info(
+            logger.debug(
                 f"Processando arquivo do submercado: {sbm_index} - {sbm_name}"
             )
             df = uow.files.get_nwlistop(
@@ -1987,7 +1985,7 @@ class OperationSynthetizer:
         um erro caso contrário.
         """
         if s in cls.CACHED_SYNTHESIS.keys():
-            cls._log(f"Lendo do cache - {str(s)}")
+            cls._log(f"Lendo do cache - {str(s)}", DEBUG)
             res = cls.CACHED_SYNTHESIS.get(s)
             if res is None:
                 cls._log(f"Erro na leitura do cache - {str(s)}", ERROR)

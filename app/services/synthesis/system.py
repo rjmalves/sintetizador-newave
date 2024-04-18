@@ -11,36 +11,35 @@ from app.utils.regex import match_variables_with_wildcards
 from app.services.deck.deck import Deck
 from app.services.unitofwork import AbstractUnitOfWork
 from app.model.system.variable import Variable
-from app.model.system.systemsynthesis import SystemSynthesis
+from app.model.system.systemsynthesis import (
+    SystemSynthesis,
+    SUPPORTED_SYNTHESIS,
+)
 
 from app.internal.constants import (
     SYSTEM_SYNTHESIS_SUBDIR,
     SYSTEM_SYNTHESIS_METADATA_OUTPUT,
     STAGE_DURATION_HOURS,
+    STAGE_COL,
+    START_DATE_COL,
+    END_DATE_COL,
+    VALUE_COL,
+    SUBMARKET_CODE_COL,
+    SUBMARKET_NAME_COL,
+    HYDRO_CODE_COL,
+    HYDRO_NAME_COL,
+    THERMAL_CODE_COL,
+    THERMAL_NAME_COL,
+    EER_CODE_COL,
+    EER_NAME_COL,
 )
+
+# TODO - rever nomes das colunas
 
 
 class SystemSynthetizer:
-    IDENTIFICATION_COLUMNS = [
-        "dataInicio",
-        "dataFim",
-        "estagio",
-        "submercado",
-        "submercadoDe",
-        "submercadoPara",
-        "ree",
-        "usina",
-        "patamar",
-    ]
 
-    DEFAULT_SYSTEM_SYNTHESIS_ARGS: List[str] = [
-        "EST",
-        "PAT",
-        "SBM",
-        "REE",
-        "UTE",
-        "UHE",
-    ]
+    DEFAULT_SYSTEM_SYNTHESIS_ARGS = SUPPORTED_SYNTHESIS
 
     T = TypeVar("T")
 
@@ -125,105 +124,37 @@ class SystemSynthetizer:
         datas_finais = [d + relativedelta(months=1) for d in datas_iniciais]
         return pd.DataFrame(
             data={
-                "idEstagio": list(range(1, len(datas_iniciais) + 1)),
-                "dataInicio": datas_iniciais,
-                "dataFim": datas_finais,
+                STAGE_COL: list(range(1, len(datas_iniciais) + 1)),
+                START_DATE_COL: datas_iniciais,
+                END_DATE_COL: datas_finais,
             }
         )
 
     @classmethod
     def __resolve_PAT(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        num_patamares = Deck.numero_patamares(uow)
-        duracao_patamares = Deck.duracao_mensal_patamares(uow)
-        mes_inicio = Deck.mes_inicio_estudo(uow)
-        mes_inicio_pre = Deck.mes_inicio_pre_estudo(uow)
-        anos_estudo = Deck.num_anos_estudo(uow)
-
-        meses_pre = mes_inicio - mes_inicio_pre
-        estagios = (
-            np.array(range(1, anos_estudo * len(MESES_DF) + 1)) - meses_pre
-        )[meses_pre:]
-        estagios = np.array(
-            [
-                list(
-                    range(12 * i + 1, 12 * (i + 1) + 1)
-                    for i in range(anos_estudo)
-                )
-            ]
-        )
-        estagios = np.tile(estagios, num_patamares).flatten()
-        patamares = np.array(list(range(1, num_patamares + 1)))
-        pats = np.tile(
-            np.repeat(patamares, len(MESES_DF)), anos_estudo
-        ).flatten()
-        horas = STAGE_DURATION_HOURS * (
-            duracao_patamares[MESES_DF].to_numpy().flatten()
-        )
-        df = pd.DataFrame(
-            data={"idEstagio": estagios, "patamar": pats, "duracao": horas}
-        )
-        # Filtra estágios pré-estudo
-        df = df.loc[df["idEstagio"] > meses_pre]
-        df = df.reset_index(drop=True)
-        df["idEstagio"] -= df["idEstagio"].min() - 1
+        df = Deck.duracao_mensal_patamares(uow)
+        df[VALUE_COL] *= STAGE_DURATION_HOURS
         return df
 
     @classmethod
     def __resolve_SBM(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        sistema = Deck.submercados(uow)
-        df = sistema[["codigo_submercado", "nome_submercado"]]
-        df = df.rename(
-            columns={"codigo_submercado": "id", "nome_submercado": "nome"}
-        )
-        return df
+        df = Deck.submercados(uow)
+        return df[[SUBMARKET_CODE_COL, SUBMARKET_NAME_COL]]
 
     @classmethod
     def __resolve_REE(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        rees = Deck.rees(uow)
-        df = rees[["codigo", "nome", "submercado"]]
-        df = df.rename(
-            columns={
-                "codigo": "id",
-                "submercado": "idSubmercado",
-                "nome": "nome",
-            }
-        )
-        return df[["id", "idSubmercado", "nome"]]
+        df = Deck.eer_submarket_map(uow)
+        return df.reset_index()
 
     @classmethod
     def __resolve_UTE(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        df = Deck.utes(uow)
-        df = df.rename(
-            columns={
-                "codigo_usina": "id",
-                "submercado": "idSubmercado",
-                "nome_usina": "nome",
-            }
-        )
-        return df[["id", "idSubmercado", "nome"]]
+        df = Deck.thermal_submarket_map(uow)
+        return df.reset_index()
 
     @classmethod
     def __resolve_UHE(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        confhd = Deck.uhes(uow)
-        df = confhd[
-            [
-                "codigo_usina",
-                "nome_usina",
-                "posto",
-                "ree",
-                "volume_inicial_percentual",
-            ]
-        ]
-        df = df.rename(
-            columns={
-                "codigo_usina": "id",
-                "ree": "idREE",
-                "nome_usina": "nome",
-                "posto": "posto",
-                "volume_inicial_percentual": "volumeInicial",
-            }
-        )
-        return df[["id", "idREE", "nome", "posto", "volumeInicial"]]
+        df = Deck.hydro_eer_submarket_map(uow)
+        return df.reset_index()
 
     @classmethod
     def _export_metadata(

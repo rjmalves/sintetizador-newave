@@ -67,7 +67,7 @@ from app.internal.constants import (
     LOWER_BOUND_UNIT_COL,
     UPPER_BOUND_UNIT_COL,
     BLOCK_COL,
-    SCENARIO_COL
+    SCENARIO_COL,
 )
 
 
@@ -419,7 +419,9 @@ class Deck:
             if df is None:
                 return pd.DataFrame()
             else:
-                return df.rename(columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL})
+                return df.rename(
+                    columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL}
+                )
         else:
             return pd.DataFrame()
 
@@ -431,7 +433,9 @@ class Deck:
             if df is None:
                 return pd.DataFrame()
             else:
-                return df.rename(columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL})
+                return df.rename(
+                    columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL}
+                )
         else:
             return pd.DataFrame()
 
@@ -443,7 +447,9 @@ class Deck:
             if df is None:
                 return pd.DataFrame()
             else:
-                return df.rename(columns={"uhe": HYDRO_CODE_COL, "serie": SCENARIO_COL})
+                return df.rename(
+                    columns={"uhe": HYDRO_CODE_COL, "serie": SCENARIO_COL}
+                )
         else:
             return pd.DataFrame()
 
@@ -455,7 +461,9 @@ class Deck:
             if df is None:
                 return pd.DataFrame()
             else:
-                return df.rename(columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL})
+                return df.rename(
+                    columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL}
+                )
         else:
             return pd.DataFrame()
 
@@ -467,7 +475,9 @@ class Deck:
             if df is None:
                 return pd.DataFrame()
             else:
-                return df.rename(columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL})
+                return df.rename(
+                    columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL}
+                )
         else:
             return pd.DataFrame()
 
@@ -479,7 +489,9 @@ class Deck:
             if df is None:
                 return pd.DataFrame()
             else:
-                return df.rename(columns={"uhe": HYDRO_CODE_COL, "serie": SCENARIO_COL})
+                return df.rename(
+                    columns={"uhe": HYDRO_CODE_COL, "serie": SCENARIO_COL}
+                )
         else:
             return pd.DataFrame()
 
@@ -491,7 +503,9 @@ class Deck:
             if df is None:
                 return pd.DataFrame()
             else:
-                return df.rename(columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL})
+                return df.rename(
+                    columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL}
+                )
         else:
             return pd.DataFrame()
 
@@ -503,7 +517,9 @@ class Deck:
             if df is None:
                 return pd.DataFrame()
             else:
-                return df.rename(columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL})
+                return df.rename(
+                    columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL}
+                )
         else:
             return pd.DataFrame()
 
@@ -515,7 +531,9 @@ class Deck:
             if df is None:
                 return pd.DataFrame()
             else:
-                return df.rename(columns={"uhe": HYDRO_CODE_COL, "serie": SCENARIO_COL})
+                return df.rename(
+                    columns={"uhe": HYDRO_CODE_COL, "serie": SCENARIO_COL}
+                )
         else:
             return pd.DataFrame()
 
@@ -1244,7 +1262,9 @@ class Deck:
                     axis=1,
                 )
             )
-            block_length_df = block_length_df.sort_values(["data", "patamar"])
+            block_length_df = block_length_df.sort_values(
+                [START_DATE_COL, BLOCK_COL]
+            )
             n_pares_limites = exchange_block_bounds_df.drop_duplicates(
                 [EXCHANGE_SOURCE_CODE_COL, EXCHANGE_TARGET_CODE_COL]
             ).shape[0]
@@ -2005,12 +2025,12 @@ class Deck:
     def duracao_mensal_patamares(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
 
         def __eval_pat0(df_pat: pd.DataFrame) -> pd.DataFrame:
-            df_pat_0 = df_pat.groupby("data", as_index=False).sum(
+            df_pat_0 = df_pat.groupby(START_DATE_COL, as_index=False).sum(
                 numeric_only=True
             )
-            df_pat_0["patamar"] = 0
+            df_pat_0[BLOCK_COL] = 0
             df_pat = pd.concat([df_pat, df_pat_0], ignore_index=True)
-            df_pat.sort_values(["data", "patamar"], inplace=True)
+            df_pat.sort_values([START_DATE_COL, BLOCK_COL], inplace=True)
             return df_pat
 
         duracao_mensal_patamares = cls.DECK_DATA_CACHING.get(
@@ -2021,6 +2041,9 @@ class Deck:
                 cls._get_patamar(uow).duracao_mensal_patamares,
                 pd.DataFrame,
                 "duração dos patamares",
+            )
+            duracao_mensal_patamares = duracao_mensal_patamares.rename(
+                columns={"data": START_DATE_COL, "patamar": BLOCK_COL}
             )
             duracao_mensal_patamares = __eval_pat0(duracao_mensal_patamares)
             cls.DECK_DATA_CACHING["duracao_mensal_patamares"] = (
