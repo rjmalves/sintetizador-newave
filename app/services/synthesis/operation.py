@@ -52,7 +52,6 @@ from app.internal.constants import (
     OPERATION_SYNTHESIS_METADATA_OUTPUT,
     OPERATION_SYNTHESIS_STATS_ROOT,
     OPERATION_SYNTHESIS_SUBDIR,
-    QUANTILES_FOR_STATISTICS,
     STATS_OR_SCENARIO_COL,
 )
 
@@ -136,9 +135,9 @@ class OperationSynthetizer:
         para o caso selecionado, considerando a presença de geração
         eólica e modelagem híbrida.
         """
-        has_wind = Deck.considera_geracao_eolica(uow)
-        simulation_with_hydro = Deck.agregacao_simulacao_final(uow)
-        policy_with_hydro = Deck.politica_hibrida(uow)
+        has_wind = Deck.models_wind_generation(uow)
+        simulation_with_hydro = Deck.final_simulation_aggregation(uow)
+        policy_with_hydro = Deck.hybrid_policy(uow)
         has_hydro = simulation_with_hydro or policy_with_hydro
         valid_variables: List[OperationSynthesis] = []
         for v in variables:
@@ -368,7 +367,7 @@ class OperationSynthetizer:
             Adiciona informações de duração de patamares a um DataFrame, utilizando
             as informações dos patamares e datas de início dos estágios.
             """
-            df_block_lengths = Deck.duracao_mensal_patamares(uow)
+            df_block_lengths = Deck.block_lengths(uow)
             df_block_lengths = df_block_lengths.loc[
                 df_block_lengths[BLOCK_COL].isin(blocks)
             ]
@@ -401,15 +400,15 @@ class OperationSynthetizer:
                 [START_DATE_COL, SCENARIO_COL, BLOCK_COL], inplace=True
             )
             num_stages = df[START_DATE_COL].unique().shape[0]
-            num_scenarios = Deck.numero_cenarios_simulacao_final(uow)
+            num_scenarios = Deck.num_scenarios_final_simulation(uow)
             blocks = df[BLOCK_COL].unique().tolist()
             num_blocks = len(blocks)
-            start_dates = Deck.datas_inicio_estagios_internos_sim_final(uow)[
-                :num_stages
-            ]
-            end_dates = Deck.datas_fim_estagios_internos_sim_final(uow)[
-                :num_stages
-            ]
+            start_dates = Deck.internal_stages_starting_dates_final_simulation(
+                uow
+            )[:num_stages]
+            end_dates = Deck.internal_stages_ending_dates_final_simulation(
+                uow
+            )[:num_stages]
             df = _replace_scenario_info(
                 df, num_stages, num_scenarios, num_blocks
             )
@@ -694,7 +693,7 @@ class OperationSynthetizer:
             de valores fornecidos por patamar de alguma variável operativa
             de uma UHE.
             """
-            n_blocks = Deck.numero_patamares(uow)
+            n_blocks = Deck.num_blocks(uow)
             unique_cols_for_block_0 = [HYDRO_CODE_COL, STAGE_COL, SCENARIO_COL]
             df_block_0 = df.copy()
             df_block_0[VALUE_COL] = (
@@ -763,7 +762,9 @@ class OperationSynthetizer:
         ) -> pd.DataFrame:
             df = df.loc[
                 df[START_DATE_COL]
-                < Deck.data_fim_estagios_individualizados_sim_final(uow),
+                < Deck.hydro_simulation_stages_ending_date_final_simulation(
+                    uow
+                ),
             ].reset_index(drop=True)
             return df
 
@@ -1175,7 +1176,7 @@ class OperationSynthetizer:
             entities: dict,
         ) -> np.ndarray:
             hydros = entities[HYDRO_CODE_COL]
-            initial_storage_data = Deck.volume_armazenado_inicial(uow)
+            initial_storage_data = Deck.initial_stored_volume(uow)
             value_column = (
                 "valor_hm3"
                 if synthesis.variable == varmi
@@ -1420,7 +1421,7 @@ class OperationSynthetizer:
         Gera cenários para uma síntese que é feita apenas para um
         dos cenários obtidos no NWLISTOP.
         """
-        num_scenarios = Deck.numero_cenarios_simulacao_final(uow)
+        num_scenarios = Deck.num_scenarios_final_simulation(uow)
         num_entries = df.shape[0]
         df = pd.concat([df] * num_scenarios, ignore_index=True)
         df["serie"] = np.repeat(np.arange(1, num_scenarios + 1), num_entries)
@@ -1627,7 +1628,7 @@ class OperationSynthetizer:
             Adiciona informações de duração de patamares a um DataFrame, utilizando
             as informações dos patamares e datas de início dos estágios.
             """
-            df_block_lengths = Deck.duracao_mensal_patamares(uow)
+            df_block_lengths = Deck.block_lengths(uow)
             df_block_lengths = df_block_lengths.loc[
                 df_block_lengths[BLOCK_COL].isin(blocks)
             ]
@@ -1665,16 +1666,18 @@ class OperationSynthetizer:
                 [THERMAL_CODE_COL, START_DATE_COL, SCENARIO_COL, BLOCK_COL],
             ).reset_index(drop=True)
             num_stages = df[START_DATE_COL].unique().shape[0]
-            num_scenarios = Deck.numero_cenarios_simulacao_final(uow)
+            num_scenarios = Deck.num_scenarios_final_simulation(uow)
             blocks = df[BLOCK_COL].unique().tolist()
             num_blocks = len(blocks)
             thermals = df[THERMAL_CODE_COL].unique().tolist()
             num_thermals = len(thermals)
-            start_dates = Deck.datas_inicio_estagios_internos_sim_final(uow)[
-                :num_stages
-            ]
+            start_dates = Deck.internal_stages_starting_dates_final_simulation(
+                uow
+            )[:num_stages]
             end_dates = np.array(
-                Deck.datas_fim_estagios_internos_sim_final(uow)[:num_stages]
+                Deck.internal_stages_ending_dates_final_simulation(uow)[
+                    :num_stages
+                ]
             )
             df = _replace_scenario_info(
                 df, num_stages, num_scenarios, num_blocks, num_thermals
@@ -1913,7 +1916,7 @@ class OperationSynthetizer:
         Também elimina estágios incluídos como consequência do formato
         dos dados lidos, que pertencem ao período pré-estudo.
         """
-        df.loc[:, STAGE_COL] -= Deck.mes_inicio_estudo(uow) - 1
+        df.loc[:, STAGE_COL] -= Deck.study_period_starting_month(uow) - 1
         df = df.loc[df[STAGE_COL] > 0]
         return df
 
@@ -1934,7 +1937,7 @@ class OperationSynthetizer:
 
         max_column = "earmax"
 
-        initial_stored_energy_df = Deck.energia_armazenada_inicial(uow)
+        initial_stored_energy_df = Deck.initial_stored_energy(uow)
         initial_stored_energy_df[EER_CODE_COL] = Deck.eer_code_order(uow)
         if s.spatial_resolution == SpatialResolution.RESERVATORIO_EQUIVALENTE:
             return initial_stored_energy_df.rename(

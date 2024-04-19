@@ -388,6 +388,24 @@ class Deck:
         return curva
 
     @classmethod
+    def modif(cls, uow: AbstractUnitOfWork) -> Modif:
+        modif = cls.DECK_DATA_CACHING.get("modif")
+        if modif is None:
+            modif = cls._validate_data(cls._get_modif(uow), Modif, "modif")
+            cls.DECK_DATA_CACHING["modif"] = modif
+        return modif
+
+    @classmethod
+    def hidr(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        hidr = cls.DECK_DATA_CACHING.get("hidr")
+        if hidr is None:
+            hidr = cls._validate_data(
+                cls._get_hidr(uow).cadastro, pd.DataFrame, "hidr"
+            )
+            cls.DECK_DATA_CACHING["hidr"] = hidr
+        return hidr.copy()
+
+    @classmethod
     def newavetim(cls, uow: AbstractUnitOfWork) -> Newavetim:
         newavetim = cls.DECK_DATA_CACHING.get("newavetim")
         if newavetim is None:
@@ -538,172 +556,199 @@ class Deck:
             return pd.DataFrame()
 
     @classmethod
-    def mes_inicio_pre_estudo(cls, uow: AbstractUnitOfWork) -> int:
-        mes_inicio_pre_estudo = cls.DECK_DATA_CACHING.get(
-            "mes_inicio_pre_estudo"
-        )
-        if mes_inicio_pre_estudo is None:
-            dger = cls.dger(uow)
-            mes_inicio_pre_estudo = cls._validate_data(
-                dger.mes_inicio_pre_estudo,
-                int,
-                "mês de início do estudo",
+    def vazoes(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        vazoes = cls.DECK_DATA_CACHING.get("vazoes")
+        if vazoes is None:
+            vazoes = cls._validate_data(
+                cls._get_vazoes(uow).vazoes, pd.DataFrame, "vazoes"
             )
-            cls.DECK_DATA_CACHING["mes_inicio_pre_estudo"] = (
-                mes_inicio_pre_estudo
-            )
-        return mes_inicio_pre_estudo
+            cls.DECK_DATA_CACHING["vazoes"] = vazoes
+        return vazoes.copy()
 
     @classmethod
-    def mes_inicio_estudo(cls, uow: AbstractUnitOfWork) -> int:
-        mes_inicio_estudo = cls.DECK_DATA_CACHING.get("mes_inicio_estudo")
-        if mes_inicio_estudo is None:
+    def pre_study_period_starting_month(cls, uow: AbstractUnitOfWork) -> int:
+        pre_study_period_starting_month = cls.DECK_DATA_CACHING.get(
+            "pre_study_period_starting_month"
+        )
+        if pre_study_period_starting_month is None:
             dger = cls.dger(uow)
-            mes_inicio_estudo = cls._validate_data(
+            pre_study_period_starting_month = cls._validate_data(
+                dger.mes_inicio_pre_estudo,
+                int,
+                "mês de início do pré-estudo",
+            )
+            cls.DECK_DATA_CACHING["pre_study_period_starting_month"] = (
+                pre_study_period_starting_month
+            )
+        return pre_study_period_starting_month
+
+    @classmethod
+    def study_period_starting_month(cls, uow: AbstractUnitOfWork) -> int:
+        study_period_starting_month = cls.DECK_DATA_CACHING.get(
+            "study_period_starting_month"
+        )
+        if study_period_starting_month is None:
+            dger = cls.dger(uow)
+            study_period_starting_month = cls._validate_data(
                 dger.mes_inicio_estudo,
                 int,
                 "mês de início do estudo",
             )
-            cls.DECK_DATA_CACHING["mes_inicio_estudo"] = mes_inicio_estudo
-        return mes_inicio_estudo
+            cls.DECK_DATA_CACHING["study_period_starting_month"] = (
+                study_period_starting_month
+            )
+        return study_period_starting_month
 
     @classmethod
-    def ano_inicio_estudo(cls, uow: AbstractUnitOfWork) -> int:
-        ano_inicio_estudo = cls.DECK_DATA_CACHING.get("ano_inicio_estudo")
-        if ano_inicio_estudo is None:
+    def study_period_starting_year(cls, uow: AbstractUnitOfWork) -> int:
+        study_period_starting_year = cls.DECK_DATA_CACHING.get(
+            "study_period_starting_year"
+        )
+        if study_period_starting_year is None:
             dger = cls.dger(uow)
-            ano_inicio_estudo = cls._validate_data(
+            study_period_starting_year = cls._validate_data(
                 dger.ano_inicio_estudo,
                 int,
                 "ano de início do estudo",
             )
-            cls.DECK_DATA_CACHING["ano_inicio_estudo"] = ano_inicio_estudo
-        return ano_inicio_estudo
+            cls.DECK_DATA_CACHING["study_period_starting_year"] = (
+                study_period_starting_year
+            )
+        return study_period_starting_year
 
     @classmethod
-    def num_anos_estudo(cls, uow: AbstractUnitOfWork) -> int:
-        num_anos_estudo = cls.DECK_DATA_CACHING.get("num_anos_estudo")
-        if num_anos_estudo is None:
+    def num_study_period_years(cls, uow: AbstractUnitOfWork) -> int:
+        num_study_period_years = cls.DECK_DATA_CACHING.get(
+            "num_study_period_years"
+        )
+        if num_study_period_years is None:
             dger = cls.dger(uow)
-            num_anos_estudo = cls._validate_data(
+            num_study_period_years = cls._validate_data(
                 dger.num_anos_estudo,
                 int,
                 "número de anos do estudo",
             )
-            cls.DECK_DATA_CACHING["num_anos_estudo"] = num_anos_estudo
-        return num_anos_estudo
+            cls.DECK_DATA_CACHING["num_study_period_years"] = (
+                num_study_period_years
+            )
+        return num_study_period_years
 
     @classmethod
-    def num_anos_pos_sim_final(cls, uow: AbstractUnitOfWork) -> int:
-        num_anos_pos_sim_final = cls.DECK_DATA_CACHING.get(
-            "num_anos_pos_sim_final"
+    def num_post_study_period_years_final_simulation(
+        cls, uow: AbstractUnitOfWork
+    ) -> int:
+        num_post_study_period_years_final_simulation = (
+            cls.DECK_DATA_CACHING.get(
+                "num_post_study_period_years_final_simulation"
+            )
         )
-        if num_anos_pos_sim_final is None:
+        if num_post_study_period_years_final_simulation is None:
             dger = cls.dger(uow)
-            num_anos_pos_sim_final = cls._validate_data(
+            num_post_study_period_years_final_simulation = cls._validate_data(
                 dger.num_anos_pos_sim_final,
                 int,
                 "número de anos do período pós-estudo na simulação",
             )
-            cls.DECK_DATA_CACHING["num_anos_pos_sim_final"] = (
-                num_anos_pos_sim_final
-            )
-        return num_anos_pos_sim_final
+            cls.DECK_DATA_CACHING[
+                "num_post_study_period_years_final_simulation"
+            ] = num_post_study_period_years_final_simulation
+        return num_post_study_period_years_final_simulation
 
     @classmethod
-    def num_series_sinteticas(cls, uow: AbstractUnitOfWork) -> int:
-        num_series_sinteticas = cls.DECK_DATA_CACHING.get(
-            "num_series_sinteticas"
+    def num_synthetic_scenarios_final_simulation(
+        cls, uow: AbstractUnitOfWork
+    ) -> int:
+        num_synthetic_scenarios_final_simulation = cls.DECK_DATA_CACHING.get(
+            "num_synthetic_scenarios_final_simulation"
         )
-        if num_series_sinteticas is None:
+        if num_synthetic_scenarios_final_simulation is None:
             dger = cls.dger(uow)
-            num_series_sinteticas = cls._validate_data(
+            num_synthetic_scenarios_final_simulation = cls._validate_data(
                 dger.num_series_sinteticas,
                 int,
                 "número de séries sintéticas na simulação",
             )
-            cls.DECK_DATA_CACHING["num_series_sinteticas"] = (
-                num_series_sinteticas
-            )
-        return num_series_sinteticas
+            cls.DECK_DATA_CACHING[
+                "num_synthetic_scenarios_final_simulation"
+            ] = num_synthetic_scenarios_final_simulation
+        return num_synthetic_scenarios_final_simulation
 
     @classmethod
-    def num_anos_historico(cls, uow: AbstractUnitOfWork) -> int:
-        num_anos_historico = cls.DECK_DATA_CACHING.get("num_anos_historico")
-        if num_anos_historico is None:
+    def num_history_years(cls, uow: AbstractUnitOfWork) -> int:
+        num_history_years = cls.DECK_DATA_CACHING.get("num_history_years")
+        if num_history_years is None:
             shist = cls._get_shist(uow)
-            ano_inicio_estudo = cls.ano_inicio_estudo(uow)
-            ano_inicio_varredura = cls._validate_data(
+            study_starting_year = cls.study_period_starting_year(uow)
+            history_starting_year = cls._validate_data(
                 shist.ano_inicio_varredura,
                 int,
                 "número de séries históricas na simulação",
             )
-            # TODO - conferir o número de anos passados desconsiderados
-            num_anos_historico = ano_inicio_estudo - ano_inicio_varredura
-            cls.DECK_DATA_CACHING["num_anos_historico"] = num_anos_historico
-        return num_anos_historico
+            num_history_years = study_starting_year - history_starting_year
+            cls.DECK_DATA_CACHING["num_history_years"] = num_history_years
+        return num_history_years
 
     @classmethod
-    def tipo_simulacao_final(cls, uow: AbstractUnitOfWork) -> int:
-        tipo_simulacao_final = cls.DECK_DATA_CACHING.get(
-            "tipo_simulacao_final"
+    def final_simulation_type(cls, uow: AbstractUnitOfWork) -> int:
+        final_simulation_type = cls.DECK_DATA_CACHING.get(
+            "final_simulation_type"
         )
-        if tipo_simulacao_final is None:
+        if final_simulation_type is None:
             dger = cls.dger(uow)
-            tipo_simulacao_final = cls._validate_data(
+            final_simulation_type = cls._validate_data(
                 dger.tipo_simulacao_final,
                 int,
                 "tipo da simulação final",
             )
-            cls.DECK_DATA_CACHING["tipo_simulacao_final"] = (
-                tipo_simulacao_final
+            cls.DECK_DATA_CACHING["final_simulation_type"] = (
+                final_simulation_type
             )
-        return tipo_simulacao_final
+        return final_simulation_type
 
     @classmethod
-    def agregacao_simulacao_final(cls, uow: AbstractUnitOfWork) -> int:
-        agregacao_simulacao_final = cls.DECK_DATA_CACHING.get(
-            "agregacao_simulacao_final"
+    def final_simulation_aggregation(cls, uow: AbstractUnitOfWork) -> int:
+        final_simulation_aggregation = cls.DECK_DATA_CACHING.get(
+            "final_simulation_aggregation"
         )
-        if agregacao_simulacao_final is None:
+        if final_simulation_aggregation is None:
             dger = cls.dger(uow)
-            agregacao_simulacao_final = cls._validate_data(
+            final_simulation_aggregation = cls._validate_data(
                 dger.agregacao_simulacao_final,
                 int,
                 "tipo da simulação final",
             )
-            cls.DECK_DATA_CACHING["agregacao_simulacao_final"] = (
-                agregacao_simulacao_final
+            cls.DECK_DATA_CACHING["final_simulation_aggregation"] = (
+                final_simulation_aggregation
             )
-        return agregacao_simulacao_final
+        return final_simulation_aggregation
 
     @classmethod
-    def numero_cenarios_simulacao_final(cls, uow: AbstractUnitOfWork) -> int:
-        numero_cenarios_simulacao_final = cls.DECK_DATA_CACHING.get(
-            "numero_cenarios_simulacao_final"
+    def num_scenarios_final_simulation(cls, uow: AbstractUnitOfWork) -> int:
+        num_scenarios_final_simulation = cls.DECK_DATA_CACHING.get(
+            "num_scenarios_final_simulation"
         )
-        if numero_cenarios_simulacao_final is None:
-            if cls.tipo_simulacao_final(uow) == 0:
-                numero_cenarios_simulacao_final = cls.num_anos_historico(uow)
+        if num_scenarios_final_simulation is None:
+            if cls.final_simulation_type(uow) == 0:
+                num_scenarios_final_simulation = cls.num_history_years(uow)
             else:
-                numero_cenarios_simulacao_final = cls.num_series_sinteticas(
-                    uow
+                num_scenarios_final_simulation = (
+                    cls.num_synthetic_scenarios_final_simulation(uow)
                 )
-            cls.DECK_DATA_CACHING["numero_cenarios_simulacao_final"] = (
-                numero_cenarios_simulacao_final
+            cls.DECK_DATA_CACHING["num_scenarios_final_simulation"] = (
+                num_scenarios_final_simulation
             )
-        return numero_cenarios_simulacao_final
+        return num_scenarios_final_simulation
 
     @classmethod
-    def num_estagios_individualizados_politica(
+    def num_hydro_simulation_stages_policy(
         cls, uow: AbstractUnitOfWork
     ) -> int:
-        num_estagios_individualizados_politica = cls.DECK_DATA_CACHING.get(
-            "num_estagios_individualizados_politica"
+        num_hydro_simulation_stages_policy = cls.DECK_DATA_CACHING.get(
+            "num_hydro_simulation_stages_policy"
         )
-        if num_estagios_individualizados_politica is None:
-            ano_inicio = cls.ano_inicio_estudo(uow)
-            mes_inicio = cls.mes_inicio_estudo(uow)
+        if num_hydro_simulation_stages_policy is None:
+            ano_inicio = cls.study_period_starting_year(uow)
+            mes_inicio = cls.study_period_starting_month(uow)
             eers = cls.eers(uow)
             mes_fim_hib = eers["mes_fim_individualizado"].iloc[0]
             ano_fim_hib = eers["ano_fim_individualizado"].iloc[0]
@@ -722,111 +767,125 @@ class Deck:
                 tempo_individualizado = (
                     data_fim_individualizado - data_inicio_estudo
                 )
-                num_estagios_individualizados_politica = int(
+                num_hydro_simulation_stages_policy = int(
                     round(tempo_individualizado / timedelta(days=30))
                 )
             else:
-                num_estagios_individualizados_politica = 0
-            cls.DECK_DATA_CACHING["num_estagios_individualizados_politica"] = (
-                num_estagios_individualizados_politica
+                num_hydro_simulation_stages_policy = 0
+            cls.DECK_DATA_CACHING["num_hydro_simulation_stages_policy"] = (
+                num_hydro_simulation_stages_policy
             )
-        return num_estagios_individualizados_politica
+        return num_hydro_simulation_stages_policy
 
     @classmethod
-    def num_estagios_individualizados_sf(cls, uow: AbstractUnitOfWork) -> int:
-        num_estagios_individualizados_sf = cls.DECK_DATA_CACHING.get(
-            "num_estagios_individualizados_sf"
+    def num_hydro_simulation_stages_final_simulation(
+        cls, uow: AbstractUnitOfWork
+    ) -> int:
+        num_hydro_simulation_stages_final_simulation = (
+            cls.DECK_DATA_CACHING.get(
+                "num_hydro_simulation_stages_final_simulation"
+            )
         )
-        if num_estagios_individualizados_sf is None:
-            agregacao = cls.agregacao_simulacao_final(uow)
-            mes_inicio = cls.mes_inicio_estudo(uow)
-            anos_estudo = cls.num_anos_estudo(uow)
-            anos_pos_sf = cls.num_anos_pos_sim_final(uow)
-            if agregacao == 1:
-                num_estagios_individualizados_sf = (
-                    anos_estudo + anos_pos_sf
-                ) * 12 - (mes_inicio - 1)
+        if num_hydro_simulation_stages_final_simulation is None:
+            aggergation = cls.final_simulation_aggregation(uow)
+            starting_month = cls.study_period_starting_month(uow)
+            study_years = cls.num_study_period_years(uow)
+            post_study_years = (
+                cls.num_post_study_period_years_final_simulation(uow)
+            )
+            if aggergation == 1:
+                num_hydro_simulation_stages_final_simulation = (
+                    study_years + post_study_years
+                ) * 12 - (starting_month - 1)
             else:
-                num_estagios_individualizados_sf = (
-                    cls.num_estagios_individualizados_politica(uow)
+                num_hydro_simulation_stages_final_simulation = (
+                    cls.num_hydro_simulation_stages_policy(uow)
                 )
 
-            cls.DECK_DATA_CACHING["num_estagios_individualizados_sf"] = (
-                num_estagios_individualizados_sf
-            )
-        return num_estagios_individualizados_sf
+            cls.DECK_DATA_CACHING[
+                "num_hydro_simulation_stages_final_simulation"
+            ] = num_hydro_simulation_stages_final_simulation
+        return num_hydro_simulation_stages_final_simulation
 
     @classmethod
-    def considera_geracao_eolica(cls, uow: AbstractUnitOfWork) -> int:
-        considera_geracao_eolica = cls.DECK_DATA_CACHING.get(
-            "considera_geracao_eolica"
+    def models_wind_generation(cls, uow: AbstractUnitOfWork) -> int:
+        models_wind_generation = cls.DECK_DATA_CACHING.get(
+            "models_wind_generation"
         )
-        if considera_geracao_eolica is None:
-            considera_geracao_eolica = cls._validate_data(
+        if models_wind_generation is None:
+            models_wind_generation = cls._validate_data(
                 cls.dger(uow).considera_geracao_eolica != 0,
                 int,
                 "consideração da geração eólica",
             )
-            cls.DECK_DATA_CACHING["considera_geracao_eolica"] = (
-                considera_geracao_eolica
+            cls.DECK_DATA_CACHING["models_wind_generation"] = (
+                models_wind_generation
             )
-        return considera_geracao_eolica
+        return models_wind_generation
 
     @classmethod
-    def consideracao_media_anual_afluencias(
-        cls, uow: AbstractUnitOfWork
-    ) -> int:
-        consideracao_media_anual_afluencias = cls.DECK_DATA_CACHING.get(
-            "consideracao_media_anual_afluencias"
+    def scenario_generation_model_type(cls, uow: AbstractUnitOfWork) -> int:
+        scenario_generation_model_type = cls.DECK_DATA_CACHING.get(
+            "scenario_generation_model_type"
         )
-        if consideracao_media_anual_afluencias is None:
-            consideracao_media_anual_afluencias = cls._validate_data(
+        if scenario_generation_model_type is None:
+            scenario_generation_model_type = cls._validate_data(
                 cls.dger(uow).consideracao_media_anual_afluencias,
                 int,
                 "opção do modelo PAR(p)",
             )
-            cls.DECK_DATA_CACHING["consideracao_media_anual_afluencias"] = (
-                consideracao_media_anual_afluencias
+            cls.DECK_DATA_CACHING["scenario_generation_model_type"] = (
+                scenario_generation_model_type
             )
-        return consideracao_media_anual_afluencias
+        return scenario_generation_model_type
 
     @classmethod
-    def ordem_maxima_parp(cls, uow: AbstractUnitOfWork) -> int:
-        ordem_maxima_parp = cls.DECK_DATA_CACHING.get("ordem_maxima_parp")
-        if ordem_maxima_parp is None:
-            ordem_maxima_parp = cls._validate_data(
+    def scenario_generation_model_max_order(
+        cls, uow: AbstractUnitOfWork
+    ) -> int:
+        scenario_generation_model_max_order = cls.DECK_DATA_CACHING.get(
+            "scenario_generation_model_max_order"
+        )
+        if scenario_generation_model_max_order is None:
+            scenario_generation_model_max_order = cls._validate_data(
                 cls.dger(uow).ordem_maxima_parp,
                 int,
                 "ordem máxima do modelo PAR(p)",
             )
-            cls.DECK_DATA_CACHING["ordem_maxima_parp"] = ordem_maxima_parp
-        return ordem_maxima_parp
+            cls.DECK_DATA_CACHING["scenario_generation_model_max_order"] = (
+                scenario_generation_model_max_order
+            )
+        return scenario_generation_model_max_order
 
     @classmethod
-    def num_estagios_tendencia_hidrologica(
+    def num_stages_with_past_tendency_period(
         cls, uow: AbstractUnitOfWork
     ) -> int:
-        scenario_model = cls.consideracao_media_anual_afluencias(uow)
-        maximum_model_order = cls.ordem_maxima_parp(uow)
+        scenario_model = cls.scenario_generation_model_type(uow)
+        maximum_model_order = cls.scenario_generation_model_max_order(uow)
         past_stages = 12 if scenario_model != 0 else maximum_model_order
         return past_stages
 
     @classmethod
-    def data_inicio_com_tendencia_hidrologica(
+    def starting_date_with_past_tendency_period(
         cls, uow: AbstractUnitOfWork
     ) -> datetime:
-        starting_year = cls.ano_inicio_estudo(uow)
-        past_stages = cls.num_estagios_tendencia_hidrologica(uow)
+        starting_year = cls.study_period_starting_year(uow)
+        past_stages = cls.num_stages_with_past_tendency_period(uow)
         starting_date_with_tendency = datetime(
             year=starting_year, month=1, day=1
         ) - relativedelta(months=past_stages)
         return starting_date_with_tendency
 
     @classmethod
-    def data_fim_com_pos_estudo(cls, uow: AbstractUnitOfWork) -> datetime:
-        starting_year = cls.ano_inicio_estudo(uow)
-        study_years = cls.num_anos_estudo(uow)
-        post_study_years_in_simulation = cls.num_anos_pos_sim_final(uow)
+    def ending_date_with_post_study_period(
+        cls, uow: AbstractUnitOfWork
+    ) -> datetime:
+        starting_year = cls.study_period_starting_year(uow)
+        study_years = cls.num_study_period_years(uow)
+        post_study_years_in_simulation = (
+            cls.num_post_study_period_years_final_simulation(uow)
+        )
         ending_date_with_post_study_years = datetime(
             year=starting_year
             + study_years
@@ -838,43 +897,45 @@ class Deck:
         return ending_date_with_post_study_years
 
     @classmethod
-    def datas_inicio_estagios_internos_politica(
+    def internal_stages_starting_dates_policy(
         cls, uow: AbstractUnitOfWork
     ) -> List[datetime]:
-        datas_inicio_estagios_internos_politica = cls.DECK_DATA_CACHING.get(
-            "datas_inicio_estagios_internos_politica"
+        internal_stages_starting_dates_policy = cls.DECK_DATA_CACHING.get(
+            "internal_stages_starting_dates_policy"
         )
-        if datas_inicio_estagios_internos_politica is None:
-            datas_inicio_estagios_internos_politica = pd.date_range(
-                datetime(cls.ano_inicio_estudo(uow), 1, 1),
+        if internal_stages_starting_dates_policy is None:
+            internal_stages_starting_dates_policy = pd.date_range(
+                datetime(cls.study_period_starting_year(uow), 1, 1),
                 datetime(
-                    cls.ano_inicio_estudo(uow) + cls.num_anos_estudo(uow) - 1,
+                    cls.study_period_starting_year(uow)
+                    + cls.num_study_period_years(uow)
+                    - 1,
                     12,
                     1,
                 ),
                 freq="MS",
             ).tolist()
-            cls.DECK_DATA_CACHING[
-                "datas_inicio_estagios_internos_politica"
-            ] = datas_inicio_estagios_internos_politica
-        return datas_inicio_estagios_internos_politica
+            cls.DECK_DATA_CACHING["internal_stages_starting_dates_policy"] = (
+                internal_stages_starting_dates_policy
+            )
+        return internal_stages_starting_dates_policy
 
     @classmethod
-    def datas_inicio_estagios_internos_politica_com_tendencia(
+    def internal_stages_starting_dates_policy_with_past_tendency(
         cls, uow: AbstractUnitOfWork
     ) -> List[datetime]:
-        datas_inicio_estagios_internos_politica_com_tendencia = (
+        internal_stages_starting_dates_policy_with_past_tendency = (
             cls.DECK_DATA_CACHING.get(
-                "datas_inicio_estagios_internos_politica_com_tendencia"
+                "internal_stages_starting_dates_policy_with_past_tendency"
             )
         )
-        if datas_inicio_estagios_internos_politica_com_tendencia is None:
-            datas_inicio_estagios_internos_politica_com_tendencia = (
+        if internal_stages_starting_dates_policy_with_past_tendency is None:
+            internal_stages_starting_dates_policy_with_past_tendency = (
                 pd.date_range(
-                    datetime(cls.ano_inicio_estudo(uow) - 1, 1, 1),
+                    datetime(cls.study_period_starting_year(uow) - 1, 1, 1),
                     datetime(
-                        cls.ano_inicio_estudo(uow)
-                        + cls.num_anos_estudo(uow)
+                        cls.study_period_starting_year(uow)
+                        + cls.num_study_period_years(uow)
                         - 1,
                         12,
                         1,
@@ -883,51 +944,55 @@ class Deck:
                 ).tolist()
             )
             cls.DECK_DATA_CACHING[
-                "datas_inicio_estagios_internos_politica_com_tendencia"
-            ] = datas_inicio_estagios_internos_politica_com_tendencia
-        return datas_inicio_estagios_internos_politica_com_tendencia
+                "internal_stages_starting_dates_policy_with_past_tendency"
+            ] = internal_stages_starting_dates_policy_with_past_tendency
+        return internal_stages_starting_dates_policy_with_past_tendency
 
     @classmethod
-    def datas_inicio_estagios_sim_final(
+    def stages_starting_dates_final_simulation(
         cls, uow: AbstractUnitOfWork
     ) -> List[datetime]:
-        datas_inicio_estagios_sim_final = cls.DECK_DATA_CACHING.get(
-            "datas_inicio_estagios_sim_final"
+        stages_starting_dates_final_simulation = cls.DECK_DATA_CACHING.get(
+            "stages_starting_dates_final_simulation"
         )
-        if datas_inicio_estagios_sim_final is None:
-            datas_inicio_estagios_sim_final = pd.date_range(
+        if stages_starting_dates_final_simulation is None:
+            stages_starting_dates_final_simulation = pd.date_range(
                 datetime(
-                    cls.ano_inicio_estudo(uow), cls.mes_inicio_estudo(uow), 1
+                    cls.study_period_starting_year(uow),
+                    cls.study_period_starting_month(uow),
+                    1,
                 ),
                 datetime(
-                    cls.ano_inicio_estudo(uow)
-                    + cls.num_anos_estudo(uow)
-                    + cls.num_anos_pos_sim_final(uow)
+                    cls.study_period_starting_year(uow)
+                    + cls.num_study_period_years(uow)
+                    + cls.num_post_study_period_years_final_simulation(uow)
                     - 1,
                     12,
                     1,
                 ),
                 freq="MS",
             ).tolist()
-            cls.DECK_DATA_CACHING["datas_inicio_estagios_sim_final"] = (
-                datas_inicio_estagios_sim_final
+            cls.DECK_DATA_CACHING["stages_starting_dates_final_simulation"] = (
+                stages_starting_dates_final_simulation
             )
-        return datas_inicio_estagios_sim_final
+        return stages_starting_dates_final_simulation
 
     @classmethod
-    def datas_inicio_estagios_internos_sim_final(
+    def internal_stages_starting_dates_final_simulation(
         cls, uow: AbstractUnitOfWork
     ) -> List[datetime]:
-        datas_inicio_estagios_internos_sim_final = cls.DECK_DATA_CACHING.get(
-            "datas_inicio_estagios_internos_sim_final"
+        internal_stages_starting_dates_final_simulation = (
+            cls.DECK_DATA_CACHING.get(
+                "internal_stages_starting_dates_final_simulation"
+            )
         )
-        if datas_inicio_estagios_internos_sim_final is None:
-            datas_inicio_estagios_internos_sim_final = pd.date_range(
-                datetime(cls.ano_inicio_estudo(uow), 1, 1),
+        if internal_stages_starting_dates_final_simulation is None:
+            internal_stages_starting_dates_final_simulation = pd.date_range(
+                datetime(cls.study_period_starting_year(uow), 1, 1),
                 datetime(
-                    cls.ano_inicio_estudo(uow)
-                    + cls.num_anos_estudo(uow)
-                    + cls.num_anos_pos_sim_final(uow)
+                    cls.study_period_starting_year(uow)
+                    + cls.num_study_period_years(uow)
+                    + cls.num_post_study_period_years_final_simulation(uow)
                     - 1,
                     12,
                     1,
@@ -935,51 +1000,57 @@ class Deck:
                 freq="MS",
             ).tolist()
             cls.DECK_DATA_CACHING[
-                "datas_inicio_estagios_internos_sim_final"
-            ] = datas_inicio_estagios_internos_sim_final
-        return datas_inicio_estagios_internos_sim_final
+                "internal_stages_starting_dates_final_simulation"
+            ] = internal_stages_starting_dates_final_simulation
+        return internal_stages_starting_dates_final_simulation
 
     @classmethod
-    def datas_fim_estagios_internos_sim_final(
+    def internal_stages_ending_dates_final_simulation(
         cls, uow: AbstractUnitOfWork
     ) -> List[datetime]:
-        datas_fim_estagios_internos_sim_final = cls.DECK_DATA_CACHING.get(
-            "datas_fim_estagios_internos_sim_final"
-        )
-        if datas_fim_estagios_internos_sim_final is None:
-            datas_fim_estagios_internos_sim_final = [
-                d + relativedelta(months=1)
-                for d in cls.datas_inicio_estagios_internos_sim_final(uow)
-            ]
-            cls.DECK_DATA_CACHING["datas_fim_estagios_internos_sim_final"] = (
-                datas_fim_estagios_internos_sim_final
+        internal_stages_ending_dates_final_simulation = (
+            cls.DECK_DATA_CACHING.get(
+                "internal_stages_ending_dates_final_simulation"
             )
-        return datas_fim_estagios_internos_sim_final
+        )
+        if internal_stages_ending_dates_final_simulation is None:
+            internal_stages_ending_dates_final_simulation = [
+                d + relativedelta(months=1)
+                for d in cls.internal_stages_starting_dates_final_simulation(
+                    uow
+                )
+            ]
+            cls.DECK_DATA_CACHING[
+                "internal_stages_ending_dates_final_simulation"
+            ] = internal_stages_ending_dates_final_simulation
+        return internal_stages_ending_dates_final_simulation
 
     @classmethod
-    def data_fim_estagios_individualizados_sim_final(
+    def hydro_simulation_stages_ending_date_final_simulation(
         cls, uow: AbstractUnitOfWork
     ) -> datetime:
-        data_fim_estagios_individualizados_sim_final = (
+        hydro_simulation_stages_ending_date_final_simulation = (
             cls.DECK_DATA_CACHING.get(
-                "data_fim_estagios_individualizados_sim_final"
+                "hydro_simulation_stages_ending_date_final_simulation"
             )
         )
-        if data_fim_estagios_individualizados_sim_final is None:
+        if hydro_simulation_stages_ending_date_final_simulation is None:
             eers = cls.eers(uow)
-            ano_inicio = cls.ano_inicio_estudo(uow)
-            agregacao_sim_final = cls.agregacao_simulacao_final(uow)
-            anos_estudo = cls.num_anos_estudo(uow)
-            anos_pos_sim_final = cls.num_anos_pos_sim_final(uow)
-            if agregacao_sim_final == 1:
+            starting_year = cls.study_period_starting_year(uow)
+            aggregation = cls.final_simulation_aggregation(uow)
+            num_study_years = cls.num_study_period_years(uow)
+            post_study_years = (
+                cls.num_post_study_period_years_final_simulation(uow)
+            )
+            if aggregation == 1:
                 fim = datetime(
-                    year=ano_inicio + anos_estudo + anos_pos_sim_final,
+                    year=starting_year + num_study_years + post_study_years,
                     month=1,
                     day=1,
                 )
             elif eers["ano_fim_individualizado"].isna().sum() > 0:
                 fim = datetime(
-                    year=ano_inicio + anos_estudo + anos_pos_sim_final,
+                    year=starting_year + num_study_years + post_study_years,
                     month=1,
                     day=1,
                 )
@@ -989,28 +1060,28 @@ class Deck:
                     month=int(eers["mes_fim_individualizado"].iloc[0]),
                     day=1,
                 )
-            data_fim_estagios_individualizados_sim_final = fim
+            hydro_simulation_stages_ending_date_final_simulation = fim
             cls.DECK_DATA_CACHING[
-                "data_fim_estagios_individualizados_sim_final"
-            ] = data_fim_estagios_individualizados_sim_final
-        return data_fim_estagios_individualizados_sim_final
+                "hydro_simulation_stages_ending_date_final_simulation"
+            ] = hydro_simulation_stages_ending_date_final_simulation
+        return hydro_simulation_stages_ending_date_final_simulation
 
     @classmethod
-    def configuracoes(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        configuracoes = cls.DECK_DATA_CACHING.get("configuracoes")
-        if configuracoes is None:
+    def configurations(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        configurations = cls.DECK_DATA_CACHING.get("configurations")
+        if configurations is None:
             pmo = cls.pmo(uow)
-            configuracoes = cls._validate_data(
+            configurations = cls._validate_data(
                 pmo.configuracoes_qualquer_modificacao,
                 pd.DataFrame,
-                "configuracoes",
+                "configurations",
             )
-            configuracoes = configuracoes.rename(
+            configurations = configurations.rename(
                 columns={"data": START_DATE_COL}
             )
 
-            cls.DECK_DATA_CACHING["configuracoes"] = configuracoes
-        return configuracoes.copy()
+            cls.DECK_DATA_CACHING["configurations"] = configurations
+        return configurations.copy()
 
     @classmethod
     def eer_stored_energy_lower_bounds(
@@ -1025,7 +1096,7 @@ class Deck:
         def _add_missing_eer_bounds(df: pd.DataFrame) -> pd.DataFrame:
             df = df.loc[
                 df[START_DATE_COL]
-                >= Deck.datas_inicio_estagios_sim_final(uow)[0]
+                >= Deck.stages_starting_dates_final_simulation(uow)[0]
             ]
             eers_minimum_storage = df[EER_CODE_COL].unique().tolist()
             eer_codes = Deck.eer_code_order(uow)
@@ -1085,7 +1156,7 @@ class Deck:
         """
 
         def _filter_study_period(df: pd.DataFrame) -> pd.DataFrame:
-            dates = cls.datas_inicio_estagios_sim_final(uow)
+            dates = cls.stages_starting_dates_final_simulation(uow)
             df = df.loc[df[START_DATE_COL].between(dates[0], dates[-1])]
             return df
 
@@ -1126,7 +1197,7 @@ class Deck:
                     "valor_MWmes": VALUE_COL,
                 }
             )
-            configs_df = cls.configuracoes(uow)
+            configs_df = cls.configurations(uow)
             configs_df = configs_df.rename(
                 columns={
                     VALUE_COL: CONFIG_COL,
@@ -1144,18 +1215,18 @@ class Deck:
         return stored_energy_upper_bounds.copy()
 
     @classmethod
-    def convergencia(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        convergencia = cls.DECK_DATA_CACHING.get("convergencia")
-        if convergencia is None:
+    def convergence(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        convergence = cls.DECK_DATA_CACHING.get("convergence")
+        if convergence is None:
             pmo = cls.pmo(uow)
-            convergencia = cls._validate_data(
+            convergence = cls._validate_data(
                 pmo.convergencia,
                 pd.DataFrame,
-                "convergencia",
+                "convergence",
             )
 
-            cls.DECK_DATA_CACHING["convergencia"] = convergencia
-        return convergencia.copy()
+            cls.DECK_DATA_CACHING["convergence"] = convergence
+        return convergence.copy()
 
     @classmethod
     def thermal_generation_bounds(
@@ -1291,8 +1362,8 @@ class Deck:
             exchange_average_bounds_df = _drops_exchange_direction_flag(
                 exchange_average_bounds_df
             )
-            exchange_block_bounds_df = cls.limites_intercambio_patamares(uow)
-            block_length_df = cls.duracao_mensal_patamares(uow)
+            exchange_block_bounds_df = cls.exchange_block_limits(uow)
+            block_length_df = cls.block_lengths(uow)
             exchange_bounds = _cast_exchange_bounds_to_MWmes(
                 exchange_block_bounds_df,
                 exchange_average_bounds_df,
@@ -1302,46 +1373,46 @@ class Deck:
         return exchange_bounds.copy()
 
     @classmethod
-    def custos(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        custos = cls.DECK_DATA_CACHING.get("custos")
-        if custos is None:
+    def costs(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        costs = cls.DECK_DATA_CACHING.get("costs")
+        if costs is None:
             pmo = cls.pmo(uow)
-            custos = cls._validate_data(
+            costs = cls._validate_data(
                 pmo.custo_operacao_series_simuladas,
                 pd.DataFrame,
-                "custos",
+                "costs",
             )
 
-            cls.DECK_DATA_CACHING["custos"] = custos
-        return custos.copy()
+            cls.DECK_DATA_CACHING["costs"] = costs
+        return costs.copy()
 
     @classmethod
-    def num_iteracoes(cls, uow: AbstractUnitOfWork) -> int:
-        num_iteracoes = cls.DECK_DATA_CACHING.get("num_iteracoes")
-        if num_iteracoes is None:
-            df = cls.convergencia(uow)
-            num_iteracoes = cls._validate_data(
+    def num_iterations(cls, uow: AbstractUnitOfWork) -> int:
+        num_iterations = cls.DECK_DATA_CACHING.get("num_iterations")
+        if num_iterations is None:
+            df = cls.convergence(uow)
+            num_iterations = cls._validate_data(
                 int(df["iteracao"].max()),
                 int,
-                "num_iteracoes",
+                "num_iterations",
             )
 
-            cls.DECK_DATA_CACHING["num_iteracoes"] = num_iteracoes
-        return num_iteracoes
+            cls.DECK_DATA_CACHING["num_iterations"] = num_iterations
+        return num_iterations
 
     @classmethod
-    def tempos_etapas(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        tempos_etapas = cls.DECK_DATA_CACHING.get("tempos_etapas")
-        if tempos_etapas is None:
+    def runtimes(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        runtimes = cls.DECK_DATA_CACHING.get("runtimes")
+        if runtimes is None:
             arq = cls.newavetim(uow)
-            tempos_etapas = cls._validate_data(
+            runtimes = cls._validate_data(
                 arq.tempos_etapas,
                 pd.DataFrame,
-                "tempos_etapas",
+                "runtimes",
             )
 
-            cls.DECK_DATA_CACHING["tempos_etapas"] = tempos_etapas
-        return tempos_etapas
+            cls.DECK_DATA_CACHING["runtimes"] = runtimes
+        return runtimes
 
     @classmethod
     def submarkets(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
@@ -1386,18 +1457,18 @@ class Deck:
         return eers.copy()
 
     @classmethod
-    def politica_hibrida(cls, uow: AbstractUnitOfWork) -> bool:
-        politica_hibrida = cls.DECK_DATA_CACHING.get("politica_hibrida")
-        if politica_hibrida is None:
+    def hybrid_policy(cls, uow: AbstractUnitOfWork) -> bool:
+        hybrid_policy = cls.DECK_DATA_CACHING.get("hybrid_policy")
+        if hybrid_policy is None:
             eers = cls.eers(uow)
             val = bool(eers["ano_fim_individualizado"].isna().sum() == 0)
-            politica_hibrida = cls._validate_data(
+            hybrid_policy = cls._validate_data(
                 val,
                 bool,
                 "REEs",
             )
-            cls.DECK_DATA_CACHING["politica_hibrida"] = politica_hibrida
-        return politica_hibrida
+            cls.DECK_DATA_CACHING["hybrid_policy"] = hybrid_policy
+        return hybrid_policy
 
     @classmethod
     def hydros(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
@@ -1416,24 +1487,6 @@ class Deck:
             hydros = hydros.astype({HYDRO_NAME_COL: STRING_DF_TYPE})
             cls.DECK_DATA_CACHING["hydros"] = hydros
         return hydros.copy()
-
-    @classmethod
-    def modif(cls, uow: AbstractUnitOfWork) -> Modif:
-        modif = cls.DECK_DATA_CACHING.get("modif")
-        if modif is None:
-            modif = cls._validate_data(cls._get_modif(uow), Modif, "modif")
-            cls.DECK_DATA_CACHING["modif"] = modif
-        return modif
-
-    @classmethod
-    def hidr(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        hidr = cls.DECK_DATA_CACHING.get("hidr")
-        if hidr is None:
-            hidr = cls._validate_data(
-                cls._get_hidr(uow).cadastro, pd.DataFrame, "hidr"
-            )
-            cls.DECK_DATA_CACHING["hidr"] = hidr
-        return hidr.copy()
 
     @classmethod
     def _get_value_and_unit_from_modif_entry(
@@ -1511,8 +1564,8 @@ class Deck:
         conforme as declarações de modificações são encontradas.
         """
         modif = cls.modif(uow)
-        num_stages = cls.num_estagios_individualizados_sf(uow)
-        dates = cls.datas_inicio_estagios_sim_final(uow)[:num_stages]
+        num_stages = cls.num_hydro_simulation_stages_final_simulation(uow)
+        dates = cls.stages_starting_dates_final_simulation(uow)[:num_stages]
         hydro_codes = df[HYDRO_CODE_COL].unique().tolist()
         for i, u in enumerate(hydro_codes):
             hydro_changes = modif.modificacoes_usina(u)
@@ -1641,7 +1694,7 @@ class Deck:
         ) -> pd.DataFrame:
             df = df.reset_index()
             num_hydros = df.shape[0]
-            dates = np.array(cls.datas_inicio_estagios_sim_final(uow))
+            dates = np.array(cls.stages_starting_dates_final_simulation(uow))
             num_stages = len(dates)
             df = pd.concat([df] * num_stages, ignore_index=True)
             df[START_DATE_COL] = np.repeat(dates, num_hydros)
@@ -1859,9 +1912,9 @@ class Deck:
         ) -> pd.DataFrame:
             df = df.reset_index()
             num_hydros = df.shape[0]
-            dates = np.array(cls.datas_inicio_estagios_sim_final(uow))
+            dates = np.array(cls.stages_starting_dates_final_simulation(uow))
             num_stages = len(dates)
-            num_blocks = cls.numero_patamares(uow) + 1
+            num_blocks = cls.num_blocks(uow) + 1
             df = pd.concat([df] * num_stages * num_blocks, ignore_index=True)
             df[START_DATE_COL] = np.repeat(dates, num_hydros * num_blocks)
             df[BLOCK_COL] = np.tile(
@@ -1981,9 +2034,9 @@ class Deck:
         ) -> pd.DataFrame:
             df = df.reset_index()
             num_hydros = df.shape[0]
-            dates = np.array(cls.datas_inicio_estagios_sim_final(uow))
+            dates = np.array(cls.stages_starting_dates_final_simulation(uow))
             num_stages = len(dates)
-            num_blocks = cls.numero_patamares(uow) + 1
+            num_blocks = cls.num_blocks(uow) + 1
             df = pd.concat([df] * num_stages * num_blocks, ignore_index=True)
             df[START_DATE_COL] = np.repeat(dates, num_hydros * num_blocks)
             df[BLOCK_COL] = np.tile(
@@ -2015,16 +2068,6 @@ class Deck:
         return hydro_outflow_bounds_in_stages.copy()
 
     @classmethod
-    def vazoes(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        vazoes = cls.DECK_DATA_CACHING.get("vazoes")
-        if vazoes is None:
-            vazoes = cls._validate_data(
-                cls._get_vazoes(uow).vazoes, pd.DataFrame, "vazoes"
-            )
-            cls.DECK_DATA_CACHING["vazoes"] = vazoes
-        return vazoes.copy()
-
-    @classmethod
     def thermals(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         thermals = cls.DECK_DATA_CACHING.get("thermals")
         if thermals is None:
@@ -2044,19 +2087,19 @@ class Deck:
         return thermals.copy()
 
     @classmethod
-    def numero_patamares(cls, uow: AbstractUnitOfWork) -> int:
-        numero_patamares = cls.DECK_DATA_CACHING.get("numero_patamares")
-        if numero_patamares is None:
-            numero_patamares = cls._validate_data(
+    def num_blocks(cls, uow: AbstractUnitOfWork) -> int:
+        num_blocks = cls.DECK_DATA_CACHING.get("num_blocks")
+        if num_blocks is None:
+            num_blocks = cls._validate_data(
                 cls._get_patamar(uow).numero_patamares,
                 int,
                 "número de patamares",
             )
-            cls.DECK_DATA_CACHING["numero_patamares"] = numero_patamares
-        return numero_patamares
+            cls.DECK_DATA_CACHING["num_blocks"] = num_blocks
+        return num_blocks
 
     @classmethod
-    def duracao_mensal_patamares(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def block_lengths(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
 
         def __eval_pat0(df_pat: pd.DataFrame) -> pd.DataFrame:
             df_pat_0 = df_pat.groupby(START_DATE_COL, as_index=False).sum(
@@ -2067,28 +2110,22 @@ class Deck:
             df_pat.sort_values([START_DATE_COL, BLOCK_COL], inplace=True)
             return df_pat
 
-        duracao_mensal_patamares = cls.DECK_DATA_CACHING.get(
-            "duracao_mensal_patamares"
-        )
-        if duracao_mensal_patamares is None:
-            duracao_mensal_patamares = cls._validate_data(
+        block_lengths = cls.DECK_DATA_CACHING.get("block_lengths")
+        if block_lengths is None:
+            block_lengths = cls._validate_data(
                 cls._get_patamar(uow).duracao_mensal_patamares,
                 pd.DataFrame,
                 "duração dos patamares",
             )
-            duracao_mensal_patamares = duracao_mensal_patamares.rename(
+            block_lengths = block_lengths.rename(
                 columns={"data": START_DATE_COL, "patamar": BLOCK_COL}
             )
-            duracao_mensal_patamares = __eval_pat0(duracao_mensal_patamares)
-            cls.DECK_DATA_CACHING["duracao_mensal_patamares"] = (
-                duracao_mensal_patamares
-            )
-        return duracao_mensal_patamares.copy()
+            block_lengths = __eval_pat0(block_lengths)
+            cls.DECK_DATA_CACHING["block_lengths"] = block_lengths
+        return block_lengths.copy()
 
     @classmethod
-    def limites_intercambio_patamares(
-        cls, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
+    def exchange_block_limits(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
 
         def __eval_pat0(df_pat: pd.DataFrame) -> pd.DataFrame:
             df_pat_0 = df_pat.loc[df_pat[BLOCK_COL] == 1].copy()
@@ -2106,67 +2143,59 @@ class Deck:
             )
             return df_pat
 
-        limites_intercambio_patamares = cls.DECK_DATA_CACHING.get(
-            "limites_intercambio_patamares"
+        exchange_block_limits = cls.DECK_DATA_CACHING.get(
+            "exchange_block_limits"
         )
-        if limites_intercambio_patamares is None:
-            limites_intercambio_patamares = cls._validate_data(
+        if exchange_block_limits is None:
+            exchange_block_limits = cls._validate_data(
                 cls._get_patamar(uow).intercambio_patamares,
                 pd.DataFrame,
                 "limites de intercâmbio dos patamares",
             )
-            limites_intercambio_patamares = (
-                limites_intercambio_patamares.rename(
-                    columns={
-                        "submercado_de": EXCHANGE_SOURCE_CODE_COL,
-                        "submercado_para": EXCHANGE_TARGET_CODE_COL,
-                        "data": START_DATE_COL,
-                    }
-                )
+            exchange_block_limits = exchange_block_limits.rename(
+                columns={
+                    "submercado_de": EXCHANGE_SOURCE_CODE_COL,
+                    "submercado_para": EXCHANGE_TARGET_CODE_COL,
+                    "data": START_DATE_COL,
+                }
             )
-            limites_intercambio_patamares = __eval_pat0(
-                limites_intercambio_patamares
+            exchange_block_limits = __eval_pat0(exchange_block_limits)
+            cls.DECK_DATA_CACHING["exchange_block_limits"] = (
+                exchange_block_limits
             )
-            cls.DECK_DATA_CACHING["limites_intercambio_patamares"] = (
-                limites_intercambio_patamares
-            )
-        return limites_intercambio_patamares.copy()
+        return exchange_block_limits.copy()
 
     @classmethod
-    def energia_armazenada_inicial(
-        cls, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
-        energia_armazenada_inicial = cls.DECK_DATA_CACHING.get(
-            "energia_armazenada_inicial"
+    def initial_stored_energy(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        initial_stored_energy = cls.DECK_DATA_CACHING.get(
+            "initial_stored_energy"
         )
-        if energia_armazenada_inicial is None:
-            energia_armazenada_inicial = cls._validate_data(
+        if initial_stored_energy is None:
+            initial_stored_energy = cls._validate_data(
                 cls.pmo(uow).energia_armazenada_inicial,
                 pd.DataFrame,
                 "EARM inicial",
             )
-            cls.DECK_DATA_CACHING["energia_armazenada_inicial"] = (
-                energia_armazenada_inicial
+            cls.DECK_DATA_CACHING["initial_stored_energy"] = (
+                initial_stored_energy
             )
-        return energia_armazenada_inicial.copy()
+        return initial_stored_energy.copy()
 
     @classmethod
-    def volume_armazenado_inicial(
-        cls, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
-        volume_armazenado_inicial = cls.DECK_DATA_CACHING.get(
-            "volume_armazenado_inicial"
+    def initial_stored_volume(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        initial_stored_volume = cls.DECK_DATA_CACHING.get(
+            "initial_stored_volume"
         )
-        if volume_armazenado_inicial is None:
-            volume_armazenado_inicial = cls._validate_data(
+        if initial_stored_volume is None:
+            initial_stored_volume = cls._validate_data(
                 cls.pmo(uow).volume_armazenado_inicial,
                 pd.DataFrame,
                 "VARM inicial",
             )
-            cls.DECK_DATA_CACHING["volume_armazenado_inicial"] = (
-                volume_armazenado_inicial
+            cls.DECK_DATA_CACHING["initial_stored_volume"] = (
+                initial_stored_volume
             )
-        return volume_armazenado_inicial.copy()
+        return initial_stored_volume.copy()
 
     @classmethod
     def eer_code_order(cls, uow: AbstractUnitOfWork) -> List[int]:

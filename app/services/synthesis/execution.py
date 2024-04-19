@@ -99,7 +99,7 @@ class ExecutionSynthetizer:
 
     @classmethod
     def _resolve_convergence(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        df = Deck.convergencia(uow)
+        df = Deck.convergence(uow)
         processed_d = pd.DataFrame(
             data={
                 "iteracao": df["iteracao"][2::3].to_numpy(),
@@ -114,12 +114,12 @@ class ExecutionSynthetizer:
 
     @classmethod
     def _resolve_cost(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        df = Deck.custos(uow)
+        df = Deck.costs(uow)
         return df[["parcela", "valor_esperado", "desvio_padrao"]]
 
     @classmethod
     def _resolve_runtime(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        df = Deck.tempos_etapas(uow)
+        df = Deck.runtimes(uow)
         df["tempo"] = df["tempo"].dt.total_seconds()
         df = df.loc[df["etapa"] != "Tempo Total"]
         return df

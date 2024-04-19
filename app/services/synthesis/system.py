@@ -1,8 +1,6 @@
 from typing import Callable, Dict, List, TypeVar, Optional
 import pandas as pd  # type: ignore
-import numpy as np  # type: ignore
 import logging
-from inewave.config import MESES_DF
 from dateutil.relativedelta import relativedelta  # type: ignore
 from app.utils.timing import time_and_log
 from logging import INFO, ERROR
@@ -26,12 +24,6 @@ from app.internal.constants import (
     VALUE_COL,
     SUBMARKET_CODE_COL,
     SUBMARKET_NAME_COL,
-    HYDRO_CODE_COL,
-    HYDRO_NAME_COL,
-    THERMAL_CODE_COL,
-    THERMAL_NAME_COL,
-    EER_CODE_COL,
-    EER_NAME_COL,
 )
 
 # TODO - rever nomes das colunas
@@ -120,19 +112,19 @@ class SystemSynthetizer:
 
     @classmethod
     def __resolve_EST(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        datas_iniciais = Deck.datas_inicio_estagios_internos_politica(uow)
-        datas_finais = [d + relativedelta(months=1) for d in datas_iniciais]
+        start_dates = Deck.stages_starting_dates_final_simulation(uow)
+        end_dates = [d + relativedelta(months=1) for d in start_dates]
         return pd.DataFrame(
             data={
-                STAGE_COL: list(range(1, len(datas_iniciais) + 1)),
-                START_DATE_COL: datas_iniciais,
-                END_DATE_COL: datas_finais,
+                STAGE_COL: list(range(1, len(start_dates) + 1)),
+                START_DATE_COL: start_dates,
+                END_DATE_COL: end_dates,
             }
         )
 
     @classmethod
     def __resolve_PAT(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        df = Deck.duracao_mensal_patamares(uow)
+        df = Deck.block_lengths(uow)
         df[VALUE_COL] *= STAGE_DURATION_HOURS
         return df
 

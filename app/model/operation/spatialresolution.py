@@ -2,18 +2,12 @@ from enum import Enum
 from typing import Dict, List, Optional
 from app.internal.constants import (
     HYDRO_CODE_COL,
-    HYDRO_NAME_COL,
     THERMAL_CODE_COL,
-    THERMAL_NAME_COL,
     EER_CODE_COL,
-    EER_NAME_COL,
     EEP_COL,
     SUBMARKET_CODE_COL,
-    SUBMARKET_NAME_COL,
     EXCHANGE_SOURCE_CODE_COL,
-    EXCHANGE_SOURCE_NAME_COL,
     EXCHANGE_TARGET_CODE_COL,
-    EXCHANGE_TARGET_NAME_COL,
     START_DATE_COL,
     END_DATE_COL,
     BLOCK_DURATION_COL,

@@ -1494,7 +1494,7 @@ class OperationVariableBounds:
 
         def _get_group_and_cast_bounds() -> Tuple[np.ndarray, np.ndarray]:
             bounds_df = Deck.thermal_generation_bounds(uow)
-            dates = Deck.datas_inicio_estagios_sim_final(uow)
+            dates = Deck.stages_starting_dates_final_simulation(uow)
             bounds_df = bounds_df.loc[bounds_df[START_DATE_COL] >= dates[0]]
 
             grouped_bounds_df = bounds_df.groupby(

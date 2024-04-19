@@ -149,8 +149,8 @@ class ScenarioSynthetizer:
         :rtype: List[ScenarioSynthesis]
         """
         valid_variables: List[ScenarioSynthesis] = []
-        simulation_with_hydro = Deck.agregacao_simulacao_final(uow)
-        policy_with_hydro = Deck.politica_hibrida(uow)
+        simulation_with_hydro = Deck.final_simulation_aggregation(uow)
+        policy_with_hydro = Deck.hybrid_policy(uow)
         has_hydro = simulation_with_hydro or policy_with_hydro
         for v in variables:
             if v.variable == Variable.VAZAO_INCREMENTAL and not has_hydro:
@@ -350,7 +350,7 @@ class ScenarioSynthetizer:
         Também elimina estágios incluídos como consequência do formato
         dos dados lidos, que pertencem ao período pré-estudo.
         """
-        df.loc[:, STAGE_COL] -= Deck.mes_inicio_estudo(uow) - 1
+        df.loc[:, STAGE_COL] -= Deck.study_period_starting_month(uow) - 1
         df = df.loc[df[STAGE_COL] > 0].reset_index(drop=True)
         return df
 
@@ -364,9 +364,11 @@ class ScenarioSynthetizer:
         em formato previamente conhecido.
         """
         starting_date_with_tendency = (
-            Deck.data_inicio_com_tendencia_hidrologica(uow)
+            Deck.starting_date_with_past_tendency_period(uow)
         )
-        ending_date_with_post_study_years = Deck.data_fim_com_pos_estudo(uow)
+        ending_date_with_post_study_years = (
+            Deck.ending_date_with_post_study_period(uow)
+        )
         dates = pd.date_range(
             starting_date_with_tendency,
             ending_date_with_post_study_years,
@@ -383,7 +385,7 @@ class ScenarioSynthetizer:
         utilizada nos DataFrames com valores da MLT para cada síntese,
         em formato previamente conhecido.
         """
-        past_stages = Deck.num_estagios_tendencia_hidrologica(uow)
+        past_stages = Deck.num_stages_with_past_tendency_period(uow)
         stages_with_past_tendency = np.arange(
             -past_stages + 1, num_stages - past_stages + 1, dtype=np.int64
         )
@@ -414,14 +416,14 @@ class ScenarioSynthetizer:
         def __generate_configuration_column(
             uow: AbstractUnitOfWork,
         ) -> np.ndarray:
-            configurations_df = Deck.configuracoes(uow)
+            configurations_df = Deck.configurations(uow)
             starting_date_with_tendency = (
-                Deck.data_inicio_com_tendencia_hidrologica(uow)
+                Deck.starting_date_with_past_tendency_period(uow)
             )
-            ending_date_with_post_study_years = Deck.data_fim_com_pos_estudo(
-                uow
+            ending_date_with_post_study_years = (
+                Deck.ending_date_with_post_study_period(uow)
             )
-            past_stages = Deck.num_estagios_tendencia_hidrologica(uow)
+            past_stages = Deck.num_stages_with_past_tendency_period(uow)
             additional_tendency_configurations = np.array([1] * past_stages)
             configurations = (
                 configurations_df.loc[
@@ -481,7 +483,7 @@ class ScenarioSynthetizer:
         def _energy_history_df(uow: AbstractUnitOfWork) -> pd.DataFrame:
             energy_history = Deck.engnat(uow)
             # Para cada REE, obtem a série de MLT para os estágios do modelo
-            starting_year = Deck.ano_inicio_estudo(uow)
+            starting_year = Deck.study_period_starting_year(uow)
             history_final_year = starting_year - 1
             energy_history = energy_history.loc[
                 energy_history["data"].dt.year < history_final_year
@@ -839,7 +841,7 @@ class ScenarioSynthetizer:
             num_stages: int,
             uow: AbstractUnitOfWork,
         ) -> pd.DataFrame:
-            starting_date = Deck.data_inicio_com_tendencia_hidrologica(uow)
+            starting_date = Deck.starting_date_with_past_tendency_period(uow)
             ending_date = starting_date + relativedelta(months=num_stages - 1)
             dates = pd.date_range(
                 starting_date,
@@ -964,10 +966,10 @@ class ScenarioSynthetizer:
         logger.info(f"Obtendo energias forward da it. {it}")
         generated_energy_df = Deck.energiaf(it, uow)
         converted_energy_df = Deck.enavazf(it, uow)
-        hydro_simulation_stages = Deck.num_estagios_individualizados_politica(
+        hydro_simulation_stages = Deck.num_hydro_simulation_stages_policy(uow)
+        dates = Deck.internal_stages_starting_dates_policy_with_past_tendency(
             uow
         )
-        dates = Deck.datas_inicio_estagios_internos_politica_com_tendencia(uow)
 
         return cls._post_resolve_energy_iteration(
             generated_energy_df,
@@ -1005,7 +1007,7 @@ class ScenarioSynthetizer:
         :return: Os dados como um DataFrame.
         :rtype: pd.DataFrame
         """
-        num_iterations = Deck.num_iteracoes(uow)
+        num_iterations = Deck.num_iterations(uow)
         num_procs = int(Settings().processors)
         with time_and_log(
             message_root="Tempo para obter energias forward",
@@ -1051,7 +1053,7 @@ class ScenarioSynthetizer:
         :return: Os dados como um DataFrame.
         :rtype: pd.DataFrame
         """
-        num_iterations = Deck.num_iteracoes(uow)
+        num_iterations = Deck.num_iterations(uow)
         num_procs = int(Settings().processors)
         with time_and_log(
             message_root="Tempo para obter vazoes forward",
@@ -1087,10 +1089,8 @@ class ScenarioSynthetizer:
         logger.info(f"Obtendo energias backward da it. {it}")
         generated_energy_df = Deck.energiab(it, uow)
         converted_energy_df = Deck.enavazb(it, uow)
-        hydro_simulation_stages = Deck.num_estagios_individualizados_politica(
-            uow
-        )
-        dates = Deck.datas_inicio_estagios_internos_politica(uow)
+        hydro_simulation_stages = Deck.num_hydro_simulation_stages_policy(uow)
+        dates = Deck.internal_stages_starting_dates_policy(uow)
 
         return cls._post_resolve_energy_iteration(
             generated_energy_df,
@@ -1110,7 +1110,7 @@ class ScenarioSynthetizer:
         :return: Os dados como um DataFrame.
         :rtype: pd.DataFrame
         """
-        num_iterations = Deck.num_iteracoes(uow)
+        num_iterations = Deck.num_iterations(uow)
         num_procs = int(Settings().processors)
         with time_and_log(
             message_root="Tempo para obter energias backward",
@@ -1157,7 +1157,7 @@ class ScenarioSynthetizer:
         :return: Os dados como um DataFrame.
         :rtype: pd.DataFrame
         """
-        num_iterations = Deck.num_iteracoes(uow)
+        num_iterations = Deck.num_iterations(uow)
         num_procs = int(Settings().processors)
         with time_and_log(
             message_root="Tempo para obter vazoes backward",
@@ -1190,8 +1190,12 @@ class ScenarioSynthetizer:
         ):
             generated_energy_df = Deck.energias(uow)
             converted_energy_df = Deck.enavazs(uow)
-        hydro_simulation_stages = Deck.num_estagios_individualizados_sf(uow)
-        dates = Deck.datas_inicio_estagios_internos_politica_com_tendencia(uow)
+        hydro_simulation_stages = (
+            Deck.num_hydro_simulation_stages_final_simulation(uow)
+        )
+        dates = Deck.internal_stages_starting_dates_policy_with_past_tendency(
+            uow
+        )
 
         df = cls._post_resolve_energy_iteration(
             generated_energy_df,
@@ -1506,7 +1510,7 @@ class ScenarioSynthetizer:
         with time_and_log(
             message_root="Tempo para exportacao dos dados", logger=cls.logger
         ):
-            num_scenarios = Deck.numero_cenarios_simulacao_final(uow)
+            num_scenarios = Deck.num_scenarios_final_simulation(uow)
             scenarios = pd.Series(
                 [str(i) for i in np.arange(1, num_scenarios + 1)],
                 dtype=STRING_DF_TYPE,
@@ -1521,7 +1525,7 @@ class ScenarioSynthetizer:
             ).reset_index(drop=True)
 
             if stats_df.empty:
-                stats_df = cls._calc_statistics(scenarios_df)
+                stats_df = calc_statistics(scenarios_df)
             cls._add_synthesis_stats(s, stats_df)
             with uow:
                 uow.export.synthetize_df(scenarios_df, filename)
