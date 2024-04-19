@@ -20,15 +20,12 @@ Informações da representação do sistema existente e alvo da otimização.
    * - VARIÁVEL
      - `MNEMÔNICO`
    * - Estágios
-     - `EST`
    * - Patamares
      - `PAT`
    * - Submercados
      - `SBM`
    * - Reservatórios Equivalentes de Energia
      - `REE`
-   * - Parques Eólicos Equivalentes
-     - `PEE`
    * - Usina Termoelétrica
      - `UTE`
    * - Usina Hidroelétrica
@@ -51,13 +48,6 @@ Informações da execução do modelo, como ambiente escolhido, recursos computa
      - `TEMPO`
    * - Convergência
      - `CONVERGENCIA`
-   * - Recursos Computacionais do Job
-     - `RECURSOS_JOB`
-   * - Recursos Computacionais do Cluster
-     - `RECURSOS_CLUSTER`
-
-Os mnemônicos `RECURSOS_JOB` e `RECURSOS_CLUSTER` dependem de arquivos que não são gerados automaticamente pelo modelo NEWAVE,
-e sim por outras ferramentas adicionais. Portanto, não devem ser utilizados em ambientes recentemente configurados.
 
 Cenários
 *********
@@ -76,9 +66,9 @@ A variável informa a grandeza do cenário que foi gerado, fornecido ou processa
 
    * - VARIÁVEL
      - MNEMÔNICO
-   * - Energia Natural Afluente
+   * - Energia Natural Afluente (MWmes)
      - `ENAA`
-   * - Vazão Incremental
+   * - Vazão Incremental (m3/s)
      - `QINC`
 
 
@@ -145,7 +135,7 @@ Informações sobre a política operativa construída (ou lida) pelo modelo.
 Operação
 *********
 
-Informações da operação fornecida como saída pelo modelo. Assim como os dados de cenários, estas informações são formadas a partir de três especificações:
+Informações da operação fornecida como saída pelo modelo. Assim como os dados de cenários, estas informações são formadas a partir de duas especificações:
 
 Variável
 =========
@@ -158,8 +148,6 @@ A variável informa a grandeza que é modelada e fornecida como saída da opera�
 
    * - VARIÁVEL
      - MNEMÔNICO
-   * - Corte de Geração Eólica (MWMes)
-     - `VEOL`
    * - Cota de Jusante (m)
      - `HJUS`
    * - Cota de Montante (m)
@@ -250,22 +238,8 @@ A variável informa a grandeza que é modelada e fornecida como saída da opera�
      - `QTUR`
    * - Vazão Vertida (m3/s)
      - `QVER`
-   * - Violação de Defluência Máxima (hm3)
-     - `VDEFMAX`
-   * - Violação de Defluência Mínima (hm3)
-     - `VDEFMIN`
-   * - Violação de Energia de Vazão Mínima (MWmes)
-     - `VEVMIN`
    * - Violação de FPHA (MWmes)
      - `VFPHA`
-   * - Violação de Turbinamento Máximo (hm3)
-     - `VTURMAX`
-   * - Violação de Turbinamento Mínimo (hm3)
-     - `VTURMIN`
-   * - Violação de Volume Mínimo Operativo (MWmes)
-     - `VVMINOP`
-   * - Velocidade do Vento (m/s)
-     - `VENTO`
    * - Volume Armazenado Inicial (hm3)
      - `VARMI`
    * - Volume Armazenado Inicial (%)
@@ -311,28 +285,8 @@ em relação ao conjunto de elementos do sistema.
      - `UHE`
    * - Usina Termelétrica
      - `UTE`
-   * - Parque Eólico Equivalente
-     - `PEE`
    * - Par de Submercados
      - `SBP`
-
-
-Agregação Temporal
-===================
-
-A agregação espacial informa o nível de agregação da variável em questão em relação
-à discretização temporal (médio diário, semanal, mensal, por patamar, etc.).
-
-.. list-table:: Possíveis Agregações Temporais
-   :widths: 50 10
-   :header-rows: 1
-
-   * - AGREGAÇÂO
-     - MNEMÔNICO
-   * - Estágio
-     - `EST`
-   * - Patamar
-     - `PAT`
 
 
 Estado do Desenvolvimento
@@ -367,55 +321,37 @@ que estão disponíveis no modelo.
 
    * - VARIÁVEL
      - AGREGAÇÃO ESPACIAL
-     - AGREGAÇÃO TEMPORAL
-   * - `VEOL`
-     - `SBM`
-     - `EST`, `PAT`
    * - `HJUS`
      - `UHE`
-     - `PAT`
    * - `HMON`
      - `UHE`
-     - `EST`
    * - `COP`
      - `SIN`
-     - `EST`
    * - `CFU`
      - 
      - 
    * - `CMO`
      - `SBM`
-     - `EST`, `PAT`
    * - `CTER`
      - `SIN`, `SBM`
-     - `EST`
    * - `DEF`
      - `SIN`, `SBM`
-     - `EST`, `PAT`
    * - `ENAA`
      - `SIN`, `SBM`, `REE`
-     - `EST`
    * - `EARMI`
      - `SIN`, `SBM`, `REE`
-     - `EST`
    * - `EARPI`
      - `SIN`, `SBM`, `REE`
-     - `EST`
    * - `EARMF`
      - `SIN`, `SBM`, `REE`
-     - `EST`
    * - `EARPF`
      - `SIN`, `SBM`, `REE`
-     - `EST`
    * - `EVER`
      - `SIN`, `SBM`, `REE`
-     - `EST`
    * - `EVERF`
      - `SIN`, `SBM`, `REE`
-     - `EST`
    * - `EVERR`
      - `SIN`, `SBM`, `REE`
-     - `EST`
    * - `EVERT`
      - 
      - 
@@ -424,106 +360,60 @@ que estão disponíveis no modelo.
      - 
    * - `EVERFT`
      - `SIN`, `SBM`, `REE`
-     - `EST`
    * - `GHID`
      - `SIN`, `SBM`, `REE`, `UHE`
-     - `EST`, `PAT`
    * - `GTER`
      - `SIN`, `SBM`
-     - `EST`, `PAT`
    * - `GEOL`
      - `SIN`, `SBM`, `PEE`
-     - `EST`, `PAT`
    * - `INT`
      - `SBP`
-     - `EST`, `PAT`
    * - `MER`
      - 
      - 
    * - `MERL`
      - `SIN`, `SBM`
-     - `EST`
    * - `HLIQ`
      - `UHE`
      - `PAT`
    * - `VAGUA`
      - `REE`, `UHE`
-     - `EST`
    * - `QAFL`
      - `UHE`
-     - `EST`
    * - `QDEF`
      - `UHE`
-     - `EST`, `PAT`
    * - `QDES`
      - `UHE`
-     - `EST`, `PAT`
    * - `QINC`
      - `UHE`
-     - `EST`
    * - `QRET`
      - `UHE`
-     - `EST`
    * - `QTUR`
      - `SIN`
-     - `EST`, `PAT`
    * - `QVER`
      - `SIN`
-     - `EST`, `PAT`
-   * - `VDEFMAX`
-     - `SIN`, `SBM`, `REE`, `UHE`
-     - `EST`, `PAT`
-   * - `VDEFMIN`
-     - `SIN`, `SBM`, `REE`, `UHE`
-     - `EST`, `PAT`
-   * - `VEVMIN`
-     - `SIN`, `SBM`, `REE`
-     - `EST`, `PAT`
    * - `VFPHA`
      - `SIN`, `SBM`, `REE`, `UHE`
-     - `EST`, `PAT`
-   * - `VTURMAX`
-     - `SIN`, `SBM`, `REE`, `UHE`
-     - `EST`, `PAT`
-   * - `VTURMIN`
-     - `SIN`, `SBM`, `REE`, `UHE`
-     - `EST`, `PAT`
-   * - `VVMINOP`
-     - `SIN`, `SBM`, `REE`
-     - `EST`
-   * - `VENTO`
-     - `PEE`
-     - `EST`
    * - `VARMI`
      - `SIN`, `SBM`, `REE`, `UHE`
-     - `EST`
    * - `VARPI`
      - `UHE`
-     - `EST`
    * - `VARMF`
      - `SIN`, `SBM`, `REE`, `UHE`
-     - `EST`
    * - `VARPF`
      - `UHE`
-     - `EST`
    * - `VAFL`
      - `UHE`
-     - `EST`
    * - `VDEF`
      - `UHE`
-     - `EST`, `PAT`
    * - `VINC`
      - `UHE`
-     - `EST`, `PAT`
    * - `VRET`
      - `UHE`
-     - `EST``
    * - `VTUR`
      - `UHE`
-     - `EST`, `PAT`
    * - `VVER`
      - `UHE`
-     - `EST`, `PAT`
 
 
-São exemplos de elementos de dados válidos para as sínteses da operação `EARPF_SBM_EST`, `VARPF_UHE_EST`, `GHID_UHE_PAT`, `CMO_SBM_EST`, dentre outras.
+São exemplos de elementos de dados válidos para as sínteses da operação `EARPF_SBM`, `VARPF_UHE`, `GHID_UHE`, `CMO_SBM`, dentre outras.

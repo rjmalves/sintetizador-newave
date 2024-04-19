@@ -64,6 +64,109 @@ Caso seja desejado, é possível forçar a saída das sínteses através do argu
 
     $ sintetizador-newave execucao --formato CSV
 
-No caso da síntese da operação, é possível paralelizar a leitura dos arquivos através do argumento opcional `--processadores`::
+No caso das sínteses da operação e de cenários, é possível paralelizar a leitura dos arquivos através do argumento opcional `--processadores`::
 
     $ sintetizador-newave operacao --processadores 8
+    $ sintetizador-newave cenarios --processadores 8
+
+A síntese completa também aceita o paralelismo, aplicando-o a todas as categorias de síntese que são suportadas::
+
+    $ sintetizador-newave completa --processadores 24
+
+
+Arquivos de Saída
+-----------------------
+
+Os arquivos de saída das sínteses são armazenados na pasta `sintese` do diretório de trabalho. Para cada síntese realizada, é configurados
+um arquivo com metadados e um conjunto de arquivos com os dados sintetizados. Para as sínteses da operação e de cenários, além dos arquivos
+com os dados brutos sintetizados, são criados arquivos com estatísticas pré-calculadas sobre os dados brutos,
+permitindo análises mais rápidas.
+
+No caso de uma síntese do sistema, são esperados os arquivos::
+
+    $ ls sintese
+    >>> EST.parquet
+    >>> METADADOS_SISTEMA.parquet
+    >>> PAT.parquet
+    >>> REE.parquet
+    >>> SBM.parquet
+    >>> UHE.parquet
+    >>> UTE.parquet
+
+Para a síntese da execução::
+    
+    $ ls sintese
+    >>> CONVERGENCIA.parquet
+    >>> CUSTOS.parquet
+    >>> METADADOS_EXECUCAO.parquet
+    >>> PROGRAMA.parquet
+    >>> TEMPO.parquet
+
+Para a síntese da política::
+    
+    $ ls sintese
+    >>> CORTES.parquet
+    >>> ESTADOS.parquet
+    >>> METADADOS_POLITICA.parquet
+
+Alguns dos arquivos esperados na síntese de cenários::
+    
+    $ ls sintese
+    >>> ENAA_REE_BKW.parquet
+    >>> ENAA_REE_FOR.parquet
+    >>> ENAA_REE_SF.parquet
+    >>> ...
+    >>> ESTATISTICAS_CENARIOS_REE_BKW.parquet
+    >>> ESTATISTICAS_CENARIOS_REE_FOR.parquet
+    >>> ESTATISTICAS_CENARIOS_REE_SF.parquet
+    >>> ESTATISTICAS_CENARIOS_UHE_BKW.parquet
+    >>> ESTATISTICAS_CENARIOS_UHE_FOR.parquet
+    >>> ...
+    >>> METADADOS_CENARIOS.parquet
+    >>> QINC_UHE_BKW.parquet
+    >>> QINC_UHE_FOR.parquet
+    >>> ...
+
+Alguns dos arquivos esperados na síntese da operação::
+
+    $ ls sintese
+    >>> CDEF_SBM.parquet
+    >>> CDEF_SIN.parquet
+    >>> CMO_SBM.parquet
+    >>> COP_SIN.parquet
+    >>> CTER_SBM.parquet
+    >>> CTER_SIN.parquet
+    >>> ...
+    >>> ESTATISTICAS_OPERACAO_REE.parquet
+    >>> ESTATISTICAS_OPERACAO_SBM.parquet
+    >>> ESTATISTICAS_OPERACAO_SBP.parquet
+    >>> ESTATISTICAS_OPERACAO_SIN.parquet
+    >>> ESTATISTICAS_OPERACAO_UHE.parquet
+    >>> ESTATISTICAS_OPERACAO_UTE.parquet
+    >>> EVERFT_REE.parquet
+    >>> EVERFT_SBM.parquet
+    >>> ...
+    >>> GHID_REE.parquet
+    >>> GHID_SBM.parquet
+    >>> GHID_SIN.parquet
+    >>> GHID_UHE.parquet
+    >>> GTER_SBM.parquet
+    >>> GTER_SIN.parquet
+    >>> GTER_UTE.parquet
+    >>> HJUS_UHE.parquet
+    >>> HLIQ_UHE.parquet
+    >>> HMON_UHE.parquet
+    >>> INT_SBP.parquet
+    >>> MERL_SBM.parquet
+    >>> MERL_SIN.parquet
+    >>> ...
+    >>> METADADOS_OPERACAO.parquet
+    >>> QAFL_UHE.parquet
+    >>> QDEF_REE.parquet
+    >>> QDEF_SBM.parquet
+    >>> ... 
+    >>> VARMF_UHE.parquet
+    >>> VARMI_REE.parquet
+    >>> VARMI_SBM.parquet
+    >>> ...
+
