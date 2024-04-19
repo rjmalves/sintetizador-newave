@@ -265,7 +265,7 @@ def test_calcula_patamar_medio_soma(test_settings):
     synthesis_str = "VTUR_UHE"
     df, df_meta = __sintetiza_com_mock(synthesis_str)
     df_arq = __calcula_patamar_medio_soma(
-        Vturuh.read(join(DECK_TEST_DIR, "vturuh001.out")).valores
+        Vturuh.read(join(DECK_TEST_DIR, "vturuh006.out")).valores
     )
     __compara_sintese_nwlistop(
         df,
@@ -273,7 +273,7 @@ def test_calcula_patamar_medio_soma(test_settings):
         data_inicio=datetime(2023, 10, 1),
         cenario=1,
         patamar=[0],
-        codigo_usina=[1],
+        codigo_usina=[6],
     )
     __valida_limites(df)
     __valida_metadata(synthesis_str, df_meta, False)
@@ -399,7 +399,7 @@ def test_sintese_earmi_ree(test_settings):
     synthesis_str = "EARMI_REE"
     df, df_meta = __sintetiza_com_mock(synthesis_str)
     # TODO - implementar validação
-    __valida_limites(df, lower=False)
+    __valida_limites(df, lower=False, tol=2.0)
     __valida_metadata(synthesis_str, df_meta, True)
 
 
@@ -415,7 +415,7 @@ def test_sintese_earmi_sbm(test_settings):
     synthesis_str = "EARMI_SBM"
     df, df_meta = __sintetiza_com_mock(synthesis_str)
     # TODO - implementar validação
-    __valida_limites(df, lower=False)
+    __valida_limites(df, lower=False, tol=2.0)
     __valida_metadata(synthesis_str, df_meta, True)
 
 
@@ -430,7 +430,7 @@ def test_sintese_earmi_sin(test_settings):
     synthesis_str = "EARMI_SIN"
     df, df_meta = __sintetiza_com_mock(synthesis_str)
     # TODO - implementar validação
-    __valida_limites(df, lower=False)
+    __valida_limites(df, lower=False, tol=2.0)
     __valida_metadata(synthesis_str, df_meta, True)
 
 

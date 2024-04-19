@@ -1,5 +1,6 @@
 import pandas as pd  # type: ignore
 import numpy as np
+from dateutil.relativedelta import relativedelta
 from typing import Dict, List, Tuple, Callable, Type, TypeVar, Optional
 from app.model.operation.variable import Variable
 from app.model.operation.unit import Unit
@@ -53,6 +54,7 @@ class OperationVariableBounds:
             synthesis_unit=Unit.MWmes.value,
             ordered_entities=entities,
             entity_column=EER_CODE_COL,
+            initial=True,
         ),
         OperationSynthesis(
             Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
@@ -73,6 +75,7 @@ class OperationVariableBounds:
             synthesis_unit=Unit.perc_modif.value,
             ordered_entities=entities,
             entity_column=EER_CODE_COL,
+            initial=True,
         ),
         OperationSynthesis(
             Variable.ENERGIA_ARMAZENADA_PERCENTUAL_FINAL,
@@ -93,6 +96,7 @@ class OperationVariableBounds:
             synthesis_unit=Unit.MWmes.value,
             ordered_entities=entities,
             entity_column=SUBMARKET_CODE_COL,
+            initial=True,
         ),
         OperationSynthesis(
             Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
@@ -113,6 +117,7 @@ class OperationVariableBounds:
             synthesis_unit=Unit.perc_modif.value,
             ordered_entities=entities,
             entity_column=SUBMARKET_CODE_COL,
+            initial=True,
         ),
         OperationSynthesis(
             Variable.ENERGIA_ARMAZENADA_PERCENTUAL_FINAL,
@@ -128,7 +133,11 @@ class OperationVariableBounds:
             Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
             SpatialResolution.SISTEMA_INTERLIGADO,
         ): lambda df, uow, entities: OperationVariableBounds._stored_energy_bounds(
-            df, uow, synthesis_unit=Unit.MWmes.value, ordered_entities=entities
+            df,
+            uow,
+            synthesis_unit=Unit.MWmes.value,
+            ordered_entities=entities,
+            initial=True,
         ),
         OperationSynthesis(
             Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
@@ -144,6 +153,7 @@ class OperationVariableBounds:
             uow,
             synthesis_unit=Unit.perc_modif.value,
             ordered_entities=entities,
+            initial=True,
         ),
         OperationSynthesis(
             Variable.ENERGIA_ARMAZENADA_PERCENTUAL_FINAL,
@@ -163,6 +173,7 @@ class OperationVariableBounds:
             synthesis_unit=Unit.hm3_modif.value,
             ordered_entities=entities,
             entity_column=HYDRO_CODE_COL,
+            initial=True,
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
@@ -173,6 +184,7 @@ class OperationVariableBounds:
             synthesis_unit=Unit.hm3_modif.value,
             ordered_entities=entities,
             entity_column=EER_CODE_COL,
+            initial=True,
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
@@ -183,6 +195,7 @@ class OperationVariableBounds:
             synthesis_unit=Unit.hm3_modif.value,
             ordered_entities=entities,
             entity_column=SUBMARKET_CODE_COL,
+            initial=True,
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
@@ -193,6 +206,7 @@ class OperationVariableBounds:
             synthesis_unit=Unit.hm3_modif.value,
             ordered_entities=entities,
             entity_column=None,
+            initial=True,
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
@@ -243,6 +257,7 @@ class OperationVariableBounds:
             synthesis_unit=Unit.perc_modif.value,
             ordered_entities=entities,
             entity_column=HYDRO_CODE_COL,
+            initial=True,
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
@@ -253,6 +268,7 @@ class OperationVariableBounds:
             synthesis_unit=Unit.perc_modif.value,
             ordered_entities=entities,
             entity_column=EER_CODE_COL,
+            initial=True,
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
@@ -263,6 +279,7 @@ class OperationVariableBounds:
             synthesis_unit=Unit.perc_modif.value,
             ordered_entities=entities,
             entity_column=SUBMARKET_CODE_COL,
+            initial=True,
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
@@ -273,6 +290,7 @@ class OperationVariableBounds:
             synthesis_unit=Unit.perc_modif.value,
             ordered_entities=entities,
             entity_column=None,
+            initial=True,
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
@@ -785,6 +803,7 @@ class OperationVariableBounds:
         synthesis_unit: str,
         ordered_entities: Dict[str, list],
         entity_column: Optional[str] = None,
+        initial: bool = False,
     ) -> pd.DataFrame:
         """
         Adiciona ao DataFrame da síntese os limites inferior e superior
@@ -795,6 +814,19 @@ class OperationVariableBounds:
         def _get_group_and_cast_bounds() -> Tuple[np.ndarray, np.ndarray]:
             upper_bound_df = Deck.stored_energy_upper_bounds(uow)
             lower_bound_df = Deck.eer_stored_energy_lower_bounds(uow)
+            if initial:
+                for df, limit in zip(
+                    [upper_bound_df, lower_bound_df], [float("inf"), 0.0]
+                ):
+                    df[START_DATE_COL] += pd.DateOffset(months=1)
+                    stages = Deck.stages_starting_dates_final_simulation(uow)
+                    first_stage = stages[0]
+                    last_stage = stages[-1] + relativedelta(months=1)
+                    df.loc[df[START_DATE_COL] == last_stage, VALUE_COL] = limit
+                    df.loc[
+                        df[START_DATE_COL] == last_stage, START_DATE_COL
+                    ] = first_stage
+
             upper_bounds = (
                 upper_bound_df.groupby(grouping_columns, as_index=False)
                 .sum(numeric_only=True)[VALUE_COL]
@@ -1026,6 +1058,7 @@ class OperationVariableBounds:
         synthesis_unit: str,
         ordered_entities: Dict[str, list],
         entity_column: Optional[str] = None,
+        initial: bool = False,
     ) -> pd.DataFrame:
         """
         Adiciona ao DataFrame da síntese os limites inferior e superior
@@ -1042,7 +1075,27 @@ class OperationVariableBounds:
                 volume_bounds_in_stages_df[HYDRO_CODE_COL].isin(
                     synthesis_hydro_codes
                 )
-            ].reset_index()
+            ].reset_index(drop=True)
+            if initial:
+
+                volume_bounds_in_stages_df[START_DATE_COL] += pd.DateOffset(
+                    months=1
+                )
+                stages = Deck.stages_starting_dates_final_simulation(uow)
+                first_stage = stages[0]
+                last_stage = stages[-1] + relativedelta(months=1)
+                volume_bounds_in_stages_df.loc[
+                    volume_bounds_in_stages_df[START_DATE_COL] == last_stage,
+                    UPPER_BOUND_COL,
+                ] = float("inf")
+                volume_bounds_in_stages_df.loc[
+                    volume_bounds_in_stages_df[START_DATE_COL] == last_stage,
+                    LOWER_BOUND_COL,
+                ] = 0.0
+                volume_bounds_in_stages_df.loc[
+                    volume_bounds_in_stages_df[START_DATE_COL] == last_stage,
+                    START_DATE_COL,
+                ] = first_stage
 
             grouped_bounds_df = (
                 volume_bounds_in_stages_df.groupby(
@@ -1249,6 +1302,7 @@ class OperationVariableBounds:
                 .sum(numeric_only=True)[[LOWER_BOUND_COL, UPPER_BOUND_COL]]
                 .to_numpy()
             )
+
             lower_bounds = grouped_bounds_df[:, 0]
             upper_bounds = grouped_bounds_df[:, 1]
 
@@ -1571,16 +1625,6 @@ class OperationVariableBounds:
         df = _cast_bounds(df)
         df = _sort_and_round_bounds(df)
         return df
-
-    # TODO intercambios - também tem que pensar em alguma lógica para plotar os limites
-    # de intercâmbio considerando os agrupamentos? Ou criar uma nova síntese
-    # de agrupamentos de intercâmbio?
-
-    # TODO ghid UHE, REE, SBM e SIN - como obter limites para geração hidráulica?
-    # pode congelar as demais variáveis e usar a FPHA para obter limites de geração
-    # variando somente o turbinamento.. é justo? Conferir se mais coisas
-    # podem estar envolvidas e limitar o quanto a usina poderia gerar naquele ponto
-    # de operação (efeito do polinjus...)
 
     @classmethod
     def is_bounded(cls, s: OperationSynthesis) -> bool:

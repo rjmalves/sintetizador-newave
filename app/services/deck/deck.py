@@ -1907,16 +1907,28 @@ class Deck:
         modificações e convertendo para hm3.
         """
 
-        def _expand_to_stages_and_blocks(
+        def _expand_to_stages(
             df: pd.DataFrame, uow: AbstractUnitOfWork
         ) -> pd.DataFrame:
             df = df.reset_index()
             num_hydros = df.shape[0]
             dates = np.array(cls.stages_starting_dates_final_simulation(uow))
             num_stages = len(dates)
+            df = pd.concat([df] * num_stages, ignore_index=True)
+            df[START_DATE_COL] = np.repeat(dates, num_hydros)
+            return df.sort_values(
+                [HYDRO_CODE_COL, START_DATE_COL]
+            ).reset_index(drop=True)
+
+        def _expand_to_blocks(
+            df: pd.DataFrame, uow: AbstractUnitOfWork
+        ) -> pd.DataFrame:
+            df = df.reset_index()
+            dates = np.array(cls.stages_starting_dates_final_simulation(uow))
+            num_stages = len(dates)
+            num_hydros = df.shape[0] // num_stages
             num_blocks = cls.num_blocks(uow) + 1
-            df = pd.concat([df] * num_stages * num_blocks, ignore_index=True)
-            df[START_DATE_COL] = np.repeat(dates, num_hydros * num_blocks)
+            df = pd.concat([df] * num_blocks, ignore_index=True)
             df[BLOCK_COL] = np.tile(
                 np.arange(num_blocks), num_hydros * num_stages
             )
@@ -1942,9 +1954,10 @@ class Deck:
         )
         if hydro_turbined_flow_bounds_in_stages is None:
             m3s_df = cls.hydro_turbined_flow_bounds_with_changes(uow)
-            m3s_df = _expand_to_stages_and_blocks(m3s_df, uow)
-            df = _add_hydro_bounds_changes_to_stages(m3s_df.copy(), uow)
-            hydro_turbined_flow_bounds_in_stages = df
+            m3s_df = _expand_to_stages(m3s_df, uow)
+            m3s_df = _add_hydro_bounds_changes_to_stages(m3s_df, uow)
+            m3s_df = _expand_to_blocks(m3s_df, uow)
+            hydro_turbined_flow_bounds_in_stages = m3s_df
             cls.DECK_DATA_CACHING["hydro_turbined_flow_bounds_in_stages"] = (
                 hydro_turbined_flow_bounds_in_stages
             )
@@ -2029,16 +2042,28 @@ class Deck:
         modificações e convertendo para hm3.
         """
 
-        def _expand_to_stages_and_blocks(
+        def _expand_to_stages(
             df: pd.DataFrame, uow: AbstractUnitOfWork
         ) -> pd.DataFrame:
             df = df.reset_index()
             num_hydros = df.shape[0]
             dates = np.array(cls.stages_starting_dates_final_simulation(uow))
             num_stages = len(dates)
+            df = pd.concat([df] * num_stages, ignore_index=True)
+            df[START_DATE_COL] = np.repeat(dates, num_hydros)
+            return df.sort_values(
+                [HYDRO_CODE_COL, START_DATE_COL]
+            ).reset_index(drop=True)
+
+        def _expand_to_blocks(
+            df: pd.DataFrame, uow: AbstractUnitOfWork
+        ) -> pd.DataFrame:
+            df = df.reset_index()
+            dates = np.array(cls.stages_starting_dates_final_simulation(uow))
+            num_stages = len(dates)
+            num_hydros = df.shape[0] // num_stages
             num_blocks = cls.num_blocks(uow) + 1
-            df = pd.concat([df] * num_stages * num_blocks, ignore_index=True)
-            df[START_DATE_COL] = np.repeat(dates, num_hydros * num_blocks)
+            df = pd.concat([df] * num_blocks, ignore_index=True)
             df[BLOCK_COL] = np.tile(
                 np.arange(num_blocks), num_hydros * num_stages
             )
@@ -2059,9 +2084,10 @@ class Deck:
         )
         if hydro_outflow_bounds_in_stages is None:
             m3s_df = cls.hydro_outflow_bounds_with_changes(uow)
-            m3s_df = _expand_to_stages_and_blocks(m3s_df, uow)
-            df = _add_hydro_bounds_changes_to_stages(m3s_df.copy(), uow)
-            hydro_outflow_bounds_in_stages = df
+            m3s_df = _expand_to_stages(m3s_df, uow)
+            m3s_df = _add_hydro_bounds_changes_to_stages(m3s_df, uow)
+            m3s_df = _expand_to_blocks(m3s_df, uow)
+            hydro_outflow_bounds_in_stages = m3s_df
             cls.DECK_DATA_CACHING["hydro_outflow_bounds_in_stages"] = (
                 hydro_outflow_bounds_in_stages
             )
