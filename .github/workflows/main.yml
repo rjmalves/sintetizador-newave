@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
     steps:
     - uses: actions/checkout@v3
     - name: Configura o Python ${{ matrix.python-version }}
@@ -25,7 +25,7 @@ jobs:
         python -m pip install -r dev-requirements.txt
     - name: Executa os testes do pacote
       run: |
-        python -m pytest --cov-report=xml --cov=sintetizador tests/
+        python -m pytest --cov-report=xml --cov=app tests/
     - uses: codecov/codecov-action@v1
       with:
         token: ${{ secrets.CODECOV_TOKEN }} 
@@ -37,7 +37,7 @@ jobs:
         verbose: true 
     - name: Veriricações de qualidade de código - tipagem estática
       run: |
-        python -m mypy ./sintetizador
+        python -m mypy ./app
     - name: Verificações de qualidade de código - linter PEP8
       run: |
-        python -m pylama --ignore E203 ./sintetizador
+        python -m pylama --ignore E203 ./app
