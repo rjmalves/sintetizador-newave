@@ -27,7 +27,7 @@ desenvolvido pelo `CEPEL <http://www.cepel.br/>`_ e utilizado para a planejament
    :caption: Referência
    :maxdepth: 2
 
-   referencia/comandos
+   referencia/saidas
    referencia/modelo
 
 :ref:`genindex`

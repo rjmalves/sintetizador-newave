@@ -108,7 +108,7 @@ As sínteses realizadas são armazenadas em arquivos de metadados, que também s
 
 Os metadados são armazenados em arquivos com o prefixo `METADADOS_` e o nome da síntese. Por exemplo, para a síntese do sistema, os metadados são armazenados em `METADADOS_SISTEMA.parquet`.
 
-Por exemplo, em uma síntese da operação, os metadados podem ser acessados como::
+Por exemplo, em uma síntese da operação, os metadados podem ser acessados como:
 
     
 .. code-block:: python
@@ -118,17 +118,17 @@ Por exemplo, em uma síntese da operação, os metadados podem ser acessados com
     meta_df
 
                 chave nome_curto_variavel              nome_longo_variavel nome_curto_agregacao      nome_longo_agregacao  unidade  calculado  limitado
-    0         CMO_SBM                 CMO       Custo Marginal de Operação                  SBM                Submercado   R$/MWh      False     False
-    1       VAGUA_REE               VAGUA                    Valor da Água                  REE  Reservatório Equivalente   R$/MWh      False     False
-    2       VAGUA_UHE               VAGUA                    Valor da Água                  UHE       Usina Hidroelétrica   R$/hm3      False     False
-    3      VAGUAI_UHE   VAGUA Incremental        Valor da Água Incremental                  UHE       Usina Hidroelétrica   R$/hm3      False     False
-    4        CTER_SBM         Custo de GT         Custo de Geração Térmica                  SBM                Submercado  10^6 R$      False     False
+    0         CMO_SBM                 CMO       Custo Marginal de Operação                  SBM                Submercado  'R$/MWh'      False     False
+    1       VAGUA_REE               VAGUA                    Valor da Água                  REE  Reservatório Equivalente  'R$/MWh'      False     False
+    2       VAGUA_UHE               VAGUA                    Valor da Água                  UHE       Usina Hidroelétrica  'R$/hm3'      False     False
+    3      VAGUAI_UHE   VAGUA Incremental        Valor da Água Incremental                  UHE       Usina Hidroelétrica  'R$/hm3'      False     False
+    4        CTER_SBM         Custo de GT         Custo de Geração Térmica                  SBM                Submercado '10^6 R$'      False     False
     ..            ...                 ...                              ...                  ...                       ...      ...        ...       ...
-    164  VNEGEVAP_UHE  Violação Neg. EVAP  Violação Negativa de Evaporação                  UHE       Usina Hidroelétrica               False     False
-    165     VEVAP_UHE       Violação EVAP           Violação de Evaporação                  UHE       Usina Hidroelétrica      hm3       True     False
-    166     VEVAP_REE       Violação EVAP           Violação de Evaporação                  REE  Reservatório Equivalente      hm3       True     False
-    167     VEVAP_SBM       Violação EVAP           Violação de Evaporação                  SBM                Submercado      hm3       True     False
-    168     VEVAP_SIN       Violação EVAP           Violação de Evaporação                  SIN       Sistema Interligado      hm3       True     False
+    164  VNEGEVAP_UHE  Violação Neg. EVAP  Violação Negativa de Evaporação                  UHE       Usina Hidroelétrica                False     False
+    165     VEVAP_UHE       Violação EVAP           Violação de Evaporação                  UHE       Usina Hidroelétrica     'hm3'       True     False
+    166     VEVAP_REE       Violação EVAP           Violação de Evaporação                  REE  Reservatório Equivalente     'hm3'       True     False
+    167     VEVAP_SBM       Violação EVAP           Violação de Evaporação                  SBM                Submercado     'hm3'       True     False
+    168     VEVAP_SIN       Violação EVAP           Violação de Evaporação                  SIN       Sistema Interligado     'hm3'       True     False
     
     [169 rows x 8 columns]
 
@@ -141,7 +141,7 @@ da agregação espacial dos dados. No caso da síntese dos cenários, além da a
 
 As estatísticas são armazenadas em arquivos com o prefixo `ESTATISTICAS_` e o nome da síntese. Por exemplo, para a síntese da operação, as estatísticas são armazenadas em arquivos com prefixo `ESTATISTICAS_OPERACAO_`, sendo um arquivo por agregação espacial.
 
-Por exemplo, em uma síntese da operação, as estatísticas podem ser acessadas como::
+Por exemplo, em uma síntese da operação, as estatísticas podem ser acessadas como:
 
 
 .. code-block:: python
@@ -174,7 +174,7 @@ Formato dos Dados Brutos
 --------------------------
 
 Os dados brutos também são armazenados em arquivos de mesma extensão dos demais produzidos pela síntese. Por exemplo, para a síntese da operação, os dados são armazenados em arquivos que possuem os nomes da chave identificadora da variável e da agregação espacial,
-como `CMO_SBM` e `EARMF_REE`. Para uma mesma entidade, os arquivos de todas as variáveis possuem as mesmas colunas::
+como `CMO_SBM` e `EARMF_REE`. Para uma mesma entidade, os arquivos de todas as variáveis possuem as mesmas colunas:
 
 
 .. code-block:: python
