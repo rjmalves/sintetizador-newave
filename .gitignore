@@ -129,8 +129,8 @@ dmypy.json
 .pyre/
 
 # Saidas
-# **.parquet.gzip
-# **.parquet
+**.parquet.gzip
+**.parquet
 
 test_case/
 test.py
