@@ -42,7 +42,7 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 import pandas as pd  # type: ignore
 import numpy as np  # type: ignore
-from typing import Any, Optional, TypeVar, Type, List, Tuple, Union
+from typing import Any, Optional, TypeVar, Type, List, Tuple, Union, Dict
 from cfinterface.components.register import Register
 
 from app.services.unitofwork import AbstractUnitOfWork
@@ -80,7 +80,7 @@ class Deck:
     T = TypeVar("T")
     logger: Optional[logging.Logger] = None
 
-    DECK_DATA_CACHING: dict[str, Any] = {}
+    DECK_DATA_CACHING: Dict[str, Any] = {}
 
     @classmethod
     def _get_dger(cls, uow: AbstractUnitOfWork) -> Dger:
