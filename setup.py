@@ -18,9 +18,9 @@ setup(
     install_requires=requirements,
     packages=find_packages(),
     py_modules=["main", "sintetizador"],
-    python_requires=">=3.8",
+    python_requires=">=3.9",
     classifiers=[
-        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
         "Operating System :: OS Independent",
     ],
     entry_points="""
