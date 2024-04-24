@@ -1,4 +1,5 @@
 # v2.0.0
+- Suporte a Python 3.8 descontinuado. Apenas versões de Python >= 3.9 são suportadas nos ambientes de CI e tem garantia de reprodutibilidade.
 - Refatoração dos processos de síntese, contemplando reuso de código e padronização de nomes de funções e variáveis
 - Opção de exportação de saídas `PARQUET` não realiza mais a compressão em `gzip` automaticamente, adotando o `snappy` (padrão do Arrow). A extensão dos arquivos passa a ser apenas `.parquet`.
 - Colunas dos DataFrames de síntese padronizadas para `snake_case`
