@@ -1074,7 +1074,7 @@ class Deck:
             configurations = cls._validate_data(
                 pmo.configuracoes_qualquer_modificacao,
                 pd.DataFrame,
-                "configurations",
+                "configurações do estudo",
             )
             configurations = configurations.rename(
                 columns={"data": START_DATE_COL}
@@ -1188,7 +1188,7 @@ class Deck:
             maximum_storage_df = cls._validate_data(
                 cls.pmo(uow).energia_armazenada_maxima,
                 pd.DataFrame,
-                "stored_energy_upper_bounds",
+                "energia armazenada máxima",
             )
             maximum_storage_df = maximum_storage_df.rename(
                 columns={
@@ -1222,7 +1222,7 @@ class Deck:
             convergence = cls._validate_data(
                 pmo.convergencia,
                 pd.DataFrame,
-                "convergence",
+                "convergência",
             )
 
             cls.DECK_DATA_CACHING["convergence"] = convergence
@@ -1257,7 +1257,7 @@ class Deck:
             bounds_df = cls._validate_data(
                 pmo.geracao_minima_usinas_termicas,
                 pd.DataFrame,
-                "geracao_minima_usinas_termicas",
+                "geração mínima das usinas térmicas",
             )
             bounds_df = bounds_df.rename(
                 columns={
@@ -1268,7 +1268,7 @@ class Deck:
             bounds_df[UPPER_BOUND_COL] = cls._validate_data(
                 pmo.geracao_maxima_usinas_termicas,
                 pd.DataFrame,
-                "geracao_maxima_usinas_termicas",
+                "geração máxima das usinas térmicas",
             )["valor_MWmed"].to_numpy()
             bounds_df = _add_submarket_data(bounds_df, uow)
             thermal_generation_bounds = bounds_df
@@ -1380,7 +1380,7 @@ class Deck:
             costs = cls._validate_data(
                 pmo.custo_operacao_series_simuladas,
                 pd.DataFrame,
-                "costs",
+                "custos de operação",
             )
 
             cls.DECK_DATA_CACHING["costs"] = costs
@@ -1394,7 +1394,7 @@ class Deck:
             num_iterations = cls._validate_data(
                 int(df["iteracao"].max()),
                 int,
-                "num_iterations",
+                "número de iterações",
             )
 
             cls.DECK_DATA_CACHING["num_iterations"] = num_iterations
@@ -1408,7 +1408,7 @@ class Deck:
             runtimes = cls._validate_data(
                 arq.tempos_etapas,
                 pd.DataFrame,
-                "runtimes",
+                "tempos de execução",
             )
 
             cls.DECK_DATA_CACHING["runtimes"] = runtimes
@@ -1421,7 +1421,7 @@ class Deck:
             submarkets = cls._validate_data(
                 cls._get_sistema(uow).custo_deficit,
                 pd.DataFrame,
-                "submarkets",
+                "submercados",
             )
             submarkets = submarkets.rename(
                 columns={
@@ -1443,7 +1443,7 @@ class Deck:
         eers = cls.DECK_DATA_CACHING.get("eers")
         if eers is None:
             eers = cls._validate_data(
-                cls._get_ree(uow).rees, pd.DataFrame, "eers"
+                cls._get_ree(uow).rees, pd.DataFrame, "REEs"
             )
             eers = eers.rename(
                 columns={
@@ -1465,7 +1465,7 @@ class Deck:
             hybrid_policy = cls._validate_data(
                 val,
                 bool,
-                "REEs",
+                "política híbrida",
             )
             cls.DECK_DATA_CACHING["hybrid_policy"] = hybrid_policy
         return hybrid_policy
@@ -1475,7 +1475,9 @@ class Deck:
         hydros = cls.DECK_DATA_CACHING.get("hydros")
         if hydros is None:
             hydros = cls._validate_data(
-                cls._get_confhd(uow).usinas, pd.DataFrame, "hydros"
+                cls._get_confhd(uow).usinas,
+                pd.DataFrame,
+                "configuração de hidrelétricas",
             )
             hydros = hydros.rename(
                 columns={
