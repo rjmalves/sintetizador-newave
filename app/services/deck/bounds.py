@@ -335,9 +335,7 @@ class OperationVariableBounds:
         OperationSynthesis(
             Variable.VOLUME_AFLUENTE,
             SpatialResolution.USINA_HIDROELETRICA,
-        ): lambda df, uow, _: OperationVariableBounds._lower_bounded_bounds(
-            df, uow
-        ),
+        ): lambda df, uow, _: OperationVariableBounds._lower_bounded_bounds(df, uow),
         OperationSynthesis(
             Variable.VOLUME_AFLUENTE,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
@@ -359,9 +357,7 @@ class OperationVariableBounds:
         OperationSynthesis(
             Variable.VAZAO_AFLUENTE,
             SpatialResolution.USINA_HIDROELETRICA,
-        ): lambda df, uow, _: OperationVariableBounds._lower_bounded_bounds(
-            df, uow
-        ),
+        ): lambda df, uow, _: OperationVariableBounds._lower_bounded_bounds(df, uow),
         OperationSynthesis(
             Variable.VAZAO_AFLUENTE,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
@@ -383,9 +379,7 @@ class OperationVariableBounds:
         OperationSynthesis(
             Variable.VOLUME_INCREMENTAL,
             SpatialResolution.USINA_HIDROELETRICA,
-        ): lambda df, uow, _: OperationVariableBounds._unbounded_bounds(
-            df, uow
-        ),
+        ): lambda df, uow, _: OperationVariableBounds._unbounded_bounds(df, uow),
         OperationSynthesis(
             Variable.VOLUME_INCREMENTAL,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
@@ -407,9 +401,7 @@ class OperationVariableBounds:
         OperationSynthesis(
             Variable.VAZAO_INCREMENTAL,
             SpatialResolution.USINA_HIDROELETRICA,
-        ): lambda df, uow, _: OperationVariableBounds._unbounded_bounds(
-            df, uow
-        ),
+        ): lambda df, uow, _: OperationVariableBounds._unbounded_bounds(df, uow),
         OperationSynthesis(
             Variable.VAZAO_INCREMENTAL,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
@@ -487,9 +479,7 @@ class OperationVariableBounds:
         OperationSynthesis(
             Variable.VOLUME_VERTIDO,
             SpatialResolution.USINA_HIDROELETRICA,
-        ): lambda df, uow, _: OperationVariableBounds._lower_bounded_bounds(
-            df, uow
-        ),
+        ): lambda df, uow, _: OperationVariableBounds._lower_bounded_bounds(df, uow),
         OperationSynthesis(
             Variable.VOLUME_VERTIDO,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
@@ -511,9 +501,7 @@ class OperationVariableBounds:
         OperationSynthesis(
             Variable.VAZAO_VERTIDA,
             SpatialResolution.USINA_HIDROELETRICA,
-        ): lambda df, uow, _: OperationVariableBounds._lower_bounded_bounds(
-            df, uow
-        ),
+        ): lambda df, uow, _: OperationVariableBounds._lower_bounded_bounds(df, uow),
         OperationSynthesis(
             Variable.VAZAO_VERTIDA,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
@@ -591,9 +579,7 @@ class OperationVariableBounds:
         OperationSynthesis(
             Variable.VOLUME_RETIRADO,
             SpatialResolution.USINA_HIDROELETRICA,
-        ): lambda df, uow, _: OperationVariableBounds._unbounded_bounds(
-            df, uow
-        ),
+        ): lambda df, uow, _: OperationVariableBounds._unbounded_bounds(df, uow),
         OperationSynthesis(
             Variable.VOLUME_RETIRADO,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
@@ -615,9 +601,7 @@ class OperationVariableBounds:
         OperationSynthesis(
             Variable.VAZAO_RETIRADA,
             SpatialResolution.USINA_HIDROELETRICA,
-        ): lambda df, uow, _: OperationVariableBounds._unbounded_bounds(
-            df, uow
-        ),
+        ): lambda df, uow, _: OperationVariableBounds._unbounded_bounds(df, uow),
         OperationSynthesis(
             Variable.VAZAO_RETIRADA,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
@@ -687,9 +671,7 @@ class OperationVariableBounds:
         OperationSynthesis(
             Variable.VOLUME_EVAPORADO,
             SpatialResolution.USINA_HIDROELETRICA,
-        ): lambda df, uow, _: OperationVariableBounds._lower_bounded_bounds(
-            df, uow
-        ),
+        ): lambda df, uow, _: OperationVariableBounds._lower_bounded_bounds(df, uow),
         OperationSynthesis(
             Variable.VOLUME_EVAPORADO,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
@@ -711,9 +693,7 @@ class OperationVariableBounds:
         OperationSynthesis(
             Variable.VAZAO_EVAPORADA,
             SpatialResolution.USINA_HIDROELETRICA,
-        ): lambda df, uow, _: OperationVariableBounds._lower_bounded_bounds(
-            df, uow
-        ),
+        ): lambda df, uow, _: OperationVariableBounds._lower_bounded_bounds(df, uow),
         OperationSynthesis(
             Variable.VAZAO_EVAPORADA,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
@@ -823,9 +803,9 @@ class OperationVariableBounds:
                     first_stage = stages[0]
                     last_stage = stages[-1] + relativedelta(months=1)
                     df.loc[df[START_DATE_COL] == last_stage, VALUE_COL] = limit
-                    df.loc[
-                        df[START_DATE_COL] == last_stage, START_DATE_COL
-                    ] = first_stage
+                    df.loc[df[START_DATE_COL] == last_stage, START_DATE_COL] = (
+                        first_stage
+                    )
 
             upper_bounds = (
                 upper_bound_df.groupby(grouping_columns, as_index=False)
@@ -847,9 +827,7 @@ class OperationVariableBounds:
             lower_bounds: np.ndarray,
             upper_bounds: np.ndarray,
         ) -> pd.DataFrame:
-            num_entities = (
-                len(ordered_entities[entity_column]) if entity_column else 1
-            )
+            num_entities = len(ordered_entities[entity_column]) if entity_column else 1
             num_stages = len(ordered_entities[STAGE_COL])
             num_scenarios = len(ordered_entities[SCENARIO_COL])
             num_blocks = len(ordered_entities[BLOCK_COL])
@@ -897,15 +875,13 @@ class OperationVariableBounds:
         Expande os dados cadastrais para cada cenário, mantendo a ordem dos
         patamares internamente.
         """
-        data_cenarios = np.zeros(
-            (len(data) * num_scenarios,), dtype=np.float64
-        )
+        data_cenarios = np.zeros((len(data) * num_scenarios,), dtype=np.float64)
         for i in range(num_entities):
             for j in range(num_stages):
                 i_i = i * num_stages * num_blocks + j * num_blocks
                 i_f = i_i + num_blocks
-                data_cenarios[i_i * num_scenarios : i_f * num_scenarios] = (
-                    np.tile(data[i_i:i_f], num_scenarios)
+                data_cenarios[i_i * num_scenarios : i_f * num_scenarios] = np.tile(
+                    data[i_i:i_f], num_scenarios
                 )
         return data_cenarios
 
@@ -930,14 +906,8 @@ class OperationVariableBounds:
                 i_i = i * num_stages + j
                 i_f = i_i + 1
                 data_cenarios[
-                    i_i
-                    * num_scenarios
-                    * num_blocks : i_f
-                    * num_scenarios
-                    * num_blocks
-                ] = np.tile(
-                    np.repeat(data[i_i:i_f], num_blocks), num_scenarios
-                )
+                    i_i * num_scenarios * num_blocks : i_f * num_scenarios * num_blocks
+                ] = np.tile(np.repeat(data[i_i:i_f], num_blocks), num_scenarios)
         return data_cenarios
 
     @classmethod
@@ -969,9 +939,7 @@ class OperationVariableBounds:
             SUBMARKET_CODE_COL: [SUBMARKET_CODE_COL],
         }
 
-        mapped_columns = (
-            grouping_column_map[grouping_column] if grouping_column else []
-        )
+        mapped_columns = grouping_column_map[grouping_column] if grouping_column else []
         grouping_columns = mapped_columns + [
             c
             for c in df.columns
@@ -1010,9 +978,7 @@ class OperationVariableBounds:
             SUBMARKET_CODE_COL: [SUBMARKET_CODE_COL],
         }
 
-        mapped_columns = (
-            grouping_column_map[grouping_column] if grouping_column else []
-        )
+        mapped_columns = grouping_column_map[grouping_column] if grouping_column else []
         grouping_columns = mapped_columns + [
             c
             for c in df.columns
@@ -1067,20 +1033,13 @@ class OperationVariableBounds:
         """
 
         def _get_group_and_cast_bounds() -> Tuple[np.ndarray, np.ndarray]:
-            volume_bounds_in_stages_df = Deck.hydro_volume_bounds_in_stages(
-                uow
-            )
+            volume_bounds_in_stages_df = Deck.hydro_volume_bounds_in_stages(uow)
             synthesis_hydro_codes = df[HYDRO_CODE_COL].unique().tolist()
             volume_bounds_in_stages_df = volume_bounds_in_stages_df.loc[
-                volume_bounds_in_stages_df[HYDRO_CODE_COL].isin(
-                    synthesis_hydro_codes
-                )
+                volume_bounds_in_stages_df[HYDRO_CODE_COL].isin(synthesis_hydro_codes)
             ].reset_index(drop=True)
             if initial:
-
-                volume_bounds_in_stages_df[START_DATE_COL] += pd.DateOffset(
-                    months=1
-                )
+                volume_bounds_in_stages_df[START_DATE_COL] += pd.DateOffset(months=1)
                 stages = Deck.stages_starting_dates_final_simulation(uow)
                 first_stage = stages[0]
                 last_stage = stages[-1] + relativedelta(months=1)
@@ -1098,9 +1057,7 @@ class OperationVariableBounds:
                 ] = first_stage
 
             grouped_bounds_df = (
-                volume_bounds_in_stages_df.groupby(
-                    grouping_columns, as_index=False
-                )
+                volume_bounds_in_stages_df.groupby(grouping_columns, as_index=False)
                 .sum(numeric_only=True)[[LOWER_BOUND_COL, UPPER_BOUND_COL]]
                 .to_numpy()
             )
@@ -1117,9 +1074,7 @@ class OperationVariableBounds:
             lower_bounds: np.ndarray,
             upper_bounds: np.ndarray,
         ) -> pd.DataFrame:
-            num_entities = (
-                len(ordered_entities[entity_column]) if entity_column else 1
-            )
+            num_entities = len(ordered_entities[entity_column]) if entity_column else 1
             num_stages = len(ordered_entities[STAGE_COL])
             num_scenarios = len(ordered_entities[SCENARIO_COL])
             num_blocks = len(ordered_entities[BLOCK_COL])
@@ -1149,16 +1104,11 @@ class OperationVariableBounds:
             df[VALUE_COL] = np.round(df[VALUE_COL], num_digits)
             df[LOWER_BOUND_COL] = np.round(df[LOWER_BOUND_COL], num_digits)
             df[UPPER_BOUND_COL] = np.round(df[UPPER_BOUND_COL], num_digits)
-            if (
-                synthesis_unit == Unit.hm3_modif.value
-                and not already_had_limits
-            ):
+            if synthesis_unit == Unit.hm3_modif.value and not already_had_limits:
                 df[VALUE_COL] += df[LOWER_BOUND_COL]
             return df
 
-        has_limits = (
-            LOWER_BOUND_COL in df.columns and UPPER_BOUND_COL in df.columns
-        )
+        has_limits = LOWER_BOUND_COL in df.columns and UPPER_BOUND_COL in df.columns
         entity_column_list = [entity_column] if entity_column else []
         grouping_columns = entity_column_list + [START_DATE_COL]
         lower_bounds, upper_bounds = _get_group_and_cast_bounds()
@@ -1209,9 +1159,7 @@ class OperationVariableBounds:
             lower_bounds: np.ndarray,
             upper_bounds: np.ndarray,
         ) -> pd.DataFrame:
-            num_entities = (
-                len(ordered_entities[entity_column]) if entity_column else 1
-            )
+            num_entities = len(ordered_entities[entity_column]) if entity_column else 1
             num_stages = len(ordered_entities[STAGE_COL])
             num_scenarios = len(ordered_entities[SCENARIO_COL])
             num_blocks = len(ordered_entities[BLOCK_COL])
@@ -1287,14 +1235,10 @@ class OperationVariableBounds:
         """
 
         def _get_group_for_bounds() -> Tuple[np.ndarray, np.ndarray]:
-            turbined_flow_bounds = Deck.hydro_turbined_flow_bounds_in_stages(
-                uow
-            )
+            turbined_flow_bounds = Deck.hydro_turbined_flow_bounds_in_stages(uow)
             synthesis_hydro_codes = df[HYDRO_CODE_COL].unique().tolist()
             turbined_flow_bounds = turbined_flow_bounds.loc[
-                turbined_flow_bounds[HYDRO_CODE_COL].isin(
-                    synthesis_hydro_codes
-                )
+                turbined_flow_bounds[HYDRO_CODE_COL].isin(synthesis_hydro_codes)
             ].reset_index(drop=True)
 
             grouped_bounds_df = (
@@ -1313,9 +1257,7 @@ class OperationVariableBounds:
             lower_bounds: np.ndarray,
             upper_bounds: np.ndarray,
         ) -> pd.DataFrame:
-            num_entities = (
-                len(ordered_entities[entity_column]) if entity_column else 1
-            )
+            num_entities = len(ordered_entities[entity_column]) if entity_column else 1
             num_stages = len(ordered_entities[STAGE_COL])
             num_scenarios = len(ordered_entities[SCENARIO_COL])
             num_blocks = len(ordered_entities[BLOCK_COL])
@@ -1451,16 +1393,12 @@ class OperationVariableBounds:
             exchange_block_bounds_df[PAIR_TMP_COL] = (
                 exchange_block_bounds_df[EXCHANGE_SOURCE_CODE_COL].astype(str)
                 + "-"
-                + exchange_block_bounds_df[EXCHANGE_TARGET_CODE_COL].astype(
-                    str
-                )
+                + exchange_block_bounds_df[EXCHANGE_TARGET_CODE_COL].astype(str)
             )
             exchange_block_bounds_df[R_PAIR_TMP_COL] = (
                 exchange_block_bounds_df[EXCHANGE_TARGET_CODE_COL].astype(str)
                 + "-"
-                + exchange_block_bounds_df[EXCHANGE_SOURCE_CODE_COL].astype(
-                    str
-                )
+                + exchange_block_bounds_df[EXCHANGE_SOURCE_CODE_COL].astype(str)
             )
             exchange_block_bounds_df = (
                 exchange_block_bounds_df.loc[
@@ -1480,9 +1418,7 @@ class OperationVariableBounds:
             pares_sbm_limites_r = (
                 exchange_block_bounds_df[R_PAIR_TMP_COL].unique().tolist()
             )
-            pares_sbm_limites = (
-                exchange_block_bounds_df[PAIR_TMP_COL].unique().tolist()
-            )
+            pares_sbm_limites = exchange_block_bounds_df[PAIR_TMP_COL].unique().tolist()
 
             # Inicializa limites com valores default
             df[LOWER_BOUND_COL] = -float("inf")
@@ -1546,14 +1482,28 @@ class OperationVariableBounds:
         agregados de acordo.
         """
 
-        def _get_group_and_cast_bounds() -> Tuple[np.ndarray, np.ndarray]:
+        def _get_group_and_cast_bounds(
+            entity_column: Optional[str], entity_list: list
+        ) -> Tuple[np.ndarray, np.ndarray]:
             bounds_df = Deck.thermal_generation_bounds(uow)
             dates = Deck.stages_starting_dates_final_simulation(uow)
             bounds_df = bounds_df.loc[bounds_df[START_DATE_COL] >= dates[0]]
-
-            grouped_bounds_df = bounds_df.groupby(
-                grouping_columns, as_index=False
-            ).sum(numeric_only=True)
+            if entity_column:
+                bounds_entities = bounds_df[entity_column].unique().tolist()
+                diff = list(set(entity_list).difference(bounds_entities))
+                for d in diff:
+                    bounds_df_sample = bounds_df.loc[
+                        bounds_df[entity_column] == bounds_entities[0]
+                    ].copy()
+                    bounds_df_sample[entity_column] = d
+                    bounds_df_sample[LOWER_BOUND_COL] = 0
+                    bounds_df_sample[UPPER_BOUND_COL] = 0
+                    bounds_df = pd.concat(
+                        [bounds_df, bounds_df_sample], ignore_index=True
+                    )
+            grouped_bounds_df = bounds_df.groupby(grouping_columns, as_index=False).sum(
+                numeric_only=True
+            )
             grouped_bounds_df = (
                 bounds_df.groupby(grouping_columns, as_index=False)
                 .sum(numeric_only=True)[[LOWER_BOUND_COL, UPPER_BOUND_COL]]
@@ -1569,9 +1519,7 @@ class OperationVariableBounds:
             lower_bounds: np.ndarray,
             upper_bounds: np.ndarray,
         ) -> pd.DataFrame:
-            num_entities = (
-                len(ordered_entities[entity_column]) if entity_column else 1
-            )
+            num_entities = len(ordered_entities[entity_column]) if entity_column else 1
             num_stages = len(ordered_entities[STAGE_COL])
             num_scenarios = len(ordered_entities[SCENARIO_COL])
             num_blocks = len(ordered_entities[BLOCK_COL])
@@ -1593,12 +1541,8 @@ class OperationVariableBounds:
             return df
 
         def _cast_bounds(df: pd.DataFrame) -> pd.DataFrame:
-            df[LOWER_BOUND_COL] *= (
-                df[BLOCK_DURATION_COL] / STAGE_DURATION_HOURS
-            )
-            df[UPPER_BOUND_COL] *= (
-                df[BLOCK_DURATION_COL] / STAGE_DURATION_HOURS
-            )
+            df[LOWER_BOUND_COL] *= df[BLOCK_DURATION_COL] / STAGE_DURATION_HOURS
+            df[UPPER_BOUND_COL] *= df[BLOCK_DURATION_COL] / STAGE_DURATION_HOURS
             return df
 
         def _sort_and_round_bounds(
@@ -1612,8 +1556,11 @@ class OperationVariableBounds:
             return df
 
         entity_column_list = [entity_column] if entity_column else []
+        entity_list = df[entity_column].unique() if entity_column else []
         grouping_columns = entity_column_list + [START_DATE_COL]
-        lower_bounds, upper_bounds = _get_group_and_cast_bounds()
+        lower_bounds, upper_bounds = _get_group_and_cast_bounds(
+            entity_column, entity_list
+        )
         if entity_column != THERMAL_CODE_COL:
             df = cls._group_thermal_df(df, entity_column)
 

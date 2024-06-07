@@ -57,7 +57,6 @@ from app.internal.constants import (
 
 
 class OperationSynthetizer:
-
     T = TypeVar("T")
     logger: Optional[logging.Logger] = None
 
@@ -98,8 +97,7 @@ class OperationSynthetizer:
         que é constituído de todos os objetos de síntese suportados.
         """
         args = [
-            OperationSynthesis.factory(a)
-            for a in cls.DEFAULT_OPERATION_SYNTHESIS_ARGS
+            OperationSynthesis.factory(a) for a in cls.DEFAULT_OPERATION_SYNTHESIS_ARGS
         ]
         return [arg for arg in args if arg is not None]
 
@@ -169,8 +167,7 @@ class OperationSynthetizer:
             if all(
                 [
                     v.variable == Variable.VALOR_AGUA,
-                    v.spatial_resolution
-                    == SpatialResolution.USINA_HIDROELETRICA,
+                    v.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
                     not has_hydro,
                 ]
             ):
@@ -194,9 +191,7 @@ class OperationSynthetizer:
         ):
             if todo_synthesis in SYNTHESIS_DEPENDENCIES.keys():
                 for dep in SYNTHESIS_DEPENDENCIES[todo_synthesis]:
-                    _add_synthesis_dependencies_recursive(
-                        current_synthesis, dep
-                    )
+                    _add_synthesis_dependencies_recursive(current_synthesis, dep)
             if todo_synthesis not in current_synthesis:
                 current_synthesis.append(todo_synthesis)
 
@@ -206,9 +201,7 @@ class OperationSynthetizer:
         return result_synthesis
 
     @classmethod
-    def _get_unique_column_values_in_order(
-        cls, df: pd.DataFrame, cols: List[str]
-    ):
+    def _get_unique_column_values_in_order(cls, df: pd.DataFrame, cols: List[str]):
         """
         Extrai valores únicos na ordem em que aparecem para um
         conjunto de colunas de um DataFrame.
@@ -216,9 +209,7 @@ class OperationSynthetizer:
         return {col: df[col].unique().tolist() for col in cols}
 
     @classmethod
-    def _set_ordered_entities(
-        cls, s: OperationSynthesis, entities: Dict[str, list]
-    ):
+    def _set_ordered_entities(cls, s: OperationSynthesis, entities: Dict[str, list]):
         """
         Armazena um conjunto de entidades ordenadas para uma síntese.
         """
@@ -275,9 +266,7 @@ class OperationSynthetizer:
         with time_and_log(
             message_root="Tempo para compactacao dos dados", logger=cls.logger
         ):
-            valid_dfs = [
-                df for df in resolve_responses.values() if df is not None
-            ]
+            valid_dfs = [df for df in resolve_responses.values() if df is not None]
             if len(valid_dfs) > 0:
                 df = pd.concat(valid_dfs, ignore_index=True)
             else:
@@ -381,9 +370,7 @@ class OperationSynthetizer:
                 ].to_numpy()
                 i_i = i * data_block_size
                 i_f = i_i + data_block_size
-                block_durations[i_i:i_f] = np.tile(
-                    date_durations, num_scenarios
-                )
+                block_durations[i_i:i_f] = np.tile(date_durations, num_scenarios)
             df[BLOCK_DURATION_COL] = block_durations * STAGE_DURATION_HOURS
             return df
 
@@ -396,22 +383,18 @@ class OperationSynthetizer:
             df = df.rename(
                 columns={"data": START_DATE_COL, "serie": SCENARIO_COL}
             ).copy()
-            df.sort_values(
-                [START_DATE_COL, SCENARIO_COL, BLOCK_COL], inplace=True
-            )
+            df.sort_values([START_DATE_COL, SCENARIO_COL, BLOCK_COL], inplace=True)
             num_stages = df[START_DATE_COL].unique().shape[0]
             num_scenarios = Deck.num_scenarios_final_simulation(uow)
             blocks = df[BLOCK_COL].unique().tolist()
             num_blocks = len(blocks)
-            start_dates = Deck.internal_stages_starting_dates_final_simulation(
-                uow
-            )[:num_stages]
-            end_dates = Deck.internal_stages_ending_dates_final_simulation(
-                uow
-            )[:num_stages]
-            df = _replace_scenario_info(
-                df, num_stages, num_scenarios, num_blocks
-            )
+            start_dates = Deck.internal_stages_starting_dates_final_simulation(uow)[
+                :num_stages
+            ]
+            end_dates = Deck.internal_stages_ending_dates_final_simulation(uow)[
+                :num_stages
+            ]
+            df = _replace_scenario_info(df, num_stages, num_scenarios, num_blocks)
             df = _add_stage_info(
                 df,
                 num_stages,
@@ -458,13 +441,9 @@ class OperationSynthetizer:
         """
 
         logger_name = f"{synthesis.variable.value}_{sbm_name}"
-        logger = Log.configure_process_logger(
-            uow.queue, logger_name, sbm_index
-        )
+        logger = Log.configure_process_logger(uow.queue, logger_name, sbm_index)
         with uow:
-            logger.debug(
-                f"Processando arquivo do submercado: {sbm_index} - {sbm_name}"
-            )
+            logger.debug(f"Processando arquivo do submercado: {sbm_index} - {sbm_name}")
             df = uow.files.get_nwlistop(
                 synthesis.variable,
                 synthesis.spatial_resolution,
@@ -489,9 +468,9 @@ class OperationSynthetizer:
         """
 
         submarkets = Deck.submarkets(uow)
-        real_submarkets = submarkets.loc[
-            submarkets["ficticio"] == 0, :
-        ].sort_values(SUBMARKET_CODE_COL)
+        real_submarkets = submarkets.loc[submarkets["ficticio"] == 0, :].sort_values(
+            SUBMARKET_CODE_COL
+        )
         sbms_idx = real_submarkets[SUBMARKET_CODE_COL].unique()
         sbms_name = [
             real_submarkets.loc[
@@ -614,13 +593,9 @@ class OperationSynthetizer:
         """
 
         logger_name = f"{synthesis.variable.value}_{ree_name}"
-        logger = Log.configure_process_logger(
-            uow.queue, logger_name, ree_index
-        )
+        logger = Log.configure_process_logger(uow.queue, logger_name, ree_index)
         with uow:
-            logger.debug(
-                f"Processando arquivo do REE: {ree_index} - {ree_name}"
-            )
+            logger.debug(f"Processando arquivo do REE: {ree_index} - {ree_name}")
             df = uow.files.get_nwlistop(
                 synthesis.variable,
                 synthesis.spatial_resolution,
@@ -705,26 +680,16 @@ class OperationSynthetizer:
             arr = df_block_0[VALUE_COL].to_numpy()
             n_linhas = arr.shape[0]
             n_elementos_distintos = n_linhas // n_blocks
-            df_base[VALUE_COL] = arr.reshape((n_elementos_distintos, -1)).sum(
-                axis=1
-            )
-            df_block_0 = pd.concat(
-                [df_block_0, df_base], ignore_index=True, copy=True
-            )
-            df_block_0 = df_block_0.sort_values(
-                unique_cols_for_block_0 + [BLOCK_COL]
-            )
+            df_base[VALUE_COL] = arr.reshape((n_elementos_distintos, -1)).sum(axis=1)
+            df_block_0 = pd.concat([df_block_0, df_base], ignore_index=True, copy=True)
+            df_block_0 = df_block_0.sort_values(unique_cols_for_block_0 + [BLOCK_COL])
             return df_block_0
 
         logger_name = f"{synthesis.variable.value}_{uhe_name}"
-        logger = Log.configure_process_logger(
-            uow.queue, logger_name, uhe_index
-        )
+        logger = Log.configure_process_logger(uow.queue, logger_name, uhe_index)
 
         with uow:
-            logger.debug(
-                f"Processando arquivo da UHE: {uhe_index} - {uhe_name}"
-            )
+            logger.debug(f"Processando arquivo da UHE: {uhe_index} - {uhe_name}")
             df = uow.files.get_nwlistop(
                 synthesis.variable,
                 synthesis.spatial_resolution,
@@ -762,9 +727,7 @@ class OperationSynthetizer:
         ) -> pd.DataFrame:
             df = df.loc[
                 df[START_DATE_COL]
-                < Deck.hydro_simulation_stages_ending_date_final_simulation(
-                    uow
-                ),
+                < Deck.hydro_simulation_stages_ending_date_final_simulation(uow),
             ].reset_index(drop=True)
             return df
 
@@ -864,8 +827,7 @@ class OperationSynthetizer:
         spilled_df = cls._get_from_cache(spilled_synthesis)
 
         spilled_df.loc[:, VALUE_COL] = (
-            turbined_df[VALUE_COL].to_numpy()
-            + spilled_df[VALUE_COL].to_numpy()
+            turbined_df[VALUE_COL].to_numpy() + spilled_df[VALUE_COL].to_numpy()
         )
         return spilled_df
 
@@ -889,8 +851,7 @@ class OperationSynthetizer:
         spilled_df = cls._get_from_cache(spilled_synthesis)
 
         spilled_df.loc[:, VALUE_COL] = (
-            turbined_df[VALUE_COL].to_numpy()
-            + spilled_df[VALUE_COL].to_numpy()
+            turbined_df[VALUE_COL].to_numpy() + spilled_df[VALUE_COL].to_numpy()
         )
         return spilled_df
 
@@ -914,8 +875,7 @@ class OperationSynthetizer:
         negative_df = cls._get_from_cache(negative_synthesis)
 
         positive_df.loc[:, VALUE_COL] = (
-            negative_df[VALUE_COL].to_numpy()
-            + positive_df[VALUE_COL].to_numpy()
+            negative_df[VALUE_COL].to_numpy() + positive_df[VALUE_COL].to_numpy()
         )
         return positive_df
 
@@ -939,8 +899,7 @@ class OperationSynthetizer:
         run_of_river_df = cls._get_from_cache(run_of_river_synthesis)
 
         reservoir_df.loc[:, VALUE_COL] = (
-            run_of_river_df[VALUE_COL].to_numpy()
-            + reservoir_df[VALUE_COL].to_numpy()
+            run_of_river_df[VALUE_COL].to_numpy() + reservoir_df[VALUE_COL].to_numpy()
         )
 
         return reservoir_df
@@ -1040,7 +999,6 @@ class OperationSynthetizer:
         def _get_final_storage_synthesis_data(
             synthesis: OperationSynthesis,
         ) -> Tuple[pd.DataFrame, dict]:
-
             final_storage_synthesis = OperationSynthesis(
                 variable=variable_map[synthesis.variable],
                 spatial_resolution=synthesis.spatial_resolution,
@@ -1050,21 +1008,17 @@ class OperationSynthetizer:
             return final_storage_df, entities
 
         def _get_initial_storage_values(
-            synthesis: OperationSynthesis,
-            uow: AbstractUnitOfWork,
+            initial_storage_data: pd.DataFrame,
             entities: dict,
         ) -> np.ndarray:
-            initial_storage_data = cls._initial_stored_energy_df(
-                synthesis, uow
-            )
             value_column = (
-                "valor_MWmes"
-                if synthesis.variable == earmi
-                else "valor_percentual"
+                "valor_MWmes" if synthesis.variable == earmi else "valor_percentual"
             )
-            groups = entities.get(
-                grouping_col_map[synthesis.spatial_resolution]
-            ) or [1]
+            groups = entities.get(grouping_col_map[synthesis.spatial_resolution]) or [1]
+            if synthesis.spatial_resolution != SpatialResolution.SISTEMA_INTERLIGADO:
+                groups = [
+                    g for g in groups if g in initial_storage_data[GROUPING_TMP_COL]
+                ]
             initial_storage_values = (
                 initial_storage_data.set_index(GROUPING_TMP_COL)
                 .loc[groups, value_column]
@@ -1072,23 +1026,21 @@ class OperationSynthetizer:
             )
             return initial_storage_values
 
-        def _get_initial_stage_indices(entities: dict) -> np.ndarray:
-            groups = entities.get(
-                grouping_col_map[synthesis.spatial_resolution]
-            ) or [1]
+        def _get_initial_stage_indices(
+            entities: dict, initial_storage_data: pd.DataFrame
+        ) -> np.ndarray:
+            groups = entities.get(grouping_col_map[synthesis.spatial_resolution]) or [1]
+            if synthesis.spatial_resolution != SpatialResolution.SISTEMA_INTERLIGADO:
+                groups = [
+                    g for g in groups if g in initial_storage_data[GROUPING_TMP_COL]
+                ]
             num_groups = len(groups)
-            scenarios = [
-                s for s in entities[SCENARIO_COL] if str(s).isnumeric()
-            ]
+            scenarios = [s for s in entities[SCENARIO_COL] if str(s).isnumeric()]
             num_scenarios = len(scenarios)
             stages = entities[STAGE_COL]
             num_stages = len(stages)
-            offsets_groups = [
-                i * num_scenarios * num_stages for i in range(num_groups)
-            ]
-            initial_stage_indices = np.tile(
-                np.arange(num_scenarios), num_groups
-            )
+            offsets_groups = [i * num_scenarios * num_stages for i in range(num_groups)]
+            initial_stage_indices = np.tile(np.arange(num_scenarios), num_groups)
             initial_stage_indices += np.repeat(offsets_groups, num_scenarios)
             return initial_stage_indices
 
@@ -1098,24 +1050,16 @@ class OperationSynthetizer:
             values: np.ndarray,
             entities: dict,
         ) -> pd.DataFrame:
-            scenarios = [
-                s for s in entities[SCENARIO_COL] if str(s).isnumeric()
-            ]
+            scenarios = [s for s in entities[SCENARIO_COL] if str(s).isnumeric()]
             num_scenarios = len(scenarios)
             initial_storage_df = df.copy()
-            initial_storage_values_df = initial_storage_df[
-                VALUE_COL
-            ].to_numpy()
-            initial_storage_values_df[num_scenarios:] = (
-                initial_storage_values_df[:-num_scenarios]
-            )
-            initial_storage_values_df[indices] = np.repeat(
-                values, num_scenarios
-            )
+            initial_storage_values_df = initial_storage_df[VALUE_COL].to_numpy()
+            initial_storage_values_df[num_scenarios:] = initial_storage_values_df[
+                :-num_scenarios
+            ]
+            initial_storage_values_df[indices] = np.repeat(values, num_scenarios)
             initial_storage_df[VALUE_COL] = initial_storage_values_df
-            initial_storage_df[VALUE_COL] = initial_storage_df[
-                VALUE_COL
-            ].fillna(0.0)
+            initial_storage_df[VALUE_COL] = initial_storage_df[VALUE_COL].fillna(0.0)
             return initial_storage_df
 
         earmi = Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL
@@ -1132,13 +1076,14 @@ class OperationSynthetizer:
             SpatialResolution.SISTEMA_INTERLIGADO: None,
         }
 
-        final_storage_df, entities = _get_final_storage_synthesis_data(
-            synthesis
-        )
+        initial_storage_data = cls._initial_stored_energy_df(synthesis, uow)
+        final_storage_df, entities = _get_final_storage_synthesis_data(synthesis)
         initial_storage_values = _get_initial_storage_values(
-            synthesis, uow, entities
+            initial_storage_data, entities
         )
-        initial_stage_indices = _get_initial_stage_indices(entities)
+        initial_stage_indices = _get_initial_stage_indices(
+            entities, initial_storage_data
+        )
         initial_storage_df = _fill_initial_storage_df(
             final_storage_df,
             initial_stage_indices,
@@ -1161,7 +1106,6 @@ class OperationSynthetizer:
         def _get_final_storage_synthesis_data(
             synthesis: OperationSynthesis,
         ) -> Tuple[pd.DataFrame, dict]:
-
             final_storage_synthesis = OperationSynthesis(
                 variable=variable_map[synthesis.variable],
                 spatial_resolution=synthesis.spatial_resolution,
@@ -1178,9 +1122,7 @@ class OperationSynthetizer:
             hydros = entities[HYDRO_CODE_COL]
             initial_storage_data = Deck.initial_stored_volume(uow)
             value_column = (
-                "valor_hm3"
-                if synthesis.variable == varmi
-                else "valor_percentual"
+                "valor_hm3" if synthesis.variable == varmi else "valor_percentual"
             )
             if synthesis.variable == varmi:
                 hidr = Deck.hidr(uow)
@@ -1201,18 +1143,12 @@ class OperationSynthetizer:
         def _get_initial_stage_indices(entities: dict) -> np.ndarray:
             hydros = entities[HYDRO_CODE_COL]
             num_hydros = len(hydros)
-            scenarios = [
-                s for s in entities[SCENARIO_COL] if str(s).isnumeric()
-            ]
+            scenarios = [s for s in entities[SCENARIO_COL] if str(s).isnumeric()]
             num_scenarios = len(scenarios)
             stages = entities[STAGE_COL]
             num_stages = len(stages)
-            offsets_groups = [
-                i * num_scenarios * num_stages for i in range(num_hydros)
-            ]
-            initial_stage_indices = np.tile(
-                np.arange(num_scenarios), num_hydros
-            )
+            offsets_groups = [i * num_scenarios * num_stages for i in range(num_hydros)]
+            initial_stage_indices = np.tile(np.arange(num_scenarios), num_hydros)
             initial_stage_indices += np.repeat(offsets_groups, num_scenarios)
             return initial_stage_indices
 
@@ -1222,24 +1158,16 @@ class OperationSynthetizer:
             values: np.ndarray,
             entities: dict,
         ) -> pd.DataFrame:
-            scenarios = [
-                s for s in entities[SCENARIO_COL] if str(s).isnumeric()
-            ]
+            scenarios = [s for s in entities[SCENARIO_COL] if str(s).isnumeric()]
             num_scenarios = len(scenarios)
             initial_storage_df = df.copy()
-            initial_storage_values_df = initial_storage_df[
-                VALUE_COL
-            ].to_numpy()
-            initial_storage_values_df[num_scenarios:] = (
-                initial_storage_values_df[:-num_scenarios]
-            )
-            initial_storage_values_df[indices] = np.repeat(
-                values, num_scenarios
-            )
+            initial_storage_values_df = initial_storage_df[VALUE_COL].to_numpy()
+            initial_storage_values_df[num_scenarios:] = initial_storage_values_df[
+                :-num_scenarios
+            ]
+            initial_storage_values_df[indices] = np.repeat(values, num_scenarios)
             initial_storage_df[VALUE_COL] = initial_storage_values_df
-            initial_storage_df[VALUE_COL] = initial_storage_df[
-                VALUE_COL
-            ].fillna(0.0)
+            initial_storage_df[VALUE_COL] = initial_storage_df[VALUE_COL].fillna(0.0)
             return initial_storage_df
 
         varmi = Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL
@@ -1251,12 +1179,8 @@ class OperationSynthetizer:
             varpi: varpf,
         }
 
-        final_storage_df, entities = _get_final_storage_synthesis_data(
-            synthesis
-        )
-        initial_storage_values = _get_initial_storage_values(
-            synthesis, uow, entities
-        )
+        final_storage_df, entities = _get_final_storage_synthesis_data(synthesis)
+        initial_storage_values = _get_initial_storage_values(synthesis, uow, entities)
         initial_stage_indices = _get_initial_stage_indices(entities)
         initial_storage_df = _fill_initial_storage_df(
             final_storage_df,
@@ -1306,10 +1230,7 @@ class OperationSynthetizer:
                 df[HYDRO_CODE_COL] == downstream_hydro_name,
                 PRODUCTIVITY_TMP_COL,
             ].to_numpy()
-            if (
-                not hydro_productivity.empty
-                and len(downstream_productivity) > 0
-            ):
+            if not hydro_productivity.empty and len(downstream_productivity) > 0:
                 hydro_productivity += downstream_productivity
         return df
 
@@ -1370,8 +1291,7 @@ class OperationSynthetizer:
             ) * net_drop_df[PRODUCTIVITY_TMP_COL].to_numpy()
             stored_volume_df[LOWER_BOUND_COL] = 0.0
             stored_volume_df[UPPER_BOUND_COL] = (
-                stored_volume_df[UPPER_BOUND_COL]
-                - stored_volume_df[LOWER_BOUND_COL]
+                stored_volume_df[UPPER_BOUND_COL] - stored_volume_df[LOWER_BOUND_COL]
             ) * net_drop_df[PRODUCTIVITY_TMP_COL].to_numpy()
             return stored_volume_df
 
@@ -1401,9 +1321,7 @@ class OperationSynthetizer:
             stored_volume_df, stored_volume_entities = _get_synthesis_data(
                 stored_volume_synthesis
             )
-            net_drop_df, net_drop_entities = _get_synthesis_data(
-                net_drop_synthesis
-            )
+            net_drop_df, net_drop_entities = _get_synthesis_data(net_drop_synthesis)
 
             net_drop_df = _add_productivity(net_drop_df, net_drop_entities)
             net_drop_df = cls._calc_accumulated_productivity(
@@ -1442,13 +1360,9 @@ class OperationSynthetizer:
         """
 
         logger_name = f"{synthesis.variable.value}_{sbm_name}"
-        logger = Log.configure_process_logger(
-            uow.queue, logger_name, sbm_index
-        )
+        logger = Log.configure_process_logger(uow.queue, logger_name, sbm_index)
         with uow:
-            logger.debug(
-                f"Processando arquivo do submercado: {sbm_index} - {sbm_name}"
-            )
+            logger.debug(f"Processando arquivo do submercado: {sbm_index} - {sbm_name}")
             df = uow.files.get_nwlistop(
                 synthesis.variable,
                 synthesis.spatial_resolution,
@@ -1491,7 +1405,6 @@ class OperationSynthetizer:
         def _resolve_SBM_MER_MERL(
             synthesis: OperationSynthesis, uow: AbstractUnitOfWork
         ) -> Optional[pd.DataFrame]:
-
             submarkets = Deck.submarkets(uow)
             real_submarkets = submarkets.loc[
                 submarkets["ficticio"] == 0, :
@@ -1517,9 +1430,7 @@ class OperationSynthetizer:
                         )
                         for idx, name in zip(sbms_idx, sbms_name)
                     }
-                    dfs = {
-                        ir: r.get(timeout=3600) for ir, r in async_res.items()
-                    }
+                    dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
 
             df = cls._post_resolve(
                 dfs,
@@ -1642,9 +1553,7 @@ class OperationSynthetizer:
                 ].to_numpy()
                 i_i = i * data_block_size
                 i_f = i_i + data_block_size
-                block_durations[i_i:i_f] = np.tile(
-                    date_durations, num_scenarios
-                )
+                block_durations[i_i:i_f] = np.tile(date_durations, num_scenarios)
             block_durations = np.tile(block_durations, num_thermals)
             df[BLOCK_DURATION_COL] = STAGE_DURATION_HOURS * block_durations
             return df
@@ -1671,13 +1580,11 @@ class OperationSynthetizer:
             num_blocks = len(blocks)
             thermals = df[THERMAL_CODE_COL].unique().tolist()
             num_thermals = len(thermals)
-            start_dates = Deck.internal_stages_starting_dates_final_simulation(
-                uow
-            )[:num_stages]
+            start_dates = Deck.internal_stages_starting_dates_final_simulation(uow)[
+                :num_stages
+            ]
             end_dates = np.array(
-                Deck.internal_stages_ending_dates_final_simulation(uow)[
-                    :num_stages
-                ]
+                Deck.internal_stages_ending_dates_final_simulation(uow)[:num_stages]
             )
             df = _replace_scenario_info(
                 df, num_stages, num_scenarios, num_blocks, num_thermals
@@ -1737,14 +1644,10 @@ class OperationSynthetizer:
         de um submercado a partir do arquivo de saída do NWLISTOP.
         """
         logger_name = f"{synthesis.variable.value}_{sbm_name}"
-        logger = Log.configure_process_logger(
-            uow.queue, logger_name, sbm_index
-        )
+        logger = Log.configure_process_logger(uow.queue, logger_name, sbm_index)
 
         with uow:
-            logger.debug(
-                f"Processando arquivo do submercado: {sbm_index} - {sbm_name}"
-            )
+            logger.debug(f"Processando arquivo do submercado: {sbm_index} - {sbm_name}")
             df = uow.files.get_nwlistop(
                 synthesis.variable,
                 synthesis.spatial_resolution,
@@ -1773,9 +1676,9 @@ class OperationSynthetizer:
             return df
 
         submarkets = Deck.submarkets(uow)
-        real_submarkets = submarkets.loc[
-            submarkets["ficticio"] == 0, :
-        ].sort_values(SUBMARKET_CODE_COL)
+        real_submarkets = submarkets.loc[submarkets["ficticio"] == 0, :].sort_values(
+            SUBMARKET_CODE_COL
+        )
         sbms_idx = real_submarkets[SUBMARKET_CODE_COL].unique()
         sbms_name = [
             real_submarkets.loc[
@@ -1952,14 +1855,12 @@ class OperationSynthetizer:
         if s.spatial_resolution == SpatialResolution.SUBMERCADO:
             eers_submarkets_map = Deck.eer_submarket_map(uow)
             initial_stored_energy_df.dropna(inplace=True)
-            initial_stored_energy_df[GROUPING_TMP_COL] = (
-                initial_stored_energy_df.apply(
-                    lambda line: eers_submarkets_map.at[
-                        line[EER_CODE_COL],
-                        SUBMARKET_CODE_COL,
-                    ],
-                    axis=1,
-                )
+            initial_stored_energy_df[GROUPING_TMP_COL] = initial_stored_energy_df.apply(
+                lambda line: eers_submarkets_map.at[
+                    line[EER_CODE_COL],
+                    SUBMARKET_CODE_COL,
+                ],
+                axis=1,
             )
         elif s.spatial_resolution == SpatialResolution.SISTEMA_INTERLIGADO:
             initial_stored_energy_df[GROUPING_TMP_COL] = 1
@@ -2176,9 +2077,7 @@ class OperationSynthetizer:
             return pd.DataFrame()
 
     @classmethod
-    def __store_in_cache_if_needed(
-        cls, s: OperationSynthesis, df: pd.DataFrame
-    ):
+    def __store_in_cache_if_needed(cls, s: OperationSynthesis, df: pd.DataFrame):
         """
         Adiciona um DataFrame com os dados de uma síntese à cache
         caso esta seja uma variável que deva ser armazenada.
@@ -2258,9 +2157,7 @@ class OperationSynthetizer:
                 OperationVariableBounds.is_bounded(s),
             ]
         with uow:
-            uow.export.synthetize_df(
-                metadata_df, OPERATION_SYNTHESIS_METADATA_OUTPUT
-            )
+            uow.export.synthetize_df(metadata_df, OPERATION_SYNTHESIS_METADATA_OUTPUT)
 
     @classmethod
     def _add_synthesis_stats(cls, s: OperationSynthesis, df: pd.DataFrame):
@@ -2306,9 +2203,7 @@ class OperationSynthetizer:
             message_root="Tempo para exportacao dos dados", logger=cls.logger
         ):
             with uow:
-                scenarios_df = scenarios_df.drop(
-                    columns=[STATS_OR_SCENARIO_COL]
-                )
+                scenarios_df = scenarios_df.drop(columns=[STATS_OR_SCENARIO_COL])
                 scenarios_df = scenarios_df[
                     s.spatial_resolution.all_synthesis_df_columns
                 ]
@@ -2329,14 +2224,12 @@ class OperationSynthetizer:
             with uow:
                 df = pd.concat(dfs, ignore_index=True)
                 df_columns = df.columns.tolist()
-                columns_without_variable = [
-                    c for c in df_columns if c != VARIABLE_COL
-                ]
+                columns_without_variable = [c for c in df_columns if c != VARIABLE_COL]
                 df = df[[VARIABLE_COL] + columns_without_variable]
                 df = df.astype({VARIABLE_COL: STRING_DF_TYPE})
-                df = df.sort_values(
-                    res.sorting_synthesis_df_columns
-                ).reset_index(drop=True)
+                df = df.sort_values(res.sorting_synthesis_df_columns).reset_index(
+                    drop=True
+                )
                 uow.export.synthetize_df(
                     df, f"{OPERATION_SYNTHESIS_STATS_ROOT}_{res.value}"
                 )
@@ -2355,12 +2248,8 @@ class OperationSynthetizer:
                 synthesis_variables = cls._default_args()
             else:
                 all_variables = cls._match_wildcards(variables)
-                synthesis_variables = cls._process_variable_arguments(
-                    all_variables
-                )
-            valid_synthesis = cls._filter_valid_variables(
-                synthesis_variables, uow
-            )
+                synthesis_variables = cls._process_variable_arguments(all_variables)
+            valid_synthesis = cls._filter_valid_variables(synthesis_variables, uow)
             synthesis_with_dependencies = cls._add_synthesis_dependencies(
                 valid_synthesis
             )
