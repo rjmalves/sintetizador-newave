@@ -38,8 +38,7 @@ class ExecutionSynthetizer:
     @classmethod
     def _default_args(cls) -> List[ExecutionSynthesis]:
         args = [
-            ExecutionSynthesis.factory(a)
-            for a in cls.DEFAULT_EXECUTION_SYNTHESIS_ARGS
+            ExecutionSynthesis.factory(a) for a in cls.DEFAULT_EXECUTION_SYNTHESIS_ARGS
         ]
         return [arg for arg in args if arg is not None]
 
@@ -71,9 +70,7 @@ class ExecutionSynthetizer:
                 synthesis_variables = cls._default_args()
             else:
                 all_variables = cls._match_wildcards(variables)
-                synthesis_variables = cls._process_variable_arguments(
-                    all_variables
-                )
+                synthesis_variables = cls._process_variable_arguments(all_variables)
         except Exception as e:
             print_exc()
             cls._log(str(e), ERROR)
@@ -93,6 +90,7 @@ class ExecutionSynthetizer:
         }
         return RULES[synthesis.variable](uow)
 
+    # TODO - adicionar versao
     @classmethod
     def _resolve_program(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         return pd.DataFrame(data={"programa": ["NEWAVE"]})
@@ -144,9 +142,7 @@ class ExecutionSynthetizer:
                 s.variable.long_name,
             ]
         with uow:
-            uow.export.synthetize_df(
-                metadata_df, EXECUTION_SYNTHESIS_METADATA_OUTPUT
-            )
+            uow.export.synthetize_df(metadata_df, EXECUTION_SYNTHESIS_METADATA_OUTPUT)
 
     @classmethod
     def _synthetize_single_variable(
@@ -182,9 +178,7 @@ class ExecutionSynthetizer:
             message_root="Tempo para sintese da execucao",
             logger=cls.logger,
         ):
-            synthesis_variables = cls._preprocess_synthesis_variables(
-                variables, uow
-            )
+            synthesis_variables = cls._preprocess_synthesis_variables(variables, uow)
             success_synthesis: List[ExecutionSynthesis] = []
             for s in synthesis_variables:
                 r = cls._synthetize_single_variable(s, uow)

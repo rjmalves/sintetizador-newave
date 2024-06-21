@@ -7,6 +7,9 @@ from inewave.newave import (
     Sistema,
     Curva,
     Clast,
+    Term,
+    Manutt,
+    Expt,
     Hidr,
     Patamar,
     Shist,
@@ -225,6 +228,45 @@ class Deck:
             return sist
 
     @classmethod
+    def _get_term(cls, uow: AbstractUnitOfWork) -> Term:
+        with uow:
+            sist = uow.files.get_term()
+            if sist is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do term.dat para"
+                        + " síntese da operação"
+                    )
+                raise RuntimeError()
+            return sist
+
+    @classmethod
+    def _get_manutt(cls, uow: AbstractUnitOfWork) -> Manutt:
+        with uow:
+            sist = uow.files.get_manutt()
+            if sist is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do manutt.dat para"
+                        + " síntese da operação"
+                    )
+                raise RuntimeError()
+            return sist
+
+    @classmethod
+    def _get_expt(cls, uow: AbstractUnitOfWork) -> Expt:
+        with uow:
+            sist = uow.files.get_expt()
+            if sist is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do expt.dat para"
+                        + " síntese da operação"
+                    )
+                raise RuntimeError()
+            return sist
+
+    @classmethod
     def _get_patamar(cls, uow: AbstractUnitOfWork) -> Patamar:
         with uow:
             pat = uow.files.get_patamar()
@@ -384,6 +426,54 @@ class Deck:
             modif = cls._validate_data(cls._get_modif(uow), Modif, "modif")
             cls.DECK_DATA_CACHING["modif"] = modif
         return modif
+
+    @classmethod
+    def confhd(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        confhd = cls.DECK_DATA_CACHING.get("confhd")
+        if confhd is None:
+            confhd = cls._validate_data(
+                cls._get_confhd(uow).usinas, pd.DataFrame, "confhd"
+            )
+            cls.DECK_DATA_CACHING["confhd"] = confhd
+        return confhd.copy()
+
+    @classmethod
+    def clast(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        clast = cls.DECK_DATA_CACHING.get("clast")
+        if clast is None:
+            clast = cls._validate_data(
+                cls._get_clast(uow).usinas, pd.DataFrame, "clast"
+            )
+            cls.DECK_DATA_CACHING["clast"] = clast
+        return clast.copy()
+
+    @classmethod
+    def term(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        term = cls.DECK_DATA_CACHING.get("term")
+        if term is None:
+            term = cls._validate_data(cls._get_term(uow).usinas, pd.DataFrame, "term")
+            cls.DECK_DATA_CACHING["term"] = term
+        return term.copy()
+
+    @classmethod
+    def manutt(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        manutt = cls.DECK_DATA_CACHING.get("manutt")
+        if manutt is None:
+            manutt = cls._validate_data(
+                cls._get_manutt(uow).manutencoes, pd.DataFrame, "manutt"
+            )
+            cls.DECK_DATA_CACHING["manutt"] = manutt
+        return manutt.copy()
+
+    @classmethod
+    def expt(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        expt = cls.DECK_DATA_CACHING.get("expt")
+        if expt is None:
+            expt = cls._validate_data(
+                cls._get_expt(uow).expansoes, pd.DataFrame, "expt"
+            )
+            cls.DECK_DATA_CACHING["expt"] = expt
+        return expt.copy()
 
     @classmethod
     def hidr(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
@@ -587,6 +677,23 @@ class Deck:
         return study_period_starting_year
 
     @classmethod
+    def num_pre_study_period_years(cls, uow: AbstractUnitOfWork) -> int:
+        num_pre_study_period_years = cls.DECK_DATA_CACHING.get(
+            "num_pre_study_period_years"
+        )
+        if num_pre_study_period_years is None:
+            dger = cls.dger(uow)
+            num_pre_study_period_years = cls._validate_data(
+                dger.num_anos_pre_estudo,
+                int,
+                "número de anos do pré-estudo",
+            )
+            cls.DECK_DATA_CACHING["num_pre_study_period_years"] = (
+                num_pre_study_period_years
+            )
+        return num_pre_study_period_years
+
+    @classmethod
     def num_study_period_years(cls, uow: AbstractUnitOfWork) -> int:
         num_study_period_years = cls.DECK_DATA_CACHING.get("num_study_period_years")
         if num_study_period_years is None:
@@ -649,6 +756,37 @@ class Deck:
             num_history_years = study_starting_year - history_starting_year - 2
             cls.DECK_DATA_CACHING["num_history_years"] = num_history_years
         return num_history_years
+
+    @classmethod
+    def num_thermal_maintenance_years(cls, uow: AbstractUnitOfWork) -> int:
+        num_thermal_maintenance_years = cls.DECK_DATA_CACHING.get(
+            "num_thermal_maintenance_years"
+        )
+        if num_thermal_maintenance_years is None:
+            dger = cls.dger(uow)
+            num_thermal_maintenance_years = cls._validate_data(
+                dger.num_anos_manutencao_utes,
+                int,
+                "número de anos de manutenção de UTEs",
+            )
+            cls.DECK_DATA_CACHING["num_thermal_maintenance_years"] = (
+                num_thermal_maintenance_years
+            )
+        return num_thermal_maintenance_years
+
+    @classmethod
+    def thermal_maintenance_end_date(cls, uow: AbstractUnitOfWork) -> datetime:
+        thermal_maintenance_end_date = cls.DECK_DATA_CACHING.get(
+            "thermal_maintenance_end_date"
+        )
+        if thermal_maintenance_end_date is None:
+            starting_year = cls.study_period_starting_year(uow)
+            num_years = cls.num_thermal_maintenance_years(uow)
+            thermal_maintenance_end_date = datetime(starting_year + num_years, 1, 1)
+            cls.DECK_DATA_CACHING["thermal_maintenance_end_date"] = (
+                thermal_maintenance_end_date
+            )
+        return thermal_maintenance_end_date
 
     @classmethod
     def final_simulation_type(cls, uow: AbstractUnitOfWork) -> int:
@@ -1144,6 +1282,64 @@ class Deck:
         return convergence.copy()
 
     @classmethod
+    def _thermal_generation_bounds_term_manutt_expt(
+        cls, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        """
+        - codigo_usina (`int`)
+        - nome_usina (`str`)
+        - data_inicio (`datetime`)
+        - limite_inferior (`float`)
+        - limite_superior (`float`)
+        """
+        pmo = cls.pmo(uow)
+        bounds_df = cls._validate_data(
+            pmo.geracao_minima_usinas_termicas,
+            pd.DataFrame,
+            "geração mínima das usinas térmicas",
+        )
+        bounds_df = bounds_df.rename(
+            columns={
+                "data": START_DATE_COL,
+                "valor_MWmed": LOWER_BOUND_COL,
+            }
+        )
+        bounds_df[UPPER_BOUND_COL] = cls._validate_data(
+            pmo.geracao_maxima_usinas_termicas,
+            pd.DataFrame,
+            "geração máxima das usinas térmicas",
+        )["valor_MWmed"].to_numpy()
+        return bounds_df
+
+    @classmethod
+    def _thermal_generation_bounds_pmo(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        """
+        - codigo_usina (`int`)
+        - nome_usina (`str`)
+        - data_inicio (`datetime`)
+        - limite_inferior (`float`)
+        - limite_superior (`float`)
+        """
+        pmo = cls.pmo(uow)
+        bounds_df = cls._validate_data(
+            pmo.geracao_minima_usinas_termicas,
+            pd.DataFrame,
+            "geração mínima das usinas térmicas",
+        )
+        bounds_df = bounds_df.rename(
+            columns={
+                "data": START_DATE_COL,
+                "valor_MWmed": LOWER_BOUND_COL,
+            }
+        )
+        bounds_df[UPPER_BOUND_COL] = cls._validate_data(
+            pmo.geracao_maxima_usinas_termicas,
+            pd.DataFrame,
+            "geração máxima das usinas térmicas",
+        )["valor_MWmed"].to_numpy()
+        return bounds_df
+
+    @classmethod
     def thermal_generation_bounds(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         def _add_submarket_data(
             df: pd.DataFrame, uow: AbstractUnitOfWork
@@ -1165,23 +1361,9 @@ class Deck:
             "thermal_generation_bounds"
         )
         if thermal_generation_bounds is None:
-            pmo = cls.pmo(uow)
-            bounds_df = cls._validate_data(
-                pmo.geracao_minima_usinas_termicas,
-                pd.DataFrame,
-                "geração mínima das usinas térmicas",
-            )
-            bounds_df = bounds_df.rename(
-                columns={
-                    "data": START_DATE_COL,
-                    "valor_MWmed": LOWER_BOUND_COL,
-                }
-            )
-            bounds_df[UPPER_BOUND_COL] = cls._validate_data(
-                pmo.geracao_maxima_usinas_termicas,
-                pd.DataFrame,
-                "geração máxima das usinas térmicas",
-            )["valor_MWmed"].to_numpy()
+            bounds_df = cls._thermal_generation_bounds_pmo(uow)
+            if bounds_df is None:
+                bounds_df = cls._thermal_generation_bounds_term_manutt_expt(uow)
             bounds_df = _add_submarket_data(bounds_df, uow)
             thermal_generation_bounds = bounds_df
             cls.DECK_DATA_CACHING["thermal_generation_bounds"] = (
@@ -2063,13 +2245,65 @@ class Deck:
         return initial_stored_energy.copy()
 
     @classmethod
+    def _initial_stored_volume_from_pmo(
+        cls, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame | None:
+        return cls.pmo(uow).volume_armazenado_inicial
+
+    @classmethod
+    def _initial_stored_volume_from_confhd_hidr(
+        cls, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame | None:
+        df = cls.confhd(uow)[
+            [HYDRO_CODE_COL, "nome_usina", "volume_inicial_percentual"]
+        ].set_index(HYDRO_CODE_COL)
+        df = df.rename(
+            columns={
+                "nome_usina": HYDRO_NAME_COL,
+                "volume_inicial_percentual": "valor_percentual",
+            }
+        )
+        hidr = cls.hidr(uow)
+        volume_bounds = cls.hydro_volume_bounds_in_stages(uow)
+        starting_date = cls.stages_starting_dates_final_simulation(uow)[0]
+        volume_bounds = volume_bounds.loc[
+            volume_bounds[START_DATE_COL] == starting_date,
+            [LOWER_BOUND_COL, UPPER_BOUND_COL, HYDRO_CODE_COL],
+        ].set_index(HYDRO_CODE_COL, drop=True)
+        df = df.join(hidr, how="inner")
+        df = df.join(volume_bounds, how="inner")
+        df["valor_hm3"] = df.apply(
+            lambda line: line["valor_percentual"]
+            / 100.0
+            * (line[UPPER_BOUND_COL] - line[LOWER_BOUND_COL])
+            + line[LOWER_BOUND_COL],
+            axis=1,
+        )
+        df.loc[df["tipo_regulacao"] != "M", "valor_hm3"] = np.nan
+        df.loc[df["tipo_regulacao"] != "M", "valor_percentual"] = 0.0
+
+        return df[[HYDRO_NAME_COL, "valor_hm3", "valor_percentual"]].reset_index()
+
+    @classmethod
+    def _initial_stored_volume_pre_study_condition(
+        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        if cls.num_pre_study_period_years(uow) > 0:
+            df.loc[~df["valor_hm3"].isna(), "valor_percentual"] = 100.0
+        return df
+
+    @classmethod
     def initial_stored_volume(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         initial_stored_volume = cls.DECK_DATA_CACHING.get("initial_stored_volume")
         if initial_stored_volume is None:
+            initial_stored_volume = cls._initial_stored_volume_from_pmo(uow)
+            if initial_stored_volume is None:
+                initial_stored_volume = cls._initial_stored_volume_from_confhd_hidr(uow)
             initial_stored_volume = cls._validate_data(
-                cls.pmo(uow).volume_armazenado_inicial,
-                pd.DataFrame,
-                "VARM inicial",
+                initial_stored_volume, pd.DataFrame, "VARM inicial"
+            )
+            initial_stored_volume = cls._initial_stored_volume_pre_study_condition(
+                initial_stored_volume, uow
             )
             cls.DECK_DATA_CACHING["initial_stored_volume"] = initial_stored_volume
         return initial_stored_volume.copy()
