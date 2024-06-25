@@ -47,7 +47,6 @@ import pandas as pd  # type: ignore
 import numpy as np  # type: ignore
 from typing import Any, Optional, TypeVar, Type, List, Tuple, Union, Dict
 from cfinterface.components.register import Register
-
 from app.services.unitofwork import AbstractUnitOfWork
 from app.model.operation.unit import Unit
 from app.internal.constants import (
@@ -1282,6 +1281,93 @@ class Deck:
         return convergence.copy()
 
     @classmethod
+    def _apply_thermal_bounds_maintenance_and_changes(
+        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        pass
+
+        def _apply_thermal_single_change(
+            df: pd.DataFrame,
+            thermal_code: int,
+            start_date: datetime,
+            end_date: datetime,
+            col: str,
+            value: float,
+        ) -> None:
+            df_filter = (
+                (df[THERMAL_CODE_COL] == thermal_code)
+                & (df[START_DATE_COL] >= start_date)
+                & (df[START_DATE_COL] <= end_date)
+            )
+            df.loc[df_filter, col] = value
+
+        def _apply_thermal_changes(
+            df: pd.DataFrame, uow: AbstractUnitOfWork
+        ) -> pd.DataFrame:
+            expt = cls.expt(uow)
+            stage_dates = cls.stages_starting_dates_final_simulation(uow)
+            final_date = stage_dates[-1]
+            expt["data_fim"] = expt["data_fim"].fillna(final_date)
+            thermal_change_type_col_map: dict[str, str] = {
+                "POTEF": "potencia_instalada",
+                "FCMAX": "fator_capacidade_maximo",
+                "TEIFT": "teif",
+                "GTMIN": LOWER_BOUND_COL,
+                "IPTER": "indisponibilidade_programada",
+            }
+            for _, line in expt.iterrows():
+                _apply_thermal_single_change(
+                    df,
+                    line["codigo_usina"],
+                    line["data_inicio"],
+                    line["data_fim"],
+                    thermal_change_type_col_map[line["tipo"]],
+                    line["modificacao"],
+                )
+            return df
+
+        def _apply_maintenance(
+            df: pd.DataFrame, uow: AbstractUnitOfWork
+        ) -> pd.DataFrame:
+            manutt = cls.manutt(uow)
+            thermal_codes = manutt[THERMAL_CODE_COL].unique()
+            maintenance_end_date = cls.thermal_maintenance_end_date(uow)
+            for code in thermal_codes:
+                thermal_df = df.loc[
+                    (df[THERMAL_CODE_COL] == code)
+                    & (df[START_DATE_COL] < maintenance_end_date),
+                    [START_DATE_COL, "potencia_instalada"],
+                ].copy()
+                last_month: pd.Timestamp = thermal_df[START_DATE_COL].max()
+                last_day = last_month.daysinmonth
+                thermal_df.loc[-1, START_DATE_COL] = last_month.replace(day=last_day)
+                thermal_df = thermal_df.set_index(START_DATE_COL).resample("D").ffill()
+                thermal_df["potencia_instalada"] = thermal_df[
+                    "potencia_instalada"
+                ].ffill()
+                thermal_maintenance_df: pd.DataFrame = manutt.loc[
+                    manutt[THERMAL_CODE_COL] == code
+                ]
+                for _, line in thermal_maintenance_df.iterrows():
+                    start_date = line["data_inicio"]
+                    num_days = line["duracao"]
+                    value = line["potencia"]
+                    end_date = start_date + timedelta(days=num_days - 1)
+                    thermal_df.loc[start_date:end_date, "potencia_instalada"] -= value
+                thermal_df = thermal_df.resample("MS").mean().reset_index()
+                df.loc[
+                    (df[THERMAL_CODE_COL] == code)
+                    & (df[START_DATE_COL].isin(thermal_df[START_DATE_COL])),
+                    "potencia_instalada",
+                ] = thermal_df["potencia_instalada"].to_numpy()
+
+            return df
+
+        df = _apply_thermal_changes(df, uow)
+        df = _apply_maintenance(df, uow)
+        return df
+
+    @classmethod
     def _thermal_generation_bounds_term_manutt_expt(
         cls, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
@@ -1292,23 +1378,100 @@ class Deck:
         - limite_inferior (`float`)
         - limite_superior (`float`)
         """
-        pmo = cls.pmo(uow)
-        bounds_df = cls._validate_data(
-            pmo.geracao_minima_usinas_termicas,
-            pd.DataFrame,
-            "geração mínima das usinas térmicas",
+
+        def _expand_to_stages(
+            df: pd.DataFrame, uow: AbstractUnitOfWork
+        ) -> pd.DataFrame:
+            num_thermals = df.shape[0]
+            dates = np.array(cls.stages_starting_dates_final_simulation(uow))
+            num_stages = len(dates)
+            df = pd.concat([df] * num_stages, ignore_index=True)
+            df[START_DATE_COL] = np.repeat(dates, num_thermals)
+            return df.sort_values([THERMAL_CODE_COL, START_DATE_COL]).reset_index(
+                drop=True
+            )
+
+        def _add_term_lower_bounds(
+            df: pd.DataFrame, term: pd.DataFrame, uow: AbstractUnitOfWork
+        ) -> pd.DataFrame:
+            stage_dates = cls.stages_starting_dates_final_simulation(uow)
+            initial_date = stage_dates[0]
+            initial_month = initial_date.month
+            # Aparentemente o bloco de GTMIN do term.dat é rolante. Ou seja,
+            # o "primeiro ano de estudo" é sempre disposto, mesmo se o caso
+            # começar em outubro. Neste caso, valem os valores até setembro
+            # do outro ano.
+            # Segundo o manual, este "ano" era pra ser todos os anos de
+            # manutenção.
+            term = term.loc[term["mes"] >= initial_month].copy()
+            last_term_month = term["mes"].max()
+            last_term_block = term.loc[term["mes"] == last_term_month]
+            num_repeats = len(stage_dates) - (12 - initial_month) - 1
+            term_repeats: list[pd.DataFrame] = []
+            for n in range(1, num_repeats):
+                last_term_block_month = last_term_block.copy()
+                last_term_block_month["mes"] += n
+                term_repeats.append(last_term_block_month)
+            term = pd.concat([term, *term_repeats], ignore_index=True)
+            term = term.sort_values([THERMAL_CODE_COL, "mes"])
+            df[LOWER_BOUND_COL] = term["geracao_minima"].to_numpy()
+            return df
+
+        def _enforce_null_lower_bounds_on_changes(
+            df: pd.DataFrame, uow: AbstractUnitOfWork
+        ) -> pd.DataFrame:
+            expt = cls.expt(uow)
+            # TODO - encontra as UTEs com modificacao de GTMIN
+            thermals_to_nullify = expt.loc[
+                expt["tipo"] == "GTMIN", "codigo_usina"
+            ].unique()
+            # zera o GTMIN de todas as UTEs que tiveram modificacao
+            # após o primeiro ano (ou num anos manut térmicas)
+            maintenance_end_date = cls.thermal_maintenance_end_date(uow)
+            for code in thermals_to_nullify:
+                df.loc[
+                    (df[THERMAL_CODE_COL] == code)
+                    & (df[START_DATE_COL] >= maintenance_end_date),
+                    LOWER_BOUND_COL,
+                ] = 0.0
+            return df
+
+        def _eval_upper_bounds(df: pd.DataFrame) -> pd.DataFrame:
+            maintenance_end_date = cls.thermal_maintenance_end_date(uow)
+            df.loc[
+                df[START_DATE_COL] < maintenance_end_date,
+                "indisponibilidade_programada",
+            ] = 0.0
+            df[UPPER_BOUND_COL] = (
+                df["potencia_instalada"]
+                * (df["fator_capacidade_maximo"] / 100.0)
+                * (100.0 - df["indisponibilidade_programada"])
+                / 100.0
+                * (100.0 - df["teif"])
+                / 100.0
+            )
+            return df
+
+        term = cls.term(uow)
+        bounds_df = (
+            term.drop_duplicates(subset=["codigo_usina", "nome_usina"])
+            .copy()
+            .sort_values(THERMAL_CODE_COL)
         )
-        bounds_df = bounds_df.rename(
-            columns={
-                "data": START_DATE_COL,
-                "valor_MWmed": LOWER_BOUND_COL,
-            }
-        )
-        bounds_df[UPPER_BOUND_COL] = cls._validate_data(
-            pmo.geracao_maxima_usinas_termicas,
-            pd.DataFrame,
-            "geração máxima das usinas térmicas",
-        )["valor_MWmed"].to_numpy()
+        bounds_df = _expand_to_stages(bounds_df, uow)
+        bounds_df = _add_term_lower_bounds(bounds_df, term, uow)
+        bounds_df = _enforce_null_lower_bounds_on_changes(bounds_df, uow)
+        bounds_df = cls._apply_thermal_bounds_maintenance_and_changes(bounds_df, uow)
+        bounds_df = _eval_upper_bounds(bounds_df)
+        bounds_df = bounds_df[
+            [
+                THERMAL_CODE_COL,
+                "nome_usina",
+                START_DATE_COL,
+                LOWER_BOUND_COL,
+                UPPER_BOUND_COL,
+            ]
+        ].copy()
         return bounds_df
 
     @classmethod
