@@ -45,10 +45,12 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 import pandas as pd  # type: ignore
 import numpy as np  # type: ignore
+from functools import partial
 from typing import Any, Optional, TypeVar, Type, List, Tuple, Union, Dict
 from cfinterface.components.register import Register
 from app.services.unitofwork import AbstractUnitOfWork
 from app.model.operation.unit import Unit
+from app.utils.graph import Graph
 from app.internal.constants import (
     STRING_DF_TYPE,
     HYDRO_CODE_COL,
@@ -70,6 +72,9 @@ from app.internal.constants import (
     UPPER_BOUND_UNIT_COL,
     BLOCK_COL,
     SCENARIO_COL,
+    PRODUCTIVITY_TMP_COL,
+    VOLUME_FOR_PRODUCTIVITY_TMP_COL,
+    HM3_M3S_MONTHLY_FACTOR,
 )
 
 
@@ -2396,13 +2401,232 @@ class Deck:
         return exchange_block_limits.copy()
 
     @classmethod
+    def _initial_stored_energy_from_pmo(
+        cls, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame | None:
+        return cls.pmo(uow).energia_armazenada_inicial
+
+    @classmethod
+    def _hydro_accumulated_productivity_at_volume(
+        cls,
+        uow: AbstractUnitOfWork,
+        df: pd.DataFrame,
+        volume_col: str = VOLUME_FOR_PRODUCTIVITY_TMP_COL,
+    ) -> pd.DataFrame:
+        """
+        Calcula a produtividade acumulada das usinas hidrelétricas
+        fornecidas em `df`, em um volume dado na coluna `volume_col`.
+        O `df` fornecido deve ter como `index` o código das usinas.
+        """
+
+        def _join_hidr_data(df: pd.DataFrame) -> pd.DataFrame:
+            hidr = cls.hidr(uow)
+            hidr_cols = [
+                RUN_OF_RIVER_REFERENCE_VOLUME_COL,
+                LOSS_COL,
+                LOSS_KIND_COL,
+                LOWER_DROP_COL,
+                SPEC_PRODUCTIVITY_COL,
+                VOLUME_REGULATION_COL,
+            ]
+            return df.join(
+                hidr[hidr_cols + HEIGHT_POLY_COLS],
+                how="inner",
+            )
+
+        def _join_bounds_data(df: pd.DataFrame) -> pd.DataFrame:
+            bounds_df = cls.hydro_volume_bounds_with_changes(uow)
+            return df.join(bounds_df, how="inner")
+
+        def _join_hydros_data(df: pd.DataFrame) -> pd.DataFrame:
+            hydros = cls.hydros(uow)
+            return df.join(hydros[[FOLLOWING_HYDRO_COL]], how="inner")
+
+        def _evaluate_upper_drop_at_volume(line: pd.Series) -> float:
+            coefs = [line[c] for c in HEIGHT_POLY_COLS]
+            if line[VOLUME_REGULATION_COL] == "M":
+                coefs_integral = [0] + [c / (i + 1) for i, c in enumerate(coefs)]
+                min_volume = line[LOWER_BOUND_COL]
+                max_volume = line[UPPER_BOUND_COL]
+                net_volume = max_volume - min_volume
+                percent_volume = line[volume_col] / net_volume
+                reversed_coefs_integral = list(reversed(coefs_integral))
+                min_integral = np.polyval(
+                    reversed_coefs_integral,
+                    min_volume,
+                )
+                max_integral = np.polyval(
+                    reversed_coefs_integral,
+                    percent_volume * net_volume + min_volume,
+                )
+                hmon = (max_integral - min_integral) / (percent_volume * net_volume)
+            else:
+                reversed_coefs = list(reversed(coefs))
+                hmon = np.polyval(
+                    reversed_coefs,
+                    line[RUN_OF_RIVER_REFERENCE_VOLUME_COL],
+                )
+            return hmon
+
+        def _fill_volume_run_of_river(line: pd.Series):
+            if pd.isna(line[volume_col]):
+                return 0.0
+            else:
+                return line[volume_col]
+
+        def _apply_losses(line: pd.Series, col: str):
+            if line[LOSS_KIND_COL] == 1:
+                return line[NET_DROP_COL] * (1 - line[LOSS_COL])
+            elif line[LOSS_KIND_COL] == 2:
+                return line[NET_DROP_COL] - line[LOSS_COL]
+
+        def _eval_productivity(df: pd.DataFrame):
+            df[UPPER_DROP_COL] = df.apply(_evaluate_upper_drop_at_volume, axis=1)
+            df[NET_DROP_COL] = df[UPPER_DROP_COL] - df[LOWER_DROP_COL]
+            df[volume_col] = df.apply(_fill_volume_run_of_river, axis=1)
+            df[PRODUCTIVITY_TMP_COL] = df[SPEC_PRODUCTIVITY_COL] * df.apply(
+                partial(_apply_losses, col=NET_DROP_COL), axis=1
+            )
+            df[PRODUCTIVITY_TMP_COL] *= HM3_M3S_MONTHLY_FACTOR
+            return df
+
+        def _accumulate_productivity(df: pd.DataFrame) -> pd.DataFrame:
+            np_edges = list(df.reset_index()[[FOLLOWING_HYDRO_COL, "index"]].to_numpy())
+            edges = [tuple(e) for e in np_edges]
+            bfs = Graph(edges, directed=True).bfs(0)[1:]
+            for hydro_code in bfs:
+                downstream_hydro_code = df.at[
+                    hydro_code,
+                    FOLLOWING_HYDRO_COL,
+                ]
+                if downstream_hydro_code == 0:
+                    continue
+                downstream_productivity = df.at[
+                    downstream_hydro_code,
+                    PRODUCTIVITY_TMP_COL,
+                ]
+                df.at[hydro_code, PRODUCTIVITY_TMP_COL] += downstream_productivity
+            return df
+
+        FOLLOWING_HYDRO_COL = "codigo_usina_jusante"
+        LOSS_KIND_COL = "tipo_perda"
+        LOSS_COL = "perdas"
+        UPPER_DROP_COL = "hmon"
+        LOWER_DROP_COL = "canal_fuga_medio"
+        NET_DROP_COL = "hliq"
+        SPEC_PRODUCTIVITY_COL = "produtibilidade_especifica"
+        VOLUME_REGULATION_COL = "tipo_regulacao"
+        RUN_OF_RIVER_REFERENCE_VOLUME_COL = "volume_referencia"
+        HEIGHT_POLY_COLS = [f"a{i}_volume_cota" for i in range(5)]
+
+        df = df.copy()
+        df_cols = df.columns.tolist()
+        df = _join_hidr_data(df)
+        df = _join_bounds_data(df)
+        df = _join_hydros_data(df)
+        df = _eval_productivity(df)
+        df = _accumulate_productivity(df)
+        return df[df_cols + [PRODUCTIVITY_TMP_COL]]
+
+    @classmethod
+    def _initial_stored_energy_from_confhd_hidr(
+        cls, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame | None:
+        def _join_bounds_data(df: pd.DataFrame) -> pd.DataFrame:
+            bounds_df = cls.hydro_volume_bounds_with_changes(uow)
+            return df.join(bounds_df, how="inner")
+
+        def _volume_to_energy(df: pd.DataFrame) -> pd.DataFrame:
+            df[ABSOLUTE_VALUE_COL] *= df[PRODUCTIVITY_TMP_COL]
+            df[MAXIMUM_STORED_ENERGY_COL] = (
+                df[MAX_STORED_VOLUME_COL] * df[MAX_PRODUCTIVITY_COL]
+            )
+            return df
+
+        def _cast_to_eers_and_fill_missing(df: pd.DataFrame) -> pd.DataFrame:
+            df = df.join(cls.hydro_eer_submarket_map(uow), how="inner")
+            df = (
+                df[
+                    [
+                        EER_CODE_COL,
+                        EER_NAME_COL,
+                        ABSOLUTE_VALUE_COL,
+                        MAXIMUM_STORED_ENERGY_COL,
+                    ]
+                ]
+                .groupby([EER_CODE_COL, EER_NAME_COL])
+                .sum()
+            ).reset_index()
+            eer_codes = cls.eer_code_order(uow)
+            eers = cls.eers(uow)
+            missing_eers = [
+                eer for eer in eer_codes if eer not in df[EER_CODE_COL].tolist()
+            ]
+            missing_df = pd.DataFrame(
+                {
+                    EER_CODE_COL: missing_eers,
+                    EER_NAME_COL: eers.loc[missing_eers, EER_NAME_COL].tolist(),
+                    ABSOLUTE_VALUE_COL: [np.nan] * len(missing_eers),
+                    PERCENT_VALUE_COL: [100.0] * len(missing_eers),
+                }
+            )
+            df = pd.concat([df, missing_df], ignore_index=True)
+            return df.set_index(EER_CODE_COL)
+
+        def _eval_percent_value(df: pd.DataFrame) -> pd.DataFrame:
+            df[PERCENT_VALUE_COL] = (
+                df[ABSOLUTE_VALUE_COL] / df[MAXIMUM_STORED_ENERGY_COL] * 100.0
+            )
+            return df
+
+        MAX_PRODUCTIVITY_COL = "prod_max"
+        MAX_STORED_VOLUME_COL = "varmax"
+        MAXIMUM_STORED_ENERGY_COL = "earmax"
+        ABSOLUTE_VALUE_COL = "valor_hm3"
+        ABSOLUTE_VALUE_FINAL_COL = "valor_MWmes"
+        PERCENT_VALUE_COL = "valor_percentual"
+
+        df = cls.initial_stored_volume(uow).set_index(HYDRO_CODE_COL)
+
+        # Calcula prodts no ponto inicial
+        df_absolute = cls._hydro_accumulated_productivity_at_volume(
+            uow, df.copy(), volume_col=ABSOLUTE_VALUE_COL
+        )
+
+        # Calcula prodts no máximo
+        df_percent = _join_bounds_data(df.copy())
+        df_percent = df_percent[[UPPER_BOUND_COL]].rename(
+            columns={
+                UPPER_BOUND_COL: MAX_STORED_VOLUME_COL,
+            }
+        )
+        df_percent = cls._hydro_accumulated_productivity_at_volume(
+            uow, df_percent, volume_col=MAX_STORED_VOLUME_COL
+        )
+        df_percent = df_percent.rename(
+            columns={PRODUCTIVITY_TMP_COL: MAX_PRODUCTIVITY_COL}
+        )
+
+        df = df_absolute.join(df_percent, how="inner")
+
+        df = _volume_to_energy(df)
+        df = _cast_to_eers_and_fill_missing(df)
+        df = _eval_percent_value(df)
+
+        df = df.rename(columns={ABSOLUTE_VALUE_COL: ABSOLUTE_VALUE_FINAL_COL})
+
+        print(df)
+        return df[[EER_NAME_COL, ABSOLUTE_VALUE_FINAL_COL, PERCENT_VALUE_COL]]
+
+    @classmethod
     def initial_stored_energy(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         initial_stored_energy = cls.DECK_DATA_CACHING.get("initial_stored_energy")
         if initial_stored_energy is None:
+            # initial_stored_energy = cls._initial_stored_energy_from_pmo(uow)
+            # if initial_stored_energy is None:
+            initial_stored_energy = cls._initial_stored_energy_from_confhd_hidr(uow)
             initial_stored_energy = cls._validate_data(
-                cls.pmo(uow).energia_armazenada_inicial,
-                pd.DataFrame,
-                "EARM inicial",
+                initial_stored_energy, pd.DataFrame, "EARM inicial"
             )
             cls.DECK_DATA_CACHING["initial_stored_energy"] = initial_stored_energy
         return initial_stored_energy.copy()
