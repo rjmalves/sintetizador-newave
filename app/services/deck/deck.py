@@ -2622,9 +2622,9 @@ class Deck:
     def initial_stored_energy(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         initial_stored_energy = cls.DECK_DATA_CACHING.get("initial_stored_energy")
         if initial_stored_energy is None:
-            # initial_stored_energy = cls._initial_stored_energy_from_pmo(uow)
-            # if initial_stored_energy is None:
-            initial_stored_energy = cls._initial_stored_energy_from_confhd_hidr(uow)
+            initial_stored_energy = cls._initial_stored_energy_from_pmo(uow)
+            if initial_stored_energy is None:
+                initial_stored_energy = cls._initial_stored_energy_from_confhd_hidr(uow)
             initial_stored_energy = cls._validate_data(
                 initial_stored_energy, pd.DataFrame, "EARM inicial"
             )
