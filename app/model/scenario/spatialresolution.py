@@ -1,5 +1,4 @@
 from enum import Enum
-from typing import Dict, List
 from app.internal.constants import (
     HYDRO_CODE_COL,
     EER_CODE_COL,
@@ -24,8 +23,8 @@ class SpatialResolution(Enum):
         return self.value
 
     @property
-    def short_name(self):
-        SHORT_NAMES: Dict[str, str] = {
+    def short_name(self) -> str | None:
+        SHORT_NAMES: dict[str, str] = {
             "SIN": "SIN",
             "SBM": "SBM",
             "REE": "REE",
@@ -34,8 +33,8 @@ class SpatialResolution(Enum):
         return SHORT_NAMES.get(self.value)
 
     @property
-    def long_name(self):
-        LONG_NAMES: Dict[str, str] = {
+    def long_name(self) -> str | None:
+        LONG_NAMES: dict[str, str] = {
             "SIN": "Sistema Interligado",
             "SBM": "Submercado",
             "REE": "Reservatório Equivalente",
@@ -44,8 +43,8 @@ class SpatialResolution(Enum):
         return LONG_NAMES.get(self.value)
 
     @property
-    def entity_df_columns(self) -> List[str]:
-        col_maps: Dict[SpatialResolution, List[str]] = {
+    def entity_df_columns(self) -> list[str]:
+        col_maps: dict[SpatialResolution, list[str]] = {
             SpatialResolution.SISTEMA_INTERLIGADO: [],
             SpatialResolution.SUBMERCADO: [SUBMARKET_CODE_COL],
             SpatialResolution.RESERVATORIO_EQUIVALENTE: [

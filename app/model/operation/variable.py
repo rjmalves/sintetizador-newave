@@ -1,5 +1,4 @@
 from enum import Enum
-from typing import Dict
 
 
 class Variable(Enum):
@@ -86,8 +85,8 @@ class Variable(Enum):
         return cls.ENERGIA_ARMAZENADA_PERCENTUAL_FINAL
 
     @property
-    def short_name(self):
-        SHORT_NAMES: Dict[str, str] = {
+    def short_name(self) -> str | None:
+        SHORT_NAMES: dict[str, str] = {
             "CMO": "CMO",
             "VAGUA": "VAGUA",
             "VAGUAI": "VAGUA Incremental",
@@ -162,8 +161,8 @@ class Variable(Enum):
         return SHORT_NAMES.get(self.value)
 
     @property
-    def long_name(self):
-        LONG_NAMES: Dict[str, str] = {
+    def long_name(self) -> str | None:
+        LONG_NAMES: dict[str, str] = {
             "CMO": "Custo Marginal de Operação",
             "VAGUA": "Valor da Água",
             "VAGUAI": "Valor da Água Incremental",

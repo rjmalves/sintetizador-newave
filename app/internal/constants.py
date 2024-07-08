@@ -30,8 +30,21 @@ VARIABLE_COL = "variavel"
 
 GROUPING_TMP_COL = "group"
 SYSTEM_GROUPING_COL = "sin"
+
+FOLLOWING_HYDRO_COL = "codigo_usina_jusante"
+HEIGHT_POLY_COLS = [f"a{i}_volume_cota" for i in range(5)]
+LOSS_KIND_COL = "tipo_perda"
+LOSS_COL = "perdas"
+LOWER_DROP_COL = "canal_fuga_medio"
+SPEC_PRODUCTIVITY_COL = "produtibilidade_especifica"
+VOLUME_REGULATION_COL = "tipo_regulacao"
+RUN_OF_RIVER_REFERENCE_VOLUME_COL = "volume_referencia"
+
+UPPER_DROP_COL = "hmon"
+NET_DROP_COL = "hliq"
 PRODUCTIVITY_TMP_COL = "prod"
 VOLUME_FOR_PRODUCTIVITY_TMP_COL = "vol_prod"
+
 LOWER_BOUND_UNIT_COL = "unidade_limite_inferior"
 UPPER_BOUND_UNIT_COL = "unidade_limite_superior"
 UNIT_COL = "unidade"

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, List, Dict
+from typing import Optional
 from app.model.operation.variable import Variable
 from app.model.operation.spatialresolution import SpatialResolution
 from app.model.operation.unit import Unit
@@ -19,9 +19,7 @@ class OperationSynthesis:
         )
 
     def __hash__(self) -> int:
-        return hash(
-            f"{self.variable.value}_" + f"{self.spatial_resolution.value}_"
-        )
+        return hash(f"{self.variable.value}_" + f"{self.spatial_resolution.value}_")
 
     def __eq__(self, o: object) -> bool:
         if not isinstance(o, OperationSynthesis):
@@ -46,7 +44,7 @@ class OperationSynthesis:
             )
 
 
-SUPPORTED_SYNTHESIS: List[str] = [
+SUPPORTED_SYNTHESIS: list[str] = [
     "CMO_SBM",
     "VAGUA_REE",
     "VAGUA_UHE",
@@ -216,7 +214,7 @@ SUPPORTED_SYNTHESIS: List[str] = [
     "VEVAP_SIN",
 ]
 
-SYNTHESIS_DEPENDENCIES: Dict[OperationSynthesis, List[OperationSynthesis]] = {
+SYNTHESIS_DEPENDENCIES: dict[OperationSynthesis, list[OperationSynthesis]] = {
     OperationSynthesis(
         Variable.ENERGIA_VERTIDA,
         SpatialResolution.RESERVATORIO_EQUIVALENTE,
@@ -1133,7 +1131,7 @@ SYNTHESIS_DEPENDENCIES: Dict[OperationSynthesis, List[OperationSynthesis]] = {
     ],
 }
 
-UNITS: Dict[OperationSynthesis, Unit] = {
+UNITS: dict[OperationSynthesis, Unit] = {
     OperationSynthesis(
         Variable.CUSTO_MARGINAL_OPERACAO, SpatialResolution.SUBMERCADO
     ): Unit.RS_MWh,

@@ -21,7 +21,7 @@ class Variable(Enum):
         return self.value
 
     @property
-    def short_name(self):
+    def short_name(self) -> str | None:
         SHORT_NAMES: Dict[str, str] = {
             "PROGRAMA": "PROGRAMA",
             "CONVERGENCIA": "CONVERGENCIA",
@@ -33,7 +33,7 @@ class Variable(Enum):
         return SHORT_NAMES.get(self.value)
 
     @property
-    def long_name(self):
+    def long_name(self) -> str | None:
         LONG_NAMES: Dict[str, str] = {
             "PROGRAMA": "Modelo de Otimização",
             "CONVERGENCIA": "Convergência do Processo Iterativo",

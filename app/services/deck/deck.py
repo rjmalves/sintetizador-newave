@@ -75,6 +75,16 @@ from app.internal.constants import (
     PRODUCTIVITY_TMP_COL,
     VOLUME_FOR_PRODUCTIVITY_TMP_COL,
     HM3_M3S_MONTHLY_FACTOR,
+    FOLLOWING_HYDRO_COL,
+    HEIGHT_POLY_COLS,
+    LOSS_KIND_COL,
+    LOSS_COL,
+    LOWER_DROP_COL,
+    SPEC_PRODUCTIVITY_COL,
+    VOLUME_REGULATION_COL,
+    RUN_OF_RIVER_REFERENCE_VOLUME_COL,
+    UPPER_DROP_COL,
+    NET_DROP_COL,
 )
 
 
@@ -2407,6 +2417,79 @@ class Deck:
         return cls.pmo(uow).energia_armazenada_inicial
 
     @classmethod
+    def _evaluate_productivity(
+        cls, df: pd.DataFrame, volume_col: str = VOLUME_FOR_PRODUCTIVITY_TMP_COL
+    ) -> pd.DataFrame:
+        def _evaluate_upper_drop_at_volume(line: pd.Series) -> float:
+            coefs = [line[c] for c in HEIGHT_POLY_COLS]
+            if line[VOLUME_REGULATION_COL] == "M":
+                coefs_integral = [0] + [c / (i + 1) for i, c in enumerate(coefs)]
+                min_volume = line[LOWER_BOUND_COL]
+                max_volume = line[UPPER_BOUND_COL]
+                net_volume = max_volume - min_volume
+                percent_volume = line[volume_col] / net_volume
+                reversed_coefs_integral = list(reversed(coefs_integral))
+                min_integral = np.polyval(
+                    reversed_coefs_integral,
+                    min_volume,
+                )
+                max_integral = np.polyval(
+                    reversed_coefs_integral,
+                    percent_volume * net_volume + min_volume,
+                )
+                hmon = (max_integral - min_integral) / (percent_volume * net_volume)
+            else:
+                reversed_coefs = list(reversed(coefs))
+                hmon = np.polyval(
+                    reversed_coefs,
+                    line[RUN_OF_RIVER_REFERENCE_VOLUME_COL],
+                )
+            return hmon
+
+        def _fill_volume_run_of_river(line: pd.Series):
+            if pd.isna(line[volume_col]):
+                return 0.0
+            else:
+                return line[volume_col]
+
+        def _apply_losses(line: pd.Series, col: str):
+            if line[LOSS_KIND_COL] == 1:
+                return line[col] * (1 - line[LOSS_COL])
+            elif line[LOSS_KIND_COL] == 2:
+                return line[col] - line[LOSS_COL]
+
+        def _eval_productivity(df: pd.DataFrame):
+            df[UPPER_DROP_COL] = df.apply(_evaluate_upper_drop_at_volume, axis=1)
+            df[NET_DROP_COL] = df[UPPER_DROP_COL] - df[LOWER_DROP_COL]
+            df[volume_col] = df.apply(_fill_volume_run_of_river, axis=1)
+            df[PRODUCTIVITY_TMP_COL] = df[SPEC_PRODUCTIVITY_COL] * df.apply(
+                partial(_apply_losses, col=NET_DROP_COL), axis=1
+            )
+            df[PRODUCTIVITY_TMP_COL] *= HM3_M3S_MONTHLY_FACTOR
+            return df
+
+        return _eval_productivity(df)
+
+    @classmethod
+    def _accumulate_productivity(cls, df: pd.DataFrame) -> pd.DataFrame:
+        np_edges = list(df.reset_index()[[FOLLOWING_HYDRO_COL, "index"]].to_numpy())
+        edges = [tuple(e) for e in np_edges]
+        bfs = Graph(edges, directed=True).bfs(0)[1:]
+        for hydro_code in bfs:
+            downstream_hydro_code = df.at[
+                hydro_code,
+                FOLLOWING_HYDRO_COL,
+            ]
+            if downstream_hydro_code == 0:
+                continue
+            downstream_productivity = df.at[
+                downstream_hydro_code,
+                PRODUCTIVITY_TMP_COL,
+            ]
+            df.at[hydro_code, PRODUCTIVITY_TMP_COL] += downstream_productivity
+        return df
+
+    @classmethod
     def _hydro_accumulated_productivity_at_volume(
         cls,
         uow: AbstractUnitOfWork,
@@ -2442,90 +2525,13 @@ class Deck:
             hydros = cls.hydros(uow)
             return df.join(hydros[[FOLLOWING_HYDRO_COL]], how="inner")
 
-        def _evaluate_upper_drop_at_volume(line: pd.Series) -> float:
-            coefs = [line[c] for c in HEIGHT_POLY_COLS]
-            if line[VOLUME_REGULATION_COL] == "M":
-                coefs_integral = [0] + [c / (i + 1) for i, c in enumerate(coefs)]
-                min_volume = line[LOWER_BOUND_COL]
-                max_volume = line[UPPER_BOUND_COL]
-                net_volume = max_volume - min_volume
-                percent_volume = line[volume_col] / net_volume
-                reversed_coefs_integral = list(reversed(coefs_integral))
-                min_integral = np.polyval(
-                    reversed_coefs_integral,
-                    min_volume,
-                )
-                max_integral = np.polyval(
-                    reversed_coefs_integral,
-                    percent_volume * net_volume + min_volume,
-                )
-                hmon = (max_integral - min_integral) / (percent_volume * net_volume)
-            else:
-                reversed_coefs = list(reversed(coefs))
-                hmon = np.polyval(
-                    reversed_coefs,
-                    line[RUN_OF_RIVER_REFERENCE_VOLUME_COL],
-                )
-            return hmon
-
-        def _fill_volume_run_of_river(line: pd.Series):
-            if pd.isna(line[volume_col]):
-                return 0.0
-            else:
-                return line[volume_col]
-
-        def _apply_losses(line: pd.Series, col: str):
-            if line[LOSS_KIND_COL] == 1:
-                return line[NET_DROP_COL] * (1 - line[LOSS_COL])
-            elif line[LOSS_KIND_COL] == 2:
-                return line[NET_DROP_COL] - line[LOSS_COL]
-
-        def _eval_productivity(df: pd.DataFrame):
-            df[UPPER_DROP_COL] = df.apply(_evaluate_upper_drop_at_volume, axis=1)
-            df[NET_DROP_COL] = df[UPPER_DROP_COL] - df[LOWER_DROP_COL]
-            df[volume_col] = df.apply(_fill_volume_run_of_river, axis=1)
-            df[PRODUCTIVITY_TMP_COL] = df[SPEC_PRODUCTIVITY_COL] * df.apply(
-                partial(_apply_losses, col=NET_DROP_COL), axis=1
-            )
-            df[PRODUCTIVITY_TMP_COL] *= HM3_M3S_MONTHLY_FACTOR
-            return df
-
-        def _accumulate_productivity(df: pd.DataFrame) -> pd.DataFrame:
-            np_edges = list(df.reset_index()[[FOLLOWING_HYDRO_COL, "index"]].to_numpy())
-            edges = [tuple(e) for e in np_edges]
-            bfs = Graph(edges, directed=True).bfs(0)[1:]
-            for hydro_code in bfs:
-                downstream_hydro_code = df.at[
-                    hydro_code,
-                    FOLLOWING_HYDRO_COL,
-                ]
-                if downstream_hydro_code == 0:
-                    continue
-                downstream_productivity = df.at[
-                    downstream_hydro_code,
-                    PRODUCTIVITY_TMP_COL,
-                ]
-                df.at[hydro_code, PRODUCTIVITY_TMP_COL] += downstream_productivity
-            return df
-
-        FOLLOWING_HYDRO_COL = "codigo_usina_jusante"
-        LOSS_KIND_COL = "tipo_perda"
-        LOSS_COL = "perdas"
-        UPPER_DROP_COL = "hmon"
-        LOWER_DROP_COL = "canal_fuga_medio"
-        NET_DROP_COL = "hliq"
-        SPEC_PRODUCTIVITY_COL = "produtibilidade_especifica"
-        VOLUME_REGULATION_COL = "tipo_regulacao"
-        RUN_OF_RIVER_REFERENCE_VOLUME_COL = "volume_referencia"
-        HEIGHT_POLY_COLS = [f"a{i}_volume_cota" for i in range(5)]
-
         df = df.copy()
         df_cols = df.columns.tolist()
         df = _join_hidr_data(df)
         df = _join_bounds_data(df)
         df = _join_hydros_data(df)
-        df = _eval_productivity(df)
-        df = _accumulate_productivity(df)
+        df = cls._evaluate_productivity(df, volume_col=volume_col)
+        df = cls._accumulate_productivity(df)
         return df[df_cols + [PRODUCTIVITY_TMP_COL]]
 
     @classmethod
@@ -2615,7 +2621,6 @@ class Deck:
 
         df = df.rename(columns={ABSOLUTE_VALUE_COL: ABSOLUTE_VALUE_FINAL_COL})
 
-        print(df)
         return df[[EER_NAME_COL, ABSOLUTE_VALUE_FINAL_COL, PERCENT_VALUE_COL]]
 
     @classmethod

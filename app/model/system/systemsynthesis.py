@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import Optional
 from app.model.system.variable import Variable
 
 
@@ -17,7 +17,7 @@ class SystemSynthesis:
         )
 
 
-SUPPORTED_SYNTHESIS: List[str] = [
+SUPPORTED_SYNTHESIS: list[str] = [
     "EST",
     "PAT",
     "SBM",

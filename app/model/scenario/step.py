@@ -1,5 +1,4 @@
 from enum import Enum
-from typing import Dict, List
 from app.internal.constants import (
     ITERATION_COL,
     SPAN_COL,
@@ -22,8 +21,8 @@ class Step(Enum):
         return self.value
 
     @property
-    def short_name(self):
-        SHORT_NAMES: Dict[str, str] = {
+    def short_name(self) -> str | None:
+        SHORT_NAMES: dict[str, str] = {
             "FOR": "FOR",
             "BKW": "BKW",
             "SF": "SF",
@@ -31,8 +30,8 @@ class Step(Enum):
         return SHORT_NAMES.get(self.value)
 
     @property
-    def long_name(self):
-        LONG_NAMES: Dict[str, str] = {
+    def long_name(self) -> str | None:
+        LONG_NAMES: dict[str, str] = {
             "FOR": "Forward",
             "BKW": "Backward",
             "SF": "Simulação Final",
@@ -40,8 +39,8 @@ class Step(Enum):
         return LONG_NAMES.get(self.value)
 
     @property
-    def entity_df_columns(self) -> List[str]:
-        col_maps: Dict[Step, List[str]] = {
+    def entity_df_columns(self) -> list[str]:
+        col_maps: dict[Step, list[str]] = {
             Step.FORWARD: [ITERATION_COL],
             Step.BACKWARD: [ITERATION_COL, SPAN_COL],
             Step.FINAL_SIMULATION: [],
