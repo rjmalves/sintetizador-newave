@@ -213,9 +213,7 @@ def __sintetiza_com_mock(synthesis_str) -> Tuple[pd.DataFrame, pd.DataFrame]:
         OperationSynthetizer.clear_cache()
     m.assert_called()
     df = __obtem_dados_sintese_mock(synthesis_str, m)
-    df_meta = __obtem_dados_sintese_mock(
-        OPERATION_SYNTHESIS_METADATA_OUTPUT, m
-    )
+    df_meta = __obtem_dados_sintese_mock(OPERATION_SYNTHESIS_METADATA_OUTPUT, m)
     assert df is not None
     assert df_meta is not None
     return df, df_meta
@@ -230,9 +228,7 @@ def __sintetiza_com_mock_wildcard(synthesis_str) -> pd.DataFrame:
         OperationSynthetizer.synthetize([synthesis_str], uow)
         OperationSynthetizer.clear_cache()
     m.assert_called()
-    df_meta = __obtem_dados_sintese_mock(
-        OPERATION_SYNTHESIS_METADATA_OUTPUT, m
-    )
+    df_meta = __obtem_dados_sintese_mock(OPERATION_SYNTHESIS_METADATA_OUTPUT, m)
     assert df_meta is not None
     return df_meta
 
@@ -252,7 +248,6 @@ def __obtem_dados_sintese_mock(
 
 
 def test_calcula_patamar_medio_soma(test_settings):
-
     def __calcula_patamar_medio_soma(df: pd.DataFrame) -> pd.DataFrame:
         df_pat0 = df.copy()
         df_pat0 = df_pat0.groupby(["data", "serie"], as_index=False).sum(
@@ -280,7 +275,6 @@ def test_calcula_patamar_medio_soma(test_settings):
 
 
 def test_calcula_patamar_medio_soma_gter_ute(test_settings):
-
     def __calcula_patamar_medio_soma_gter_ute(
         df: pd.DataFrame,
     ) -> pd.DataFrame:
@@ -1380,7 +1374,6 @@ def test_sintese_evmin_sin(test_settings):
 
 
 def test_sintese_hjus_uhe(test_settings):
-
     def __adiciona_duracoes_patamares(df: pd.DataFrame) -> pd.DataFrame:
         arq_pat = Patamar.read(join(DECK_TEST_DIR, "patamar.dat"))
         df_pat = arq_pat.duracao_mensal_patamares
@@ -1438,7 +1431,6 @@ def test_sintese_hjus_uhe(test_settings):
 
 
 def test_sintese_hliq_uhe(test_settings):
-
     def __adiciona_duracoes_patamares(df: pd.DataFrame) -> pd.DataFrame:
         arq_pat = Patamar.read(join(DECK_TEST_DIR, "patamar.dat"))
         df_pat = arq_pat.duracao_mensal_patamares
@@ -1619,7 +1611,6 @@ def test_sintese_vinc_uhe(test_settings):
 
 
 def test_sintese_qdef_uhe(test_settings):
-
     def __calcula_patamar_medio_soma(df: pd.DataFrame) -> pd.DataFrame:
         df_pat0 = df.copy()
         df_pat0 = df_pat0.groupby(["data", "serie"], as_index=False).sum(

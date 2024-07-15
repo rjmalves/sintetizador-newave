@@ -1285,6 +1285,12 @@ class Deck:
 
         def _cast_perc_to_absolute(df: pd.DataFrame) -> pd.DataFrame:
             upper_bound_df = cls.stored_energy_upper_bounds(uow)
+            df = df.reset_index(drop=True).sort_values(
+                [EER_CODE_COL, START_DATE_COL]
+            )
+            upper_bound_df = upper_bound_df.reset_index(drop=True).sort_values(
+                [EER_CODE_COL, START_DATE_COL]
+            )
             df[VALUE_COL] = df[VALUE_COL] * upper_bound_df[VALUE_COL] / 100.0
             return df
 
@@ -1515,15 +1521,14 @@ class Deck:
             "stored_energy_upper_bounds"
         )
         if stored_energy_upper_bounds is None:
-            bounds_df = None
-            # bounds_df = cls._stored_energy_upper_bounds_pmo(uow)
+            # bounds_df = None
+            bounds_df = cls._stored_energy_upper_bounds_pmo(uow)
             if bounds_df is None:
                 bounds_df = cls._stored_energy_upper_bounds_inputs(uow)
             stored_energy_upper_bounds = bounds_df
             cls.DECK_DATA_CACHING["stored_energy_upper_bounds"] = (
                 stored_energy_upper_bounds
             )
-            stored_energy_upper_bounds.to_csv("teste.csv", index=False)
         return stored_energy_upper_bounds.copy()
 
     @classmethod
