@@ -2,6 +2,7 @@ from inewave.newave import (
     Dger,
     Ree,
     Confhd,
+    Dsvagua,
     Modif,
     Conft,
     Sistema,
@@ -165,6 +166,19 @@ class Deck:
                     )
                 raise RuntimeError()
             return confhd
+
+    @classmethod
+    def _get_dsvagua(cls, uow: AbstractUnitOfWork) -> Dsvagua:
+        with uow:
+            dsvagua = uow.files.get_dsvagua()
+            if dsvagua is None:
+                if cls.logger is not None:
+                    cls.logger.error(
+                        "Erro no processamento do dsvagua.dat para"
+                        + " síntese da operação"
+                    )
+                raise RuntimeError()
+            return dsvagua
 
     @classmethod
     def _get_modif(cls, uow: AbstractUnitOfWork) -> Modif:
@@ -1341,7 +1355,7 @@ class Deck:
             drops_df = drops_df.loc[
                 drops_df[START_DATE_COL] == stage_date
             ].set_index(HYDRO_CODE_COL)
-            return df.join(drops_df, how="inner")
+            return df.drop(columns=["usina"]).join(drops_df, how="inner")
 
         def _join_hydros_data(df: pd.DataFrame) -> pd.DataFrame:
             hydros = cls.hydros(uow).set_index(HYDRO_CODE_COL)
@@ -1492,37 +1506,31 @@ class Deck:
             )
             return df
 
-        stored_energy_upper_bounds = cls.DECK_DATA_CACHING.get(
-            "stored_energy_upper_bounds"
+        maximum_storage_df = cls.pmo(uow).energia_armazenada_maxima
+
+        if maximum_storage_df is None:
+            return None
+
+        maximum_storage_df = maximum_storage_df.rename(
+            columns={
+                "nome_ree": EER_NAME_COL,
+                "data": START_DATE_COL,
+                "valor_MWmes": VALUE_COL,
+            }
         )
-        if stored_energy_upper_bounds is None:
-            maximum_storage_df = cls._validate_data(
-                cls.pmo(uow).energia_armazenada_maxima,
-                pd.DataFrame,
-                "energia armazenada máxima",
-            )
-            maximum_storage_df = maximum_storage_df.rename(
-                columns={
-                    "nome_ree": EER_NAME_COL,
-                    "data": START_DATE_COL,
-                    "valor_MWmes": VALUE_COL,
-                }
-            )
-            configs_df = cls.configurations(uow)
-            configs_df = configs_df.rename(
-                columns={
-                    VALUE_COL: CONFIG_COL,
-                }
-            )
-            configs_df = _filter_study_period(configs_df)
-            configs_df = _add_entity_data(configs_df)
-            configs_df = _add_values(configs_df, maximum_storage_df)
-            stored_energy_upper_bounds = configs_df.sort_values(
-                [EER_CODE_COL, START_DATE_COL]
-            )
-            cls.DECK_DATA_CACHING["stored_energy_upper_bounds"] = (
-                stored_energy_upper_bounds
-            )
+        configs_df = cls.configurations(uow)
+        configs_df = configs_df.rename(
+            columns={
+                VALUE_COL: CONFIG_COL,
+            }
+        )
+        configs_df = _filter_study_period(configs_df)
+        configs_df = _add_entity_data(configs_df)
+        configs_df = _add_values(configs_df, maximum_storage_df)
+        stored_energy_upper_bounds = configs_df.sort_values(
+            [EER_CODE_COL, START_DATE_COL]
+        )
+
         return stored_energy_upper_bounds.copy()
 
     @classmethod
@@ -1533,7 +1541,6 @@ class Deck:
             "stored_energy_upper_bounds"
         )
         if stored_energy_upper_bounds is None:
-            # bounds_df = None
             bounds_df = cls._stored_energy_upper_bounds_pmo(uow)
             if bounds_df is None:
                 bounds_df = cls._stored_energy_upper_bounds_inputs(uow)
@@ -2023,6 +2030,80 @@ class Deck:
             hydros = hydros.astype({HYDRO_NAME_COL: STRING_DF_TYPE})
             cls.DECK_DATA_CACHING["hydros"] = hydros
         return hydros.copy()
+
+    @classmethod
+    def flow_diversion(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        def _filter_stages(
+            df: pd.DataFrame, uow: AbstractUnitOfWork
+        ) -> pd.DataFrame:
+            return df.loc[
+                df[START_DATE_COL].isin(
+                    cls.stages_starting_dates_final_simulation(uow)
+                )
+            ].copy()
+
+        def _add_missing_hydros(
+            df: pd.DataFrame, uow: AbstractUnitOfWork
+        ) -> pd.DataFrame:
+            hydros = cls.hydros(uow)
+            hydro_codes = hydros[HYDRO_CODE_COL].tolist()
+            hydro_codes_in_df = df[HYDRO_CODE_COL].unique().tolist()
+            missing_hydros = [
+                c for c in hydro_codes if c not in hydro_codes_in_df
+            ]
+            dfs_missing_hydros: list[pd.DataFrame] = []
+            for c in missing_hydros:
+                df_hydro = df.loc[
+                    df[HYDRO_CODE_COL] == hydro_codes_in_df[0]
+                ].copy()
+                df_hydro[HYDRO_CODE_COL] = c
+                dfs_missing_hydros.append(df_hydro)
+            df = pd.concat([df] + dfs_missing_hydros, ignore_index=True)
+            df = df.sort_values([HYDRO_CODE_COL, START_DATE_COL])
+            return df
+
+        def _make_bound_columns(df: pd.DataFrame) -> pd.DataFrame:
+            df[VALUE_COL] *= -1
+            df[LOWER_BOUND_COL] = df[VALUE_COL]
+            df[UPPER_BOUND_COL] = df[VALUE_COL]
+            df[LOWER_BOUND_UNIT_COL] = Unit.m3s.value
+            df[UPPER_BOUND_UNIT_COL] = Unit.m3s.value
+            return df
+
+        def _repeat_by_block(
+            df: pd.DataFrame, uow: AbstractUnitOfWork
+        ) -> pd.DataFrame:
+            df[BLOCK_COL] = 0
+            return df
+
+        flow_diversion = cls.DECK_DATA_CACHING.get("flow_diversion")
+        if flow_diversion is None:
+            flow_diversion = cls._validate_data(
+                cls._get_dsvagua(uow).desvios,
+                pd.DataFrame,
+                "desvio de água das hidrelétricas",
+            )
+            flow_diversion = flow_diversion.rename(
+                columns={
+                    "codigo_usina": HYDRO_CODE_COL,
+                    "data": START_DATE_COL,
+                }
+            )
+            flow_diversion = (
+                flow_diversion.groupby([HYDRO_CODE_COL, START_DATE_COL])[
+                    VALUE_COL
+                ]
+                .sum()
+                .reset_index()
+            )
+            flow_diversion = _filter_stages(flow_diversion, uow)
+            flow_diversion = _add_missing_hydros(flow_diversion, uow)
+            flow_diversion = _make_bound_columns(flow_diversion)
+            flow_diversion = _repeat_by_block(flow_diversion, uow)
+            flow_diversion = flow_diversion.reset_index(drop=True)
+
+            cls.DECK_DATA_CACHING["flow_diversion"] = flow_diversion
+        return flow_diversion.copy()
 
     @classmethod
     def _get_value_and_unit_from_modif_entry(
@@ -2917,6 +2998,7 @@ class Deck:
                 SPEC_PRODUCTIVITY_COL,
                 VOLUME_REGULATION_COL,
             ]
+            df.index.name = HYDRO_CODE_COL
             return df.join(
                 hidr[hidr_cols + HEIGHT_POLY_COLS],
                 how="inner",
@@ -2924,10 +3006,12 @@ class Deck:
 
         def _join_bounds_data(df: pd.DataFrame) -> pd.DataFrame:
             bounds_df = cls.hydro_volume_bounds_with_changes(uow)
+            bounds_df.index.name = HYDRO_CODE_COL
             return df.join(bounds_df, how="inner")
 
         def _join_hydros_data(df: pd.DataFrame) -> pd.DataFrame:
             hydros = cls.hydros(uow)
+            hydros.index.name = HYDRO_CODE_COL
             return df.join(hydros[[FOLLOWING_HYDRO_COL]], how="inner")
 
         df = df.copy()
@@ -2949,7 +3033,7 @@ class Deck:
             bounds_df = bounds_df.loc[
                 bounds_df[START_DATE_COL] == starting_date
             ].set_index(HYDRO_CODE_COL)
-            return df.join(bounds_df, how="inner")
+            return df.join(bounds_df.drop(columns=["usina"]), how="inner")
 
         def _volume_to_energy(df: pd.DataFrame) -> pd.DataFrame:
             df[ABSOLUTE_VALUE_COL] *= df[PRODUCTIVITY_TMP_COL]
@@ -2959,7 +3043,10 @@ class Deck:
             return df
 
         def _cast_to_eers_and_fill_missing(df: pd.DataFrame) -> pd.DataFrame:
-            df = df.join(cls.hydro_eer_submarket_map(uow), how="inner")
+            df = df.join(
+                cls.hydro_eer_submarket_map(uow).drop(columns=["usina"]),
+                how="inner",
+            )
             df = (
                 df[
                     [
