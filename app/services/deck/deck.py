@@ -1285,12 +1285,12 @@ class Deck:
 
         def _cast_perc_to_absolute(df: pd.DataFrame) -> pd.DataFrame:
             upper_bound_df = cls.stored_energy_upper_bounds(uow)
-            df = df.reset_index(drop=True).sort_values(
-                [EER_CODE_COL, START_DATE_COL]
+            df = df.sort_values([EER_CODE_COL, START_DATE_COL]).reset_index(
+                drop=True
             )
-            upper_bound_df = upper_bound_df.reset_index(drop=True).sort_values(
+            upper_bound_df = upper_bound_df.sort_values(
                 [EER_CODE_COL, START_DATE_COL]
-            )
+            ).reset_index(drop=True)
             df[VALUE_COL] = df[VALUE_COL] * upper_bound_df[VALUE_COL] / 100.0
             return df
 
