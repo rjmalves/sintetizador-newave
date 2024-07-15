@@ -803,13 +803,25 @@ class Deck:
         num_history_years = cls.DECK_DATA_CACHING.get("num_history_years")
         if num_history_years is None:
             shist = cls._get_shist(uow)
-            study_starting_year = cls.study_period_starting_year(uow)
-            history_starting_year = cls._validate_data(
-                shist.ano_inicio_varredura,
-                int,
-                "número de séries históricas na simulação",
-            )
-            num_history_years = study_starting_year - history_starting_year - 2
+            span = cls._validate_data(shist.varredura, int, "tipo de varredura")
+            if span == 1:
+                study_starting_year = cls.study_period_starting_year(uow)
+                history_starting_year = cls._validate_data(
+                    shist.ano_inicio_varredura,
+                    int,
+                    "número de séries históricas na simulação",
+                )
+                num_history_years = (
+                    study_starting_year - history_starting_year - 2
+                )
+            else:
+                num_history_years = len(
+                    cls._validate_data(
+                        shist.anos_inicio_simulacoes,
+                        list,
+                        "anos de início das simulações",
+                    )
+                )
             cls.DECK_DATA_CACHING["num_history_years"] = num_history_years
         return num_history_years
 
