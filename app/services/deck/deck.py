@@ -39,6 +39,8 @@ from inewave.newave.modelos.modif import (
     TURBMAXT,
     NUMCNJ,
     NUMMAQ,
+    CFUGA,
+    CMONT,
 )
 import logging
 from datetime import datetime, timedelta
@@ -145,7 +147,8 @@ class Deck:
             if ree is None:
                 if cls.logger is not None:
                     cls.logger.error(
-                        "Erro no processamento do ree.dat para" + " síntese da operação"
+                        "Erro no processamento do ree.dat para"
+                        + " síntese da operação"
                     )
                 raise RuntimeError()
             return ree
@@ -300,7 +303,8 @@ class Deck:
             if pmo is None:
                 if cls.logger is not None:
                     cls.logger.error(
-                        "Erro no processamento do pmo.dat para" + " síntese da operação"
+                        "Erro no processamento do pmo.dat para"
+                        + " síntese da operação"
                     )
                 raise RuntimeError()
             return pmo
@@ -340,13 +344,17 @@ class Deck:
             return energiaf
 
     @classmethod
-    def _get_enavazf(cls, iteracao: int, uow: AbstractUnitOfWork) -> Optional[Enavazf]:
+    def _get_enavazf(
+        cls, iteracao: int, uow: AbstractUnitOfWork
+    ) -> Optional[Enavazf]:
         with uow:
             enavazf = uow.files.get_enavazf(iteracao)
             return enavazf
 
     @classmethod
-    def _get_vazaof(cls, iteracao: int, uow: AbstractUnitOfWork) -> Optional[Vazaof]:
+    def _get_vazaof(
+        cls, iteracao: int, uow: AbstractUnitOfWork
+    ) -> Optional[Vazaof]:
         with uow:
             vazaof = uow.files.get_vazaof(iteracao)
             return vazaof
@@ -360,13 +368,17 @@ class Deck:
             return energiab
 
     @classmethod
-    def _get_enavazb(cls, iteracao: int, uow: AbstractUnitOfWork) -> Optional[Enavazb]:
+    def _get_enavazb(
+        cls, iteracao: int, uow: AbstractUnitOfWork
+    ) -> Optional[Enavazb]:
         with uow:
             enavazb = uow.files.get_enavazb(iteracao)
             return enavazb
 
     @classmethod
-    def _get_vazaob(cls, iteracao: int, uow: AbstractUnitOfWork) -> Optional[Vazaob]:
+    def _get_vazaob(
+        cls, iteracao: int, uow: AbstractUnitOfWork
+    ) -> Optional[Vazaob]:
         with uow:
             vazaob = uow.files.get_vazaob(iteracao)
             return vazaob
@@ -465,7 +477,9 @@ class Deck:
     def term(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         term = cls.DECK_DATA_CACHING.get("term")
         if term is None:
-            term = cls._validate_data(cls._get_term(uow).usinas, pd.DataFrame, "term")
+            term = cls._validate_data(
+                cls._get_term(uow).usinas, pd.DataFrame, "term"
+            )
             cls.DECK_DATA_CACHING["term"] = term
         return term.copy()
 
@@ -493,7 +507,9 @@ class Deck:
     def hidr(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         hidr = cls.DECK_DATA_CACHING.get("hidr")
         if hidr is None:
-            hidr = cls._validate_data(cls._get_hidr(uow).cadastro, pd.DataFrame, "hidr")
+            hidr = cls._validate_data(
+                cls._get_hidr(uow).cadastro, pd.DataFrame, "hidr"
+            )
             cls.DECK_DATA_CACHING["hidr"] = hidr
         return hidr.copy()
 
@@ -529,7 +545,9 @@ class Deck:
             if df is None:
                 return pd.DataFrame()
             else:
-                return df.rename(columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL})
+                return df.rename(
+                    columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL}
+                )
         else:
             return pd.DataFrame()
 
@@ -541,7 +559,9 @@ class Deck:
             if df is None:
                 return pd.DataFrame()
             else:
-                return df.rename(columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL})
+                return df.rename(
+                    columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL}
+                )
         else:
             return pd.DataFrame()
 
@@ -553,7 +573,9 @@ class Deck:
             if df is None:
                 return pd.DataFrame()
             else:
-                return df.rename(columns={"uhe": HYDRO_CODE_COL, "serie": SCENARIO_COL})
+                return df.rename(
+                    columns={"uhe": HYDRO_CODE_COL, "serie": SCENARIO_COL}
+                )
         else:
             return pd.DataFrame()
 
@@ -565,7 +587,9 @@ class Deck:
             if df is None:
                 return pd.DataFrame()
             else:
-                return df.rename(columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL})
+                return df.rename(
+                    columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL}
+                )
         else:
             return pd.DataFrame()
 
@@ -577,7 +601,9 @@ class Deck:
             if df is None:
                 return pd.DataFrame()
             else:
-                return df.rename(columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL})
+                return df.rename(
+                    columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL}
+                )
         else:
             return pd.DataFrame()
 
@@ -589,7 +615,9 @@ class Deck:
             if df is None:
                 return pd.DataFrame()
             else:
-                return df.rename(columns={"uhe": HYDRO_CODE_COL, "serie": SCENARIO_COL})
+                return df.rename(
+                    columns={"uhe": HYDRO_CODE_COL, "serie": SCENARIO_COL}
+                )
         else:
             return pd.DataFrame()
 
@@ -601,7 +629,9 @@ class Deck:
             if df is None:
                 return pd.DataFrame()
             else:
-                return df.rename(columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL})
+                return df.rename(
+                    columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL}
+                )
         else:
             return pd.DataFrame()
 
@@ -613,7 +643,9 @@ class Deck:
             if df is None:
                 return pd.DataFrame()
             else:
-                return df.rename(columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL})
+                return df.rename(
+                    columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL}
+                )
         else:
             return pd.DataFrame()
 
@@ -625,7 +657,9 @@ class Deck:
             if df is None:
                 return pd.DataFrame()
             else:
-                return df.rename(columns={"uhe": HYDRO_CODE_COL, "serie": SCENARIO_COL})
+                return df.rename(
+                    columns={"uhe": HYDRO_CODE_COL, "serie": SCENARIO_COL}
+                )
         else:
             return pd.DataFrame()
 
@@ -709,7 +743,9 @@ class Deck:
 
     @classmethod
     def num_study_period_years(cls, uow: AbstractUnitOfWork) -> int:
-        num_study_period_years = cls.DECK_DATA_CACHING.get("num_study_period_years")
+        num_study_period_years = cls.DECK_DATA_CACHING.get(
+            "num_study_period_years"
+        )
         if num_study_period_years is None:
             dger = cls.dger(uow)
             num_study_period_years = cls._validate_data(
@@ -717,15 +753,19 @@ class Deck:
                 int,
                 "número de anos do estudo",
             )
-            cls.DECK_DATA_CACHING["num_study_period_years"] = num_study_period_years
+            cls.DECK_DATA_CACHING["num_study_period_years"] = (
+                num_study_period_years
+            )
         return num_study_period_years
 
     @classmethod
     def num_post_study_period_years_final_simulation(
         cls, uow: AbstractUnitOfWork
     ) -> int:
-        num_post_study_period_years_final_simulation = cls.DECK_DATA_CACHING.get(
-            "num_post_study_period_years_final_simulation"
+        num_post_study_period_years_final_simulation = (
+            cls.DECK_DATA_CACHING.get(
+                "num_post_study_period_years_final_simulation"
+            )
         )
         if num_post_study_period_years_final_simulation is None:
             dger = cls.dger(uow)
@@ -734,13 +774,15 @@ class Deck:
                 int,
                 "número de anos do período pós-estudo na simulação",
             )
-            cls.DECK_DATA_CACHING["num_post_study_period_years_final_simulation"] = (
-                num_post_study_period_years_final_simulation
-            )
+            cls.DECK_DATA_CACHING[
+                "num_post_study_period_years_final_simulation"
+            ] = num_post_study_period_years_final_simulation
         return num_post_study_period_years_final_simulation
 
     @classmethod
-    def num_synthetic_scenarios_final_simulation(cls, uow: AbstractUnitOfWork) -> int:
+    def num_synthetic_scenarios_final_simulation(
+        cls, uow: AbstractUnitOfWork
+    ) -> int:
         num_synthetic_scenarios_final_simulation = cls.DECK_DATA_CACHING.get(
             "num_synthetic_scenarios_final_simulation"
         )
@@ -751,9 +793,9 @@ class Deck:
                 int,
                 "número de séries sintéticas na simulação",
             )
-            cls.DECK_DATA_CACHING["num_synthetic_scenarios_final_simulation"] = (
-                num_synthetic_scenarios_final_simulation
-            )
+            cls.DECK_DATA_CACHING[
+                "num_synthetic_scenarios_final_simulation"
+            ] = num_synthetic_scenarios_final_simulation
         return num_synthetic_scenarios_final_simulation
 
     @classmethod
@@ -796,7 +838,9 @@ class Deck:
         if thermal_maintenance_end_date is None:
             starting_year = cls.study_period_starting_year(uow)
             num_years = cls.num_thermal_maintenance_years(uow)
-            thermal_maintenance_end_date = datetime(starting_year + num_years, 1, 1)
+            thermal_maintenance_end_date = datetime(
+                starting_year + num_years, 1, 1
+            )
             cls.DECK_DATA_CACHING["thermal_maintenance_end_date"] = (
                 thermal_maintenance_end_date
             )
@@ -804,7 +848,9 @@ class Deck:
 
     @classmethod
     def final_simulation_type(cls, uow: AbstractUnitOfWork) -> int:
-        final_simulation_type = cls.DECK_DATA_CACHING.get("final_simulation_type")
+        final_simulation_type = cls.DECK_DATA_CACHING.get(
+            "final_simulation_type"
+        )
         if final_simulation_type is None:
             dger = cls.dger(uow)
             final_simulation_type = cls._validate_data(
@@ -812,7 +858,9 @@ class Deck:
                 int,
                 "tipo da simulação final",
             )
-            cls.DECK_DATA_CACHING["final_simulation_type"] = final_simulation_type
+            cls.DECK_DATA_CACHING["final_simulation_type"] = (
+                final_simulation_type
+            )
         return final_simulation_type
 
     @classmethod
@@ -872,7 +920,9 @@ class Deck:
                     month=int(mes_fim_hib),
                     day=1,
                 )
-                tempo_individualizado = data_fim_individualizado - data_inicio_estudo
+                tempo_individualizado = (
+                    data_fim_individualizado - data_inicio_estudo
+                )
                 num_hydro_simulation_stages_policy = int(
                     round(tempo_individualizado / timedelta(days=30))
                 )
@@ -887,14 +937,18 @@ class Deck:
     def num_hydro_simulation_stages_final_simulation(
         cls, uow: AbstractUnitOfWork
     ) -> int:
-        num_hydro_simulation_stages_final_simulation = cls.DECK_DATA_CACHING.get(
-            "num_hydro_simulation_stages_final_simulation"
+        num_hydro_simulation_stages_final_simulation = (
+            cls.DECK_DATA_CACHING.get(
+                "num_hydro_simulation_stages_final_simulation"
+            )
         )
         if num_hydro_simulation_stages_final_simulation is None:
             aggergation = cls.final_simulation_aggregation(uow)
             starting_month = cls.study_period_starting_month(uow)
             study_years = cls.num_study_period_years(uow)
-            post_study_years = cls.num_post_study_period_years_final_simulation(uow)
+            post_study_years = cls.num_post_study_period_years_final_simulation(
+                uow
+            )
             if aggergation == 1:
                 num_hydro_simulation_stages_final_simulation = (
                     study_years + post_study_years
@@ -904,21 +958,25 @@ class Deck:
                     cls.num_hydro_simulation_stages_policy(uow)
                 )
 
-            cls.DECK_DATA_CACHING["num_hydro_simulation_stages_final_simulation"] = (
-                num_hydro_simulation_stages_final_simulation
-            )
+            cls.DECK_DATA_CACHING[
+                "num_hydro_simulation_stages_final_simulation"
+            ] = num_hydro_simulation_stages_final_simulation
         return num_hydro_simulation_stages_final_simulation
 
     @classmethod
     def models_wind_generation(cls, uow: AbstractUnitOfWork) -> int:
-        models_wind_generation = cls.DECK_DATA_CACHING.get("models_wind_generation")
+        models_wind_generation = cls.DECK_DATA_CACHING.get(
+            "models_wind_generation"
+        )
         if models_wind_generation is None:
             models_wind_generation = cls._validate_data(
                 cls.dger(uow).considera_geracao_eolica != 0,
                 int,
                 "consideração da geração eólica",
             )
-            cls.DECK_DATA_CACHING["models_wind_generation"] = models_wind_generation
+            cls.DECK_DATA_CACHING["models_wind_generation"] = (
+                models_wind_generation
+            )
         return models_wind_generation
 
     @classmethod
@@ -938,7 +996,9 @@ class Deck:
         return scenario_generation_model_type
 
     @classmethod
-    def scenario_generation_model_max_order(cls, uow: AbstractUnitOfWork) -> int:
+    def scenario_generation_model_max_order(
+        cls, uow: AbstractUnitOfWork
+    ) -> int:
         scenario_generation_model_max_order = cls.DECK_DATA_CACHING.get(
             "scenario_generation_model_max_order"
         )
@@ -954,7 +1014,9 @@ class Deck:
         return scenario_generation_model_max_order
 
     @classmethod
-    def num_stages_with_past_tendency_period(cls, uow: AbstractUnitOfWork) -> int:
+    def num_stages_with_past_tendency_period(
+        cls, uow: AbstractUnitOfWork
+    ) -> int:
         scenario_model = cls.scenario_generation_model_type(uow)
         maximum_model_order = cls.scenario_generation_model_max_order(uow)
         past_stages = 12 if scenario_model != 0 else maximum_model_order
@@ -972,14 +1034,19 @@ class Deck:
         return starting_date_with_tendency
 
     @classmethod
-    def ending_date_with_post_study_period(cls, uow: AbstractUnitOfWork) -> datetime:
+    def ending_date_with_post_study_period(
+        cls, uow: AbstractUnitOfWork
+    ) -> datetime:
         starting_year = cls.study_period_starting_year(uow)
         study_years = cls.num_study_period_years(uow)
         post_study_years_in_simulation = (
             cls.num_post_study_period_years_final_simulation(uow)
         )
         ending_date_with_post_study_years = datetime(
-            year=starting_year + study_years + post_study_years_in_simulation - 1,
+            year=starting_year
+            + study_years
+            + post_study_years_in_simulation
+            - 1,
             month=12,
             day=1,
         )
@@ -1019,17 +1086,19 @@ class Deck:
             )
         )
         if internal_stages_starting_dates_policy_with_past_tendency is None:
-            internal_stages_starting_dates_policy_with_past_tendency = pd.date_range(
-                datetime(cls.study_period_starting_year(uow) - 1, 1, 1),
-                datetime(
-                    cls.study_period_starting_year(uow)
-                    + cls.num_study_period_years(uow)
-                    - 1,
-                    12,
-                    1,
-                ),
-                freq="MS",
-            ).tolist()
+            internal_stages_starting_dates_policy_with_past_tendency = (
+                pd.date_range(
+                    datetime(cls.study_period_starting_year(uow) - 1, 1, 1),
+                    datetime(
+                        cls.study_period_starting_year(uow)
+                        + cls.num_study_period_years(uow)
+                        - 1,
+                        12,
+                        1,
+                    ),
+                    freq="MS",
+                ).tolist()
+            )
             cls.DECK_DATA_CACHING[
                 "internal_stages_starting_dates_policy_with_past_tendency"
             ] = internal_stages_starting_dates_policy_with_past_tendency
@@ -1068,8 +1137,10 @@ class Deck:
     def internal_stages_starting_dates_final_simulation(
         cls, uow: AbstractUnitOfWork
     ) -> List[datetime]:
-        internal_stages_starting_dates_final_simulation = cls.DECK_DATA_CACHING.get(
-            "internal_stages_starting_dates_final_simulation"
+        internal_stages_starting_dates_final_simulation = (
+            cls.DECK_DATA_CACHING.get(
+                "internal_stages_starting_dates_final_simulation"
+            )
         )
         if internal_stages_starting_dates_final_simulation is None:
             internal_stages_starting_dates_final_simulation = pd.date_range(
@@ -1084,26 +1155,30 @@ class Deck:
                 ),
                 freq="MS",
             ).tolist()
-            cls.DECK_DATA_CACHING["internal_stages_starting_dates_final_simulation"] = (
-                internal_stages_starting_dates_final_simulation
-            )
+            cls.DECK_DATA_CACHING[
+                "internal_stages_starting_dates_final_simulation"
+            ] = internal_stages_starting_dates_final_simulation
         return internal_stages_starting_dates_final_simulation
 
     @classmethod
     def internal_stages_ending_dates_final_simulation(
         cls, uow: AbstractUnitOfWork
     ) -> List[datetime]:
-        internal_stages_ending_dates_final_simulation = cls.DECK_DATA_CACHING.get(
-            "internal_stages_ending_dates_final_simulation"
+        internal_stages_ending_dates_final_simulation = (
+            cls.DECK_DATA_CACHING.get(
+                "internal_stages_ending_dates_final_simulation"
+            )
         )
         if internal_stages_ending_dates_final_simulation is None:
             internal_stages_ending_dates_final_simulation = [
                 d + relativedelta(months=1)
-                for d in cls.internal_stages_starting_dates_final_simulation(uow)
+                for d in cls.internal_stages_starting_dates_final_simulation(
+                    uow
+                )
             ]
-            cls.DECK_DATA_CACHING["internal_stages_ending_dates_final_simulation"] = (
-                internal_stages_ending_dates_final_simulation
-            )
+            cls.DECK_DATA_CACHING[
+                "internal_stages_ending_dates_final_simulation"
+            ] = internal_stages_ending_dates_final_simulation
         return internal_stages_ending_dates_final_simulation
 
     @classmethod
@@ -1120,7 +1195,9 @@ class Deck:
             starting_year = cls.study_period_starting_year(uow)
             aggregation = cls.final_simulation_aggregation(uow)
             num_study_years = cls.num_study_period_years(uow)
-            post_study_years = cls.num_post_study_period_years_final_simulation(uow)
+            post_study_years = cls.num_post_study_period_years_final_simulation(
+                uow
+            )
             if aggregation == 1:
                 fim = datetime(
                     year=starting_year + num_study_years + post_study_years,
@@ -1150,14 +1227,18 @@ class Deck:
         pmo = cls.pmo(uow)
         configurations = pmo.configuracoes_qualquer_modificacao
         if isinstance(configurations, pd.DataFrame):
-            configurations = configurations.rename(columns={"data": START_DATE_COL})
+            configurations = configurations.rename(
+                columns={"data": START_DATE_COL}
+            )
         return configurations
 
     @classmethod
     def _configurations_dger(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         dates = cls.stages_starting_dates_final_simulation(uow)
         configurations = list(range(1, len(dates) + 1))
-        return pd.DataFrame(data={VALUE_COL: configurations, START_DATE_COL: dates})
+        return pd.DataFrame(
+            data={VALUE_COL: configurations, START_DATE_COL: dates}
+        )
 
     @classmethod
     def configurations(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
@@ -1171,7 +1252,9 @@ class Deck:
         return configurations.copy()
 
     @classmethod
-    def eer_stored_energy_lower_bounds(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def eer_stored_energy_lower_bounds(
+        cls, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
         """
         Obtem os limites inferiores de armazenamento de energia para
         cada REE, convertendo os valores de percentual para MWmes,
@@ -1188,12 +1271,16 @@ class Deck:
             missing_eers = list(set(eer_codes).difference(eers_minimum_storage))
             lower_bound_dfs = [df]
             for c in missing_eers:
-                eer_df = df.loc[df[EER_CODE_COL] == eers_minimum_storage[0]].copy()
+                eer_df = df.loc[
+                    df[EER_CODE_COL] == eers_minimum_storage[0]
+                ].copy()
                 eer_df[EER_CODE_COL] = c
                 eer_df[VALUE_COL] = 0.0
                 lower_bound_dfs.append(eer_df)
             lower_bound_df = pd.concat(lower_bound_dfs, ignore_index=True)
-            lower_bound_df = lower_bound_df.sort_values([EER_CODE_COL, START_DATE_COL])
+            lower_bound_df = lower_bound_df.sort_values(
+                [EER_CODE_COL, START_DATE_COL]
+            )
             return lower_bound_df
 
         def _cast_perc_to_absolute(df: pd.DataFrame) -> pd.DataFrame:
@@ -1229,31 +1316,24 @@ class Deck:
     def _stored_energy_upper_bounds_inputs(
         cls, uow: AbstractUnitOfWork
     ) -> pd.DataFrame | None:
-        def _join_hidr_data(df: pd.DataFrame) -> pd.DataFrame:
-            hidr = cls.hidr(uow)
-            hidr_cols = [
-                RUN_OF_RIVER_REFERENCE_VOLUME_COL,
-                LOSS_COL,
-                LOSS_KIND_COL,
-                LOWER_DROP_COL,
-                SPEC_PRODUCTIVITY_COL,
-                VOLUME_REGULATION_COL,
-            ]
-            return df.join(
-                hidr[hidr_cols + HEIGHT_POLY_COLS],
-                how="inner",
-            )
+        def _join_drop_data(
+            df: pd.DataFrame, stage_date: datetime
+        ) -> pd.DataFrame:
+            drops_df = cls.hydro_drops_in_stages(uow)
+            drops_df = drops_df.loc[
+                drops_df[START_DATE_COL] == stage_date
+            ].set_index(HYDRO_CODE_COL)
+            return df.join(drops_df, how="inner")
 
         def _join_hydros_data(df: pd.DataFrame) -> pd.DataFrame:
-            hydros = cls.hydros(uow)
+            hydros = cls.hydros(uow).set_index(HYDRO_CODE_COL)
             return df.join(hydros[[FOLLOWING_HYDRO_COL]], how="inner")
 
-        def _join_bounds_data(df: pd.DataFrame, stage_date: datetime) -> pd.DataFrame:
-            bounds_df = cls.hydro_volume_bounds_in_stages(uow)
-            bounds_df = bounds_df.loc[
-                bounds_df[START_DATE_COL] == stage_date
-            ].set_index(HYDRO_CODE_COL)
-            return df.join(bounds_df, how="inner")
+        def _join_bounds_data(df: pd.DataFrame) -> pd.DataFrame:
+            bounds_df = cls.hydro_volume_bounds_with_changes(uow)
+            return df.join(
+                bounds_df[[LOWER_BOUND_COL, UPPER_BOUND_COL]], how="inner"
+            )
 
         def _volume_to_energy(df: pd.DataFrame) -> pd.DataFrame:
             df[ABSOLUTE_VALUE_COL] *= df[PRODUCTIVITY_TMP_COL]
@@ -1298,7 +1378,8 @@ class Deck:
                     {
                         START_DATE_COL: dates,
                         CONFIG_COL: configurations_df.loc[
-                            configuration_df[START_DATE_COL].isin(dates), VALUE_COL
+                            configuration_df[START_DATE_COL].isin(dates),
+                            VALUE_COL,
                         ].to_numpy(),
                         EER_CODE_COL: [eer] * len(dates),
                         EER_NAME_COL: [eers.at[eer, EER_NAME_COL]] * len(dates),
@@ -1317,7 +1398,6 @@ class Deck:
         ABSOLUTE_VALUE_COL = "valor_hm3"
 
         df = cls.initial_stored_volume(uow).set_index(HYDRO_CODE_COL)
-
         dfs: list[pd.DataFrame] = []
         configuration_df = cls.configurations(uow)
         dates = cls.stages_starting_dates_final_simulation(uow)
@@ -1327,10 +1407,12 @@ class Deck:
                 continue
             # Calcula prodts no máximo
             stage_df = df.copy()
-            stage_df = _join_hidr_data(stage_df)
-            stage_df = _join_bounds_data(stage_df, configuration_date)
+            stage_df = _join_drop_data(stage_df, configuration_date)
+            stage_df = _join_bounds_data(stage_df)
             stage_df = _join_hydros_data(stage_df)
-            stage_df[ABSOLUTE_VALUE_COL] = stage_df[UPPER_BOUND_COL]
+            stage_df[ABSOLUTE_VALUE_COL] = (
+                stage_df[UPPER_BOUND_COL] - stage_df[LOWER_BOUND_COL]
+            )
             stage_df = cls._evaluate_productivity(
                 stage_df, volume_col=ABSOLUTE_VALUE_COL
             )
@@ -1355,11 +1437,12 @@ class Deck:
                 VALUE_COL,
             ]
         ]
-
         return df
 
     @classmethod
-    def _stored_energy_upper_bounds_pmo(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def _stored_energy_upper_bounds_pmo(
+        cls, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
         """
         Obtem os limites superiores de armazenamento de energia para
         cada REE em MWmes, para o período de estudo.
@@ -1425,20 +1508,22 @@ class Deck:
         return stored_energy_upper_bounds.copy()
 
     @classmethod
-    def stored_energy_upper_bounds(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def stored_energy_upper_bounds(
+        cls, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
         stored_energy_upper_bounds = cls.DECK_DATA_CACHING.get(
             "stored_energy_upper_bounds"
         )
         if stored_energy_upper_bounds is None:
-            # bounds_df = None
-            bounds_df = cls._stored_energy_upper_bounds_pmo(uow)
+            bounds_df = None
+            # bounds_df = cls._stored_energy_upper_bounds_pmo(uow)
             if bounds_df is None:
                 bounds_df = cls._stored_energy_upper_bounds_inputs(uow)
             stored_energy_upper_bounds = bounds_df
             cls.DECK_DATA_CACHING["stored_energy_upper_bounds"] = (
                 stored_energy_upper_bounds
             )
-            # stored_energy_upper_bounds.to_csv("teste.csv", index=False)
+            stored_energy_upper_bounds.to_csv("teste.csv", index=False)
         return stored_energy_upper_bounds.copy()
 
     @classmethod
@@ -1515,8 +1600,12 @@ class Deck:
                 ].copy()
                 last_month: pd.Timestamp = thermal_df[START_DATE_COL].max()
                 last_day = last_month.daysinmonth
-                thermal_df.loc[-1, START_DATE_COL] = last_month.replace(day=last_day)
-                thermal_df = thermal_df.set_index(START_DATE_COL).resample("D").ffill()
+                thermal_df.loc[-1, START_DATE_COL] = last_month.replace(
+                    day=last_day
+                )
+                thermal_df = (
+                    thermal_df.set_index(START_DATE_COL).resample("D").ffill()
+                )
                 thermal_df["potencia_instalada"] = thermal_df[
                     "potencia_instalada"
                 ].ffill()
@@ -1528,7 +1617,9 @@ class Deck:
                     num_days = line["duracao"]
                     value = line["potencia"]
                     end_date = start_date + timedelta(days=num_days - 1)
-                    thermal_df.loc[start_date:end_date, "potencia_instalada"] -= value
+                    thermal_df.loc[
+                        start_date:end_date, "potencia_instalada"
+                    ] -= value
                 thermal_df = thermal_df.resample("MS").mean().reset_index()
                 df.loc[
                     (df[THERMAL_CODE_COL] == code)
@@ -1562,9 +1653,9 @@ class Deck:
             num_stages = len(dates)
             df = pd.concat([df] * num_stages, ignore_index=True)
             df[START_DATE_COL] = np.repeat(dates, num_thermals)
-            return df.sort_values([THERMAL_CODE_COL, START_DATE_COL]).reset_index(
-                drop=True
-            )
+            return df.sort_values(
+                [THERMAL_CODE_COL, START_DATE_COL]
+            ).reset_index(drop=True)
 
         def _add_term_lower_bounds(
             df: pd.DataFrame, term: pd.DataFrame, uow: AbstractUnitOfWork
@@ -1636,7 +1727,9 @@ class Deck:
         bounds_df = _expand_to_stages(bounds_df, uow)
         bounds_df = _add_term_lower_bounds(bounds_df, term, uow)
         bounds_df = _enforce_null_lower_bounds_on_changes(bounds_df, uow)
-        bounds_df = cls._apply_thermal_bounds_maintenance_and_changes(bounds_df, uow)
+        bounds_df = cls._apply_thermal_bounds_maintenance_and_changes(
+            bounds_df, uow
+        )
         bounds_df = _eval_upper_bounds(bounds_df)
         bounds_df = bounds_df[
             [
@@ -1650,7 +1743,9 @@ class Deck:
         return bounds_df
 
     @classmethod
-    def _thermal_generation_bounds_pmo(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def _thermal_generation_bounds_pmo(
+        cls, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
         """
         - codigo_usina (`int`)
         - nome_usina (`str`)
@@ -1669,7 +1764,9 @@ class Deck:
             )
             upper_bounds = pmo.geracao_maxima_usinas_termicas
             if isinstance(bounds_df, pd.DataFrame):
-                bounds_df[UPPER_BOUND_COL] = upper_bounds["valor_MWmed"].to_numpy()
+                bounds_df[UPPER_BOUND_COL] = upper_bounds[
+                    "valor_MWmed"
+                ].to_numpy()
         return bounds_df
 
     @classmethod
@@ -1734,26 +1831,30 @@ class Deck:
             em MWmed e P.U. e das durações de cada patamar. Estes limites
             são compatíveis com o visto no nwlistop.
             """
-            exchange_block_bounds_df[VALUE_COL] = exchange_block_bounds_df.apply(
-                lambda linha: exchange_average_bounds_df.loc[
-                    (
-                        exchange_average_bounds_df[EXCHANGE_SOURCE_CODE_COL]
-                        == linha[EXCHANGE_SOURCE_CODE_COL]
-                    )
-                    & (
-                        exchange_average_bounds_df[EXCHANGE_TARGET_CODE_COL]
-                        == linha[EXCHANGE_TARGET_CODE_COL]
-                    )
-                    & (
-                        exchange_average_bounds_df[START_DATE_COL]
-                        == linha[START_DATE_COL]
-                    ),
-                    VALUE_COL,
-                ].iloc[0]
-                * linha[VALUE_COL],
-                axis=1,
+            exchange_block_bounds_df[VALUE_COL] = (
+                exchange_block_bounds_df.apply(
+                    lambda linha: exchange_average_bounds_df.loc[
+                        (
+                            exchange_average_bounds_df[EXCHANGE_SOURCE_CODE_COL]
+                            == linha[EXCHANGE_SOURCE_CODE_COL]
+                        )
+                        & (
+                            exchange_average_bounds_df[EXCHANGE_TARGET_CODE_COL]
+                            == linha[EXCHANGE_TARGET_CODE_COL]
+                        )
+                        & (
+                            exchange_average_bounds_df[START_DATE_COL]
+                            == linha[START_DATE_COL]
+                        ),
+                        VALUE_COL,
+                    ].iloc[0]
+                    * linha[VALUE_COL],
+                    axis=1,
+                )
             )
-            block_length_df = block_length_df.sort_values([START_DATE_COL, BLOCK_COL])
+            block_length_df = block_length_df.sort_values(
+                [START_DATE_COL, BLOCK_COL]
+            )
             n_pares_limites = exchange_block_bounds_df.drop_duplicates(
                 [EXCHANGE_SOURCE_CODE_COL, EXCHANGE_TARGET_CODE_COL]
             ).shape[0]
@@ -1858,7 +1959,9 @@ class Deck:
     def eers(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         eers = cls.DECK_DATA_CACHING.get("eers")
         if eers is None:
-            eers = cls._validate_data(cls._get_ree(uow).rees, pd.DataFrame, "REEs")
+            eers = cls._validate_data(
+                cls._get_ree(uow).rees, pd.DataFrame, "REEs"
+            )
             eers = eers.rename(
                 columns={
                     "codigo": EER_CODE_COL,
@@ -1929,6 +2032,10 @@ class Deck:
             return r.turbinamento, Unit.m3s.value
         elif isinstance(r, TURBMAXT):
             return r.turbinamento, Unit.m3s.value
+        elif isinstance(r, CMONT):
+            return r.nivel, ""
+        elif isinstance(r, CFUGA):
+            return r.nivel, ""
         return None, None
 
     @classmethod
@@ -1949,7 +2056,9 @@ class Deck:
         for idx in df.index:
             hydro_changes = modif.modificacoes_usina(idx)
             if hydro_changes is not None:
-                regs_usina = [r for r in hydro_changes if isinstance(r, register_type)]
+                regs_usina = [
+                    r for r in hydro_changes if isinstance(r, register_type)
+                ]
                 if len(regs_usina) > 0:
                     r = regs_usina[-1]
                     value, unit = cls._get_value_and_unit_from_modif_entry(r)
@@ -1965,7 +2074,11 @@ class Deck:
         df: pd.DataFrame,
         hydro_data_col: str,
         hydro_data_unit_col: str,
-        register_type: Type[Union[VMINT, VMAXT, VAZMINT, VAZMAXT, TURBMINT, TURBMAXT]],
+        register_type: Type[
+            Union[
+                VMINT, VMAXT, VAZMINT, VAZMAXT, TURBMINT, TURBMAXT, CFUGA, CMONT
+            ]
+        ],
         uow: AbstractUnitOfWork,
     ) -> pd.DataFrame:
         """
@@ -1988,6 +2101,8 @@ class Deck:
                     r for r in hydro_changes if isinstance(r, register_type)
                 ]
                 for reg in hydro_registers:
+                    if reg.data_inicio not in dates:
+                        continue
                     idx_data = dates.index(reg.data_inicio)  # type: ignore
                     value, unit = cls._get_value_and_unit_from_modif_entry(reg)
                     df.loc[i_i + idx_data : i_f, hydro_data_col] = value
@@ -2027,7 +2142,9 @@ class Deck:
         return hydro_volume_bounds.copy()
 
     @classmethod
-    def hydro_volume_bounds_with_changes(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def hydro_volume_bounds_with_changes(
+        cls, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
         """
         Obtém um DataFrame com os limites de volume armazenado
         de cada usina hidrelétrica, sem considerar modificações que variam
@@ -2046,7 +2163,9 @@ class Deck:
             )
             return df
 
-        def _cast_bounds_to_hm3(df: pd.DataFrame, hm3_df: pd.DataFrame) -> pd.DataFrame:
+        def _cast_bounds_to_hm3(
+            df: pd.DataFrame, hm3_df: pd.DataFrame
+        ) -> pd.DataFrame:
             def _min_volume(hydro_code: int) -> float:
                 return hm3_df.at[hydro_code, LOWER_BOUND_COL]
 
@@ -2086,7 +2205,9 @@ class Deck:
         return hydro_volume_bounds_with_changes.copy()
 
     @classmethod
-    def hydro_volume_bounds_in_stages(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def hydro_volume_bounds_in_stages(
+        cls, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
         """
         Obtém um DataFrame com os limites de volume armazenado de cada usina
         hidrelétrica para cada estágio do problema, considerando possíveis
@@ -2117,7 +2238,9 @@ class Deck:
             )
             return df
 
-        def _cast_bounds_to_hm3(df: pd.DataFrame, hm3_df: pd.DataFrame) -> pd.DataFrame:
+        def _cast_bounds_to_hm3(
+            df: pd.DataFrame, hm3_df: pd.DataFrame
+        ) -> pd.DataFrame:
             def _min_volume(line: pd.Series) -> float:
                 hydro_code = line[HYDRO_CODE_COL]
                 date = line[START_DATE_COL]
@@ -2168,7 +2291,9 @@ class Deck:
         return hydro_volume_bounds_in_stages.copy()
 
     @classmethod
-    def hydro_turbined_flow_bounds(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def hydro_turbined_flow_bounds(
+        cls, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
         """
         Obtém um DataFrame com os limites cadastrais de vazão turbinada
         de cada usina hidrelétrica.
@@ -2207,7 +2332,9 @@ class Deck:
         if hydro_turbined_flow_bounds is None:
             hydro_turbined_flow_bounds = _get_hydro_data(uow)
             entities = cls.hydro_eer_submarket_map(uow)
-            hydro_turbined_flow_bounds = hydro_turbined_flow_bounds.join(entities)
+            hydro_turbined_flow_bounds = hydro_turbined_flow_bounds.join(
+                entities
+            )
             cls.DECK_DATA_CACHING["hydro_turbined_flow_bounds"] = (
                 hydro_turbined_flow_bounds
             )
@@ -2223,7 +2350,9 @@ class Deck:
         no tempo.
         """
 
-        def _apply_changes_to_hydro_data(df: pd.DataFrame, uow: AbstractUnitOfWork):
+        def _apply_changes_to_hydro_data(
+            df: pd.DataFrame, uow: AbstractUnitOfWork
+        ):
             modif = cls.modif(uow)
             for idx in df.index:
                 hydro_changes = modif.modificacoes_usina(idx)
@@ -2280,7 +2409,9 @@ class Deck:
         if hydro_turbined_flow_bounds_with_changes is None:
             hydro_turbined_flow_bounds = _get_hydro_data(uow)
             entities = cls.hydro_eer_submarket_map(uow)
-            hydro_turbined_flow_bounds = hydro_turbined_flow_bounds.join(entities)
+            hydro_turbined_flow_bounds = hydro_turbined_flow_bounds.join(
+                entities
+            )
             hydro_turbined_flow_bounds_with_changes = hydro_turbined_flow_bounds
             cls.DECK_DATA_CACHING["hydro_turbined_flow_bounds_with_changes"] = (
                 hydro_turbined_flow_bounds_with_changes
@@ -2320,7 +2451,9 @@ class Deck:
             num_blocks = cls.num_blocks(uow) + 1
             df = pd.concat([df] * num_blocks, ignore_index=True)
             df = df.sort_values([HYDRO_CODE_COL, START_DATE_COL])
-            df[BLOCK_COL] = np.tile(np.arange(num_blocks), num_hydros * num_stages)
+            df[BLOCK_COL] = np.tile(
+                np.arange(num_blocks), num_hydros * num_stages
+            )
             return df.sort_values(
                 [HYDRO_CODE_COL, START_DATE_COL, BLOCK_COL]
             ).reset_index(drop=True)
@@ -2386,7 +2519,9 @@ class Deck:
         return hydro_outflow_bounds.copy()
 
     @classmethod
-    def hydro_outflow_bounds_with_changes(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def hydro_outflow_bounds_with_changes(
+        cls, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
         """
         Obtém um DataFrame com os limites de vazão turbinada
         de cada usina hidrelétrica, sem considerar modificações que variam
@@ -2416,7 +2551,9 @@ class Deck:
         return hydro_outflow_bounds_with_changes.copy()
 
     @classmethod
-    def hydro_outflow_bounds_in_stages(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def hydro_outflow_bounds_in_stages(
+        cls, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
         """
         Obtém um DataFrame com os limites de vazão turbinada de cada usina
         hidrelétrica para cada estágio do problema, considerando possíveis
@@ -2446,7 +2583,9 @@ class Deck:
             num_blocks = cls.num_blocks(uow) + 1
             df = pd.concat([df] * num_blocks, ignore_index=True)
             df = df.sort_values([HYDRO_CODE_COL, START_DATE_COL])
-            df[BLOCK_COL] = np.tile(np.arange(num_blocks), num_hydros * num_stages)
+            df[BLOCK_COL] = np.tile(
+                np.arange(num_blocks), num_hydros * num_stages
+            )
             return df.sort_values(
                 [HYDRO_CODE_COL, START_DATE_COL, BLOCK_COL]
             ).reset_index(drop=True)
@@ -2472,6 +2611,86 @@ class Deck:
                 hydro_outflow_bounds_in_stages
             )
         return hydro_outflow_bounds_in_stages.copy()
+
+    @classmethod
+    def hydro_drops(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        """
+        Obtém um DataFrame com os dados cadastrais de níveis de canal
+        de montante e jusante, perdas e regularização
+        de cada usina hidrelétrica.
+        """
+
+        def _get_hydro_data(uow: AbstractUnitOfWork) -> pd.DataFrame:
+            df = cls.hidr(uow).reset_index()
+            hydro_codes = cls.hydro_code_order(uow)
+            df = df.loc[
+                df[HYDRO_CODE_COL].isin(hydro_codes),
+                HEIGHT_POLY_COLS
+                + [
+                    HYDRO_CODE_COL,
+                    LOWER_DROP_COL,
+                    LOSS_KIND_COL,
+                    LOSS_COL,
+                    VOLUME_REGULATION_COL,
+                    RUN_OF_RIVER_REFERENCE_VOLUME_COL,
+                    SPEC_PRODUCTIVITY_COL,
+                ],
+            ].set_index(HYDRO_CODE_COL)
+            return df
+
+        hydro_drops = cls.DECK_DATA_CACHING.get("hydro_drops")
+        if hydro_drops is None:
+            hydro_drops = _get_hydro_data(uow)
+            entities = cls.hydro_eer_submarket_map(uow)
+            hydro_drops = hydro_drops.join(entities)
+            cls.DECK_DATA_CACHING["hydro_drops"] = hydro_drops
+        return hydro_drops.copy()
+
+    @classmethod
+    def hydro_drops_in_stages(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        """
+        Obtém um DataFrame com os dados cadastrais de níveis de canal
+        de montante e jusante, perdas e regularização
+        de cada usina hidrelétrica, considerando possíveis
+        modificações.
+        """
+
+        def _expand_to_stages(
+            df: pd.DataFrame, uow: AbstractUnitOfWork
+        ) -> pd.DataFrame:
+            df = df.reset_index()
+            num_hydros = df.shape[0]
+            dates = np.array(cls.stages_starting_dates_final_simulation(uow))
+            num_stages = len(dates)
+            df = pd.concat([df] * num_stages, ignore_index=True)
+            df[START_DATE_COL] = np.repeat(dates, num_hydros)
+            return df.sort_values([HYDRO_CODE_COL, START_DATE_COL]).reset_index(
+                drop=True
+            )
+
+        def _add_hydro_drops_changes_to_stages(
+            df: pd.DataFrame, uow: AbstractUnitOfWork
+        ) -> pd.DataFrame:
+            df = cls._get_hydro_data_changes_from_modif_to_stages(
+                df, HEIGHT_POLY_COLS[0], LOWER_BOUND_UNIT_COL, CMONT, uow
+            )
+            df = cls._get_hydro_data_changes_from_modif_to_stages(
+                df, LOWER_DROP_COL, UPPER_BOUND_UNIT_COL, CFUGA, uow
+            )
+            return df
+
+        hydro_drops_in_stages = cls.DECK_DATA_CACHING.get(
+            "hydro_drops_in_stages"
+        )
+        if hydro_drops_in_stages is None:
+            df = cls.hydro_drops(uow)
+            df = _expand_to_stages(df, uow)
+            df = _add_hydro_drops_changes_to_stages(df.copy(), uow)
+            hydro_drops_in_stages = df
+            cls.DECK_DATA_CACHING["hydro_drops_in_stages"] = (
+                hydro_drops_in_stages
+            )
+        return hydro_drops_in_stages.copy()
 
     @classmethod
     def thermals(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
@@ -2547,7 +2766,9 @@ class Deck:
             )
             return df_pat
 
-        exchange_block_limits = cls.DECK_DATA_CACHING.get("exchange_block_limits")
+        exchange_block_limits = cls.DECK_DATA_CACHING.get(
+            "exchange_block_limits"
+        )
         if exchange_block_limits is None:
             exchange_block_limits = cls._validate_data(
                 cls._get_patamar(uow).intercambio_patamares,
@@ -2562,7 +2783,9 @@ class Deck:
                 }
             )
             exchange_block_limits = __eval_pat0(exchange_block_limits)
-            cls.DECK_DATA_CACHING["exchange_block_limits"] = exchange_block_limits
+            cls.DECK_DATA_CACHING["exchange_block_limits"] = (
+                exchange_block_limits
+            )
         return exchange_block_limits.copy()
 
     @classmethod
@@ -2578,11 +2801,15 @@ class Deck:
         def _evaluate_upper_drop_at_volume(line: pd.Series) -> float:
             coefs = [line[c] for c in HEIGHT_POLY_COLS]
             if line[VOLUME_REGULATION_COL] == "M":
-                coefs_integral = [0] + [c / (i + 1) for i, c in enumerate(coefs)]
+                coefs_integral = [0] + [
+                    c / (i + 1) for i, c in enumerate(coefs)
+                ]
                 min_volume = line[LOWER_BOUND_COL]
                 max_volume = line[UPPER_BOUND_COL]
                 net_volume = max_volume - min_volume
-                percent_volume = line[volume_col] / net_volume if net_volume > 0 else 0
+                percent_volume = (
+                    line[volume_col] / net_volume if net_volume > 0 else 0
+                )
                 reversed_coefs_integral = list(reversed(coefs_integral))
                 min_integral = np.polyval(
                     reversed_coefs_integral,
@@ -2592,7 +2819,9 @@ class Deck:
                     reversed_coefs_integral,
                     percent_volume * net_volume + min_volume,
                 )
-                hmon = (max_integral - min_integral) / (percent_volume * net_volume)
+                hmon = (max_integral - min_integral) / (
+                    percent_volume * net_volume
+                )
             else:
                 reversed_coefs = list(reversed(coefs))
                 hmon = np.polyval(
@@ -2614,7 +2843,9 @@ class Deck:
                 return line[col] - line[LOSS_COL]
 
         def _eval_productivity(df: pd.DataFrame):
-            df[UPPER_DROP_COL] = df.apply(_evaluate_upper_drop_at_volume, axis=1)
+            df[UPPER_DROP_COL] = df.apply(
+                _evaluate_upper_drop_at_volume, axis=1
+            )
             df[NET_DROP_COL] = df[UPPER_DROP_COL] - df[LOWER_DROP_COL]
             df[volume_col] = df.apply(_fill_volume_run_of_river, axis=1)
             df[PRODUCTIVITY_TMP_COL] = df[SPEC_PRODUCTIVITY_COL] * df.apply(
@@ -2627,7 +2858,9 @@ class Deck:
 
     @classmethod
     def _accumulate_productivity(cls, df: pd.DataFrame) -> pd.DataFrame:
-        np_edges = list(df.reset_index()[[FOLLOWING_HYDRO_COL, "index"]].to_numpy())
+        np_edges = list(
+            df.reset_index()[[FOLLOWING_HYDRO_COL, HYDRO_CODE_COL]].to_numpy()
+        )
         edges = [tuple(e) for e in np_edges]
         bfs = Graph(edges, directed=True).bfs(0)[1:]
         for hydro_code in bfs:
@@ -2784,15 +3017,21 @@ class Deck:
 
     @classmethod
     def initial_stored_energy(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        initial_stored_energy = cls.DECK_DATA_CACHING.get("initial_stored_energy")
+        initial_stored_energy = cls.DECK_DATA_CACHING.get(
+            "initial_stored_energy"
+        )
         if initial_stored_energy is None:
             initial_stored_energy = cls._initial_stored_energy_from_pmo(uow)
             if initial_stored_energy is None:
-                initial_stored_energy = cls._initial_stored_energy_from_confhd_hidr(uow)
+                initial_stored_energy = (
+                    cls._initial_stored_energy_from_confhd_hidr(uow)
+                )
             initial_stored_energy = cls._validate_data(
                 initial_stored_energy, pd.DataFrame, "EARM inicial"
             )
-            cls.DECK_DATA_CACHING["initial_stored_energy"] = initial_stored_energy
+            cls.DECK_DATA_CACHING["initial_stored_energy"] = (
+                initial_stored_energy
+            )
         return initial_stored_energy.copy()
 
     @classmethod
@@ -2833,7 +3072,9 @@ class Deck:
         df.loc[df["tipo_regulacao"] != "M", "valor_hm3"] = np.nan
         df.loc[df["tipo_regulacao"] != "M", "valor_percentual"] = 0.0
 
-        return df[[HYDRO_NAME_COL, "valor_hm3", "valor_percentual"]].reset_index()
+        return df[
+            [HYDRO_NAME_COL, "valor_hm3", "valor_percentual"]
+        ].reset_index()
 
     @classmethod
     def _initial_stored_volume_pre_study_condition(
@@ -2845,18 +3086,26 @@ class Deck:
 
     @classmethod
     def initial_stored_volume(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        initial_stored_volume = cls.DECK_DATA_CACHING.get("initial_stored_volume")
+        initial_stored_volume = cls.DECK_DATA_CACHING.get(
+            "initial_stored_volume"
+        )
         if initial_stored_volume is None:
             initial_stored_volume = cls._initial_stored_volume_from_pmo(uow)
             if initial_stored_volume is None:
-                initial_stored_volume = cls._initial_stored_volume_from_confhd_hidr(uow)
+                initial_stored_volume = (
+                    cls._initial_stored_volume_from_confhd_hidr(uow)
+                )
             initial_stored_volume = cls._validate_data(
                 initial_stored_volume, pd.DataFrame, "VARM inicial"
             )
-            initial_stored_volume = cls._initial_stored_volume_pre_study_condition(
-                initial_stored_volume, uow
+            initial_stored_volume = (
+                cls._initial_stored_volume_pre_study_condition(
+                    initial_stored_volume, uow
+                )
             )
-            cls.DECK_DATA_CACHING["initial_stored_volume"] = initial_stored_volume
+            cls.DECK_DATA_CACHING["initial_stored_volume"] = (
+                initial_stored_volume
+            )
         return initial_stored_volume.copy()
 
     @classmethod
