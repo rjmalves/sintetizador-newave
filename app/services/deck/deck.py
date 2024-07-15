@@ -1156,8 +1156,8 @@ class Deck:
     @classmethod
     def _configurations_dger(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         dates = cls.stages_starting_dates_final_simulation(uow)
-        conigurations = list(range(1, len(dates) + 1))
-        return pd.DataFrame(data={VALUE_COL: conigurations, START_DATE_COL: dates})
+        configurations = list(range(1, len(dates) + 1))
+        return pd.DataFrame(data={VALUE_COL: configurations, START_DATE_COL: dates})
 
     @classmethod
     def configurations(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
@@ -1259,7 +1259,9 @@ class Deck:
             df[ABSOLUTE_VALUE_COL] *= df[PRODUCTIVITY_TMP_COL]
             return df
 
-        def _cast_to_eers_and_fill_missing(df: pd.DataFrame) -> pd.DataFrame:
+        def _cast_to_eers_and_fill_missing(
+            df: pd.DataFrame, configurations_df: pd.DataFrame
+        ) -> pd.DataFrame:
             df = (
                 df[
                     [
@@ -1291,14 +1293,14 @@ class Deck:
             ]
             missing_dfs: list[pd.DataFrame] = []
             dates = df[START_DATE_COL].unique()
-            configurations = df[CONFIG_COL].unique()
             print(dates)
-            print(configurations)
             for eer in missing_eers:
                 missing_df = pd.DataFrame(
                     {
                         START_DATE_COL: dates,
-                        CONFIG_COL: configurations,
+                        CONFIG_COL: configurations_df.loc[
+                            configuration_df[START_DATE_COL].isin(dates), VALUE_COL
+                        ].to_numpy(),
                         EER_CODE_COL: [eer] * len(dates),
                         EER_NAME_COL: [eers.at[eer, EER_NAME_COL]] * len(dates),
                         SUBMARKET_CODE_COL: [eers.at[eer, SUBMARKET_CODE_COL]]
@@ -1341,7 +1343,7 @@ class Deck:
 
         df = pd.concat(dfs, ignore_index=True)
         df = _volume_to_energy(df)
-        df = _cast_to_eers_and_fill_missing(df)
+        df = _cast_to_eers_and_fill_missing(df, configuration_df)
 
         df = df.rename(columns={ABSOLUTE_VALUE_COL: VALUE_COL})
 
