@@ -1,3 +1,5 @@
+from importlib.util import find_spec
+
 STAGE_DURATION_HOURS = 730
 
 HM3_M3S_MONTHLY_FACTOR = 1.0 / 2.63
@@ -120,11 +122,7 @@ QUANTILES_FOR_STATISTICS = [0.05 * i for i in range(21)]
 
 import pandas  # type: ignore # noqa: E402
 
-__has_numba = True
-try:
-    import numba  # type: ignore # noqa: E402
-except ImportError:
-    __has_numba = False
+__has_numba = find_spec("numba") is not None
 if pandas.__version__ >= "2.2.0" and __has_numba:
     PANDAS_GROUPING_ENGINE = "numba"
 else:
