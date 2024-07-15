@@ -1292,6 +1292,8 @@ class Deck:
             missing_dfs: list[pd.DataFrame] = []
             dates = df[START_DATE_COL].unique()
             configurations = df[CONFIG_COL].unique()
+            print(dates)
+            print(configurations)
             for eer in missing_eers:
                 missing_df = pd.DataFrame(
                     {
