@@ -1293,7 +1293,6 @@ class Deck:
             ]
             missing_dfs: list[pd.DataFrame] = []
             dates = df[START_DATE_COL].unique()
-            print(dates)
             for eer in missing_eers:
                 missing_df = pd.DataFrame(
                     {
@@ -1312,9 +1311,7 @@ class Deck:
                 )
                 missing_dfs.append(missing_df)
             df = pd.concat([df] + missing_dfs, ignore_index=True)
-            df[EER_CODE_COL] = pd.Categorical(df[EER_CODE_COL], categories=eer_codes)
-            df = df.sort_values([START_DATE_COL, CONFIG_COL, EER_CODE_COL])
-            df[EER_CODE_COL] = df[EER_CODE_COL].astype(int)
+            df = df.sort_values([EER_CODE_COL, START_DATE_COL, CONFIG_COL])
             return df
 
         ABSOLUTE_VALUE_COL = "valor_hm3"
@@ -1358,9 +1355,6 @@ class Deck:
                 VALUE_COL,
             ]
         ]
-
-        # print(df)
-        # df.to_csv("teste.csv", index=False)
 
         return df
 
@@ -1444,6 +1438,7 @@ class Deck:
             cls.DECK_DATA_CACHING["stored_energy_upper_bounds"] = (
                 stored_energy_upper_bounds
             )
+            # stored_energy_upper_bounds.to_csv("teste.csv", index=False)
         return stored_energy_upper_bounds.copy()
 
     @classmethod
