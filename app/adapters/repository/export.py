@@ -4,6 +4,7 @@ import pandas as pd  # type: ignore
 import pyarrow as pa  # type: ignore
 import pyarrow.parquet as pq  # type: ignore
 import pathlib
+from app.utils.tz import enforce_utc
 
 
 class AbstractExportRepository(ABC):
@@ -25,7 +26,7 @@ class ParquetExportRepository(AbstractExportRepository):
 
     def synthetize_df(self, df: pd.DataFrame, filename: str) -> bool:
         pq.write_table(
-            pa.Table.from_pandas(df),
+            pa.Table.from_pandas(enforce_utc(df)),
             self.path.joinpath(filename + ".parquet"),
             write_statistics=False,
             flavor="spark",
@@ -44,7 +45,9 @@ class CSVExportRepository(AbstractExportRepository):
         return pathlib.Path(self.__path)
 
     def synthetize_df(self, df: pd.DataFrame, filename: str) -> bool:
-        df.to_csv(self.path.joinpath(filename + ".csv"), index=False)
+        enforce_utc(df).to_csv(
+            self.path.joinpath(filename + ".csv"), index=False
+        )
         return True
 
 
