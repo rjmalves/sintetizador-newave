@@ -1768,7 +1768,7 @@ class Deck:
                 }
             )
             upper_bounds = pmo.geracao_maxima_usinas_termicas
-            if isinstance(bounds_df, pd.DataFrame):
+            if isinstance(upper_bounds, pd.DataFrame):
                 bounds_df[UPPER_BOUND_COL] = upper_bounds[
                     "valor_MWmed"
                 ].to_numpy()
@@ -2106,7 +2106,7 @@ class Deck:
                     r for r in hydro_changes if isinstance(r, register_type)
                 ]
                 for reg in hydro_registers:
-                    if reg.data_inicio not in dates:
+                    if reg.data_inicio not in dates:  # type: ignore
                         continue
                     idx_data = dates.index(reg.data_inicio)  # type: ignore
                     value, unit = cls._get_value_and_unit_from_modif_entry(reg)
