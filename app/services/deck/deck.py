@@ -1298,7 +1298,7 @@ class Deck:
                         START_DATE_COL: dates,
                         CONFIG_COL: configurations,
                         EER_CODE_COL: [eer] * len(dates),
-                        EER_NAME_COL: eers.at[eer, EER_NAME_COL],
+                        EER_NAME_COL: [eers.at[eer, EER_NAME_COL]] * len(dates),
                         SUBMARKET_CODE_COL: [eers.at[eer, SUBMARKET_CODE_COL]]
                         * len(dates),
                         SUBMARKET_NAME_COL: [eers.at[eer, SUBMARKET_NAME_COL]]
