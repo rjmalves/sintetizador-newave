@@ -1430,8 +1430,8 @@ class Deck:
             "stored_energy_upper_bounds"
         )
         if stored_energy_upper_bounds is None:
-            bounds_df = None
-            # bounds_df = cls._stored_energy_upper_bounds_pmo(uow)
+            # bounds_df = None
+            bounds_df = cls._stored_energy_upper_bounds_pmo(uow)
             if bounds_df is None:
                 bounds_df = cls._stored_energy_upper_bounds_inputs(uow)
             stored_energy_upper_bounds = bounds_df
