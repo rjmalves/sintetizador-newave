@@ -130,7 +130,7 @@ dmypy.json
 
 # Saidas
 **.parquet.gzip
-# **.parquet
+**.parquet
 
 test_case/
 test.py

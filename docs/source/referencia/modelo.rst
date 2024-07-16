@@ -20,6 +20,7 @@ Informações da representação do sistema existente e alvo da otimização.
    * - VARIÁVEL
      - `MNEMÔNICO`
    * - Estágios
+     - `EST`
    * - Patamares
      - `PAT`
    * - Submercados
@@ -316,7 +317,7 @@ que estão disponíveis no modelo.
      - `FOR`, `BKW`, `SF`
 
 .. list-table:: Sínteses da Operação Existentes
-   :widths: 50 10 10
+   :widths: 50 10
    :header-rows: 1
 
    * - VARIÁVEL
@@ -328,7 +329,6 @@ que estão disponíveis no modelo.
    * - `COP`
      - `SIN`
    * - `CFU`
-     - 
      - 
    * - `CMO`
      - `SBM`
@@ -354,9 +354,7 @@ que estão disponíveis no modelo.
      - `SIN`, `SBM`, `REE`
    * - `EVERT`
      - 
-     - 
    * - `EVERNT`
-     - 
      - 
    * - `EVERFT`
      - `SIN`, `SBM`, `REE`
@@ -370,12 +368,10 @@ que estão disponíveis no modelo.
      - `SBP`
    * - `MER`
      - 
-     - 
    * - `MERL`
      - `SIN`, `SBM`
    * - `HLIQ`
      - `UHE`
-     - `PAT`
    * - `VAGUA`
      - `REE`, `UHE`
    * - `QAFL`
