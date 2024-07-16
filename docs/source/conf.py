@@ -19,7 +19,7 @@ import plotly.io as pio
 pio.renderers.default = "sphinx_gallery"
 
 sys.path.insert(0, os.path.abspath("../../"))
-from sintetizador import __version__  # noqa: E402
+from app import __version__  # noqa: E402
 
 
 # -- Project information -----------------------------------------------------
@@ -78,7 +78,7 @@ exclude_patterns: List[str] = []
 
 add_module_names = False
 pygments_style = "sphinx"
-modindex_common_prefix = ["idessem."]
+modindex_common_prefix = ["app."]
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -87,8 +87,14 @@ modindex_common_prefix = ["idessem."]
 #
 html_theme = "sphinx_rtd_theme"
 html_theme_options = {
-    "navigation_depth": 5,
+    # Toc options
+    "collapse_navigation": False,
+    "sticky_navigation": True,
+    "navigation_depth": 4,
+    "includehidden": True,
+    "titles_only": False,
 }
+
 github_url = "https://github.com/rjmalves/sintetizador-newave"
 
 # Add any paths that contain custom static files (such as style sheets) here,

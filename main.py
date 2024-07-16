@@ -1,4 +1,4 @@
-from sintetizador.app import app
+from app.app import app
 import os
 import pathlib
 

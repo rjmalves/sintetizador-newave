@@ -5,26 +5,29 @@ Sintetizador do NEWAVE
 
 **Data:** |today|
 
-O *sintetizador-newave* é um pacote Python para formatação dos arquivos de saída do modelo `NEWAVE <https://www.cepel.br/linhas-de-pesquisa/newave/>`_. O NEWAVE é
+O *sintetizador-newave* é uma aplicação CLI para formatação dos arquivos de saída do modelo `NEWAVE <https://www.cepel.br/linhas-de-pesquisa/newave/>`_. O NEWAVE é
 desenvolvido pelo `CEPEL <http://www.cepel.br/>`_ e utilizado para a planejamento da operação do Sistema Interligado Nacional (SIN).
 
 .. toctree::
    :caption: Apresentação 
    :maxdepth: 3
-   :hidden:
 
-   ./install.rst
-
-.. toctree::
-   :caption: Referência 
-   :maxdepth: 3
-   :hidden:
-
-   ./reference.rst
+   apresentacao/apresentacao.rst
 
 .. toctree::
-   :caption: Exemplos 
+   :caption: Geral 
    :maxdepth: 3
-   :hidden:
 
+   geral/instalacao
+   geral/tutorial
    examples/index.rst
+   geral/contribuicao
+
+.. toctree::
+   :caption: Referência
+   :maxdepth: 2
+
+   referencia/saidas
+   referencia/modelo
+
+:ref:`genindex`

@@ -1,0 +1,15 @@
+RES   USINAS PERTENCENTES AO CONJUNTO
+XXX   XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX
+  1   287 285                                
+  2   172                                    
+  3   176                                    
+  4   178                                    
+999
+RES MM/AAAA MM/AAAA P       RESTRICAO
+XXX XX XXXX XX XXXX X XXXXXXXXXXXXXXX
+  1 10 2023 10 2023 0    7363.41      ESCOAMENTO MADEIRA     
+  1 11 2023 11 2023 0    7406.30      ESCOAMENTO MADEIRA     
+  2 10 2023 11 2023 0     442.53      REGRA ANA              
+  3 10 2023 11 2023 0    1021.27      REGRA ANA              
+  4 10 2023 11 2023 0    1078.06      REGRA ANA              
+999

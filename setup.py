@@ -1,4 +1,5 @@
 from setuptools import setup, find_packages
+from app import __version__
 
 long_description = "sintetizador_newave"
 
@@ -9,7 +10,7 @@ with open("requirements.txt", "r") as fh:
 
 setup(
     name="sintetizador_newave",
-    version="1.2.0",
+    version=__version__,
     author="Rogerio Alves",
     author_email="rogerioalves.ee@gmail.com",
     description="sintetizador_newave",
@@ -17,9 +18,9 @@ setup(
     install_requires=requirements,
     packages=find_packages(),
     py_modules=["main", "sintetizador"],
-    python_requires=">=3.8",
+    python_requires=">=3.10",
     classifiers=[
-        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.10",
         "Operating System :: OS Independent",
     ],
     entry_points="""

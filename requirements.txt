@@ -2,3 +2,4 @@ click
 pandas
 pyarrow
 inewave>=1.5.0
+numba

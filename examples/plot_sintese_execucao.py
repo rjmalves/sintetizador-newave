@@ -4,68 +4,75 @@ Síntese da Execução
 ========================================
 """
 
-#%%
+# %%
 # Para realizar a síntese da execução de um caso do NEWAVE é necessário estar em um diretório
 # no qual estão os principais arquivos de saída do modelo. Por exemplo, para se realizar a
 # síntese de tempo de execução, é necessario o `newave.tim`. Para a síntese da convergência,
 # o `pmo.dat`. Neste contexto, basta fazer::
 #
-#    $ sintetizador-newave execucao CONVERGENCIA CUSTOS TEMPO
+#    $ sintetizador-newave execucao
 #
 
-#%%
+# %%
 # O sintetizador irá exibir o log da sua execução::
 #
-#    >>> 2023-02-10 01:27:19,894 INFO: # Realizando síntese da EXECUÇÃO #
-#    >>> 2023-02-10 01:27:19,894 INFO: Realizando síntese de CONVERGENCIA
-#    >>> 2023-02-10 01:27:19,897 INFO: Lendo arquivo pmo.dat
-#    >>> 2023-02-10 01:27:26,532 INFO: Realizando síntese de CUSTOS
-#    >>> 2023-02-10 01:27:26,585 INFO: Realizando síntese de TEMPO
-#    >>> 2023-02-10 01:27:26,585 INFO: Lendo arquivo newave.tim
-#    >>> 2023-02-10 01:27:26,592 INFO: # Fim da síntese #
+#    >>> 2024-04-22 10:33:42,304 INFO: # Realizando síntese da EXECUÇÃO #
+#    >>> 2024-04-22 10:33:42,306 INFO: Realizando síntese de PROGRAMA
+#    >>> 2024-04-22 10:33:42,315 INFO: Tempo para sintese de PROGRAMA: 0.01 s
+#    >>> 2024-04-22 10:33:42,315 INFO: Realizando síntese de CONVERGENCIA
+#    >>> 2024-04-22 10:33:42,941 INFO: Tempo para sintese de CONVERGENCIA: 0.63 s
+#    >>> 2024-04-22 10:33:42,942 INFO: Realizando síntese de TEMPO
+#    >>> 2024-04-22 10:33:42,946 INFO: Tempo para sintese de TEMPO: 0.00 s
+#    >>> 2024-04-22 10:33:42,946 INFO: Realizando síntese de CUSTOS
+#    >>> 2024-04-22 10:33:42,948 INFO: Tempo para sintese de CUSTOS: 0.00 s
+#    >>> 2024-04-22 10:33:42,951 INFO: Tempo para sintese da execucao: 0.65 s
+#    >>> 2024-04-22 10:33:42,951 INFO: # Fim da síntese #
 
-
-#%%
+# %%
 # Os arquivos serão salvos no subdiretório `sintese`. Para realizar o processamento,
 # pode ser utilizado o próprio `python`:
 import plotly.express as px
 import pandas as pd
 
-convergencia = pd.read_parquet("sintese/CONVERGENCIA.parquet.gzip")
-custos = pd.read_parquet("sintese/CUSTOS.parquet.gzip")
-tempo = pd.read_parquet("sintese/TEMPO.parquet.gzip")
+convergencia = pd.read_parquet("sintese/CONVERGENCIA.parquet")
+custos = pd.read_parquet("sintese/CUSTOS.parquet")
+tempo = pd.read_parquet("sintese/TEMPO.parquet")
 
-#%%
+# %%
 # O formato dos dados de CONVERGÊNCIA:
-convergencia.head(10)
+print(convergencia.head(10))
 
-#%%
+# %%
 # O formato dos dados de CUSTOS:
-custos.head(10)
+print(custos.head(10))
 
-#%%
+# %%
 # O formato dos dados de TEMPO:
-tempo.head(5)
+print(tempo.head(5))
 
-#%%
+# %%
 # Cada arquivo pode ser visualizado de diferentes maneiras, a depender da aplicação.
 # Por exemplo, é comum avaliar a convergência do modelo através da variação do Zinf.
 
 fig = px.line(
     convergencia,
-    x="iter",
-    y="dZinf",
+    x="iteracao",
+    y="delta_zinf",
 )
 fig
 
-#%%
+# %%
 # Quando se analisam os custos de cada fonte, geralmente são feitos gráficos de barras
 # empilhadas ou setores:
 
-fig = px.pie(custos.loc[custos["mean"] > 0], values="mean", names="parcela")
+fig = px.pie(
+    custos.loc[custos["valor_esperado"] > 0],
+    values="valor_esperado",
+    names="parcela",
+)
 fig
 
-#%%
+# %%
 # Uma abordagem semelhante é utilizada na análise do tempo de execução:
 from datetime import timedelta
 

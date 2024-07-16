@@ -1,0 +1,131 @@
+from importlib.util import find_spec
+
+STAGE_DURATION_HOURS = 730
+
+HM3_M3S_MONTHLY_FACTOR = 1.0 / 2.63
+
+NULL_INFLOW_STATION = 300
+
+HYDRO_CODE_COL = "codigo_usina"
+HYDRO_NAME_COL = "usina"
+THERMAL_CODE_COL = "codigo_usina"
+THERMAL_NAME_COL = "usina"
+EER_CODE_COL = "codigo_ree"
+EER_NAME_COL = "ree"
+EEP_COL = "pee"
+SUBMARKET_CODE_COL = "codigo_submercado"
+SUBMARKET_NAME_COL = "submercado"
+EXCHANGE_SOURCE_CODE_COL = "codigo_submercado_de"
+EXCHANGE_SOURCE_NAME_COL = "submercado_de"
+EXCHANGE_TARGET_CODE_COL = "codigo_submercado_para"
+EXCHANGE_TARGET_NAME_COL = "submercado_para"
+STAGE_COL = "estagio"
+START_DATE_COL = "data_inicio"
+END_DATE_COL = "data_fim"
+SCENARIO_COL = "cenario"
+BLOCK_COL = "patamar"
+BLOCK_DURATION_COL = "duracao_patamar"
+VALUE_COL = "valor"
+LOWER_BOUND_COL = "limite_inferior"
+UPPER_BOUND_COL = "limite_superior"
+VARIABLE_COL = "variavel"
+
+GROUPING_TMP_COL = "group"
+SYSTEM_GROUPING_COL = "sin"
+
+FOLLOWING_HYDRO_COL = "codigo_usina_jusante"
+HEIGHT_POLY_COLS = [f"a{i}_volume_cota" for i in range(5)]
+LOSS_KIND_COL = "tipo_perda"
+LOSS_COL = "perdas"
+LOWER_DROP_COL = "canal_fuga_medio"
+SPEC_PRODUCTIVITY_COL = "produtibilidade_especifica"
+VOLUME_REGULATION_COL = "tipo_regulacao"
+RUN_OF_RIVER_REFERENCE_VOLUME_COL = "volume_referencia"
+
+UPPER_DROP_COL = "hmon"
+NET_DROP_COL = "hliq"
+PRODUCTIVITY_TMP_COL = "prod"
+VOLUME_FOR_PRODUCTIVITY_TMP_COL = "vol_prod"
+
+LOWER_BOUND_UNIT_COL = "unidade_limite_inferior"
+UPPER_BOUND_UNIT_COL = "unidade_limite_superior"
+UNIT_COL = "unidade"
+
+ITERATION_COL = "iteracao"
+SPAN_COL = "abertura"
+LTA_COL = "mlt"
+LTA_VALUE_COL = "valor_mlt"
+MONTH_COL = "mes"
+DATE_COL = "data"
+CONFIG_COL = "configuracao"
+
+STATS_OR_SCENARIO_COL = "estatistica_ou_cenario"
+
+
+IDENTIFICATION_COLUMNS = [
+    START_DATE_COL,
+    END_DATE_COL,
+    STAGE_COL,
+    SUBMARKET_CODE_COL,
+    SUBMARKET_NAME_COL,
+    EXCHANGE_SOURCE_CODE_COL,
+    EXCHANGE_SOURCE_NAME_COL,
+    EXCHANGE_TARGET_CODE_COL,
+    EXCHANGE_TARGET_NAME_COL,
+    HYDRO_CODE_COL,
+    HYDRO_NAME_COL,
+    THERMAL_CODE_COL,
+    THERMAL_NAME_COL,
+    EER_CODE_COL,
+    EER_NAME_COL,
+    BLOCK_COL,
+    BLOCK_DURATION_COL,
+    SCENARIO_COL,
+    STATS_OR_SCENARIO_COL,
+]
+
+OPERATION_SYNTHESIS_COMMON_COLUMNS = [
+    STAGE_COL,
+    START_DATE_COL,
+    END_DATE_COL,
+    SCENARIO_COL,
+    BLOCK_COL,
+    BLOCK_DURATION_COL,
+    VALUE_COL,
+]
+
+
+SCENARIO_SYNTHESIS_COMMON_COLUMNS = [
+    STAGE_COL,
+    START_DATE_COL,
+    END_DATE_COL,
+    SCENARIO_COL,
+    VALUE_COL,
+    LTA_VALUE_COL,
+]
+
+
+EXECUTION_SYNTHESIS_METADATA_OUTPUT = "METADADOS_EXECUCAO"
+OPERATION_SYNTHESIS_METADATA_OUTPUT = "METADADOS_OPERACAO"
+OPERATION_SYNTHESIS_STATS_ROOT = "ESTATISTICAS_OPERACAO"
+SCENARIO_SYNTHESIS_METADATA_OUTPUT = "METADADOS_CENARIOS"
+SCENARIO_SYNTHESIS_STATS_ROOT = "ESTATISTICAS_CENARIOS"
+POLICY_SYNTHESIS_METADATA_OUTPUT = "METADADOS_POLITICA"
+SYSTEM_SYNTHESIS_METADATA_OUTPUT = "METADADOS_SISTEMA"
+EXECUTION_SYNTHESIS_SUBDIR = ""
+OPERATION_SYNTHESIS_SUBDIR = ""
+SCENARIO_SYNTHESIS_SUBDIR = ""
+POLICY_SYNTHESIS_SUBDIR = ""
+SYSTEM_SYNTHESIS_SUBDIR = ""
+
+QUANTILES_FOR_STATISTICS = [0.05 * i for i in range(21)]
+
+import pandas  # type: ignore # noqa: E402
+
+__has_numba = find_spec("numba") is not None
+if pandas.__version__ >= "2.2.0" and __has_numba:
+    PANDAS_GROUPING_ENGINE = "numba"
+else:
+    PANDAS_GROUPING_ENGINE = "cython"
+
+STRING_DF_TYPE = pandas.StringDtype(storage="pyarrow")
