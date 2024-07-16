@@ -3,7 +3,7 @@ pandas
 pyarrow
 inewave>=1.5.0
 numba
-pylama
+ruff
 mypy
 pytest-cov
 pytest
