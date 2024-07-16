@@ -1,3 +1,10 @@
+# v1.2.0 (v1-compat)
+
+- Versão de compatibilidade com a séries de releases major `1.x`
+- Última versão antes da reformulação do formato das sínteses (pré `2.0`)
+- Síntese em formato compatível com `pyspark` para ingestão em ambiente analíticos
+- Correções diversas em variáveis da síntese da operação e cenários
+
 # v1.1.0
 
 - Compatibilização com `inewave` após a primeira major release (>= 1.4.0)

@@ -9,7 +9,7 @@ with open("requirements.txt", "r") as fh:
 
 setup(
     name="sintetizador_newave",
-    version="1.0.0",
+    version="1.2.0",
     author="Rogerio Alves",
     author_email="rogerioalves.ee@gmail.com",
     description="sintetizador_newave",
