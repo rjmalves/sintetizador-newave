@@ -30,7 +30,6 @@ from app.internal.constants import (
 
 
 class SystemSynthetizer:
-
     DEFAULT_SYSTEM_SYNTHESIS_ARGS = SUPPORTED_SYNTHESIS
 
     T = TypeVar("T")
@@ -130,7 +129,7 @@ class SystemSynthetizer:
 
     @classmethod
     def __resolve_SBM(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        df = Deck.submarkets(uow)
+        df = Deck.submarkets(uow).reset_index()
         return df[[SUBMARKET_CODE_COL, SUBMARKET_NAME_COL]]
 
     @classmethod

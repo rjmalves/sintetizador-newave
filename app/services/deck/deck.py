@@ -1263,7 +1263,7 @@ class Deck:
         dates = cls.stages_starting_dates_final_simulation(uow)
         configurations = list(range(1, len(dates) + 1))
         return pd.DataFrame(
-            data={VALUE_COL: configurations, START_DATE_COL: dates}
+            data={START_DATE_COL: dates, VALUE_COL: configurations}
         )
 
     @classmethod
@@ -1358,7 +1358,7 @@ class Deck:
             return df.drop(columns=["usina"]).join(drops_df, how="inner")
 
         def _join_hydros_data(df: pd.DataFrame) -> pd.DataFrame:
-            hydros = cls.hydros(uow).set_index(HYDRO_CODE_COL)
+            hydros = cls.hydros(uow)
             return df.join(hydros[[FOLLOWING_HYDRO_COL]], how="inner")
 
         def _join_bounds_data(df: pd.DataFrame) -> pd.DataFrame:
@@ -1368,6 +1368,7 @@ class Deck:
             )
 
         def _volume_to_energy(df: pd.DataFrame) -> pd.DataFrame:
+            df.loc[df[VOLUME_REGULATION_COL] != "M", ABSOLUTE_VALUE_COL] = 0.0
             df[ABSOLUTE_VALUE_COL] *= df[PRODUCTIVITY_TMP_COL]
             return df
 
@@ -1468,7 +1469,7 @@ class Deck:
                 SUBMARKET_NAME_COL,
                 VALUE_COL,
             ]
-        ]
+        ].reset_index(drop=True)
         return df
 
     @classmethod
@@ -1531,7 +1532,7 @@ class Deck:
             [EER_CODE_COL, START_DATE_COL]
         )
 
-        return stored_energy_upper_bounds.copy()
+        return stored_energy_upper_bounds.reset_index(drop=True)
 
     @classmethod
     def stored_energy_upper_bounds(
@@ -1653,6 +1654,12 @@ class Deck:
 
             return df
 
+        maintenance_end_date = cls.thermal_maintenance_end_date(uow)
+        # Por padrão desconsidera IP no início do estudo
+        df.loc[
+            df[START_DATE_COL] < maintenance_end_date,
+            "indisponibilidade_programada",
+        ] = 0.0
         df = _apply_thermal_changes(df, uow)
         df = _apply_maintenance(df, uow)
         return df
@@ -1711,7 +1718,7 @@ class Deck:
             df: pd.DataFrame, uow: AbstractUnitOfWork
         ) -> pd.DataFrame:
             expt = cls.expt(uow)
-            # TODO - encontra as UTEs com modificacao de GTMIN
+            # encontra as UTEs com modificacao de GTMIN
             thermals_to_nullify = expt.loc[
                 expt["tipo"] == "GTMIN", "codigo_usina"
             ].unique()
@@ -1726,12 +1733,26 @@ class Deck:
                 ] = 0.0
             return df
 
-        def _eval_upper_bounds(df: pd.DataFrame) -> pd.DataFrame:
+        def _enforce_null_upper_bounds_on_changes(
+            df: pd.DataFrame, uow: AbstractUnitOfWork
+        ) -> pd.DataFrame:
+            expt = cls.expt(uow)
+            # encontra as UTEs com modificacao de POTEF
+            thermals_to_nullify = expt.loc[
+                expt["tipo"] == "POTEF", "codigo_usina"
+            ].unique()
+            # zera o POTEF de todas as UTEs que tiveram modificacao
+            # após o primeiro ano (ou num anos manut térmicas)
             maintenance_end_date = cls.thermal_maintenance_end_date(uow)
-            df.loc[
-                df[START_DATE_COL] < maintenance_end_date,
-                "indisponibilidade_programada",
-            ] = 0.0
+            for code in thermals_to_nullify:
+                df.loc[
+                    (df[THERMAL_CODE_COL] == code)
+                    & (df[START_DATE_COL] >= maintenance_end_date),
+                    "potencia_instalada",
+                ] = 0.0
+            return df
+
+        def _eval_upper_bounds(df: pd.DataFrame) -> pd.DataFrame:
             df[UPPER_BOUND_COL] = (
                 df["potencia_instalada"]
                 * (df["fator_capacidade_maximo"] / 100.0)
@@ -1751,6 +1772,7 @@ class Deck:
         bounds_df = _expand_to_stages(bounds_df, uow)
         bounds_df = _add_term_lower_bounds(bounds_df, term, uow)
         bounds_df = _enforce_null_lower_bounds_on_changes(bounds_df, uow)
+        bounds_df = _enforce_null_upper_bounds_on_changes(bounds_df, uow)
         bounds_df = cls._apply_thermal_bounds_maintenance_and_changes(
             bounds_df, uow
         )
@@ -1769,7 +1791,7 @@ class Deck:
     @classmethod
     def _thermal_generation_bounds_pmo(
         cls, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
+    ) -> pd.DataFrame | None:
         """
         - codigo_usina (`int`)
         - nome_usina (`str`)
@@ -1779,6 +1801,8 @@ class Deck:
         """
         pmo = cls.pmo(uow)
         bounds_df = pmo.geracao_minima_usinas_termicas
+        if bounds_df is None:
+            return None
         if isinstance(bounds_df, pd.DataFrame):
             bounds_df = bounds_df.rename(
                 columns={
@@ -1791,7 +1815,10 @@ class Deck:
                 bounds_df[UPPER_BOUND_COL] = upper_bounds[
                     "valor_MWmed"
                 ].to_numpy()
-        return bounds_df
+        start_date = cls.stages_starting_dates_final_simulation(uow)[0]
+        return bounds_df.loc[
+            bounds_df[START_DATE_COL] >= start_date
+        ].reset_index(drop=True)
 
     @classmethod
     def thermal_generation_bounds(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
@@ -1912,6 +1939,7 @@ class Deck:
                 exchange_average_bounds_df,
                 block_length_df,
             )
+            exchange_bounds = exchange_bounds.reset_index(drop=True)
             cls.DECK_DATA_CACHING["exchange_bounds"] = exchange_bounds
         return exchange_bounds.copy()
 
@@ -1976,6 +2004,7 @@ class Deck:
                 subset=[SUBMARKET_CODE_COL]
             ).reset_index(drop=True)
             submarkets = submarkets.astype({SUBMARKET_NAME_COL: STRING_DF_TYPE})
+            submarkets = submarkets.set_index(SUBMARKET_CODE_COL)
             cls.DECK_DATA_CACHING["submarkets"] = submarkets
         return submarkets.copy()
 
@@ -1994,6 +2023,7 @@ class Deck:
                 }
             )
             eers = eers.astype({EER_NAME_COL: STRING_DF_TYPE})
+            eers = eers.set_index(EER_CODE_COL)
             cls.DECK_DATA_CACHING["eers"] = eers
         return eers.copy()
 
@@ -2028,6 +2058,7 @@ class Deck:
                 }
             )
             hydros = hydros.astype({HYDRO_NAME_COL: STRING_DF_TYPE})
+            hydros = hydros.set_index(HYDRO_CODE_COL)
             cls.DECK_DATA_CACHING["hydros"] = hydros
         return hydros.copy()
 
@@ -2046,7 +2077,7 @@ class Deck:
             df: pd.DataFrame, uow: AbstractUnitOfWork
         ) -> pd.DataFrame:
             hydros = cls.hydros(uow)
-            hydro_codes = hydros[HYDRO_CODE_COL].tolist()
+            hydro_codes = hydros.index.tolist()
             hydro_codes_in_df = df[HYDRO_CODE_COL].unique().tolist()
             missing_hydros = [
                 c for c in hydro_codes if c not in hydro_codes_in_df
@@ -2792,6 +2823,7 @@ class Deck:
                 }
             )
             thermals = thermals.astype({THERMAL_NAME_COL: STRING_DF_TYPE})
+            thermals = thermals.set_index(THERMAL_CODE_COL)
             cls.DECK_DATA_CACHING["thermals"] = thermals
         return thermals.copy()
 
@@ -2876,7 +2908,18 @@ class Deck:
     def _initial_stored_energy_from_pmo(
         cls, uow: AbstractUnitOfWork
     ) -> pd.DataFrame | None:
-        return cls.pmo(uow).energia_armazenada_inicial
+        df_pmo = cls.pmo(uow).energia_armazenada_inicial
+        if isinstance(df_pmo, pd.DataFrame):
+            eers = cls.eers(uow).reset_index()
+            df_pmo[EER_CODE_COL] = df_pmo["nome_ree"].apply(
+                lambda x: eers.loc[eers[EER_NAME_COL] == x, EER_CODE_COL].iloc[
+                    0
+                ]
+            )
+            df_pmo = df_pmo.rename(columns={"nome_ree": EER_NAME_COL})
+            df_pmo = df_pmo.set_index([EER_CODE_COL])
+            df_pmo = df_pmo.sort_index()
+        return df_pmo
 
     @classmethod
     def _evaluate_productivity(
@@ -2984,7 +3027,6 @@ class Deck:
                 SPEC_PRODUCTIVITY_COL,
                 VOLUME_REGULATION_COL,
             ]
-            df.index.name = HYDRO_CODE_COL
             return df.join(
                 hidr[hidr_cols + HEIGHT_POLY_COLS],
                 how="inner",
@@ -2992,12 +3034,10 @@ class Deck:
 
         def _join_bounds_data(df: pd.DataFrame) -> pd.DataFrame:
             bounds_df = cls.hydro_volume_bounds_with_changes(uow)
-            bounds_df.index.name = HYDRO_CODE_COL
             return df.join(bounds_df, how="inner")
 
         def _join_hydros_data(df: pd.DataFrame) -> pd.DataFrame:
             hydros = cls.hydros(uow)
-            hydros.index.name = HYDRO_CODE_COL
             return df.join(hydros[[FOLLOWING_HYDRO_COL]], how="inner")
 
         df = df.copy()
@@ -3013,16 +3053,40 @@ class Deck:
     def _initial_stored_energy_from_confhd_hidr(
         cls, uow: AbstractUnitOfWork
     ) -> pd.DataFrame | None:
-        def _join_bounds_data(df: pd.DataFrame) -> pd.DataFrame:
-            bounds_df = cls.hydro_volume_bounds_in_stages(uow)
-            starting_date = cls.stages_starting_dates_final_simulation(uow)[0]
-            bounds_df = bounds_df.loc[
-                bounds_df[START_DATE_COL] == starting_date
+        """
+        Realiza o cálculo da energia armazenada inicial a partir
+        de entrada de dados do CONFHD e HIDR.
+
+        Como premissa, para o cálculo dessa energia, considera-se:
+
+        - Usina fio d'água contribuem para o acúmulo da produtividade,
+        mas não com energia armazenada.
+        - As modificações de CFUGA e CMONT são consideradas para cálculo
+        da produtividade nas usinas a fio d'água.
+        - As modificações de VOLMIN, VOLMAX, VMINT e VMAXT não são
+        consideradas.
+        """
+
+        def _join_drop_data(df: pd.DataFrame) -> pd.DataFrame:
+            drops_df = cls.hydro_drops_in_stages(uow)
+            stage_date = cls.stages_starting_dates_final_simulation(uow)[0]
+            drops_df = drops_df.loc[
+                drops_df[START_DATE_COL] == stage_date
             ].set_index(HYDRO_CODE_COL)
-            return df.join(bounds_df.drop(columns=["usina"]), how="inner")
+            return df.drop(columns=["usina"]).join(drops_df, how="inner")
+
+        def _join_bounds_data(df: pd.DataFrame) -> pd.DataFrame:
+            bounds_df = cls.hydro_volume_bounds_with_changes(uow)
+            return df.join(
+                bounds_df[[LOWER_BOUND_COL, UPPER_BOUND_COL]], how="inner"
+            )
 
         def _volume_to_energy(df: pd.DataFrame) -> pd.DataFrame:
+            df.loc[df[VOLUME_REGULATION_COL] != "M", ABSOLUTE_VALUE_COL] = 0.0
             df[ABSOLUTE_VALUE_COL] *= df[PRODUCTIVITY_TMP_COL]
+            df.loc[df[VOLUME_REGULATION_COL] != "M", MAX_STORED_VOLUME_COL] = (
+                0.0
+            )
             df[MAXIMUM_STORED_ENERGY_COL] = (
                 df[MAX_STORED_VOLUME_COL] * df[MAX_PRODUCTIVITY_COL]
             )
@@ -3058,7 +3122,9 @@ class Deck:
                     PERCENT_VALUE_COL: [100.0] * len(missing_eers),
                 }
             )
-            df = pd.concat([df, missing_df], ignore_index=True)
+            if not missing_df.empty:
+                df = pd.concat([df, missing_df], ignore_index=True)
+            df[EER_CODE_COL] = df[EER_CODE_COL].astype(int)
             return df.set_index(EER_CODE_COL)
 
         def _eval_percent_value(df: pd.DataFrame) -> pd.DataFrame:
@@ -3066,6 +3132,10 @@ class Deck:
                 df[ABSOLUTE_VALUE_COL] / df[MAXIMUM_STORED_ENERGY_COL] * 100.0
             )
             return df
+
+        def _join_hydros_data(df: pd.DataFrame) -> pd.DataFrame:
+            hydros = cls.hydros(uow)
+            return df.join(hydros[[FOLLOWING_HYDRO_COL]], how="inner")
 
         MAX_PRODUCTIVITY_COL = "prod_max"
         MAX_STORED_VOLUME_COL = "varmax"
@@ -3077,30 +3147,55 @@ class Deck:
         df = cls.initial_stored_volume(uow).set_index(HYDRO_CODE_COL)
 
         # Calcula prodts no ponto inicial
-        df_absolute = cls._hydro_accumulated_productivity_at_volume(
-            uow, df.copy(), volume_col=ABSOLUTE_VALUE_COL
+        absolute_df = df.copy()
+        absolute_df = _join_drop_data(absolute_df)
+        absolute_df = _join_bounds_data(absolute_df)
+        absolute_df = _join_hydros_data(absolute_df)
+        absolute_df = cls._evaluate_productivity(
+            absolute_df, volume_col=ABSOLUTE_VALUE_COL
         )
+        absolute_df = cls._accumulate_productivity(absolute_df)
 
         # Calcula prodts no máximo
-        df_percent = _join_bounds_data(df.copy())
-        df_percent = df_percent[[UPPER_BOUND_COL]].rename(
+        df_cols = df.columns
+        percent_df = _join_bounds_data(df.copy())
+        percent_df[ABSOLUTE_VALUE_COL] = (
+            percent_df[UPPER_BOUND_COL] - percent_df[LOWER_BOUND_COL]
+        )
+        percent_df = percent_df[df_cols]
+        percent_df = _join_drop_data(percent_df)
+        percent_df = _join_bounds_data(percent_df)
+        percent_df = _join_hydros_data(percent_df)
+        percent_df[ABSOLUTE_VALUE_COL] = (
+            percent_df[UPPER_BOUND_COL] - percent_df[LOWER_BOUND_COL]
+        )
+        percent_df = cls._evaluate_productivity(
+            percent_df, volume_col=ABSOLUTE_VALUE_COL
+        )
+        percent_df = cls._accumulate_productivity(percent_df)
+        percent_df = percent_df.rename(
             columns={
-                UPPER_BOUND_COL: MAX_STORED_VOLUME_COL,
+                ABSOLUTE_VALUE_COL: MAX_STORED_VOLUME_COL,
+                PRODUCTIVITY_TMP_COL: MAX_PRODUCTIVITY_COL,
             }
         )
-        df_percent = cls._hydro_accumulated_productivity_at_volume(
-            uow, df_percent, volume_col=MAX_STORED_VOLUME_COL
-        )
-        df_percent = df_percent.rename(
-            columns={PRODUCTIVITY_TMP_COL: MAX_PRODUCTIVITY_COL}
-        )
 
-        df = df_absolute.join(df_percent, how="inner")
-
+        # Combina os resultados para calcular EARMi em % da EARMax
+        df = absolute_df.join(
+            percent_df[[MAX_STORED_VOLUME_COL, MAX_PRODUCTIVITY_COL]],
+            how="inner",
+        )
         df = _volume_to_energy(df)
-        df = _cast_to_eers_and_fill_missing(df)
+        df = _cast_to_eers_and_fill_missing(
+            df[
+                [
+                    ABSOLUTE_VALUE_COL,
+                    MAX_STORED_VOLUME_COL,
+                    MAXIMUM_STORED_ENERGY_COL,
+                ]
+            ]
+        )
         df = _eval_percent_value(df)
-
         df = df.rename(columns={ABSOLUTE_VALUE_COL: ABSOLUTE_VALUE_FINAL_COL})
 
         return df[[EER_NAME_COL, ABSOLUTE_VALUE_FINAL_COL, PERCENT_VALUE_COL]]
@@ -3128,7 +3223,15 @@ class Deck:
     def _initial_stored_volume_from_pmo(
         cls, uow: AbstractUnitOfWork
     ) -> pd.DataFrame | None:
-        return cls.pmo(uow).volume_armazenado_inicial
+        df = cls.pmo(uow).volume_armazenado_inicial
+        if df is None:
+            return df
+        return df.rename(
+            columns={
+                "codigo_usina": HYDRO_CODE_COL,
+                "nome_usina": HYDRO_NAME_COL,
+            }
+        )
 
     @classmethod
     def _initial_stored_volume_from_confhd_hidr(
@@ -3144,19 +3247,14 @@ class Deck:
             }
         )
         hidr = cls.hidr(uow)
-        volume_bounds = cls.hydro_volume_bounds_in_stages(uow)
-        starting_date = cls.stages_starting_dates_final_simulation(uow)[0]
-        volume_bounds = volume_bounds.loc[
-            volume_bounds[START_DATE_COL] == starting_date,
-            [LOWER_BOUND_COL, UPPER_BOUND_COL, HYDRO_CODE_COL],
-        ].set_index(HYDRO_CODE_COL, drop=True)
+        volume_bounds = cls.hydro_volume_bounds_with_changes(uow)
+        volume_bounds = volume_bounds[[LOWER_BOUND_COL, UPPER_BOUND_COL]]
         df = df.join(hidr, how="inner")
         df = df.join(volume_bounds, how="inner")
         df["valor_hm3"] = df.apply(
             lambda line: line["valor_percentual"]
             / 100.0
-            * (line[UPPER_BOUND_COL] - line[LOWER_BOUND_COL])
-            + line[LOWER_BOUND_COL],
+            * (line[UPPER_BOUND_COL] - line[LOWER_BOUND_COL]),
             axis=1,
         )
         df.loc[df["tipo_regulacao"] != "M", "valor_hm3"] = np.nan
@@ -3202,7 +3300,7 @@ class Deck:
     def eer_code_order(cls, uow: AbstractUnitOfWork) -> List[int]:
         eer_code_order = cls.DECK_DATA_CACHING.get("eer_code_order")
         if eer_code_order is None:
-            eer_code_order = cls.eers(uow)[EER_CODE_COL].tolist()
+            eer_code_order = cls.eers(uow).index.tolist()
             cls.DECK_DATA_CACHING["eer_code_order"] = eer_code_order
         return eer_code_order
 
@@ -3210,7 +3308,7 @@ class Deck:
     def hydro_code_order(cls, uow: AbstractUnitOfWork) -> List[int]:
         hydro_code_order = cls.DECK_DATA_CACHING.get("hydro_code_order")
         if hydro_code_order is None:
-            hydro_code_order = cls.hydros(uow)[HYDRO_CODE_COL].tolist()
+            hydro_code_order = cls.hydros(uow).index.tolist()
             cls.DECK_DATA_CACHING["hydro_code_order"] = hydro_code_order
         return hydro_code_order
 
@@ -3218,9 +3316,9 @@ class Deck:
     def hydro_eer_submarket_map(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         aux_df = cls.DECK_DATA_CACHING.get("hydro_eer_submarket_map")
         if aux_df is None:
-            hydros = cls.hydros(uow).set_index(HYDRO_CODE_COL)
-            eers = cls.eers(uow).set_index(EER_CODE_COL)
-            submarkets = cls.submarkets(uow).set_index(SUBMARKET_CODE_COL)
+            hydros = cls.hydros(uow)
+            eers = cls.eers(uow)
+            submarkets = cls.submarkets(uow)
             aux_df = hydros[[HYDRO_NAME_COL, EER_CODE_COL]].copy()
             aux_df = aux_df.join(
                 eers[[EER_NAME_COL, SUBMARKET_CODE_COL]], on=EER_CODE_COL
@@ -3254,9 +3352,9 @@ class Deck:
     def thermal_submarket_map(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         aux_df = cls.DECK_DATA_CACHING.get("thermal_submarket_map")
         if aux_df is None:
-            thermals = Deck.thermals(uow)
+            thermals = Deck.thermals(uow).reset_index()
             thermals = thermals.set_index(THERMAL_NAME_COL)
-            submarkets = cls.submarkets(uow).set_index(SUBMARKET_CODE_COL)
+            submarkets = cls.submarkets(uow)
 
             aux_df = pd.DataFrame(
                 data={

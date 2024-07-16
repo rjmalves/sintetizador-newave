@@ -47,7 +47,6 @@ from app.internal.constants import (
 
 
 class ScenarioSynthetizer:
-
     # Por padrão, todas as sínteses suportadas são consideradas
     DEFAULT_OPERATION_SYNTHESIS_ARGS: List[str] = SUPPORTED_SYNTHESIS
 
@@ -173,7 +172,7 @@ class ScenarioSynthetizer:
         :return: A tabela como um DataFrame
         :rtype: pd.DataFrame | None
         """
-        hydros = Deck.hydros(uow)
+        hydros = Deck.hydros(uow).reset_index()
         vazoes = Deck.vazoes(uow)
         inflow_station = hydros.loc[
             hydros["codigo_usina"] == hydro_code, "posto"
@@ -778,9 +777,7 @@ class ScenarioSynthetizer:
             SCENARIO_COL,
             VALUE_COL,
         ]
-        energy_df_columns += (
-            [SPAN_COL] if SPAN_COL in energy_df.columns else []
-        )
+        energy_df_columns += [SPAN_COL] if SPAN_COL in energy_df.columns else []
         return energy_df[energy_df_columns]
 
     @classmethod
@@ -882,9 +879,7 @@ class ScenarioSynthetizer:
             SUBMARKET_CODE_COL,
             VALUE_COL,
         ]
-        inflow_df_columns += (
-            [SPAN_COL] if SPAN_COL in inflow_df.columns else []
-        )
+        inflow_df_columns += [SPAN_COL] if SPAN_COL in inflow_df.columns else []
         return inflow_df[inflow_df_columns]
 
     @classmethod
@@ -909,8 +904,7 @@ class ScenarioSynthetizer:
                         <= hydro_simulation_stages
                     ],
                     generated_energy_df.loc[
-                        generated_energy_df[STAGE_COL]
-                        > hydro_simulation_stages
+                        generated_energy_df[STAGE_COL] > hydro_simulation_stages
                     ],
                 ],
                 ignore_index=True,
