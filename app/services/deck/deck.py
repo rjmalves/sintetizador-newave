@@ -501,9 +501,21 @@ class Deck:
     def manutt(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         manutt = cls.DECK_DATA_CACHING.get("manutt")
         if manutt is None:
-            manutt = cls._validate_data(
-                cls._get_manutt(uow).manutencoes, pd.DataFrame, "manutt"
-            )
+            df_manutt = cls._get_manutt(uow).manutencoes
+            if df_manutt is None:
+                df_manutt = pd.DataFrame(
+                    columns=[
+                        "codigo_empresa",
+                        "nome_empresa",
+                        "codigo_usina",
+                        "nome_usina",
+                        "codigo_unidade",
+                        "data_inicio",
+                        "duracao",
+                        "potencia",
+                    ]
+                )
+            manutt = cls._validate_data(df_manutt, pd.DataFrame, "manutt")
             cls.DECK_DATA_CACHING["manutt"] = manutt
         return manutt.copy()
 
