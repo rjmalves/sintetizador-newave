@@ -1,8 +1,6 @@
-from os.path import join
 import numpy as np
 import pandas as pd
 from datetime import datetime
-from unittest.mock import patch, MagicMock
 from app.services.unitofwork import factory
 from app.services.deck.deck import Deck
 from tests.conftest import DECK_TEST_DIR, q
