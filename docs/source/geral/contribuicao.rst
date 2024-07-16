@@ -39,7 +39,7 @@ do autor da linguagem. Além disso, não é recomendado que existam funções mu
 excessiva de *branches* e *loops*, o que piora e legibilidade do código. Isto pode ser garantido através de módulos
 específicos para análise de qualidade de código, como será mencionado a seguir. A única exceção é a regra `E203 <https://www.flake8rules.com/rules/E203.html>`_.
 
-Para garantir a formatação é recomendado utilizar o módulo `black <https://github.com/psf/black>`_, que realiza formatação automática e possui
+Para garantir a formatação é recomendado utilizar o módulo `ruff <https://docs.astral.sh/ruff/>`_, que realiza formatação automática e possui
 integração nativa com alguns editores de texto no formato de *plugins* ou extensões. 
 
 A segunda convenção é que seja utilizada tipagem estática. Isto é, não deve ser uitilizada uma variável em código a qual possua
