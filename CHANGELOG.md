@@ -1,7 +1,8 @@
 # v2.0.0
-- Suporte a Python 3.8 descontinuado. Apenas versões de Python >= 3.9 são suportadas nos ambientes de CI e tem garantia de reprodutibilidade.
+- Suporte a Python 3.8 descontinuado. Apenas versões de Python >= 3.10 são suportadas nos ambientes de CI e tem garantia de reprodutibilidade.
 - Refatoração dos processos de síntese, contemplando reuso de código e padronização de nomes de funções e variáveis
 - Opção de exportação de saídas `PARQUET` não realiza mais a compressão em `gzip` automaticamente, adotando o `snappy` (padrão do Arrow). A extensão dos arquivos passa a ser apenas `.parquet`.
+- Colunas do tipo `datetime` agora garante que a informação de fuso seja `UTC`, permitindo maior compatibilidade na leitura em outras implementações do Arrow. [#43](https://github.com/rjmalves/sintetizador-newave/issues/43)
 - Colunas dos DataFrames de síntese padronizadas para `snake_case`
 - Entidades passam a ser indexadas pelos seus códigos ao invés de nomes nos DataFrames das sínteses da operação e de cenários (`usina` -> `codigo_usina`, etc.). A síntese com opção `sistema` contem o mapeamento entre códigos e nomes.
 - Estatísticas calculadas a partir dos cenários de cada variável, para cada entidade, em um determinado estágio, passam a ser salvas em saídas especíicas (`ESTATISTICAS_OPERACAO_UHE.parquet`, `ESTATISTICAS_CENARIOS_REE_BKW.parquet`, etc.)
@@ -14,7 +15,16 @@
 - Dados das sínteses de operação e cenários que sejam agrupados por entidades menores contém os códigos dos conjuntos que englobam estas entidades, permitindo agrupamentos arbitrários pelo usuário (ex. sínteses por UHE também contém colunas `codigo_ree` e `codigo_submercado`) [#22](https://github.com/rjmalves/sintetizador-newave/issues/22)
 - Implementada síntese de Energia Armazenada por UHE, com cálculo feito na aplicação de síntese (`EARMI_UHE`, `EARMF_UHE`) [#37](https://github.com/rjmalves/sintetizador-newave/issues/37)
 - Logging do processo de síntese melhorado e resumido, incluindo os tempos gastos em cada etapa do processo [#39](https://github.com/rjmalves/sintetizador-newave/issues/39)
+- Diversas informações existentes no `pmo.dat` passaram a ser calculadas internamente para compatibilidade total com execuções do modelo que vão direto para a Simulação Final [#42](https://github.com/rjmalves/sintetizador-newave/issues/42)
+- Criação da abstração `Deck` que centraliza as conversões de formato e implementação de cálculos já realizados pelo modelo quando necessários para padronização do restante dos módulos de síntese [#40](https://github.com/rjmalves/sintetizador-newave/issues/40)
 
+
+# v1.2.0 (v1-compat)
+
+- Versão de compatibilidade com a séries de releases major `1.x`
+- Última versão antes da reformulação do formato das sínteses (pré `2.0`)
+- Síntese em formato compatível com `pyspark` para ingestão em ambiente analíticos
+- Correções diversas em variáveis da síntese da operação e cenários
 
 # v1.1.0
 
