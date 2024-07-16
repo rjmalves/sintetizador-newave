@@ -40,15 +40,15 @@ tempo = pd.read_parquet("sintese/TEMPO.parquet")
 
 # %%
 # O formato dos dados de CONVERGÊNCIA:
-convergencia.head(10)
+print(convergencia.head(10))
 
 # %%
 # O formato dos dados de CUSTOS:
-custos.head(10)
+print(custos.head(10))
 
 # %%
 # O formato dos dados de TEMPO:
-tempo.head(5)
+print(tempo.head(5))
 
 # %%
 # Cada arquivo pode ser visualizado de diferentes maneiras, a depender da aplicação.
@@ -56,7 +56,7 @@ tempo.head(5)
 
 fig = px.line(
     convergencia,
-    x="iter",
+    x="iteracao",
     y="delta_zinf",
 )
 fig
