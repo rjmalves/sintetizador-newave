@@ -23,7 +23,6 @@ from app.internal.constants import (
     UPPER_BOUND_COL,
     LOWER_BOUND_COL,
     VALUE_COL,
-    SYSTEM_GROUPING_COL,
     STAGE_DURATION_HOURS,
     HM3_M3S_MONTHLY_FACTOR,
     IDENTIFICATION_COLUMNS,
@@ -768,7 +767,7 @@ class OperationVariableBounds:
             Variable.VOLUME_DESVIADO,
             SpatialResolution.SISTEMA_INTERLIGADO,
         ): lambda df, uow, _: OperationVariableBounds._group_hydro_df(
-            df, grouping_column=SYSTEM_GROUPING_COL
+            df, grouping_column=None
         ),
         OperationSynthesis(
             Variable.VAZAO_DESVIADA,
