@@ -52,7 +52,7 @@ Procedimentos de teste
 -----------------------
 
 O *sintetizador-newave* realiza testes utilizando o pacote de testes de Python `pytest <https://pytest.org>`_
-e controle da qualidade de código com `pylama <https://pylama.readthedocs.io/en/latest//>`_.
+e controle da qualidade de código com `ruff <https://docs.astral.sh/ruff/>`_.
 A tipagem estática é garantida através do uso de `mypy <http://mypy-lang.org/>`_
 , que é sempre executado nos scripts de Integração Contínua (CI).
 
@@ -61,4 +61,4 @@ descritos, que serão novamente executados pelo ambiente de CI::
 
     $ pytest ./tests
     $ mypy ./app
-    $ pylama ./app --ignore E203
+    $ ruff check ./app
