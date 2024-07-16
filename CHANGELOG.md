@@ -7,7 +7,7 @@
 - Colunas dos DataFrames de síntese padronizadas para `snake_case`
 - Entidades passam a ser indexadas pelos seus códigos ao invés de nomes nos DataFrames das sínteses da operação e de cenários (`usina` -> `codigo_usina`, etc.). A síntese com opção `sistema` contem o mapeamento entre códigos e nomes.
 - Estatísticas calculadas a partir dos cenários de cada variável, para cada entidade, em um determinado estágio, passam a ser salvas em saídas especíicas (`ESTATISTICAS_OPERACAO_UHE.parquet`, `ESTATISTICAS_CENARIOS_REE_BKW.parquet`, etc.)
-- Uso do módulo (numba)[https://numba.pydata.org/] como dependência opcional para aceleração de operações com DataFrames
+- Uso do módulo [numba](https://numba.pydata.org/) como dependência opcional para aceleração de operações com DataFrames
 - Substituída a divisão da síntese da operação utilizando agregação temporal (`EST` e `PAT`) pela inclusão sempre das colunas `patamar` e `duracao_patamar`, onde `patamar = 0` representa o valor médio do estágio [#21](https://github.com/rjmalves/sintetizador-newave/issues/21)
 - As sínteses agora produzem sempre como saída um arquivo de metadados, com informações sobre as sínteses que foram geradas (`METADADOS_OPERACAO.parquet`, `METADADOS_SISTEMA.parquet`, etc.) [#32](https://github.com/rjmalves/sintetizador-newave/issues/32)
 - Implementado suporte para uso do caractere de `wildcard` (`*`) na especificação das sínteses desejadas via CLI [#33](https://github.com/rjmalves/sintetizador-newave/issues/33)
