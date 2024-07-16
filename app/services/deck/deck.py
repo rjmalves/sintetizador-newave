@@ -2112,27 +2112,13 @@ class Deck:
         """
         Extrai um dado de um registro do modif.dat com a sua unidade.
         """
-        if isinstance(r, VOLMIN):
+        if isinstance(r, Union[VOLMIN, VMINT, VOLMAX, VMAXT]):
             return r.volume, r.unidade
-        elif isinstance(r, VMINT):
-            return r.volume, r.unidade
-        elif isinstance(r, VOLMAX):
-            return r.volume, r.unidade
-        elif isinstance(r, VMAXT):
-            return r.volume, r.unidade
-        elif isinstance(r, VAZMIN):
+        elif isinstance(r, Union[VAZMIN, VAZMINT, VAZMAXT]):
             return r.vazao, Unit.m3s.value
-        elif isinstance(r, VAZMINT):
-            return r.vazao, Unit.m3s.value
-        elif isinstance(r, VAZMAXT):
-            return r.vazao, Unit.m3s.value
-        elif isinstance(r, TURBMINT):
+        elif isinstance(r, Union[TURBMINT, TURBMAXT]):
             return r.turbinamento, Unit.m3s.value
-        elif isinstance(r, TURBMAXT):
-            return r.turbinamento, Unit.m3s.value
-        elif isinstance(r, CMONT):
-            return r.nivel, ""
-        elif isinstance(r, CFUGA):
+        elif isinstance(r, Union[CMONT, CFUGA]):
             return r.nivel, ""
         return None, None
 
