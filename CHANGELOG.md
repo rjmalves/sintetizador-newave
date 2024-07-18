@@ -3,6 +3,8 @@
 - Implementada síntese do Custo Futuro (`CFU_SIN.parquet`) verificado no processo de simulação final [#45](https://github.com/rjmalves/sintetizador-newave/issues/45)
 - Implementada síntese do Custo Total (`CTO_SIN.parquet`) obtido através da soma entre custo do estágio e custo futuro.
 
+# v2.0.1
+- Fix no processamento de variáveis que só estão disponíveis no NWLISTOP por patamares e o valor médio dos patamares era calculado pelo sintetizador (`HLIQ`, `HJUS`).
 
 # v2.0.0
 - Suporte a Python 3.8 descontinuado. Apenas versões de Python >= 3.10 são suportadas nos ambientes de CI e tem garantia de reprodutibilidade.
