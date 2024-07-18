@@ -703,9 +703,7 @@ class OperationSynthetizer:
             df_base[VALUE_COL] = arr.reshape((n_elementos_distintos, -1)).sum(
                 axis=1
             )
-            df_block_0 = pd.concat(
-                [df_block_0, df_base], ignore_index=True, copy=True
-            )
+            df_block_0 = pd.concat([df, df_base], ignore_index=True, copy=True)
             df_block_0 = df_block_0.sort_values(
                 unique_cols_for_block_0 + [BLOCK_COL]
             )

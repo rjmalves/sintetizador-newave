@@ -1,3 +1,6 @@
+# v2.0.1
+- Fix no processamento de variáveis que só estão disponíveis no NWLISTOP por patamares e o valor médio dos patamares era calculado pelo sintetizador (`HLIQ`, `HJUS`).
+
 # v2.0.0
 - Suporte a Python 3.8 descontinuado. Apenas versões de Python >= 3.10 são suportadas nos ambientes de CI e tem garantia de reprodutibilidade.
 - Descontinuado o uso do `pylama` como linter para garantir padrões PEP de código devido à falta de suporte em Python >= 3.12. Adoção do [ruff](https://github.com/astral-sh/ruff) em substituição.
