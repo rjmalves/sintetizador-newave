@@ -1,7 +1,7 @@
 click
 pandas
 pyarrow
-inewave>=1.9.0
+inewave>=1.9.1
 numba
 ruff
 mypy
