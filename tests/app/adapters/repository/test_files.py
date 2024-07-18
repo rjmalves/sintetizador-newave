@@ -603,14 +603,14 @@ def test_get_nwlistop(test_settings):
     )
     assert isinstance(
         repo.get_nwlistop(
-            operationvariable.Variable.VOLUME_TURBINADO,
+            operationvariable.Variable.VAZAO_TURBINADA,
             operationspatialresolution.SpatialResolution.USINA_HIDROELETRICA,
         ),
         pd.DataFrame,
     )
     assert isinstance(
         repo.get_nwlistop(
-            operationvariable.Variable.VOLUME_VERTIDO,
+            operationvariable.Variable.VAZAO_VERTIDA,
             operationspatialresolution.SpatialResolution.USINA_HIDROELETRICA,
         ),
         pd.DataFrame,
@@ -807,7 +807,7 @@ def test_get_nwlistop(test_settings):
     )
     assert isinstance(
         repo.get_nwlistop(
-            operationvariable.Variable.VOLUME_DESVIADO,
+            operationvariable.Variable.VAZAO_DESVIADA,
             operationspatialresolution.SpatialResolution.USINA_HIDROELETRICA,
         ),
         pd.DataFrame,

@@ -703,7 +703,7 @@ class OperationSynthetizer:
             df_base[VALUE_COL] = arr.reshape((n_elementos_distintos, -1)).sum(
                 axis=1
             )
-            df_block_0 = pd.concat([df, df_base], ignore_index=True, copy=True)
+            df_block_0 = pd.concat([df_base, df], ignore_index=True, copy=True)
             df_block_0 = df_block_0.sort_values(
                 unique_cols_for_block_0 + [BLOCK_COL]
             )
@@ -725,7 +725,11 @@ class OperationSynthetizer:
         internal_stubs = {
             Variable.COTA_JUSANTE: _calc_block_0_weighted_mean,  # noqa
             Variable.QUEDA_LIQUIDA: _calc_block_0_weighted_mean,  # noqa
+            Variable.VAZAO_TURBINADA: _calc_block_0_weighted_mean,  # noqa
+            Variable.VAZAO_VERTIDA: _calc_block_0_weighted_mean,  # noqa
+            Variable.VAZAO_DESVIADA: _calc_block_0_weighted_mean,  # noqa
         }
+
         aux_df = Deck.hydro_eer_submarket_map(uow)
         return cls._post_resolve_entity(
             df,
@@ -793,9 +797,6 @@ class OperationSynthetizer:
         Realiza a conversão de síntese de volume para vazão.
         """
         variable_map = {
-            Variable.VAZAO_VERTIDA: Variable.VOLUME_VERTIDO,
-            Variable.VAZAO_TURBINADA: Variable.VOLUME_TURBINADO,
-            Variable.VAZAO_DESVIADA: Variable.VOLUME_DESVIADO,
             Variable.VAZAO_RETIRADA: Variable.VOLUME_RETIRADO,
         }
         volume_synthesis = OperationSynthesis(
@@ -822,6 +823,9 @@ class OperationSynthetizer:
         variable_map = {
             Variable.VOLUME_AFLUENTE: Variable.VAZAO_AFLUENTE,
             Variable.VOLUME_INCREMENTAL: Variable.VAZAO_INCREMENTAL,
+            Variable.VOLUME_TURBINADO: Variable.VAZAO_TURBINADA,
+            Variable.VOLUME_VERTIDO: Variable.VAZAO_VERTIDA,
+            Variable.VOLUME_DESVIADO: Variable.VAZAO_DESVIADA,
         }
         flow_synthesis = OperationSynthesis(
             variable_map[synthesis.variable],
@@ -907,6 +911,31 @@ class OperationSynthetizer:
             + positive_df[VALUE_COL].to_numpy()
         )
         return positive_df
+
+    @classmethod
+    def __stub_CTO(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        """
+        Realiza o cálculo do custo total a partir dos valores
+        das parcelas de custo presente e futuro.
+        """
+        operation_cost_synthesis = OperationSynthesis(
+            Variable.CUSTO_OPERACAO,
+            synthesis.spatial_resolution,
+        )
+        future_cost_synthesis = OperationSynthesis(
+            Variable.CUSTO_FUTURO,
+            synthesis.spatial_resolution,
+        )
+        operation_df = cls._get_from_cache(operation_cost_synthesis)
+        future_df = cls._get_from_cache(future_cost_synthesis)
+
+        operation_df.loc[:, VALUE_COL] = (
+            future_df[VALUE_COL].to_numpy() + operation_df[VALUE_COL].to_numpy()
+        )
+
+        return operation_df
 
     @classmethod
     def __stub_EVER(
@@ -1999,7 +2028,9 @@ class OperationSynthetizer:
         funções `stub` para cada variável e/ou resolução espacial.
         """
         f = None
-        if s.variable == Variable.ENERGIA_VERTIDA:
+        if s.variable == Variable.CUSTO_TOTAL:
+            f = cls.__stub_CTO
+        elif s.variable == Variable.ENERGIA_VERTIDA:
             f = cls.__stub_EVER
         elif all(
             [
@@ -2085,10 +2116,7 @@ class OperationSynthetizer:
             [
                 s.variable
                 in [
-                    Variable.VAZAO_TURBINADA,
-                    Variable.VAZAO_VERTIDA,
                     Variable.VAZAO_RETIRADA,
-                    Variable.VAZAO_DESVIADA,
                 ],
                 s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
             ]
@@ -2100,6 +2128,9 @@ class OperationSynthetizer:
                 in [
                     Variable.VOLUME_AFLUENTE,
                     Variable.VOLUME_INCREMENTAL,
+                    Variable.VOLUME_TURBINADO,
+                    Variable.VOLUME_VERTIDO,
+                    Variable.VOLUME_DESVIADO,
                 ],
                 s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
             ]

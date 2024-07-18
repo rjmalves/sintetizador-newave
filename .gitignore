@@ -135,3 +135,5 @@ dmypy.json
 test_case/
 test.py
 .vscode/
+
+nwlistop/

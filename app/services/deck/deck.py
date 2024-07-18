@@ -2100,6 +2100,7 @@ class Deck:
                     df[HYDRO_CODE_COL] == hydro_codes_in_df[0]
                 ].copy()
                 df_hydro[HYDRO_CODE_COL] = c
+                df_hydro[VALUE_COL] = 0.0
                 dfs_missing_hydros.append(df_hydro)
             df = pd.concat([df] + dfs_missing_hydros, ignore_index=True)
             df = df.sort_values([HYDRO_CODE_COL, START_DATE_COL])
