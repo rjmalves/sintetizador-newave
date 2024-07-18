@@ -19,7 +19,9 @@ class OperationSynthesis:
         )
 
     def __hash__(self) -> int:
-        return hash(f"{self.variable.value}_" + f"{self.spatial_resolution.value}_")
+        return hash(
+            f"{self.variable.value}_" + f"{self.spatial_resolution.value}_"
+        )
 
     def __eq__(self, o: object) -> bool:
         if not isinstance(o, OperationSynthesis):
@@ -52,6 +54,8 @@ SUPPORTED_SYNTHESIS: list[str] = [
     "CTER_SBM",
     "CTER_SIN",
     "COP_SIN",
+    "CFU_SIN",
+    "CTO_SIN",
     "ENAA_REE",
     "ENAA_SBM",
     "ENAA_SIN",
@@ -215,6 +219,19 @@ SUPPORTED_SYNTHESIS: list[str] = [
 ]
 
 SYNTHESIS_DEPENDENCIES: dict[OperationSynthesis, list[OperationSynthesis]] = {
+    OperationSynthesis(
+        Variable.CUSTO_TOTAL,
+        SpatialResolution.SISTEMA_INTERLIGADO,
+    ): [
+        OperationSynthesis(
+            Variable.CUSTO_OPERACAO,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ),
+        OperationSynthesis(
+            Variable.CUSTO_FUTURO,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ),
+    ],
     OperationSynthesis(
         Variable.ENERGIA_VERTIDA,
         SpatialResolution.RESERVATORIO_EQUIVALENTE,
@@ -420,29 +437,29 @@ SYNTHESIS_DEPENDENCIES: dict[OperationSynthesis, list[OperationSynthesis]] = {
         ),
     ],
     OperationSynthesis(
-        Variable.VAZAO_VERTIDA,
+        Variable.VOLUME_VERTIDO,
         SpatialResolution.USINA_HIDROELETRICA,
     ): [
         OperationSynthesis(
-            Variable.VOLUME_VERTIDO,
+            Variable.VAZAO_VERTIDA,
             SpatialResolution.USINA_HIDROELETRICA,
         )
     ],
     OperationSynthesis(
-        Variable.VAZAO_TURBINADA,
+        Variable.VOLUME_TURBINADO,
         SpatialResolution.USINA_HIDROELETRICA,
     ): [
         OperationSynthesis(
-            Variable.VOLUME_TURBINADO,
+            Variable.VAZAO_TURBINADA,
             SpatialResolution.USINA_HIDROELETRICA,
         )
     ],
     OperationSynthesis(
-        Variable.VAZAO_DESVIADA,
+        Variable.VOLUME_DESVIADO,
         SpatialResolution.USINA_HIDROELETRICA,
     ): [
         OperationSynthesis(
-            Variable.VOLUME_DESVIADO,
+            Variable.VAZAO_DESVIADA,
             SpatialResolution.USINA_HIDROELETRICA,
         )
     ],
@@ -852,7 +869,7 @@ SYNTHESIS_DEPENDENCIES: dict[OperationSynthesis, list[OperationSynthesis]] = {
         SpatialResolution.RESERVATORIO_EQUIVALENTE,
     ): [
         OperationSynthesis(
-            Variable.VAZAO_DEFLUENTE,
+            Variable.VOLUME_DEFLUENTE,
             SpatialResolution.USINA_HIDROELETRICA,
         ),
     ],
@@ -861,7 +878,7 @@ SYNTHESIS_DEPENDENCIES: dict[OperationSynthesis, list[OperationSynthesis]] = {
         SpatialResolution.SUBMERCADO,
     ): [
         OperationSynthesis(
-            Variable.VAZAO_DEFLUENTE,
+            Variable.VOLUME_DEFLUENTE,
             SpatialResolution.USINA_HIDROELETRICA,
         ),
     ],
@@ -870,7 +887,7 @@ SYNTHESIS_DEPENDENCIES: dict[OperationSynthesis, list[OperationSynthesis]] = {
         SpatialResolution.SISTEMA_INTERLIGADO,
     ): [
         OperationSynthesis(
-            Variable.VAZAO_DEFLUENTE,
+            Variable.VOLUME_DEFLUENTE,
             SpatialResolution.USINA_HIDROELETRICA,
         ),
     ],
@@ -879,7 +896,7 @@ SYNTHESIS_DEPENDENCIES: dict[OperationSynthesis, list[OperationSynthesis]] = {
         SpatialResolution.RESERVATORIO_EQUIVALENTE,
     ): [
         OperationSynthesis(
-            Variable.VAZAO_VERTIDA,
+            Variable.VOLUME_VERTIDO,
             SpatialResolution.USINA_HIDROELETRICA,
         ),
     ],
@@ -888,7 +905,7 @@ SYNTHESIS_DEPENDENCIES: dict[OperationSynthesis, list[OperationSynthesis]] = {
         SpatialResolution.SUBMERCADO,
     ): [
         OperationSynthesis(
-            Variable.VAZAO_VERTIDA,
+            Variable.VOLUME_VERTIDO,
             SpatialResolution.USINA_HIDROELETRICA,
         ),
     ],
@@ -897,7 +914,7 @@ SYNTHESIS_DEPENDENCIES: dict[OperationSynthesis, list[OperationSynthesis]] = {
         SpatialResolution.SISTEMA_INTERLIGADO,
     ): [
         OperationSynthesis(
-            Variable.VAZAO_VERTIDA,
+            Variable.VOLUME_VERTIDO,
             SpatialResolution.USINA_HIDROELETRICA,
         ),
     ],
@@ -906,7 +923,7 @@ SYNTHESIS_DEPENDENCIES: dict[OperationSynthesis, list[OperationSynthesis]] = {
         SpatialResolution.RESERVATORIO_EQUIVALENTE,
     ): [
         OperationSynthesis(
-            Variable.VAZAO_TURBINADA,
+            Variable.VOLUME_TURBINADO,
             SpatialResolution.USINA_HIDROELETRICA,
         ),
     ],
@@ -915,7 +932,7 @@ SYNTHESIS_DEPENDENCIES: dict[OperationSynthesis, list[OperationSynthesis]] = {
         SpatialResolution.SUBMERCADO,
     ): [
         OperationSynthesis(
-            Variable.VAZAO_TURBINADA,
+            Variable.VOLUME_TURBINADO,
             SpatialResolution.USINA_HIDROELETRICA,
         ),
     ],
@@ -924,7 +941,7 @@ SYNTHESIS_DEPENDENCIES: dict[OperationSynthesis, list[OperationSynthesis]] = {
         SpatialResolution.SISTEMA_INTERLIGADO,
     ): [
         OperationSynthesis(
-            Variable.VAZAO_TURBINADA,
+            Variable.VOLUME_TURBINADO,
             SpatialResolution.USINA_HIDROELETRICA,
         ),
     ],
@@ -1155,6 +1172,14 @@ UNITS: dict[OperationSynthesis, Unit] = {
     ): Unit.MiRS,
     OperationSynthesis(
         Variable.CUSTO_OPERACAO,
+        SpatialResolution.SISTEMA_INTERLIGADO,
+    ): Unit.MiRS,
+    OperationSynthesis(
+        Variable.CUSTO_FUTURO,
+        SpatialResolution.SISTEMA_INTERLIGADO,
+    ): Unit.MiRS,
+    OperationSynthesis(
+        Variable.CUSTO_TOTAL,
         SpatialResolution.SISTEMA_INTERLIGADO,
     ): Unit.MiRS,
     OperationSynthesis(

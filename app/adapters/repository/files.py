@@ -43,6 +43,7 @@ from inewave.nwlistop.cmargmed import Cmargmed
 from inewave.nwlistop.cterm import Cterm
 from inewave.nwlistop.ctermsin import Ctermsin
 from inewave.nwlistop.coper import Coper
+from inewave.nwlistop.custo_futuro import CustoFuturo
 from inewave.nwlistop.eafb import Eafb
 from inewave.nwlistop.eafbm import Eafbm
 from inewave.nwlistop.eafbsin import Eafbsin
@@ -93,14 +94,14 @@ from inewave.nwlistop.perdfsin import Perdfsin
 from inewave.nwlistop.verturb import Verturb
 from inewave.nwlistop.verturbm import Verturbm
 from inewave.nwlistop.verturbsin import Verturbsin
-from inewave.nwlistop.vagua import Vagua
-from inewave.nwlistop.vevmin import Vevmin
-from inewave.nwlistop.vevminm import Vevminm
-from inewave.nwlistop.vevminsin import Vevminsin
-from inewave.nwlistop.vghminuh import Vghminuh
-from inewave.nwlistop.vghmin import Vghmin
-from inewave.nwlistop.vghminm import Vghminm
-from inewave.nwlistop.vghminsin import Vghminsin
+from inewave.nwlistop.valor_agua import ValorAgua
+from inewave.nwlistop.viol_evmin import ViolEvmin
+from inewave.nwlistop.viol_evminm import ViolEvminm
+from inewave.nwlistop.viol_evminsin import ViolEvminsin
+from inewave.nwlistop.viol_ghminuh import ViolGhminuh
+from inewave.nwlistop.viol_ghmin import ViolGhmin
+from inewave.nwlistop.viol_ghminm import ViolGhminm
+from inewave.nwlistop.viol_ghminsin import ViolGhminsin
 
 from inewave.nwlistop.vento import Vento
 from inewave.nwlistop.geol import Geol
@@ -111,21 +112,21 @@ from inewave.nwlistop.corteolm import Corteolm
 from inewave.nwlistop.qafluh import Qafluh
 from inewave.nwlistop.qincruh import Qincruh
 from inewave.nwlistop.ghiduh import Ghiduh
-from inewave.nwlistop.vturuh import Vturuh
-from inewave.nwlistop.vertuh import Vertuh
+from inewave.nwlistop.qturuh import Qturuh
+from inewave.nwlistop.qvertuh import Qvertuh
 from inewave.nwlistop.varmuh import Varmuh
 from inewave.nwlistop.varmpuh import Varmpuh
-from inewave.nwlistop.dfphauh import Dfphauh
+from inewave.nwlistop.viol_fpha import ViolFpha
 from inewave.nwlistop.pivarm import Pivarm
 from inewave.nwlistop.pivarmincr import Pivarmincr
-from inewave.nwlistop.desvuh import Desvuh
-from inewave.nwlistop.vdesviouh import Vdesviouh
+from inewave.nwlistop.vretiradauh import Vretiradauh
+from inewave.nwlistop.qdesviouh import Qdesviouh
 from inewave.nwlistop.hmont import Hmont
 from inewave.nwlistop.hjus import Hjus
 from inewave.nwlistop.hliq import Hliq
 from inewave.nwlistop.vevapuh import Vevapuh
-from inewave.nwlistop.dposevap import Dposevap
-from inewave.nwlistop.dnegevap import Dnegevap
+from inewave.nwlistop.viol_pos_evap import ViolPosEvap
+from inewave.nwlistop.viol_neg_evap import ViolNegEvap
 
 from inewave.nwlistcf import Nwlistcfrel
 from inewave.nwlistcf import Estados
@@ -353,7 +354,9 @@ class RawFilesRepository(AbstractFilesRepository):
                 Variable.VALOR_AGUA,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
             ): lambda dir, ree=1: self.__adiciona_coluna_patamar(
-                Vagua.read(join(dir, f"vagua{str(ree).zfill(3)}.out")).valores
+                ValorAgua.read(
+                    join(dir, f"valor_agua{str(ree).zfill(3)}.out")
+                ).valores
             ),
             (
                 Variable.VALOR_AGUA,
@@ -388,6 +391,12 @@ class RawFilesRepository(AbstractFilesRepository):
                 SpatialResolution.SISTEMA_INTERLIGADO,
             ): lambda dir, _: self.__adiciona_coluna_patamar(
                 Coper.read(join(dir, "coper.out")).valores
+            ),
+            (
+                Variable.CUSTO_FUTURO,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+            ): lambda dir, _: self.__adiciona_coluna_patamar(
+                CustoFuturo.read(join(dir, "custo_futuro.out")).valores
             ),
             (
                 Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA,
@@ -759,16 +768,18 @@ class RawFilesRepository(AbstractFilesRepository):
                 ).valores
             ),
             (
-                Variable.VOLUME_TURBINADO,
+                Variable.VAZAO_TURBINADA,
                 SpatialResolution.USINA_HIDROELETRICA,
-            ): lambda dir, uhe=1: self.__calcula_patamar_medio_soma(
-                Vturuh.read(join(dir, f"vturuh{str(uhe).zfill(3)}.out")).valores
+            ): lambda dir, uhe=1: self.__substitui_coluna_patamar(
+                Qturuh.read(join(dir, f"qturuh{str(uhe).zfill(3)}.out")).valores
             ),
             (
-                Variable.VOLUME_VERTIDO,
+                Variable.VAZAO_VERTIDA,
                 SpatialResolution.USINA_HIDROELETRICA,
-            ): lambda dir, uhe=1: self.__calcula_patamar_medio_soma(
-                Vertuh.read(join(dir, f"vertuh{str(uhe).zfill(3)}.out")).valores
+            ): lambda dir, uhe=1: self.__substitui_coluna_patamar(
+                Qvertuh.read(
+                    join(dir, f"qvertuh{str(uhe).zfill(3)}.out")
+                ).valores
             ),
             (
                 Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
@@ -896,21 +907,23 @@ class RawFilesRepository(AbstractFilesRepository):
                 Variable.VIOLACAO_FPHA,
                 SpatialResolution.USINA_HIDROELETRICA,
             ): lambda dir, uhe=1: self.__calcula_patamar_medio_soma(
-                Dfphauh.read(
-                    join(dir, f"dfphauh{str(uhe).zfill(3)}.out")
+                ViolFpha.read(
+                    join(dir, f"viol_fpha{str(uhe).zfill(3)}.out")
                 ).valores
             ),
             (
                 Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
             ): lambda dir, ree=1: self.__adiciona_coluna_patamar(
-                Vevmin.read(join(dir, f"vevmin{str(ree).zfill(3)}.out")).valores
+                ViolEvmin.read(
+                    join(dir, f"viol_evmin{str(ree).zfill(3)}.out")
+                ).valores
             ),
             (
                 Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
                 SpatialResolution.SUBMERCADO,
             ): lambda dir, submercado=1: self.__adiciona_coluna_patamar(
-                Vevminm.read(
+                ViolEvminm.read(
                     join(dir, f"vevminm{str(submercado).zfill(3)}.out")
                 ).valores
             ),
@@ -918,43 +931,46 @@ class RawFilesRepository(AbstractFilesRepository):
                 Variable.VIOLACAO_ENERGIA_DEFLUENCIA_MINIMA,
                 SpatialResolution.SISTEMA_INTERLIGADO,
             ): lambda dir, _: self.__adiciona_coluna_patamar(
-                Vevminsin.read(join(dir, "vevminsin.out")).valores
+                ViolEvminsin.read(join(dir, "viol_evminsin.out")).valores
             ),
             (
                 Variable.VOLUME_RETIRADO,
                 SpatialResolution.USINA_HIDROELETRICA,
             ): lambda dir, uhe=1: self.__adiciona_coluna_patamar(
-                Desvuh.read(join(dir, f"desvuh{str(uhe).zfill(3)}.out")).valores
+                Vretiradauh.read(
+                    join(dir, f"vretiradauh{str(uhe).zfill(3)}.out")
+                ).valores
             ),
             (
-                Variable.VOLUME_DESVIADO,
+                Variable.VAZAO_DESVIADA,
                 SpatialResolution.USINA_HIDROELETRICA,
-            ): lambda dir, uhe=1: self.__calcula_patamar_medio_soma(
-                Vdesviouh.read(
-                    join(dir, f"vdesviouh{str(uhe).zfill(3)}.out")
+            ): lambda dir, uhe=1: self.__substitui_coluna_patamar(
+                Qdesviouh.read(
+                    join(dir, f"qdesviouh{str(uhe).zfill(3)}.out")
                 ).valores
             ),
             (
                 Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
                 SpatialResolution.USINA_HIDROELETRICA,
             ): lambda dir, uhe=1: self.__calcula_patamar_medio_soma(
-                Vghminuh.read(
-                    join(dir, f"vghminuh{str(uhe).zfill(3)}.out")
+                ViolGhminuh.read(
+                    join(dir, f"viol_ghminuh{str(uhe).zfill(3)}.out")
                 ).valores
             ),
             (
                 Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
                 SpatialResolution.RESERVATORIO_EQUIVALENTE,
             ): lambda dir, ree=1: self.__substitui_coluna_patamar(
-                Vghmin.read(
-                    join(dir, f"vghmin{str(ree).zfill(3)}.out")
+                ViolGhmin.read(
+                    join(dir, f"viol_ghmin{str(ree).zfill(3)}.out")
                 ).valores,
             ),
             (
                 Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
                 SpatialResolution.SUBMERCADO,
             ): lambda dir, submercado=1: self.__substitui_coluna_patamar(
-                Vghminm.read(
+                # TODO - atualizar o nome do arquivo quando for alterado
+                ViolGhminm.read(
                     join(dir, f"vghminm{str(submercado).zfill(3)}.out")
                 ).valores
             ),
@@ -962,7 +978,7 @@ class RawFilesRepository(AbstractFilesRepository):
                 Variable.VIOLACAO_GERACAO_HIDRAULICA_MINIMA,
                 SpatialResolution.SISTEMA_INTERLIGADO,
             ): lambda dir, _: self.__substitui_coluna_patamar(
-                Vghminsin.read(join(dir, "vghminsin.out")).valores
+                ViolGhminsin.read(join(dir, "viol_ghminsin.out")).valores
             ),
             (
                 Variable.COTA_MONTANTE,
@@ -994,16 +1010,16 @@ class RawFilesRepository(AbstractFilesRepository):
                 Variable.VIOLACAO_POSITIVA_EVAPORACAO,
                 SpatialResolution.USINA_HIDROELETRICA,
             ): lambda dir, uhe=1: self.__adiciona_coluna_patamar(
-                Dposevap.read(
-                    join(dir, f"dpos_evap{str(uhe).zfill(3)}.out")
+                ViolPosEvap.read(
+                    join(dir, f"viol_pos_evap{str(uhe).zfill(3)}.out")
                 ).valores
             ),
             (
                 Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
                 SpatialResolution.USINA_HIDROELETRICA,
             ): lambda dir, uhe=1: self.__adiciona_coluna_patamar(
-                Dnegevap.read(
-                    join(dir, f"dneg_evap{str(uhe).zfill(3)}.out")
+                ViolNegEvap.read(
+                    join(dir, f"viol_neg_evap{str(uhe).zfill(3)}.out")
                 ).valores.fillna(0.0)
             ),
         }

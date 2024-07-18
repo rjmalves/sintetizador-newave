@@ -9,6 +9,7 @@ class Variable(Enum):
     CUSTO_DEFICIT = "CDEF"
     CUSTO_OPERACAO = "COP"
     CUSTO_FUTURO = "CFU"
+    CUSTO_TOTAL = "CTO"
     ENERGIA_NATURAL_AFLUENTE_ABSOLUTA_RESERVATORIO = "ENAAR"
     ENERGIA_NATURAL_AFLUENTE_ABSOLUTA_FIO = "ENAAF"
     ENERGIA_NATURAL_AFLUENTE_ABSOLUTA = "ENAA"
@@ -94,6 +95,7 @@ class Variable(Enum):
             "CDEF": "Custo de Déficit",
             "COP": "COPER",
             "CFU": "CFU",
+            "CTO": "CTO",
             "ENAAR": "ENA Reservatório",
             "ENAAF": "ENA Fio",
             "ENAA": "ENA",
@@ -170,6 +172,7 @@ class Variable(Enum):
             "CDEF": "Custo de Déficit",
             "COP": "Custo de Operação",
             "CFU": "Custo Futuro",
+            "CTO": "Custo Total",
             "ENAAR": "Energia Natural Afluente Absoluta em Reservatórios",
             "ENAAF": "Energia Natural Afluente Absoluta em Fio d'Água",
             "ENAA": "Energia Natural Afluente Absoluta",
