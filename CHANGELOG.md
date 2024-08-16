@@ -1,3 +1,6 @@
+# v2.1.1
+- Correção na montagem das séries de cada ano simulado quando feita simulação final histórica [#47](https://github.com/rjmalves/sintetizador-newave/issues/47)
+
 # v2.1.0
 - Suporte a versões >= 29.4 do modelo NEWAVE devido a renomeação de diversos arquivos de saída utilizados pelo sintetizador [#44](https://github.com/rjmalves/sintetizador-newave/issues/44)
 - Implementada síntese do Custo Futuro (`CFU_SIN.parquet`) verificado no processo de simulação final [#45](https://github.com/rjmalves/sintetizador-newave/issues/45)
