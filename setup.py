@@ -7,7 +7,6 @@ requirements = []
 with open("requirements.txt", "r") as fh:
     requirements = fh.readlines()
 
-
 setup(
     name="sintetizador_newave",
     version=__version__,
@@ -15,10 +14,8 @@ setup(
     author_email="rogerioalves.ee@gmail.com",
     description="sintetizador_newave",
     long_description=long_description,
-    install_requires=requirements,
     packages=find_packages(),
     py_modules=["main", "sintetizador"],
-    python_requires=">=3.10",
     classifiers=[
         "Programming Language :: Python :: 3.10",
         "Operating System :: OS Independent",
@@ -27,4 +24,6 @@ setup(
         [console_scripts]
         sintetizador-newave=main:main
     """,
+    python_requires=">=3.10",
+    install_requires=requirements,
 )

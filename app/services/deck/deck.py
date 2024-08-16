@@ -45,7 +45,7 @@ from inewave.newave.modelos.modif import (
 )
 import logging
 from datetime import datetime, timedelta
-from dateutil.relativedelta import relativedelta
+from dateutil.relativedelta import relativedelta  # type: ignore
 import pandas as pd  # type: ignore
 import numpy as np  # type: ignore
 from functools import partial

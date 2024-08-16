@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Type, Optional, Tuple, Callable, TypeVar
+import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
 from datetime import datetime, timedelta
 import pathlib
@@ -1024,33 +1025,53 @@ class RawFilesRepository(AbstractFilesRepository):
             ),
         }
 
+    def __fix_indices_cenarios(self, df: pd.DataFrame) -> pd.DataFrame:
+        anos = df["data"].dt.year.unique().tolist()
+        num_patamares = (
+            1 if "patamar" not in df.columns else len(df["patamar"].unique())
+        )
+        num_series = df.loc[df["data"].dt.year == anos[0]].shape[0] // (
+            12 * num_patamares
+        )
+        df["serie"] = np.tile(
+            np.repeat(np.arange(1, num_series + 1), 12 * num_patamares),
+            len(anos),
+        )
+        return df
+
     def __agrega_dfs_cmo(self, dir: str, submercado: int) -> pd.DataFrame:
         df_med = Cmargmed.read(
             join(dir, f"cmarg{str(submercado).zfill(3)}-med.out")
         ).valores
         df_med["patamar"] = 0
-        return pd.concat(
-            [
-                df_med,
-                Cmarg.read(
-                    join(dir, f"cmarg{str(submercado).zfill(3)}.out")
-                ).valores,
-            ],
+        df_med = self.__fix_indices_cenarios(df_med)
+        df_pats = Cmarg.read(
+            join(dir, f"cmarg{str(submercado).zfill(3)}.out")
+        ).valores
+        df_pats = self.__fix_indices_cenarios(df_pats)
+        df = pd.concat(
+            [df_med, df_pats],
             ignore_index=True,
         )
+        df = df.sort_values(["data", "serie", "patamar"]).reset_index(drop=True)
+        return df
 
     def __adiciona_coluna_patamar(self, df: pd.DataFrame) -> pd.DataFrame:
         df["patamar"] = 0
+        df = self.__fix_indices_cenarios(df)
         return df
 
     def __substitui_coluna_patamar(
         self, df: pd.DataFrame, col: str = "TOTAL"
     ) -> pd.DataFrame:
         df.loc[df["patamar"] == col, "patamar"] = "0"
-        return df.astype({"patamar": int})
+        df = df.astype({"patamar": int})
+        df = self.__fix_indices_cenarios(df)
+        return df
 
     def __calcula_patamar_medio_soma(self, df: pd.DataFrame) -> pd.DataFrame:
         df = df.astype({"patamar": int})
+        df = self.__fix_indices_cenarios(df)
         df_pat0 = df.copy()
         df_pat0["patamar"] = 0
         df_pat0 = df_pat0.groupby(["data", "serie"], as_index=False).sum(
@@ -1063,6 +1084,7 @@ class RawFilesRepository(AbstractFilesRepository):
         self, df: pd.DataFrame
     ) -> pd.DataFrame:
         df = df.astype({"patamar": int})
+        df = self.__fix_indices_cenarios(df)
         df_pat0 = df.copy()
         df_pat0["patamar"] = 0
         df_pat0 = df_pat0.groupby(
@@ -1252,7 +1274,8 @@ class RawFilesRepository(AbstractFilesRepository):
             regra = self.__regras.get((variable, spatial_resolution))
             if regra is None:
                 return None
-            return regra(self.__tmppath, *args, **kwargs)
+            df = regra(self.__tmppath, *args, **kwargs)
+            return df
         except Exception:
             return None
 

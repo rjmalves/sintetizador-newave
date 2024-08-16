@@ -1,6 +1,6 @@
 import pandas as pd  # type: ignore
 import numpy as np
-from dateutil.relativedelta import relativedelta
+from dateutil.relativedelta import relativedelta  # type: ignore
 from typing import Dict, List, Tuple, Callable, Type, TypeVar, Optional
 from app.model.operation.variable import Variable
 from app.model.operation.unit import Unit
