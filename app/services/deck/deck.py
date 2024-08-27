@@ -1,94 +1,97 @@
-from inewave.newave import (
-    Dger,
-    Ree,
-    Confhd,
-    Dsvagua,
-    Modif,
-    Conft,
-    Sistema,
-    Curva,
-    Clast,
-    Term,
-    Manutt,
-    Expt,
-    Hidr,
-    Patamar,
-    Shist,
-    Pmo,
-    Newavetim,
-    Vazoes,
-    Engnat,
-    Energiaf,
-    Enavazf,
-    Vazaof,
-    Energiab,
-    Enavazb,
-    Vazaob,
-    Energias,
-    # Enavazs,
-    Vazaos,
-)
-from inewave.newave.modelos.modif import (
-    VOLMIN,
-    VOLMAX,
-    VMINT,
-    VMAXT,
-    VAZMIN,
-    VAZMINT,
-    VAZMAXT,
-    TURBMINT,
-    TURBMAXT,
-    NUMCNJ,
-    NUMMAQ,
-    CFUGA,
-    CMONT,
-)
 import logging
 from datetime import datetime, timedelta
-from dateutil.relativedelta import relativedelta  # type: ignore
-import pandas as pd  # type: ignore
-import numpy as np  # type: ignore
 from functools import partial
-from typing import Any, Optional, TypeVar, Type, List, Tuple, Union, Dict
+from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
+
+import numpy as np  # type: ignore
+import pandas as pd  # type: ignore
+import polars as pl
 from cfinterface.components.register import Register
-from app.services.unitofwork import AbstractUnitOfWork
-from app.model.operation.unit import Unit
-from app.utils.graph import Graph
+from dateutil.relativedelta import relativedelta  # type: ignore
+from inewave.newave import (
+    Clast,
+    Confhd,
+    Conft,
+    Curva,
+    Dger,
+    Dsvagua,
+    Enavazb,
+    Enavazf,
+    Energiab,
+    Energiaf,
+    Energias,
+    Engnat,
+    Expt,
+    Hidr,
+    Manutt,
+    Modif,
+    Newavetim,
+    Patamar,
+    Pmo,
+    Ree,
+    Shist,
+    Sistema,
+    Term,
+    Vazaob,
+    Vazaof,
+    # Enavazs,
+    Vazaos,
+    Vazoes,
+)
+from inewave.newave.modelos.modif import (
+    CFUGA,
+    CMONT,
+    NUMCNJ,
+    NUMMAQ,
+    TURBMAXT,
+    TURBMINT,
+    VAZMAXT,
+    VAZMIN,
+    VAZMINT,
+    VMAXT,
+    VMINT,
+    VOLMAX,
+    VOLMIN,
+)
+
 from app.internal.constants import (
-    STRING_DF_TYPE,
-    HYDRO_CODE_COL,
-    HYDRO_NAME_COL,
-    THERMAL_CODE_COL,
-    THERMAL_NAME_COL,
+    BLOCK_COL,
+    CONFIG_COL,
     EER_CODE_COL,
     EER_NAME_COL,
-    SUBMARKET_CODE_COL,
-    SUBMARKET_NAME_COL,
     EXCHANGE_SOURCE_CODE_COL,
     EXCHANGE_TARGET_CODE_COL,
-    VALUE_COL,
-    CONFIG_COL,
-    START_DATE_COL,
-    LOWER_BOUND_COL,
-    UPPER_BOUND_COL,
-    LOWER_BOUND_UNIT_COL,
-    UPPER_BOUND_UNIT_COL,
-    BLOCK_COL,
-    SCENARIO_COL,
-    PRODUCTIVITY_TMP_COL,
-    VOLUME_FOR_PRODUCTIVITY_TMP_COL,
-    HM3_M3S_MONTHLY_FACTOR,
     FOLLOWING_HYDRO_COL,
     HEIGHT_POLY_COLS,
-    LOSS_KIND_COL,
+    HM3_M3S_MONTHLY_FACTOR,
+    HYDRO_CODE_COL,
+    HYDRO_NAME_COL,
     LOSS_COL,
+    LOSS_KIND_COL,
+    LOWER_BOUND_COL,
+    LOWER_BOUND_UNIT_COL,
     LOWER_DROP_COL,
-    SPEC_PRODUCTIVITY_COL,
-    VOLUME_REGULATION_COL,
-    RUN_OF_RIVER_REFERENCE_VOLUME_COL,
-    UPPER_DROP_COL,
     NET_DROP_COL,
+    PRODUCTIVITY_TMP_COL,
+    RUN_OF_RIVER_REFERENCE_VOLUME_COL,
+    SCENARIO_COL,
+    SPEC_PRODUCTIVITY_COL,
+    START_DATE_COL,
+    STRING_DF_TYPE,
+    SUBMARKET_CODE_COL,
+    SUBMARKET_NAME_COL,
+    THERMAL_CODE_COL,
+    THERMAL_NAME_COL,
+    UPPER_BOUND_COL,
+    UPPER_BOUND_UNIT_COL,
+    UPPER_DROP_COL,
+    VALUE_COL,
+    VOLUME_FOR_PRODUCTIVITY_TMP_COL,
+    VOLUME_REGULATION_COL,
 )
+from app.model.operation.unit import Unit
+from app.services.unitofwork import AbstractUnitOfWork
+from app.utils.graph import Graph
 
 
 class Deck:
@@ -1193,6 +1196,10 @@ class Deck:
                 ),
                 freq="MS",
             ).tolist()
+            internal_stages_starting_dates_final_simulation = [
+                a.to_pydatetime()
+                for a in internal_stages_starting_dates_final_simulation
+            ]
             cls.DECK_DATA_CACHING[
                 "internal_stages_starting_dates_final_simulation"
             ] = internal_stages_starting_dates_final_simulation
@@ -1286,53 +1293,59 @@ class Deck:
             if configurations is None:
                 configurations = cls._configurations_dger(uow)
 
+            configurations = pl.from_pandas(configurations)
             cls.DECK_DATA_CACHING["configurations"] = configurations
-        return configurations.copy()
+        return configurations
 
     @classmethod
     def eer_stored_energy_lower_bounds(
         cls, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """
         Obtem os limites inferiores de armazenamento de energia para
         cada REE, convertendo os valores de percentual para MWmes,
         para o período de estudo.
         """
 
-        def _add_missing_eer_bounds(df: pd.DataFrame) -> pd.DataFrame:
-            df = df.loc[
-                df[START_DATE_COL]
+        def _add_missing_eer_bounds(df: pl.DataFrame) -> pl.DataFrame:
+            df = df.filter(
+                pl.col(START_DATE_COL)
                 >= Deck.stages_starting_dates_final_simulation(uow)[0]
-            ]
-            eers_minimum_storage = df[EER_CODE_COL].unique().tolist()
+            )
+
+            eers_minimum_storage = df[EER_CODE_COL].unique().to_list()
             eer_codes = Deck.eer_code_order(uow)
             missing_eers = list(set(eer_codes).difference(eers_minimum_storage))
             lower_bound_dfs = [df]
             for c in missing_eers:
-                eer_df = df.loc[
-                    df[EER_CODE_COL] == eers_minimum_storage[0]
-                ].copy()
-                eer_df[EER_CODE_COL] = c
-                eer_df[VALUE_COL] = 0.0
+                eer_df = df.filter(
+                    pl.col(EER_CODE_COL) == eers_minimum_storage[0]
+                )
+                eer_df = eer_df.with_columns(
+                    pl.lit(c, dtype=df[EER_CODE_COL].dtype).alias(EER_CODE_COL),
+                    pl.lit(0.0).alias(VALUE_COL),
+                )
                 lower_bound_dfs.append(eer_df)
-            lower_bound_df = pd.concat(lower_bound_dfs, ignore_index=True)
-            lower_bound_df = lower_bound_df.sort_values(
-                [EER_CODE_COL, START_DATE_COL]
-            )
+            lower_bound_df = pl.concat(lower_bound_dfs)
+            lower_bound_df = lower_bound_df.sort([
+                EER_CODE_COL,
+                START_DATE_COL,
+            ])
             return lower_bound_df
 
-        def _cast_perc_to_absolute(df: pd.DataFrame) -> pd.DataFrame:
+        def _cast_perc_to_absolute(df: pl.DataFrame) -> pl.DataFrame:
             upper_bound_df = cls.stored_energy_upper_bounds(uow)
-            df = df.sort_values([EER_CODE_COL, START_DATE_COL]).reset_index(
-                drop=True
+            df = df.sort([EER_CODE_COL, START_DATE_COL])
+            upper_bound_df = upper_bound_df.sort([
+                EER_CODE_COL,
+                START_DATE_COL,
+            ])
+            df = df.with_columns(
+                (pl.col(VALUE_COL) * upper_bound_df[VALUE_COL] / 100.0)
             )
-            upper_bound_df = upper_bound_df.sort_values(
-                [EER_CODE_COL, START_DATE_COL]
-            ).reset_index(drop=True)
-            df[VALUE_COL] = df[VALUE_COL] * upper_bound_df[VALUE_COL] / 100.0
             return df
 
-        def _add_entity_data(df: pd.DataFrame) -> pd.DataFrame:
+        def _add_entity_data(df: pl.DataFrame) -> pl.DataFrame:
             entity_map = cls.eer_submarket_map(uow)
             return df.join(entity_map, on=EER_CODE_COL)
 
@@ -1345,16 +1358,17 @@ class Deck:
                 pd.DataFrame,
                 "curva de segurança",
             )
-            minimum_perc_storage_df = minimum_perc_storage_df.rename(
-                columns={"data": START_DATE_COL}
-            )
+            minimum_perc_storage_df = pl.from_pandas(minimum_perc_storage_df)
+            minimum_perc_storage_df = minimum_perc_storage_df.rename({
+                "data": START_DATE_COL
+            })
             lower_bound_df = _add_missing_eer_bounds(minimum_perc_storage_df)
             lower_bound_df = _cast_perc_to_absolute(lower_bound_df)
             eer_stored_energy_lower_bounds = _add_entity_data(lower_bound_df)
             cls.DECK_DATA_CACHING["eer_stored_energy_lower_bounds"] = (
                 eer_stored_energy_lower_bounds
             )
-        return eer_stored_energy_lower_bounds.copy()
+        return eer_stored_energy_lower_bounds
 
     @classmethod
     def _stored_energy_upper_bounds_inputs(
@@ -1399,16 +1413,14 @@ class Deck:
                         ABSOLUTE_VALUE_COL,
                     ]
                 ]
-                .groupby(
-                    [
-                        START_DATE_COL,
-                        CONFIG_COL,
-                        EER_CODE_COL,
-                        EER_NAME_COL,
-                        SUBMARKET_CODE_COL,
-                        SUBMARKET_NAME_COL,
-                    ]
-                )
+                .groupby([
+                    START_DATE_COL,
+                    CONFIG_COL,
+                    EER_CODE_COL,
+                    EER_NAME_COL,
+                    SUBMARKET_CODE_COL,
+                    SUBMARKET_NAME_COL,
+                ])
                 .sum()
             ).reset_index()
             eer_codes = cls.eer_code_order(uow)
@@ -1419,22 +1431,20 @@ class Deck:
             missing_dfs: list[pd.DataFrame] = []
             dates = df[START_DATE_COL].unique()
             for eer in missing_eers:
-                missing_df = pd.DataFrame(
-                    {
-                        START_DATE_COL: dates,
-                        CONFIG_COL: configurations_df.loc[
-                            configuration_df[START_DATE_COL].isin(dates),
-                            VALUE_COL,
-                        ].to_numpy(),
-                        EER_CODE_COL: [eer] * len(dates),
-                        EER_NAME_COL: [eers.at[eer, EER_NAME_COL]] * len(dates),
-                        SUBMARKET_CODE_COL: [eers.at[eer, SUBMARKET_CODE_COL]]
-                        * len(dates),
-                        SUBMARKET_NAME_COL: [eers.at[eer, SUBMARKET_NAME_COL]]
-                        * len(dates),
-                        ABSOLUTE_VALUE_COL: [0.0] * len(dates),
-                    }
-                )
+                missing_df = pd.DataFrame({
+                    START_DATE_COL: dates,
+                    CONFIG_COL: configurations_df.loc[
+                        configuration_df[START_DATE_COL].isin(dates),
+                        VALUE_COL,
+                    ].to_numpy(),
+                    EER_CODE_COL: [eer] * len(dates),
+                    EER_NAME_COL: [eers.at[eer, EER_NAME_COL]] * len(dates),
+                    SUBMARKET_CODE_COL: [eers.at[eer, SUBMARKET_CODE_COL]]
+                    * len(dates),
+                    SUBMARKET_NAME_COL: [eers.at[eer, SUBMARKET_NAME_COL]]
+                    * len(dates),
+                    ABSOLUTE_VALUE_COL: [0.0] * len(dates),
+                })
                 missing_dfs.append(missing_df)
             df = pd.concat([df] + missing_dfs, ignore_index=True)
             df = df.sort_values([EER_CODE_COL, START_DATE_COL, CONFIG_COL])
@@ -1493,30 +1503,41 @@ class Deck:
         cada REE em MWmes, para o período de estudo.
         """
 
-        def _filter_study_period(df: pd.DataFrame) -> pd.DataFrame:
+        def _filter_study_period(df: pl.DataFrame) -> pl.DataFrame:
             dates = cls.stages_starting_dates_final_simulation(uow)
-            df = df.loc[df[START_DATE_COL].between(dates[0], dates[-1])]
+            df = df.filter(
+                pl.col(START_DATE_COL).is_between(dates[0], dates[-1])
+            )
             return df
 
-        def _add_entity_data(df: pd.DataFrame) -> pd.DataFrame:
+        def _add_entity_data(df: pl.DataFrame) -> pl.DataFrame:
             eers = cls.eer_code_order(uow)
             num_configs = df.shape[0]
-            df = pd.concat([df] * len(eers), ignore_index=True)
-            df[EER_CODE_COL] = np.repeat(eers, num_configs)
+            df = pl.concat([df] * len(eers))
+            df = df.with_columns(
+                pl.Series(
+                    name=EER_CODE_COL, values=np.repeat(eers, num_configs)
+                )
+            )
             entity_map = cls.eer_submarket_map(uow)
             return df.join(entity_map, on=EER_CODE_COL)
 
         def _add_values(
-            df: pd.DataFrame, maximum_storage_df: pd.DataFrame
-        ) -> pd.DataFrame:
-            df[VALUE_COL] = df.apply(
-                lambda line: maximum_storage_df.loc[
-                    (maximum_storage_df[EER_NAME_COL] == line[EER_NAME_COL])
-                    & (maximum_storage_df[CONFIG_COL] == line[CONFIG_COL]),
-                    VALUE_COL,
-                ].iloc[0],
-                axis=1,
+            df: pl.DataFrame, maximum_storage_df: pl.DataFrame
+        ) -> pl.DataFrame:
+            maximum_storage_df = maximum_storage_df.with_columns(
+                (pl.col(EER_NAME_COL) + pl.col(CONFIG_COL).cast(str)).alias(
+                    "key"
+                )
             )
+            df = df.with_columns(
+                (pl.col(EER_NAME_COL) + pl.col(CONFIG_COL).cast(str)).alias(
+                    "key"
+                )
+            )
+            df = df.join(maximum_storage_df[["key", VALUE_COL]], on="key").drop([
+                "key"
+            ])
             return df
 
         maximum_storage_df = cls.pmo(uow).energia_armazenada_maxima
@@ -1524,32 +1545,32 @@ class Deck:
         if maximum_storage_df is None:
             return None
 
-        maximum_storage_df = maximum_storage_df.rename(
-            columns={
-                "nome_ree": EER_NAME_COL,
-                "data": START_DATE_COL,
-                "valor_MWmes": VALUE_COL,
-            }
-        )
+        maximum_storage_df = pl.from_pandas(maximum_storage_df)
+
+        maximum_storage_df = maximum_storage_df.rename({
+            "nome_ree": EER_NAME_COL,
+            "valor_MWmes": VALUE_COL,
+        })
         configs_df = cls.configurations(uow)
-        configs_df = configs_df.rename(
-            columns={
-                VALUE_COL: CONFIG_COL,
-            }
-        )
+        configs_df = configs_df.rename({
+            VALUE_COL: CONFIG_COL,
+        })
         configs_df = _filter_study_period(configs_df)
         configs_df = _add_entity_data(configs_df)
         configs_df = _add_values(configs_df, maximum_storage_df)
-        stored_energy_upper_bounds = configs_df.sort_values(
-            [EER_CODE_COL, START_DATE_COL]
+        stored_energy_upper_bounds = configs_df.sort(
+            by=[
+                EER_CODE_COL,
+                START_DATE_COL,
+            ]
         )
 
-        return stored_energy_upper_bounds.reset_index(drop=True)
+        return stored_energy_upper_bounds
 
     @classmethod
     def stored_energy_upper_bounds(
         cls, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         stored_energy_upper_bounds = cls.DECK_DATA_CACHING.get(
             "stored_energy_upper_bounds"
         )
@@ -1561,7 +1582,7 @@ class Deck:
             cls.DECK_DATA_CACHING["stored_energy_upper_bounds"] = (
                 stored_energy_upper_bounds
             )
-        return stored_energy_upper_bounds.copy()
+        return stored_energy_upper_bounds
 
     @classmethod
     def convergence(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
@@ -1696,9 +1717,10 @@ class Deck:
             num_stages = len(dates)
             df = pd.concat([df] * num_stages, ignore_index=True)
             df[START_DATE_COL] = np.repeat(dates, num_thermals)
-            return df.sort_values(
-                [THERMAL_CODE_COL, START_DATE_COL]
-            ).reset_index(drop=True)
+            return df.sort_values([
+                THERMAL_CODE_COL,
+                START_DATE_COL,
+            ]).reset_index(drop=True)
 
         def _add_term_lower_bounds(
             df: pd.DataFrame, term: pd.DataFrame, uow: AbstractUnitOfWork
@@ -1915,12 +1937,14 @@ class Deck:
                     axis=1,
                 )
             )
-            block_length_df = block_length_df.sort_values(
-                [START_DATE_COL, BLOCK_COL]
-            )
-            n_pares_limites = exchange_block_bounds_df.drop_duplicates(
-                [EXCHANGE_SOURCE_CODE_COL, EXCHANGE_TARGET_CODE_COL]
-            ).shape[0]
+            block_length_df = block_length_df.sort_values([
+                START_DATE_COL,
+                BLOCK_COL,
+            ])
+            n_pares_limites = exchange_block_bounds_df.drop_duplicates([
+                EXCHANGE_SOURCE_CODE_COL,
+                EXCHANGE_TARGET_CODE_COL,
+            ]).shape[0]
             exchange_block_bounds_df[VALUE_COL] *= np.tile(
                 block_length_df[VALUE_COL].to_numpy(), n_pares_limites
             )
@@ -2582,9 +2606,11 @@ class Deck:
             df[BLOCK_COL] = np.tile(
                 np.arange(num_blocks), num_hydros * num_stages
             )
-            return df.sort_values(
-                [HYDRO_CODE_COL, START_DATE_COL, BLOCK_COL]
-            ).reset_index(drop=True)
+            return df.sort_values([
+                HYDRO_CODE_COL,
+                START_DATE_COL,
+                BLOCK_COL,
+            ]).reset_index(drop=True)
 
         def _add_hydro_bounds_changes_to_stages(
             df: pd.DataFrame, uow: AbstractUnitOfWork
@@ -2714,9 +2740,11 @@ class Deck:
             df[BLOCK_COL] = np.tile(
                 np.arange(num_blocks), num_hydros * num_stages
             )
-            return df.sort_values(
-                [HYDRO_CODE_COL, START_DATE_COL, BLOCK_COL]
-            ).reset_index(drop=True)
+            return df.sort_values([
+                HYDRO_CODE_COL,
+                START_DATE_COL,
+                BLOCK_COL,
+            ]).reset_index(drop=True)
 
         def _add_hydro_bounds_changes_to_stages(
             df: pd.DataFrame, uow: AbstractUnitOfWork
@@ -3127,14 +3155,12 @@ class Deck:
             missing_eers = [
                 eer for eer in eer_codes if eer not in df[EER_CODE_COL].tolist()
             ]
-            missing_df = pd.DataFrame(
-                {
-                    EER_CODE_COL: missing_eers,
-                    EER_NAME_COL: eers.loc[missing_eers, EER_NAME_COL].tolist(),
-                    ABSOLUTE_VALUE_COL: [np.nan] * len(missing_eers),
-                    PERCENT_VALUE_COL: [100.0] * len(missing_eers),
-                }
-            )
+            missing_df = pd.DataFrame({
+                EER_CODE_COL: missing_eers,
+                EER_NAME_COL: eers.loc[missing_eers, EER_NAME_COL].tolist(),
+                ABSOLUTE_VALUE_COL: [np.nan] * len(missing_eers),
+                PERCENT_VALUE_COL: [100.0] * len(missing_eers),
+            })
             if not missing_df.empty:
                 df = pd.concat([df, missing_df], ignore_index=True)
             df[EER_CODE_COL] = df[EER_CODE_COL].astype(int)
@@ -3326,8 +3352,9 @@ class Deck:
         return hydro_code_order
 
     @classmethod
-    def hydro_eer_submarket_map(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def hydro_eer_submarket_map(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         aux_df = cls.DECK_DATA_CACHING.get("hydro_eer_submarket_map")
+        # TODO - replace with pl.DataFrame
         if aux_df is None:
             hydros = cls.hydros(uow)
             eers = cls.eers(uow)
@@ -3339,30 +3366,26 @@ class Deck:
             aux_df = aux_df.join(
                 submarkets[[SUBMARKET_NAME_COL]], on=SUBMARKET_CODE_COL
             )
+            aux_df = pl.from_pandas(aux_df.reset_index())
             cls.DECK_DATA_CACHING["hydro_eer_submarket_map"] = aux_df
-        return aux_df.copy()
+        return aux_df
 
     @classmethod
     def eer_submarket_map(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         aux_df = cls.DECK_DATA_CACHING.get("eer_submarket_map")
         if aux_df is None:
             aux_df = cls.hydro_eer_submarket_map(uow)
-            aux_df = aux_df.drop_duplicates(subset=[EER_CODE_COL]).reset_index(
-                drop=True
-            )[
-                [
-                    EER_CODE_COL,
-                    EER_NAME_COL,
-                    SUBMARKET_CODE_COL,
-                    SUBMARKET_NAME_COL,
-                ]
+            aux_df = aux_df.unique(subset=[EER_CODE_COL])[
+                EER_CODE_COL,
+                EER_NAME_COL,
+                SUBMARKET_CODE_COL,
+                SUBMARKET_NAME_COL,
             ]
-            aux_df = aux_df.set_index(EER_CODE_COL)
             cls.DECK_DATA_CACHING["eer_submarket_map"] = aux_df
-        return aux_df.copy()
+        return aux_df
 
     @classmethod
-    def thermal_submarket_map(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def thermal_submarket_map(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         aux_df = cls.DECK_DATA_CACHING.get("thermal_submarket_map")
         if aux_df is None:
             thermals = Deck.thermals(uow).reset_index()
@@ -3379,6 +3402,6 @@ class Deck:
             aux_df[SUBMARKET_NAME_COL] = aux_df[SUBMARKET_CODE_COL].apply(
                 lambda c: submarkets.at[c, SUBMARKET_NAME_COL]
             )
-            aux_df = aux_df.set_index(THERMAL_CODE_COL)
+            aux_df = pl.from_pandas(aux_df)
             cls.DECK_DATA_CACHING["thermal_submarket_map"] = aux_df
-        return aux_df.copy()
+        return aux_df

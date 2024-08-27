@@ -1,9 +1,10 @@
+import pathlib
 from abc import ABC, abstractmethod
 from typing import Dict, Type
+
 import pandas as pd  # type: ignore
-import pyarrow as pa  # type: ignore
-import pyarrow.parquet as pq  # type: ignore
-import pathlib
+import polars as pl
+
 from app.utils.tz import enforce_utc
 
 
@@ -24,15 +25,26 @@ class ParquetExportRepository(AbstractExportRepository):
     def path(self) -> pathlib.Path:
         return pathlib.Path(self.__path)
 
-    def synthetize_df(self, df: pd.DataFrame, filename: str) -> bool:
-        pq.write_table(
-            pa.Table.from_pandas(enforce_utc(df)),
+    def synthetize_df(self, df: pl.DataFrame, filename: str) -> bool:
+        df.write_parquet(
             self.path.joinpath(filename + ".parquet"),
-            write_statistics=False,
-            flavor="spark",
-            coerce_timestamps="ms",
-            allow_truncated_timestamps=True,
+            compression="snappy",
+            use_pyarrow=True,
+            pyarrow_options={
+                "coerce_timestamps": "ms",
+                "write_statistics": False,
+                "flavor": "spark",
+                "allow_truncated_timestamps": True,
+            },
         )
+        # pq.write_table(
+        #     pa.Table.from_pandas(enforce_utc(df)),
+        #     self.path.joinpath(filename + ".parquet"),
+        #     write_statistics=False,
+        #     flavor="spark",
+        #     coerce_timestamps="ms",
+        #     allow_truncated_timestamps=True,
+        # )
         return True
 
 

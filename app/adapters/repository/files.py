@@ -1,143 +1,136 @@
+import asyncio
+import pathlib
+import platform
 from abc import ABC, abstractmethod
-from typing import Dict, Type, Optional, Tuple, Callable, TypeVar
+from datetime import datetime, timedelta
+from os.path import join
+from typing import Callable, Dict, Optional, Tuple, Type, TypeVar
+
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
-from datetime import datetime, timedelta
-import pathlib
-import asyncio
-from os.path import join
-
-from inewave.newave.caso import Caso
-from inewave.newave.arquivos import Arquivos
-from inewave.newave.patamar import Patamar
-from inewave.newave.dger import Dger
-from inewave.newave.shist import Shist
-from inewave.newave.confhd import Confhd
-from inewave.newave.dsvagua import Dsvagua
-from inewave.newave.modif import Modif
-from inewave.newave.conft import Conft
-from inewave.newave.clast import Clast
-from inewave.newave.term import Term
-from inewave.newave.manutt import Manutt
-from inewave.newave.expt import Expt
+import polars as pl
 from inewave.libs.eolica import Eolica
-from inewave.newave.ree import Ree
+from inewave.newave.arquivos import Arquivos
+from inewave.newave.caso import Caso
+from inewave.newave.clast import Clast
+from inewave.newave.confhd import Confhd
+from inewave.newave.conft import Conft
 from inewave.newave.curva import Curva
-from inewave.newave.sistema import Sistema
-from inewave.newave.pmo import Pmo
-from inewave.newave.newavetim import Newavetim
-from inewave.newave.vazoes import Vazoes
-from inewave.newave.hidr import Hidr
-
-from inewave.newave.energiaf import Energiaf
-from inewave.newave.energiab import Energiab
-from inewave.newave.energias import Energias
-from inewave.newave.vazaof import Vazaof
-from inewave.newave.vazaob import Vazaob
-from inewave.newave.vazaos import Vazaos
-from inewave.newave.enavazf import Enavazf
+from inewave.newave.dger import Dger
+from inewave.newave.dsvagua import Dsvagua
 from inewave.newave.enavazb import Enavazb
+from inewave.newave.enavazf import Enavazf
+from inewave.newave.energiab import Energiab
+from inewave.newave.energiaf import Energiaf
+from inewave.newave.energias import Energias
 from inewave.newave.engnat import Engnat
-
+from inewave.newave.expt import Expt
+from inewave.newave.hidr import Hidr
+from inewave.newave.manutt import Manutt
+from inewave.newave.modif import Modif
+from inewave.newave.newavetim import Newavetim
+from inewave.newave.patamar import Patamar
+from inewave.newave.pmo import Pmo
+from inewave.newave.ree import Ree
+from inewave.newave.shist import Shist
+from inewave.newave.sistema import Sistema
+from inewave.newave.term import Term
+from inewave.newave.vazaob import Vazaob
+from inewave.newave.vazaof import Vazaof
+from inewave.newave.vazaos import Vazaos
+from inewave.newave.vazoes import Vazoes
+from inewave.nwlistcf import Estados, Nwlistcfrel
+from inewave.nwlistop.cdef import Cdef
+from inewave.nwlistop.cdefsin import Cdefsin
 from inewave.nwlistop.cmarg import Cmarg
 from inewave.nwlistop.cmargmed import Cmargmed
+from inewave.nwlistop.coper import Coper
+from inewave.nwlistop.corteolm import Corteolm
 from inewave.nwlistop.cterm import Cterm
 from inewave.nwlistop.ctermsin import Ctermsin
-from inewave.nwlistop.coper import Coper
 from inewave.nwlistop.custo_futuro import CustoFuturo
+from inewave.nwlistop.deficit import Def
+from inewave.nwlistop.eaf import Eaf
 from inewave.nwlistop.eafb import Eafb
 from inewave.nwlistop.eafbm import Eafbm
 from inewave.nwlistop.eafbsin import Eafbsin
-from inewave.nwlistop.eaf import Eaf
 from inewave.nwlistop.eafm import Eafm
-from inewave.nwlistop.intercambio import Intercambio
-from inewave.nwlistop.deficit import Def
-from inewave.nwlistop.exces import Exces
-from inewave.nwlistop.excessin import Excessin
-from inewave.nwlistop.cdef import Cdef
-from inewave.nwlistop.cdefsin import Cdefsin
-from inewave.nwlistop.mercl import Mercl
-from inewave.nwlistop.merclsin import Merclsin
-
+from inewave.nwlistop.earmf import Earmf
+from inewave.nwlistop.earmfm import Earmfm
 from inewave.nwlistop.earmfp import Earmfp
 from inewave.nwlistop.earmfpm import Earmfpm
 from inewave.nwlistop.earmfpsin import Earmfpsin
-from inewave.nwlistop.earmf import Earmf
-from inewave.nwlistop.earmfm import Earmfm
 from inewave.nwlistop.earmfsin import Earmfsin
-from inewave.nwlistop.ghidr import Ghidr
-from inewave.nwlistop.ghidrm import Ghidrm
-from inewave.nwlistop.ghidrsin import Ghidrsin
-from inewave.nwlistop.ghtot import Ghtot
-from inewave.nwlistop.ghtotm import Ghtotm
-from inewave.nwlistop.ghtotsin import Ghtotsin
-from inewave.nwlistop.gtert import Gtert
-from inewave.nwlistop.gttot import Gttot
-from inewave.nwlistop.gttotsin import Gttotsin
-from inewave.nwlistop.evert import Evert
-from inewave.nwlistop.evertm import Evertm
-from inewave.nwlistop.evertsin import Evertsin
 from inewave.nwlistop.edesvc import Edesvc
 from inewave.nwlistop.edesvcm import Edesvcm
 from inewave.nwlistop.edesvcsin import Edesvcsin
 from inewave.nwlistop.evapo import Evapo
 from inewave.nwlistop.evapom import Evapom
 from inewave.nwlistop.evaporsin import Evaporsin
-from inewave.nwlistop.mevmin import Mevmin
-from inewave.nwlistop.mevminm import Mevminm
-from inewave.nwlistop.mevminsin import Mevminsin
-from inewave.nwlistop.vmort import Vmort
-from inewave.nwlistop.vmortm import Vmortm
-from inewave.nwlistop.vmortsin import Vmortsin
-from inewave.nwlistop.perdf import Perdf
-from inewave.nwlistop.perdfm import Perdfm
-from inewave.nwlistop.perdfsin import Perdfsin
-from inewave.nwlistop.verturb import Verturb
-from inewave.nwlistop.verturbm import Verturbm
-from inewave.nwlistop.verturbsin import Verturbsin
-from inewave.nwlistop.valor_agua import ValorAgua
-from inewave.nwlistop.viol_evmin import ViolEvmin
-from inewave.nwlistop.viol_evminm import ViolEvminm
-from inewave.nwlistop.viol_evminsin import ViolEvminsin
-from inewave.nwlistop.viol_ghminuh import ViolGhminuh
-from inewave.nwlistop.viol_ghmin import ViolGhmin
-from inewave.nwlistop.viol_ghminm import ViolGhminm
-from inewave.nwlistop.viol_ghminsin import ViolGhminsin
-
-from inewave.nwlistop.vento import Vento
+from inewave.nwlistop.evert import Evert
+from inewave.nwlistop.evertm import Evertm
+from inewave.nwlistop.evertsin import Evertsin
+from inewave.nwlistop.exces import Exces
+from inewave.nwlistop.excessin import Excessin
 from inewave.nwlistop.geol import Geol
 from inewave.nwlistop.geolm import Geolm
 from inewave.nwlistop.geolsin import Geolsin
-from inewave.nwlistop.corteolm import Corteolm
-
-from inewave.nwlistop.qafluh import Qafluh
-from inewave.nwlistop.qincruh import Qincruh
+from inewave.nwlistop.ghidr import Ghidr
+from inewave.nwlistop.ghidrm import Ghidrm
+from inewave.nwlistop.ghidrsin import Ghidrsin
 from inewave.nwlistop.ghiduh import Ghiduh
-from inewave.nwlistop.qturuh import Qturuh
-from inewave.nwlistop.qvertuh import Qvertuh
-from inewave.nwlistop.varmuh import Varmuh
-from inewave.nwlistop.varmpuh import Varmpuh
-from inewave.nwlistop.viol_fpha import ViolFpha
-from inewave.nwlistop.pivarm import Pivarm
-from inewave.nwlistop.pivarmincr import Pivarmincr
-from inewave.nwlistop.vretiradauh import Vretiradauh
-from inewave.nwlistop.qdesviouh import Qdesviouh
-from inewave.nwlistop.hmont import Hmont
+from inewave.nwlistop.ghtot import Ghtot
+from inewave.nwlistop.ghtotm import Ghtotm
+from inewave.nwlistop.ghtotsin import Ghtotsin
+from inewave.nwlistop.gtert import Gtert
+from inewave.nwlistop.gttot import Gttot
+from inewave.nwlistop.gttotsin import Gttotsin
 from inewave.nwlistop.hjus import Hjus
 from inewave.nwlistop.hliq import Hliq
+from inewave.nwlistop.hmont import Hmont
+from inewave.nwlistop.intercambio import Intercambio
+from inewave.nwlistop.mercl import Mercl
+from inewave.nwlistop.merclsin import Merclsin
+from inewave.nwlistop.mevmin import Mevmin
+from inewave.nwlistop.mevminm import Mevminm
+from inewave.nwlistop.mevminsin import Mevminsin
+from inewave.nwlistop.perdf import Perdf
+from inewave.nwlistop.perdfm import Perdfm
+from inewave.nwlistop.perdfsin import Perdfsin
+from inewave.nwlistop.pivarm import Pivarm
+from inewave.nwlistop.pivarmincr import Pivarmincr
+from inewave.nwlistop.qafluh import Qafluh
+from inewave.nwlistop.qdesviouh import Qdesviouh
+from inewave.nwlistop.qincruh import Qincruh
+from inewave.nwlistop.qturuh import Qturuh
+from inewave.nwlistop.qvertuh import Qvertuh
+from inewave.nwlistop.valor_agua import ValorAgua
+from inewave.nwlistop.varmpuh import Varmpuh
+from inewave.nwlistop.varmuh import Varmuh
+from inewave.nwlistop.vento import Vento
+from inewave.nwlistop.verturb import Verturb
+from inewave.nwlistop.verturbm import Verturbm
+from inewave.nwlistop.verturbsin import Verturbsin
 from inewave.nwlistop.vevapuh import Vevapuh
-from inewave.nwlistop.viol_pos_evap import ViolPosEvap
+from inewave.nwlistop.viol_evmin import ViolEvmin
+from inewave.nwlistop.viol_evminm import ViolEvminm
+from inewave.nwlistop.viol_evminsin import ViolEvminsin
+from inewave.nwlistop.viol_fpha import ViolFpha
+from inewave.nwlistop.viol_ghmin import ViolGhmin
+from inewave.nwlistop.viol_ghminm import ViolGhminm
+from inewave.nwlistop.viol_ghminsin import ViolGhminsin
+from inewave.nwlistop.viol_ghminuh import ViolGhminuh
 from inewave.nwlistop.viol_neg_evap import ViolNegEvap
+from inewave.nwlistop.viol_pos_evap import ViolPosEvap
+from inewave.nwlistop.vmort import Vmort
+from inewave.nwlistop.vmortm import Vmortm
+from inewave.nwlistop.vmortsin import Vmortsin
+from inewave.nwlistop.vretiradauh import Vretiradauh
 
-from inewave.nwlistcf import Nwlistcfrel
-from inewave.nwlistcf import Estados
-
+from app.model.operation.spatialresolution import SpatialResolution
+from app.model.operation.variable import Variable
 from app.model.settings import Settings
 from app.utils.encoding import converte_codificacao
-from app.model.operation.variable import Variable
-from app.model.operation.spatialresolution import SpatialResolution
-
-import platform
 
 if platform.system() == "Windows":
     Dger.ENCODING = "iso-8859-1"
@@ -1275,6 +1268,8 @@ class RawFilesRepository(AbstractFilesRepository):
             if regra is None:
                 return None
             df = regra(self.__tmppath, *args, **kwargs)
+            if isinstance(df, pd.DataFrame):
+                df = pl.from_pandas(df)
             return df
         except Exception:
             return None

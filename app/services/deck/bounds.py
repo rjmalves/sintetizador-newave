@@ -1,37 +1,40 @@
-import pandas as pd  # type: ignore
+from typing import Callable, Dict, List, Optional, Tuple, Type, TypeVar
+
 import numpy as np
+import pandas as pd  # type: ignore
+import polars as pl
 from dateutil.relativedelta import relativedelta  # type: ignore
-from typing import Dict, List, Tuple, Callable, Type, TypeVar, Optional
-from app.model.operation.variable import Variable
-from app.model.operation.unit import Unit
-from app.model.operation.spatialresolution import SpatialResolution
-from app.model.operation.operationsynthesis import OperationSynthesis
-from app.services.unitofwork import AbstractUnitOfWork
-from app.services.deck.deck import Deck
+from inewave.newave import (
+    Patamar,
+    Sistema,
+)
+
 from app.internal.constants import (
-    START_DATE_COL,
-    STAGE_COL,
-    HYDRO_CODE_COL,
-    EER_CODE_COL,
-    THERMAL_CODE_COL,
-    SUBMARKET_CODE_COL,
-    EXCHANGE_SOURCE_CODE_COL,
-    EXCHANGE_TARGET_CODE_COL,
     BLOCK_COL,
     BLOCK_DURATION_COL,
-    SCENARIO_COL,
-    UPPER_BOUND_COL,
-    LOWER_BOUND_COL,
-    VALUE_COL,
-    STAGE_DURATION_HOURS,
+    EER_CODE_COL,
+    EXCHANGE_SOURCE_CODE_COL,
+    EXCHANGE_TARGET_CODE_COL,
     HM3_M3S_MONTHLY_FACTOR,
+    HYDRO_CODE_COL,
     IDENTIFICATION_COLUMNS,
+    LOWER_BOUND_COL,
+    SCENARIO_COL,
+    STAGE_COL,
+    STAGE_DURATION_HOURS,
+    START_DATE_COL,
+    SUBMARKET_CODE_COL,
+    THERMAL_CODE_COL,
+    UPPER_BOUND_COL,
+    VALUE_COL,
 )
+from app.model.operation.operationsynthesis import OperationSynthesis
+from app.model.operation.spatialresolution import SpatialResolution
+from app.model.operation.unit import Unit
+from app.model.operation.variable import Variable
+from app.services.deck.deck import Deck
+from app.services.unitofwork import AbstractUnitOfWork
 from app.utils.operations import fast_group_df
-from inewave.newave import (
-    Sistema,
-    Patamar,
-)
 
 
 class OperationVariableBounds:
@@ -927,13 +930,13 @@ class OperationVariableBounds:
     @classmethod
     def _stored_energy_bounds(
         cls,
-        df: pd.DataFrame,
+        df: pl.DataFrame,
         uow: AbstractUnitOfWork,
         synthesis_unit: str,
         ordered_entities: Dict[str, list],
         entity_column: Optional[str] = None,
         initial: bool = False,
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """
         Adiciona ao DataFrame da síntese os limites inferior e superior
         para as variáveis de Energia Armazenada Absoluta (EARM) e Energia
@@ -951,19 +954,26 @@ class OperationVariableBounds:
                     stages = Deck.stages_starting_dates_final_simulation(uow)
                     first_stage = stages[0]
                     last_stage = stages[-1] + relativedelta(months=1)
-                    df.loc[df[START_DATE_COL] == last_stage, VALUE_COL] = limit
-                    df.loc[df[START_DATE_COL] == last_stage, START_DATE_COL] = (
-                        first_stage
+                    df = df.with_columns(pl.col(VALUE_COL))
+                    df = df.with_columns(
+                        pl.when(pl.col(START_DATE_COL) == last_stage)
+                        .then(pl.lit(limit))
+                        .alias(VALUE_COL)
+                    )
+                    df = df.with_columns(
+                        pl.when(pl.col(START_DATE_COL) == last_stage)
+                        .then(pl.lit(first_stage))
+                        .alias(START_DATE_COL)
                     )
 
             upper_bounds = (
-                upper_bound_df.groupby(grouping_columns, as_index=False)
-                .sum(numeric_only=True)[VALUE_COL]
+                upper_bound_df.group_by(grouping_columns, maintain_order=True)
+                .sum()[VALUE_COL]
                 .to_numpy()
             )
             lower_bounds = (
-                lower_bound_df.groupby(grouping_columns, as_index=False)
-                .sum(numeric_only=True)[VALUE_COL]
+                lower_bound_df.group_by(grouping_columns, maintain_order=True)
+                .sum()[VALUE_COL]
                 .to_numpy()
             )
             if synthesis_unit == Unit.perc_modif.value:
@@ -972,38 +982,48 @@ class OperationVariableBounds:
             return lower_bounds, upper_bounds
 
         def _repeat_bounds_by_scenario(
-            df: pd.DataFrame,
+            df: pl.DataFrame,
             lower_bounds: np.ndarray,
             upper_bounds: np.ndarray,
-        ) -> pd.DataFrame:
+        ) -> pl.DataFrame:
             num_entities = (
                 len(ordered_entities[entity_column]) if entity_column else 1
             )
             num_stages = len(ordered_entities[STAGE_COL])
             num_scenarios = len(ordered_entities[SCENARIO_COL])
             num_blocks = len(ordered_entities[BLOCK_COL])
-            df[LOWER_BOUND_COL] = cls._repeats_data_by_scenario(
-                lower_bounds,
-                num_entities,
-                num_stages,
-                num_scenarios,
-                num_blocks,
-            )
-            df[UPPER_BOUND_COL] = cls._repeats_data_by_scenario(
-                upper_bounds,
-                num_entities,
-                num_stages,
-                num_scenarios,
-                num_blocks,
+            df = df.with_columns(
+                pl.Series(
+                    name=LOWER_BOUND_COL,
+                    values=cls._repeats_data_by_scenario(
+                        lower_bounds,
+                        num_entities,
+                        num_stages,
+                        num_scenarios,
+                        num_blocks,
+                    ),
+                ),
+                pl.Series(
+                    name=UPPER_BOUND_COL,
+                    values=cls._repeats_data_by_scenario(
+                        upper_bounds,
+                        num_entities,
+                        num_stages,
+                        num_scenarios,
+                        num_blocks,
+                    ),
+                ),
             )
             return df
 
-        def _sort_and_round_bounds(df: pd.DataFrame) -> pd.DataFrame:
+        def _sort_and_round_bounds(df: pl.DataFrame) -> pl.DataFrame:
             num_digits = 1 if synthesis_unit == Unit.perc_modif.value else 0
-            df[VALUE_COL] = np.round(df[VALUE_COL], num_digits)
-            df = df.sort_values(grouping_columns)
-            df[LOWER_BOUND_COL] = np.round(df[LOWER_BOUND_COL], num_digits)
-            df[UPPER_BOUND_COL] = np.round(df[UPPER_BOUND_COL], num_digits)
+            df = df.with_columns(pl.col(VALUE_COL).round(num_digits))
+            df = df.sort(grouping_columns)
+            df = df.with_columns(
+                pl.col(LOWER_BOUND_COL).round(num_digits),
+                pl.col(UPPER_BOUND_COL).round(num_digits),
+            )
             return df
 
         entity_column_list = [entity_column] if entity_column else []
@@ -1588,29 +1608,33 @@ class OperationVariableBounds:
 
     @classmethod
     def _lower_bounded_bounds(
-        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
+        cls, df: pl.DataFrame, uow: AbstractUnitOfWork
+    ) -> pl.DataFrame:
         """
         Adiciona ao DataFrame da síntese os limites inferior e superior
         para as variáveis de Volume Afluente (VAFL) e Vazão Afluente (QAFL)
         para cada UHE.
         """
-        df[VALUE_COL] = np.round(df[VALUE_COL], 2)
-        df[LOWER_BOUND_COL] = 0.0
-        df[UPPER_BOUND_COL] = float("inf")
+        df = df.with_columns(
+            pl.col(VALUE_COL).round(2),
+            pl.lit(0.0).alias(LOWER_BOUND_COL),
+            pl.lit(float("inf")).alias(UPPER_BOUND_COL),
+        )
         return df
 
     @classmethod
     def _unbounded_bounds(
-        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
+        cls, df: pl.DataFrame, uow: AbstractUnitOfWork
+    ) -> pl.DataFrame:
         """
         Adiciona ao DataFrame da síntese os limites inferior e superior
         para variáveis ilimitadas.
         """
-        df[VALUE_COL] = np.round(df[VALUE_COL], 2)
-        df[LOWER_BOUND_COL] = -float("inf")
-        df[UPPER_BOUND_COL] = float("inf")
+        df = df.with_columns(
+            pl.col(VALUE_COL).round(2),
+            pl.lit(float("-inf")).alias(LOWER_BOUND_COL),
+            pl.lit(float("inf")).alias(UPPER_BOUND_COL),
+        )
         return df
 
     @classmethod
@@ -1677,13 +1701,11 @@ class OperationVariableBounds:
                 exchange_block_bounds_df.loc[
                     exchange_block_bounds_df[START_DATE_COL].isin(start_dates)
                 ]
-                .sort_values(
-                    [
-                        EXCHANGE_SOURCE_CODE_COL,
-                        EXCHANGE_TARGET_CODE_COL,
-                        START_DATE_COL,
-                    ]
-                )
+                .sort_values([
+                    EXCHANGE_SOURCE_CODE_COL,
+                    EXCHANGE_TARGET_CODE_COL,
+                    START_DATE_COL,
+                ])
                 .reset_index(drop=True)
             )
 
@@ -1859,12 +1881,14 @@ class OperationVariableBounds:
         return s in cls.MAPPINGS
 
     @classmethod
-    def _unbounded(cls, df: pd.DataFrame) -> pd.DataFrame:
+    def _unbounded(cls, df: pl.DataFrame) -> pl.DataFrame:
         """
         Adiciona os valores padrão para variáveis não limitadas.
         """
-        df[LOWER_BOUND_COL] = -float("inf")
-        df[UPPER_BOUND_COL] = float("inf")
+        df = df.with_columns(
+            pl.lit(-float("inf")).alias(LOWER_BOUND_COL),
+            pl.lit(float("inf")).alias(UPPER_BOUND_COL),
+        )
         return df
 
     @classmethod

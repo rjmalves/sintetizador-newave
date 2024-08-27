@@ -1,59 +1,62 @@
-from typing import Callable, Dict, List, Tuple, Optional, TypeVar, Any
-import pandas as pd  # type: ignore
-import numpy as np
 import logging
 from datetime import datetime
-from traceback import print_exc
-from logging import INFO, WARNING, ERROR, DEBUG
+from logging import DEBUG, ERROR, INFO, WARNING
 from multiprocessing import Pool
-from app.utils.graph import Graph
-from app.utils.log import Log
-from app.utils.timing import time_and_log
-from app.utils.regex import match_variables_with_wildcards
-from app.utils.operations import calc_statistics
+from traceback import print_exc
+from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar
+
+import numpy as np
+import pandas as pd  # type: ignore
+import polars as pl
+
+from app.internal.constants import (
+    BLOCK_COL,
+    BLOCK_DURATION_COL,
+    EER_CODE_COL,
+    EER_NAME_COL,
+    END_DATE_COL,
+    EXCHANGE_SOURCE_CODE_COL,
+    EXCHANGE_TARGET_CODE_COL,
+    GROUPING_TMP_COL,
+    HM3_M3S_MONTHLY_FACTOR,
+    HYDRO_CODE_COL,
+    HYDRO_NAME_COL,
+    LOWER_BOUND_COL,
+    OPERATION_SYNTHESIS_COMMON_COLUMNS,
+    OPERATION_SYNTHESIS_METADATA_OUTPUT,
+    OPERATION_SYNTHESIS_STATS_ROOT,
+    OPERATION_SYNTHESIS_SUBDIR,
+    PRODUCTIVITY_TMP_COL,
+    SCENARIO_COL,
+    STAGE_COL,
+    STAGE_DURATION_HOURS,
+    START_DATE_COL,
+    STATS_OR_SCENARIO_COL,
+    STRING_DF_TYPE,
+    SUBMARKET_CODE_COL,
+    SUBMARKET_NAME_COL,
+    THERMAL_CODE_COL,
+    UPPER_BOUND_COL,
+    VALUE_COL,
+    VARIABLE_COL,
+)
+from app.model.operation.operationsynthesis import (
+    SUPPORTED_SYNTHESIS,
+    SYNTHESIS_DEPENDENCIES,
+    UNITS,
+    OperationSynthesis,
+)
+from app.model.operation.spatialresolution import SpatialResolution
+from app.model.operation.variable import Variable
 from app.model.settings import Settings
 from app.services.deck.bounds import OperationVariableBounds
 from app.services.deck.deck import Deck
 from app.services.unitofwork import AbstractUnitOfWork
-from app.model.operation.variable import Variable
-from app.model.operation.spatialresolution import SpatialResolution
-from app.model.operation.operationsynthesis import (
-    OperationSynthesis,
-    SUPPORTED_SYNTHESIS,
-    SYNTHESIS_DEPENDENCIES,
-    UNITS,
-)
-from app.internal.constants import (
-    HM3_M3S_MONTHLY_FACTOR,
-    STAGE_DURATION_HOURS,
-    STAGE_COL,
-    START_DATE_COL,
-    END_DATE_COL,
-    SCENARIO_COL,
-    BLOCK_COL,
-    BLOCK_DURATION_COL,
-    VALUE_COL,
-    OPERATION_SYNTHESIS_COMMON_COLUMNS,
-    EER_CODE_COL,
-    EER_NAME_COL,
-    SUBMARKET_CODE_COL,
-    SUBMARKET_NAME_COL,
-    HYDRO_CODE_COL,
-    HYDRO_NAME_COL,
-    THERMAL_CODE_COL,
-    EXCHANGE_SOURCE_CODE_COL,
-    EXCHANGE_TARGET_CODE_COL,
-    VARIABLE_COL,
-    GROUPING_TMP_COL,
-    PRODUCTIVITY_TMP_COL,
-    LOWER_BOUND_COL,
-    UPPER_BOUND_COL,
-    STRING_DF_TYPE,
-    OPERATION_SYNTHESIS_METADATA_OUTPUT,
-    OPERATION_SYNTHESIS_STATS_ROOT,
-    OPERATION_SYNTHESIS_SUBDIR,
-    STATS_OR_SCENARIO_COL,
-)
+from app.utils.graph import Graph
+from app.utils.log import Log
+from app.utils.operations import calc_statistics
+from app.utils.regex import match_variables_with_wildcards
+from app.utils.timing import time_and_log
 
 
 class OperationSynthetizer:
@@ -70,11 +73,11 @@ class OperationSynthetizer:
     )
 
     # Estratégias de cache para reduzir tempo total de síntese
-    CACHED_SYNTHESIS: Dict[OperationSynthesis, pd.DataFrame] = {}
+    CACHED_SYNTHESIS: Dict[OperationSynthesis, pl.DataFrame] = {}
     ORDERED_SYNTHESIS_ENTITIES: Dict[OperationSynthesis, Dict[str, list]] = {}
 
     # Estatísticas das sínteses são armazenadas separadamente
-    SYNTHESIS_STATS: Dict[SpatialResolution, List[pd.DataFrame]] = {}
+    SYNTHESIS_STATS: Dict[SpatialResolution, List[pl.DataFrame]] = {}
 
     @classmethod
     def clear_cache(cls):
@@ -165,14 +168,11 @@ class OperationSynthetizer:
                 and not has_hydro
             ):
                 continue
-            if all(
-                [
-                    v.variable == Variable.VALOR_AGUA,
-                    v.spatial_resolution
-                    == SpatialResolution.USINA_HIDROELETRICA,
-                    not has_hydro,
-                ]
-            ):
+            if all([
+                v.variable == Variable.VALOR_AGUA,
+                v.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+                not has_hydro,
+            ]):
                 continue
             valid_variables.append(v)
         cls._log(f"Sinteses: {valid_variables}")
@@ -206,13 +206,13 @@ class OperationSynthetizer:
 
     @classmethod
     def _get_unique_column_values_in_order(
-        cls, df: pd.DataFrame, cols: List[str]
+        cls, df: pl.DataFrame, cols: List[str]
     ):
         """
         Extrai valores únicos na ordem em que aparecem para um
         conjunto de colunas de um DataFrame.
         """
-        return {col: df[col].unique().tolist() for col in cols}
+        return {col: df[col].unique().to_list() for col in cols}
 
     @classmethod
     def _set_ordered_entities(
@@ -233,12 +233,12 @@ class OperationSynthetizer:
     @classmethod
     def _post_resolve_entity(
         cls,
-        df: Optional[pd.DataFrame],
+        df: Optional[pl.DataFrame],
         s: OperationSynthesis,
         entity_column_values: Dict[str, Any],
         uow: AbstractUnitOfWork,
         internal_stubs: Dict[Variable, Callable] = {},
-    ) -> Optional[pd.DataFrame]:
+    ) -> Optional[pl.DataFrame]:
         """
         Realiza pós-processamento após a resolução da extração dados
         em um DataFrame de síntese extraído do NWLISTOP.
@@ -246,27 +246,34 @@ class OperationSynthetizer:
         if df is None:
             return df
         df = cls._resolve_temporal_resolution(df, uow)
-        for col, val in entity_column_values.items():
-            df[col] = val
+        df = df.with_columns(*[
+            pl.lit(val).alias(col) for col, val in entity_column_values.items()
+        ])
+
         df = cls._resolve_starting_stage(df, uow)
         if s.variable in internal_stubs:
             df = internal_stubs[s.variable](df, uow)
         df_stats = calc_statistics(df)
-        df[STATS_OR_SCENARIO_COL] = False
-        df_stats[STATS_OR_SCENARIO_COL] = True
-        df = pd.concat([df, df_stats], ignore_index=True)
-        df = df.astype({SCENARIO_COL: STRING_DF_TYPE})
+        df = df.with_columns(
+            pl.col(SCENARIO_COL).cast(str),
+            pl.lit(False).alias(STATS_OR_SCENARIO_COL),
+        )
+        df_stats = df_stats.with_columns(
+            pl.lit(True).alias(STATS_OR_SCENARIO_COL)
+        )
+        df_stats = df_stats[df.columns]
+        df = pl.concat([df, df_stats])
         return df
 
     @classmethod
     def _post_resolve(
         cls,
-        resolve_responses: Dict[str, Optional[pd.DataFrame]],
+        resolve_responses: Dict[str, Optional[pl.DataFrame]],
         s: OperationSynthesis,
         uow: AbstractUnitOfWork,
         early_hooks: List[Callable] = [],
         late_hooks: List[Callable] = [],
-    ) -> Optional[pd.DataFrame]:
+    ) -> Optional[pl.DataFrame]:
         """
         Realiza pós-processamento após a resolução da extração
         de todos os dados de síntese extraídos do NWLISTOP para uma síntese.
@@ -278,7 +285,7 @@ class OperationSynthetizer:
                 df for df in resolve_responses.values() if df is not None
             ]
             if len(valid_dfs) > 0:
-                df = pd.concat(valid_dfs, ignore_index=True)
+                df = pl.concat(valid_dfs)
             else:
                 return None
 
@@ -287,9 +294,7 @@ class OperationSynthetizer:
             for c in early_hooks:
                 df = c(s, df, uow)
 
-            df = df.sort_values(
-                spatial_resolution.sorting_synthesis_df_columns
-            ).reset_index(drop=True)
+            df = df.sort(spatial_resolution.sorting_synthesis_df_columns)
 
             entity_columns_order = cls._get_unique_column_values_in_order(
                 df,
@@ -309,37 +314,42 @@ class OperationSynthetizer:
 
     @staticmethod
     def _resolve_temporal_resolution(
-        df: pd.DataFrame, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
+        df: pl.DataFrame, uow: AbstractUnitOfWork
+    ) -> pl.DataFrame:
         """
         Adiciona informação temporal a um DataFrame de síntese, utilizando
         as informações de duração dos patamares e datas de início dos estágios.
         """
 
         def _replace_scenario_info(
-            df: pd.DataFrame,
+            df: pl.DataFrame,
             num_stages: int,
             num_scenarios: int,
             num_blocks: int,
-        ) -> pd.DataFrame:
+        ) -> pl.DataFrame:
             """
             Substitui a informação de cenário por um intervalo fixo de `1`a
             `num_scenarios`, caso os dados fornecidos contenham informações
             de cenários de índices não regulares.
             """
-            df[SCENARIO_COL] = np.tile(
-                np.repeat(np.arange(1, num_scenarios + 1), num_blocks),
-                num_stages,
+            df = df.with_columns(
+                pl.Series(
+                    name=SCENARIO_COL,
+                    values=np.tile(
+                        np.repeat(np.arange(1, num_scenarios + 1), num_blocks),
+                        num_stages,
+                    ),
+                )
             )
             return df
 
         def _add_stage_info(
-            df: pd.DataFrame,
+            df: pl.DataFrame,
             num_stages: int,
             num_scenarios: int,
             num_blocks: int,
             end_dates: List[datetime],
-        ) -> pd.DataFrame:
+        ) -> pl.DataFrame:
             """
             Adiciona informações de estágio a um DataFrame, utilizando o
             número de valores de data distintos fornecidos para definir uma
@@ -348,20 +358,23 @@ class OperationSynthetizer:
             stages = np.arange(1, num_stages + 1)
             stages_to_df_column = np.repeat(stages, num_scenarios * num_blocks)
             end_dates_to_df_column: np.ndarray = np.repeat(
-                np.array(end_dates), num_scenarios * num_blocks
+                np.array(end_dates, dtype="datetime64[ns]"),
+                num_scenarios * num_blocks,
             )
-            df[STAGE_COL] = stages_to_df_column
-            df[END_DATE_COL] = end_dates_to_df_column
+            df = df.with_columns(
+                pl.Series(name=STAGE_COL, values=stages_to_df_column),
+                pl.Series(name=END_DATE_COL, values=end_dates_to_df_column),
+            )
             return df
 
         def _add_block_duration_info(
-            df: pd.DataFrame,
+            df: pl.DataFrame,
             num_stages: int,
             num_scenarios: int,
             num_blocks: int,
             blocks: List[int],
             start_dates: List[datetime],
-        ) -> pd.DataFrame:
+        ) -> pl.DataFrame:
             """
             Adiciona informações de duração de patamares a um DataFrame, utilizando
             as informações dos patamares e datas de início dos estágios.
@@ -383,24 +396,25 @@ class OperationSynthetizer:
                 block_durations[i_i:i_f] = np.tile(
                     date_durations, num_scenarios
                 )
-            df[BLOCK_DURATION_COL] = block_durations * STAGE_DURATION_HOURS
+            df = df.with_columns(
+                pl.Series(
+                    name=BLOCK_DURATION_COL,
+                    values=block_durations * STAGE_DURATION_HOURS,
+                )
+            )
             return df
 
         def _add_temporal_info(
-            df: pd.DataFrame, uow: AbstractUnitOfWork
-        ) -> pd.DataFrame:
+            df: pl.DataFrame, uow: AbstractUnitOfWork
+        ) -> pl.DataFrame:
             """
             Adiciona informação temporal a um DataFrame de síntese.
             """
-            df = df.rename(
-                columns={"data": START_DATE_COL, "serie": SCENARIO_COL}
-            ).copy()
-            df.sort_values(
-                [START_DATE_COL, SCENARIO_COL, BLOCK_COL], inplace=True
-            )
+            df = df.rename({"data": START_DATE_COL, "serie": SCENARIO_COL})
+            df = df.sort([START_DATE_COL, SCENARIO_COL, BLOCK_COL])
             num_stages = df[START_DATE_COL].unique().shape[0]
             num_scenarios = Deck.num_scenarios_final_simulation(uow)
-            blocks = df[BLOCK_COL].unique().tolist()
+            blocks = df[BLOCK_COL].unique().to_list()
             num_blocks = len(blocks)
             start_dates = Deck.internal_stages_starting_dates_final_simulation(
                 uow
@@ -430,7 +444,7 @@ class OperationSynthetizer:
     @classmethod
     def __resolve_SIN(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
-    ) -> Optional[pd.DataFrame]:
+    ) -> Optional[pl.DataFrame]:
         with time_and_log(
             message_root="Tempo para obter dados do SIN", logger=cls.logger
         ):
@@ -450,7 +464,7 @@ class OperationSynthetizer:
         synthesis: OperationSynthesis,
         sbm_index: int,
         sbm_name: str,
-    ) -> Optional[pd.DataFrame]:
+    ) -> Optional[pl.DataFrame]:
         """
         Obtem os dados da síntese de operação para um submercado
         a partir do arquivo de saída do NWLISTOP.
@@ -479,7 +493,7 @@ class OperationSynthetizer:
     @classmethod
     def __resolve_SBM(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
-    ) -> Optional[pd.DataFrame]:
+    ) -> Optional[pl.DataFrame]:
         """
         Resolve a síntese de operação para uma variável operativa
         de um submercado a partir dos arquivos de saída do NWLISTOP.
@@ -526,7 +540,7 @@ class OperationSynthetizer:
         sbm1_name: str,
         sbm2_index: int,
         sbm2_name: str,
-    ) -> Optional[pd.DataFrame]:
+    ) -> Optional[pl.DataFrame]:
         """
         Obtém os dados da síntese de operação para um par de submercados
         a partir do arquivo de saída do NWLISTOP.
@@ -560,7 +574,7 @@ class OperationSynthetizer:
     @classmethod
     def __resolve_SBP(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
-    ) -> Optional[pd.DataFrame]:
+    ) -> Optional[pl.DataFrame]:
         """
         Resolve a síntese de operação para uma variável operativa
         de um par de submercados a partir dos arquivos de saída do NWLISTOP.
@@ -604,7 +618,7 @@ class OperationSynthetizer:
         synthesis: OperationSynthesis,
         ree_index: int,
         ree_name: str,
-    ) -> Optional[pd.DataFrame]:
+    ) -> Optional[pl.DataFrame]:
         """
         Obtem os dados da síntese de operação para um REE
         a partir do arquivo de saída do NWLISTOP.
@@ -629,7 +643,9 @@ class OperationSynthetizer:
             synthesis,
             {
                 EER_CODE_COL: ree_index,
-                SUBMARKET_CODE_COL: aux_df.at[ree_index, SUBMARKET_CODE_COL],
+                SUBMARKET_CODE_COL: aux_df.filter(
+                    pl.col(EER_CODE_COL) == ree_index
+                )[SUBMARKET_CODE_COL][0],
             },
             uow,
         )
@@ -637,7 +653,7 @@ class OperationSynthetizer:
     @classmethod
     def __resolve_REE(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
-    ) -> Optional[pd.DataFrame]:
+    ) -> Optional[pl.DataFrame]:
         """
         Resolve a síntese de operação para uma variável operativa
         de um REE a partir dos arquivos de saída do NWLISTOP.
@@ -674,7 +690,7 @@ class OperationSynthetizer:
         synthesis: OperationSynthesis,
         uhe_index: int,
         uhe_name: str,
-    ) -> Optional[pd.DataFrame]:
+    ) -> Optional[pl.DataFrame]:
         """
         Obtem os dados da síntese de operação para uma UHE
         a partir do arquivo de saída do NWLISTOP.
@@ -736,8 +752,12 @@ class OperationSynthetizer:
             synthesis,
             {
                 HYDRO_CODE_COL: uhe_index,
-                EER_CODE_COL: aux_df.at[uhe_index, EER_CODE_COL],
-                SUBMARKET_CODE_COL: aux_df.at[uhe_index, SUBMARKET_CODE_COL],
+                EER_CODE_COL: aux_df.filter(
+                    pl.col(HYDRO_CODE_COL) == uhe_index
+                )[EER_CODE_COL][0],
+                SUBMARKET_CODE_COL: aux_df.filter(
+                    pl.col(HYDRO_CODE_COL) == uhe_index
+                )[SUBMARKET_CODE_COL][0],
             },
             uow,
             internal_stubs=internal_stubs,
@@ -746,21 +766,19 @@ class OperationSynthetizer:
     @classmethod
     def __resolve_UHE(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
-    ) -> Optional[pd.DataFrame]:
+    ) -> Optional[pl.DataFrame]:
         """
         Resolve a síntese de operação para uma variável operativa
         de uma UHE a partir dos arquivos de saída do NWLISTOP.
         """
 
         def _limit_stages_with_hydro(
-            s: OperationSynthesis, df: pd.DataFrame, uow: AbstractUnitOfWork
+            s: OperationSynthesis, df: pl.DataFrame, uow: AbstractUnitOfWork
         ) -> pd.DataFrame:
-            df = df.loc[
-                df[START_DATE_COL]
-                < Deck.hydro_simulation_stages_ending_date_final_simulation(
-                    uow
-                ),
-            ].reset_index(drop=True)
+            df = df.filter(
+                pl.col(START_DATE_COL)
+                < Deck.hydro_simulation_stages_ending_date_final_simulation(uow)
+            )
             return df
 
         hydros = Deck.hydros(uow).reset_index().sort_values(HYDRO_CODE_COL)
@@ -816,7 +834,7 @@ class OperationSynthetizer:
     @classmethod
     def _convert_flow_to_volume(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """
         Realiza a conversão de síntese de vazão para volume.
         """
@@ -832,10 +850,12 @@ class OperationSynthetizer:
             synthesis.spatial_resolution,
         )
         df = cls._get_from_cache(flow_synthesis)
-        df.loc[:, VALUE_COL] = (
-            df[VALUE_COL]
-            * df[BLOCK_DURATION_COL]
-            / (HM3_M3S_MONTHLY_FACTOR * STAGE_DURATION_HOURS)
+        df = df.with_columns(
+            (
+                pl.col(VALUE_COL)
+                * pl.col(BLOCK_DURATION_COL)
+                / (HM3_M3S_MONTHLY_FACTOR * STAGE_DURATION_HOURS)
+            ).alias(VALUE_COL)
         )
         return df
 
@@ -1389,12 +1409,16 @@ class OperationSynthetizer:
                 & net_drop_df[BLOCK_COL].isin(stored_volume_hydro_blocks)
             ].copy()
 
-            net_drop_df = net_drop_df.sort_values(
-                [HYDRO_CODE_COL, STAGE_COL, BLOCK_COL]
-            )
-            stored_volume_df = stored_volume_df.sort_values(
-                [HYDRO_CODE_COL, STAGE_COL, BLOCK_COL]
-            )
+            net_drop_df = net_drop_df.sort_values([
+                HYDRO_CODE_COL,
+                STAGE_COL,
+                BLOCK_COL,
+            ])
+            stored_volume_df = stored_volume_df.sort_values([
+                HYDRO_CODE_COL,
+                STAGE_COL,
+                BLOCK_COL,
+            ])
 
             stored_volume_df[VALUE_COL] = (
                 stored_volume_df[VALUE_COL] - stored_volume_df[LOWER_BOUND_COL]
@@ -1932,8 +1956,8 @@ class OperationSynthetizer:
 
     @staticmethod
     def _resolve_starting_stage(
-        df: pd.DataFrame, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
+        df: pl.DataFrame, uow: AbstractUnitOfWork
+    ) -> pl.DataFrame:
         """
         Adiciona a informação do estágio inicial do caso aos dados,
         realizando um deslocamento da coluna "estagio" para que o
@@ -1942,8 +1966,10 @@ class OperationSynthetizer:
         Também elimina estágios incluídos como consequência do formato
         dos dados lidos, que pertencem ao período pré-estudo.
         """
-        df.loc[:, STAGE_COL] -= Deck.study_period_starting_month(uow) - 1
-        df = df.loc[df[STAGE_COL] > 0]
+        df = df.with_columns(
+            pl.col(STAGE_COL) - (Deck.study_period_starting_month(uow) - 1)
+        )
+        df = df.filter(pl.col(STAGE_COL) > 0)
         return df
 
     @classmethod
@@ -2002,7 +2028,7 @@ class OperationSynthetizer:
         return initial_stored_energy_df
 
     @classmethod
-    def _get_from_cache(cls, s: OperationSynthesis) -> pd.DataFrame:
+    def _get_from_cache(cls, s: OperationSynthesis) -> pl.DataFrame:
         """
         Extrai o resultado de uma síntese da cache caso exista, lançando
         um erro caso contrário.
@@ -2013,7 +2039,7 @@ class OperationSynthetizer:
             if res is None:
                 cls._log(f"Erro na leitura do cache - {str(s)}", ERROR)
                 raise RuntimeError()
-            return res.copy()
+            return res
         else:
             cls._log(f"Erro na leitura do cache - {str(s)}", ERROR)
             raise RuntimeError()
@@ -2032,141 +2058,119 @@ class OperationSynthetizer:
             f = cls.__stub_CTO
         elif s.variable == Variable.ENERGIA_VERTIDA:
             f = cls.__stub_EVER
-        elif all(
-            [
-                s.variable
-                in [
-                    Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
-                    Variable.ENERGIA_ARMAZENADA_PERCENTUAL_INICIAL,
-                ],
-                s.spatial_resolution
-                in [
-                    SpatialResolution.RESERVATORIO_EQUIVALENTE,
-                    SpatialResolution.SUBMERCADO,
-                    SpatialResolution.SISTEMA_INTERLIGADO,
-                ],
-            ]
-        ):
+        elif all([
+            s.variable
+            in [
+                Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
+                Variable.ENERGIA_ARMAZENADA_PERCENTUAL_INICIAL,
+            ],
+            s.spatial_resolution
+            in [
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+                SpatialResolution.SUBMERCADO,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+            ],
+        ]):
             f = cls._stub_resolve_initial_stored_energy
-        elif all(
-            [
-                s.variable
-                in [
-                    Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
-                    Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
-                ],
-                s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
-            ]
-        ):
+        elif all([
+            s.variable
+            in [
+                Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
+                Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
+            ],
+            s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+        ]):
             f = cls.__stub_resolve_initial_stored_volumes
-        elif all(
-            [
-                s.variable
-                in [
-                    Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
-                    Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
-                    Variable.VOLUME_AFLUENTE,
-                    Variable.VOLUME_INCREMENTAL,
-                    Variable.VOLUME_DEFLUENTE,
-                    Variable.VOLUME_VERTIDO,
-                    Variable.VOLUME_TURBINADO,
-                    Variable.VOLUME_RETIRADO,
-                    Variable.VOLUME_DESVIADO,
-                    Variable.VOLUME_EVAPORADO,
-                    Variable.VIOLACAO_EVAPORACAO,
-                    Variable.VIOLACAO_FPHA,
-                    Variable.VIOLACAO_POSITIVA_EVAPORACAO,
-                    Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
-                ],
-                s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
-            ]
-        ):
+        elif all([
+            s.variable
+            in [
+                Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
+                Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+                Variable.VOLUME_AFLUENTE,
+                Variable.VOLUME_INCREMENTAL,
+                Variable.VOLUME_DEFLUENTE,
+                Variable.VOLUME_VERTIDO,
+                Variable.VOLUME_TURBINADO,
+                Variable.VOLUME_RETIRADO,
+                Variable.VOLUME_DESVIADO,
+                Variable.VOLUME_EVAPORADO,
+                Variable.VIOLACAO_EVAPORACAO,
+                Variable.VIOLACAO_FPHA,
+                Variable.VIOLACAO_POSITIVA_EVAPORACAO,
+                Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
+            ],
+            s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
+        ]):
             f = cls._hydro_resolution_variable_map
-        elif all(
-            [
-                s.variable
-                in [
-                    Variable.VAZAO_AFLUENTE,
-                    Variable.VAZAO_INCREMENTAL,
-                    Variable.VAZAO_DEFLUENTE,
-                    Variable.VAZAO_VERTIDA,
-                    Variable.VAZAO_TURBINADA,
-                    Variable.VAZAO_RETIRADA,
-                    Variable.VAZAO_DESVIADA,
-                    Variable.VAZAO_EVAPORADA,
-                ],
-                s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
-            ]
-        ):
+        elif all([
+            s.variable
+            in [
+                Variable.VAZAO_AFLUENTE,
+                Variable.VAZAO_INCREMENTAL,
+                Variable.VAZAO_DEFLUENTE,
+                Variable.VAZAO_VERTIDA,
+                Variable.VAZAO_TURBINADA,
+                Variable.VAZAO_RETIRADA,
+                Variable.VAZAO_DESVIADA,
+                Variable.VAZAO_EVAPORADA,
+            ],
+            s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
+        ]):
             f = cls._flow_volume_hydro_variable_map
-        elif all(
-            [
-                s.variable
-                in [
-                    Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
-                    Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
-                ],
-                s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
-            ]
-        ):
+        elif all([
+            s.variable
+            in [
+                Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
+                Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
+            ],
+            s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
+        ]):
             f = cls._absolute_percent_volume_variable_map
         elif s.variable in [Variable.ENERGIA_DEFLUENCIA_MINIMA]:
             f = cls.__stub_EVMIN
-        elif all(
-            [
-                s.variable
-                in [
-                    Variable.VAZAO_RETIRADA,
-                ],
-                s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
-            ]
-        ):
+        elif all([
+            s.variable
+            in [
+                Variable.VAZAO_RETIRADA,
+            ],
+            s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+        ]):
             f = cls._convert_volume_to_flow
-        elif all(
-            [
-                s.variable
-                in [
-                    Variable.VOLUME_AFLUENTE,
-                    Variable.VOLUME_INCREMENTAL,
-                    Variable.VOLUME_TURBINADO,
-                    Variable.VOLUME_VERTIDO,
-                    Variable.VOLUME_DESVIADO,
-                ],
-                s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
-            ]
-        ):
+        elif all([
+            s.variable
+            in [
+                Variable.VOLUME_AFLUENTE,
+                Variable.VOLUME_INCREMENTAL,
+                Variable.VOLUME_TURBINADO,
+                Variable.VOLUME_VERTIDO,
+                Variable.VOLUME_DESVIADO,
+            ],
+            s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+        ]):
             f = cls._convert_flow_to_volume
-        elif all(
-            [
-                s.variable == Variable.VAZAO_DEFLUENTE,
-                s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
-            ]
-        ):
+        elif all([
+            s.variable == Variable.VAZAO_DEFLUENTE,
+            s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+        ]):
             f = cls.__stub_QDEF
-        elif all(
-            [
-                s.variable == Variable.VOLUME_DEFLUENTE,
-                s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
-            ]
-        ):
+        elif all([
+            s.variable == Variable.VOLUME_DEFLUENTE,
+            s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+        ]):
             f = cls.__stub_VDEF
-        elif all(
-            [
-                s.variable == Variable.VIOLACAO_EVAPORACAO,
-                s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
-            ]
-        ):
+        elif all([
+            s.variable == Variable.VIOLACAO_EVAPORACAO,
+            s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+        ]):
             f = cls.__stub_VEVAP
-        elif all(
-            [
-                s.variable
-                in [
-                    Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
-                    Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
-                ],
-                s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
-            ]
-        ):
+        elif all([
+            s.variable
+            in [
+                Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
+                Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
+            ],
+            s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+        ]):
             f = cls.__stub_EARM_UHE
         elif s.variable in [Variable.MERCADO, Variable.MERCADO_LIQUIDO]:
             f = cls.__stub_MER_MERL
@@ -2205,7 +2209,7 @@ class OperationSynthetizer:
 
     @classmethod
     def __store_in_cache_if_needed(
-        cls, s: OperationSynthesis, df: pd.DataFrame
+        cls, s: OperationSynthesis, df: pl.DataFrame
     ):
         """
         Adiciona um DataFrame com os dados de uma síntese à cache
@@ -2216,7 +2220,7 @@ class OperationSynthetizer:
                 message_root="Tempo para armazenamento na cache",
                 logger=cls.logger,
             ):
-                cls.CACHED_SYNTHESIS[s] = df.copy()
+                cls.CACHED_SYNTHESIS[s] = df
 
     @classmethod
     def _resolve_bounds(
@@ -2291,12 +2295,12 @@ class OperationSynthetizer:
             )
 
     @classmethod
-    def _add_synthesis_stats(cls, s: OperationSynthesis, df: pd.DataFrame):
+    def _add_synthesis_stats(cls, s: OperationSynthesis, df: pl.DataFrame):
         """
         Adiciona um DataFrame com estatísticas de uma síntese ao
         DataFrame de estatísticas da agregação espacial em questão.
         """
-        df[VARIABLE_COL] = s.variable.value
+        df = df.with_columns(pl.lit(s.variable.value).alias(VARIABLE_COL))
 
         if s.spatial_resolution not in cls.SYNTHESIS_STATS:
             cls.SYNTHESIS_STATS[s.spatial_resolution] = [df]
@@ -2305,7 +2309,7 @@ class OperationSynthetizer:
 
     @classmethod
     def _export_scenario_synthesis(
-        cls, s: OperationSynthesis, df: pd.DataFrame, uow: AbstractUnitOfWork
+        cls, s: OperationSynthesis, df: pl.DataFrame, uow: AbstractUnitOfWork
     ):
         """
         Realiza a exportação dos dados para uma síntese da
@@ -2318,25 +2322,24 @@ class OperationSynthetizer:
             message_root="Tempo para preparacao para exportacao",
             logger=cls.logger,
         ):
-            scenarios_df = df.loc[~df[STATS_OR_SCENARIO_COL]]
-            stats_df = df.loc[df[STATS_OR_SCENARIO_COL]]
-            scenarios_df = scenarios_df.astype({SCENARIO_COL: int})
-            stats_df = stats_df.reset_index(drop=True)
-            if stats_df.empty:
-                scenarios_df = scenarios_df.sort_values(
+            scenarios_df = df.filter(~pl.col(STATS_OR_SCENARIO_COL))
+            stats_df = df.filter(pl.col(STATS_OR_SCENARIO_COL))
+            scenarios_df = scenarios_df.with_columns(
+                pl.col(SCENARIO_COL).cast(int)
+            )
+            if stats_df.shape[0] == 0:
+                scenarios_df = scenarios_df.sort(
                     s.spatial_resolution.sorting_synthesis_df_columns
-                ).reset_index(drop=True)
+                )
                 stats_df = calc_statistics(scenarios_df)
-            stats_df = stats_df.drop(columns=[STATS_OR_SCENARIO_COL])
+            stats_df = stats_df.drop([STATS_OR_SCENARIO_COL])
             cls._add_synthesis_stats(s, stats_df)
             cls.__store_in_cache_if_needed(s, scenarios_df)
         with time_and_log(
             message_root="Tempo para exportacao dos dados", logger=cls.logger
         ):
             with uow:
-                scenarios_df = scenarios_df.drop(
-                    columns=[STATS_OR_SCENARIO_COL]
-                )
+                scenarios_df = scenarios_df.drop([STATS_OR_SCENARIO_COL])
                 scenarios_df = scenarios_df[
                     s.spatial_resolution.all_synthesis_df_columns
                 ]
@@ -2355,16 +2358,15 @@ class OperationSynthetizer:
         """
         for res, dfs in cls.SYNTHESIS_STATS.items():
             with uow:
-                df = pd.concat(dfs, ignore_index=True)
-                df_columns = df.columns.tolist()
+                df_col_order = dfs[0].columns
+                dfs = [df[df_col_order] for df in dfs]
+                df = pl.concat(dfs)
+                df_columns = df.columns
                 columns_without_variable = [
                     c for c in df_columns if c != VARIABLE_COL
                 ]
                 df = df[[VARIABLE_COL] + columns_without_variable]
-                df = df.astype({VARIABLE_COL: STRING_DF_TYPE})
-                df = df.sort_values(
-                    res.sorting_synthesis_df_columns
-                ).reset_index(drop=True)
+                df = df.sort(res.sorting_synthesis_df_columns)
                 uow.export.synthetize_df(
                     df, f"{OPERATION_SYNTHESIS_STATS_ROOT}_{res.value}"
                 )
@@ -2417,12 +2419,12 @@ class OperationSynthetizer:
                 cls._log(f"Realizando sintese de {filename}")
                 df = cls.__get_from_cache_if_exists(s)
                 is_stub = cls._stub_mappings(s) is not None
-                if df.empty:
+                if df.shape[0] == 0:
                     df, is_stub = cls._resolve_stub(s, uow)
                     if not is_stub:
                         df = cls._resolve_synthesis(s, uow)
                 if df is not None:
-                    if not df.empty:
+                    if df.shape[0] > 0:
                         found_synthesis = True
                         cls._export_scenario_synthesis(s, df, uow)
                         return s
