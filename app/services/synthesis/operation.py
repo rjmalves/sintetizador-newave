@@ -1077,7 +1077,7 @@ class OperationSynthetizer:
 
         def _get_final_storage_synthesis_data(
             synthesis: OperationSynthesis,
-        ) -> Tuple[pd.DataFrame, dict]:
+        ) -> Tuple[pl.DataFrame, dict]:
             final_storage_synthesis = OperationSynthesis(
                 variable=variable_map[synthesis.variable],
                 spatial_resolution=synthesis.spatial_resolution,
@@ -1087,7 +1087,7 @@ class OperationSynthetizer:
             return final_storage_df, entities
 
         def _get_initial_storage_values(
-            initial_storage_data: pd.DataFrame,
+            initial_storage_data: pl.DataFrame,
             entities: dict,
         ) -> np.ndarray:
             value_column = (
@@ -1107,15 +1107,13 @@ class OperationSynthetizer:
                     for g in groups
                     if g in initial_storage_data[GROUPING_TMP_COL]
                 ]
-            initial_storage_values = (
-                initial_storage_data.set_index(GROUPING_TMP_COL)
-                .loc[groups, value_column]
-                .to_numpy()
-            )
+            initial_storage_values = initial_storage_data.filter(
+                pl.col(GROUPING_TMP_COL).is_in(groups)
+            )[value_column].to_numpy()
             return initial_storage_values
 
         def _get_initial_stage_indices(
-            entities: dict, initial_storage_data: pd.DataFrame
+            entities: dict, initial_storage_data: pl.DataFrame
         ) -> np.ndarray:
             groups = entities.get(
                 grouping_col_map[synthesis.spatial_resolution]
@@ -1146,16 +1144,15 @@ class OperationSynthetizer:
             return initial_stage_indices
 
         def _fill_initial_storage_df(
-            df: pd.DataFrame,
+            df: pl.DataFrame,
             indices: np.ndarray,
             values: np.ndarray,
             entities: dict,
-        ) -> pd.DataFrame:
-            scenarios = [
+        ) -> pl.DataFrame:
+            num_scenarios = len([
                 s for s in entities[SCENARIO_COL] if str(s).isnumeric()
-            ]
-            num_scenarios = len(scenarios)
-            initial_storage_df = df.copy()
+            ])
+            initial_storage_df = df
             initial_storage_values_df = initial_storage_df[VALUE_COL].to_numpy()
             initial_storage_values_df[num_scenarios:] = (
                 initial_storage_values_df[:-num_scenarios]
@@ -1163,10 +1160,12 @@ class OperationSynthetizer:
             initial_storage_values_df[indices] = np.repeat(
                 values, num_scenarios
             )
-            initial_storage_df[VALUE_COL] = initial_storage_values_df
-            initial_storage_df[VALUE_COL] = initial_storage_df[
-                VALUE_COL
-            ].fillna(0.0)
+            initial_storage_df = initial_storage_df.with_columns(
+                pl.Series(name=VALUE_COL, values=initial_storage_values_df)
+            )
+            initial_storage_df = initial_storage_df.with_columns(
+                pl.col(VALUE_COL).fill_nan(0.0)
+            )
             return initial_storage_df
 
         earmi = Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL
@@ -1183,7 +1182,9 @@ class OperationSynthetizer:
             SpatialResolution.SISTEMA_INTERLIGADO: None,
         }
 
-        initial_storage_data = cls._initial_stored_energy_df(synthesis, uow)
+        initial_storage_data = pl.from_pandas(
+            cls._initial_stored_energy_df(synthesis, uow)
+        )
         final_storage_df, entities = _get_final_storage_synthesis_data(
             synthesis
         )

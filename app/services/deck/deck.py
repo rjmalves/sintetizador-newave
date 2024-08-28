@@ -2193,20 +2193,20 @@ class Deck:
     @classmethod
     def _get_hydro_data_changes_from_modif(
         cls,
-        df: pd.DataFrame,
+        df: pl.DataFrame,
         hydro_data_col: str,
         hydro_data_unit_col: str,
         register_type: Type[Union[VAZMIN, VOLMIN, VOLMAX]],
         uow: AbstractUnitOfWork,
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """
         Realiza a extração de modificações cadastrais de volumes de usinas
         hidrelétricas a partir do arquivo modif.dat, atualizando os cadastros
         conforme as declarações de modificações são encontradas.
         """
         modif = cls.modif(uow)
-        for idx in df.index:
-            hydro_changes = modif.modificacoes_usina(idx)
+        for code in df[HYDRO_CODE_COL]:
+            hydro_changes = modif.modificacoes_usina(code)
             if hydro_changes is not None:
                 regs_usina = [
                     r for r in hydro_changes if isinstance(r, register_type)
@@ -2215,15 +2215,25 @@ class Deck:
                     r = regs_usina[-1]
                     value, unit = cls._get_value_and_unit_from_modif_entry(r)
                     if value is not None:
-                        df.at[idx, hydro_data_col] = value
+                        df = df.with_columns(
+                            pl.when(pl.col(HYDRO_CODE_COL) == code)
+                            .then(value)
+                            .otherwise(pl.col(hydro_data_col))
+                            .alias(hydro_data_col)
+                        )
                     if unit is not None:
-                        df.at[idx, hydro_data_unit_col] = unit.lower()
+                        df = df.with_columns(
+                            pl.when(pl.col(HYDRO_CODE_COL) == code)
+                            .then(pl.lit(unit.lower()))
+                            .otherwise(pl.col(hydro_data_unit_col))
+                            .alias(hydro_data_unit_col)
+                        )
         return df
 
     @classmethod
     def _get_hydro_data_changes_from_modif_to_stages(
         cls,
-        df: pd.DataFrame,
+        df: pl.DataFrame,
         hydro_data_col: str,
         hydro_data_unit_col: str,
         register_type: Type[
@@ -2232,7 +2242,7 @@ class Deck:
             ]
         ],
         uow: AbstractUnitOfWork,
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """
         Realiza a extração de modificações cadastrais de volumes de usinas
         hidrelétricas a partir do arquivo modif.dat, considerando também
@@ -2243,7 +2253,7 @@ class Deck:
         modif = cls.modif(uow)
         num_stages = cls.num_hydro_simulation_stages_final_simulation(uow)
         dates = cls.stages_starting_dates_final_simulation(uow)[:num_stages]
-        hydro_codes = df[HYDRO_CODE_COL].unique().tolist()
+        hydro_codes = df[HYDRO_CODE_COL].unique().to_list()
         for i, u in enumerate(hydro_codes):
             hydro_changes = modif.modificacoes_usina(u)
             i_i = i * num_stages
@@ -2257,41 +2267,60 @@ class Deck:
                         continue
                     idx_data = dates.index(reg.data_inicio)  # type: ignore
                     value, unit = cls._get_value_and_unit_from_modif_entry(reg)
-                    df.loc[i_i + idx_data : i_f, hydro_data_col] = value
-                    df.loc[i_i + idx_data : i_f, hydro_data_unit_col] = unit
+                    df = df.with_columns(
+                        pl.when(
+                            pl.int_range(pl.len()).is_between(
+                                i_i + idx_data, i_f
+                            )
+                        )
+                        .then(value)
+                        .otherwise(pl.col(hydro_data_col))
+                        .alias(hydro_data_col)
+                    )
+                    df = df.with_columns(
+                        pl.when(
+                            pl.int_range(pl.len()).is_between(
+                                i_i + idx_data, i_f
+                            )
+                        )
+                        .then(pl.lit(unit))
+                        .otherwise(pl.col(hydro_data_unit_col))
+                        .alias(hydro_data_unit_col)
+                    )
         return df
 
     @classmethod
-    def hydro_volume_bounds(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def hydro_volume_bounds(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         """
         Obtém um DataFrame com os limites cadastrais de volume armazenado
         de cada usina hidrelétrica.
         """
 
-        def _get_hydro_data(uow: AbstractUnitOfWork) -> pd.DataFrame:
-            df = cls.hidr(uow).reset_index()
+        def _get_hydro_data(uow: AbstractUnitOfWork) -> pl.DataFrame:
+            df = pl.from_pandas(cls.hidr(uow).reset_index())
             hydro_codes = cls.hydro_code_order(uow)
-            df = df.loc[
-                df[HYDRO_CODE_COL].isin(hydro_codes),
-                [HYDRO_CODE_COL, "volume_minimo", "volume_maximo"],
-            ].set_index(HYDRO_CODE_COL)
-            df = df.rename(
-                columns={
-                    "volume_minimo": LOWER_BOUND_COL,
-                    "volume_maximo": UPPER_BOUND_COL,
-                }
+            df = df.filter(pl.col(HYDRO_CODE_COL).is_in(hydro_codes))[
+                [HYDRO_CODE_COL, "volume_minimo", "volume_maximo"]
+            ]
+            df = df.rename({
+                "volume_minimo": LOWER_BOUND_COL,
+                "volume_maximo": UPPER_BOUND_COL,
+            })
+            df = df.with_columns(
+                pl.lit(Unit.hm3_modif.value).alias(LOWER_BOUND_UNIT_COL),
+                pl.lit(Unit.hm3_modif.value).alias(UPPER_BOUND_UNIT_COL),
             )
-            df[LOWER_BOUND_UNIT_COL] = Unit.hm3_modif.value
-            df[UPPER_BOUND_UNIT_COL] = Unit.hm3_modif.value
             return df
 
         hydro_volume_bounds = cls.DECK_DATA_CACHING.get("hydro_volume_bounds")
         if hydro_volume_bounds is None:
             hydro_volume_bounds = _get_hydro_data(uow)
             entities = cls.hydro_eer_submarket_map(uow)
-            hydro_volume_bounds = hydro_volume_bounds.join(entities)
+            hydro_volume_bounds = hydro_volume_bounds.join(
+                entities, on=HYDRO_CODE_COL
+            )
             cls.DECK_DATA_CACHING["hydro_volume_bounds"] = hydro_volume_bounds
-        return hydro_volume_bounds.copy()
+        return hydro_volume_bounds
 
     @classmethod
     def hydro_volume_bounds_with_changes(
@@ -2304,9 +2333,8 @@ class Deck:
         """
 
         def _add_hydro_bounds_changes(
-            df: pd.DataFrame, uow: AbstractUnitOfWork
-        ) -> pd.DataFrame:
-            df = df.copy()
+            df: pl.DataFrame, uow: AbstractUnitOfWork
+        ) -> pl.DataFrame:
             df = cls._get_hydro_data_changes_from_modif(
                 df, LOWER_BOUND_COL, LOWER_BOUND_UNIT_COL, VOLMIN, uow
             )
@@ -2316,31 +2344,45 @@ class Deck:
             return df
 
         def _cast_bounds_to_hm3(
-            df: pd.DataFrame, hm3_df: pd.DataFrame
-        ) -> pd.DataFrame:
-            def _min_volume(hydro_code: int) -> float:
-                return hm3_df.at[hydro_code, LOWER_BOUND_COL]
-
-            def _net_volume(hydro_code: int) -> float:
-                return (
-                    hm3_df.at[hydro_code, UPPER_BOUND_COL]
-                    - hm3_df.at[hydro_code, LOWER_BOUND_COL]
-                )
-
+            df: pl.DataFrame, hm3_df: pl.DataFrame
+        ) -> pl.DataFrame:
             bound_columns = [LOWER_BOUND_COL, UPPER_BOUND_COL]
             unit_columns = [LOWER_BOUND_UNIT_COL, UPPER_BOUND_UNIT_COL]
             for col, unit_col in zip(bound_columns, unit_columns):
-                bound_df = df.loc[df[unit_col] == Unit.perc_modif.value].copy()
+                bound_df = df.filter(pl.col(unit_col) == Unit.perc_modif.value)
 
-                if not bound_df.empty:
-                    bound_df[col] = bound_df.apply(
-                        lambda line: line[col] * _net_volume(line.name) / 100.0
-                        + _min_volume(line.name),
-                        axis=1,
+                if bound_df.shape[0] > 0:
+                    bound_df = bound_df.join(hm3_df, on=HYDRO_CODE_COL)
+                    bound_df = bound_df.with_columns(
+                        (
+                            pl.col(col)
+                            * (
+                                pl.col(UPPER_BOUND_COL)
+                                - pl.col(LOWER_BOUND_COL)
+                            )
+                            / 100.0
+                            + pl.col(LOWER_BOUND_COL)
+                        ).alias(col)
                     )
-                    df.loc[bound_df.index, col] = bound_df[col]
-                    df.loc[bound_df.index, unit_col] = Unit.hm3_modif.value
 
+                    df = df.with_columns(
+                        pl.when(
+                            pl.col(HYDRO_CODE_COL).is_in(
+                                bound_df[HYDRO_CODE_COL]
+                            )
+                        )
+                        .then(bound_df[col])
+                        .otherwise(pl.col(col))
+                        .alias(col),
+                        pl.when(
+                            pl.col(HYDRO_CODE_COL).is_in(
+                                bound_df[HYDRO_CODE_COL]
+                            )
+                        )
+                        .then(pl.lit(Unit.hm3_modif.value))
+                        .otherwise(pl.col(unit_col))
+                        .alias(unit_col),
+                    )
             return df
 
         hydro_volume_bounds_with_changes = cls.DECK_DATA_CACHING.get(
@@ -2354,12 +2396,12 @@ class Deck:
             cls.DECK_DATA_CACHING["hydro_volume_bounds_with_changes"] = (
                 hydro_volume_bounds_with_changes
             )
-        return hydro_volume_bounds_with_changes.copy()
+        return hydro_volume_bounds_with_changes
 
     @classmethod
     def hydro_volume_bounds_in_stages(
         cls, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """
         Obtém um DataFrame com os limites de volume armazenado de cada usina
         hidrelétrica para cada estágio do problema, considerando possíveis
@@ -2367,21 +2409,25 @@ class Deck:
         """
 
         def _expand_to_stages(
-            df: pd.DataFrame, uow: AbstractUnitOfWork
-        ) -> pd.DataFrame:
-            df = df.reset_index()
+            df: pl.DataFrame, uow: AbstractUnitOfWork
+        ) -> pl.DataFrame:
             num_hydros = df.shape[0]
-            dates = np.array(cls.stages_starting_dates_final_simulation(uow))
-            num_stages = len(dates)
-            df = pd.concat([df] * num_stages, ignore_index=True)
-            df[START_DATE_COL] = np.repeat(dates, num_hydros)
-            return df.sort_values([HYDRO_CODE_COL, START_DATE_COL]).reset_index(
-                drop=True
+            dates = np.array(
+                cls.stages_starting_dates_final_simulation(uow),
+                dtype=np.datetime64,
             )
+            num_stages = len(dates)
+            df = pl.concat([df] * num_stages)
+            df = df.with_columns(
+                pl.Series(
+                    name=START_DATE_COL, values=np.repeat(dates, num_hydros)
+                )
+            )
+            return df.sort([HYDRO_CODE_COL, START_DATE_COL])
 
         def _add_hydro_bounds_changes_to_stages(
-            df: pd.DataFrame, uow: AbstractUnitOfWork
-        ) -> pd.DataFrame:
+            df: pl.DataFrame, uow: AbstractUnitOfWork
+        ) -> pl.DataFrame:
             df = cls._get_hydro_data_changes_from_modif_to_stages(
                 df, LOWER_BOUND_COL, LOWER_BOUND_UNIT_COL, VMINT, uow
             )
@@ -2391,41 +2437,41 @@ class Deck:
             return df
 
         def _cast_bounds_to_hm3(
-            df: pd.DataFrame, hm3_df: pd.DataFrame
-        ) -> pd.DataFrame:
-            def _min_volume(line: pd.Series) -> float:
-                hydro_code = line[HYDRO_CODE_COL]
-                date = line[START_DATE_COL]
-                filter = (hm3_df[HYDRO_CODE_COL] == hydro_code) & (
-                    hm3_df[START_DATE_COL] == date
-                )
-                return hm3_df.loc[filter, LOWER_BOUND_COL].iloc[0]
-
-            def _net_volume(line: pd.Series) -> float:
-                hydro_code = line[HYDRO_CODE_COL]
-                date = line[START_DATE_COL]
-                filter = (hm3_df[HYDRO_CODE_COL] == hydro_code) & (
-                    hm3_df[START_DATE_COL] == date
-                )
-                return (
-                    hm3_df.loc[filter, UPPER_BOUND_COL].iloc[0]
-                    - hm3_df.loc[filter, LOWER_BOUND_COL].iloc[0]
-                )
-
+            df: pl.DataFrame, hm3_df: pl.DataFrame
+        ) -> pl.DataFrame:
             bound_columns = [LOWER_BOUND_COL, UPPER_BOUND_COL]
             unit_columns = [LOWER_BOUND_UNIT_COL, UPPER_BOUND_UNIT_COL]
+
+            df = df.with_columns(
+                pl.Series(
+                    name="tmp_lower_bound", values=hm3_df[LOWER_BOUND_COL]
+                ),
+                pl.Series(
+                    name="tmp_upper_bound", values=hm3_df[UPPER_BOUND_COL]
+                ),
+            )
             for col, unit_col in zip(bound_columns, unit_columns):
-                bound_df = df.loc[df[unit_col] == Unit.perc_modif.value].copy()
+                df = df.with_columns(
+                    (
+                        pl.col(col)
+                        * (
+                            pl.col("tmp_upper_bound")
+                            - pl.col("tmp_lower_bound")
+                        )
+                        / 100.0
+                        + pl.col("tmp_lower_bound")
+                    ).alias("tmp")
+                )
 
-                if not bound_df.empty:
-                    bound_df[col] = bound_df.apply(
-                        lambda line: line[col] * _net_volume(line) / 100.0
-                        + _min_volume(line),
-                        axis=1,
-                    )
-                    df.loc[bound_df.index, col] = bound_df[col]
-                    df.loc[bound_df.index, unit_col] = Unit.hm3_modif.value
+                df = df.with_columns(
+                    pl.when(pl.col(unit_col) == Unit.perc_modif.value)
+                    .then(pl.col("tmp"))
+                    .otherwise(pl.col(col))
+                    .alias(col),
+                    pl.lit(Unit.hm3_modif.value).alias(unit_col),
+                )
 
+            df = df.drop(["tmp", "tmp_lower_bound", "tmp_upper_bound"])
             return df
 
         hydro_volume_bounds_in_stages = cls.DECK_DATA_CACHING.get(
@@ -2434,13 +2480,13 @@ class Deck:
         if hydro_volume_bounds_in_stages is None:
             hm3_df = cls.hydro_volume_bounds_with_changes(uow)
             hm3_df = _expand_to_stages(hm3_df, uow)
-            df = _add_hydro_bounds_changes_to_stages(hm3_df.copy(), uow)
+            df = _add_hydro_bounds_changes_to_stages(hm3_df, uow)
             casted_df = _cast_bounds_to_hm3(df, hm3_df)
             hydro_volume_bounds_in_stages = casted_df
             cls.DECK_DATA_CACHING["hydro_volume_bounds_in_stages"] = (
                 hydro_volume_bounds_in_stages
             )
-        return hydro_volume_bounds_in_stages.copy()
+        return hydro_volume_bounds_in_stages
 
     @classmethod
     def hydro_turbined_flow_bounds(

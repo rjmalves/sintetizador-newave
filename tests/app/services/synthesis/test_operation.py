@@ -160,7 +160,7 @@ def __compara_sintese_nwlistop(
 
 
 def __valida_limites(
-    df: pd.DataFrame, tol: float = 0.2, lower=True, upper=True
+    df: pl.DataFrame, tol: float = 0.2, lower=True, upper=True
 ):
     num_amostras = df.shape[0]
     if upper:
@@ -169,7 +169,7 @@ def __valida_limites(
                 df["valor"] <= (df["limite_superior"] + tol)
             ).sum() == num_amostras
         except AssertionError:
-            print(df.loc[df["valor"] > (df["limite_superior"] + tol)])
+            print(df.filter(pl.col("valor") > pl.col("limite_superior") + tol))
             raise
     if lower:
         try:
@@ -177,7 +177,7 @@ def __valida_limites(
                 df["valor"] >= (df["limite_inferior"] - tol)
             ).sum() == num_amostras
         except AssertionError:
-            print(df.loc[df["valor"] < (df["limite_inferior"] - tol)])
+            print(df.filter(pl.col("valor") < pl.col("limite_inferior") - tol))
             raise
 
 
@@ -204,7 +204,7 @@ def __valida_metadata(chave: str, df_metadata: pd.DataFrame, calculated: bool):
     )
 
 
-def __sintetiza_com_mock(synthesis_str) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def __sintetiza_com_mock(synthesis_str) -> Tuple[pl.DataFrame, pl.DataFrame]:
     m = MagicMock(lambda df, filename: df)
     with patch(
         "app.adapters.repository.export.TestExportRepository.synthetize_df",
@@ -2654,7 +2654,9 @@ def test_sintese_varmf_uhe(test_settings):
     __valida_limites(df)
     # Somente para VARM: subtrai volume mínimo para comparação com nwlistop,
     # que imprime somente volume útil.
-    df["valor"] -= df_hidr.at[1, "volume_minimo"]
+    df = df.with_columns(
+        (pl.col("valor") - df_hidr.at[1, "volume_minimo"]).alias("valor")
+    )
     __compara_sintese_nwlistop(
         df,
         df_arq,

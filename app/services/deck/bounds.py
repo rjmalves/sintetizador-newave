@@ -943,34 +943,43 @@ class OperationVariableBounds:
         Armazenada Percentual (EARP).
         """
 
+        def _replace_initial_bounds(
+            df: pl.DataFrame, bound: float
+        ) -> pl.DataFrame:
+            df = df.with_columns(pl.col(START_DATE_COL).dt.offset_by("1mo"))
+            stages = Deck.stages_starting_dates_final_simulation(uow)
+            first_stage = stages[0]
+            last_stage = stages[-1] + relativedelta(months=1)
+            df = df.with_columns(
+                pl.when(pl.col(START_DATE_COL) == last_stage)
+                .then(bound)
+                .otherwise(pl.col(VALUE_COL))
+                .alias(VALUE_COL)
+            )
+            df = df.with_columns(
+                pl.when(pl.col(START_DATE_COL) == last_stage)
+                .then(first_stage)
+                .otherwise(pl.col(START_DATE_COL))
+                .alias(START_DATE_COL)
+            )
+            return df
+
         def _get_group_and_cast_bounds() -> Tuple[np.ndarray, np.ndarray]:
             upper_bound_df = Deck.stored_energy_upper_bounds(uow)
             lower_bound_df = Deck.eer_stored_energy_lower_bounds(uow)
             if initial:
-                for df, limit in zip(
-                    [upper_bound_df, lower_bound_df], [float("inf"), 0.0]
-                ):
-                    df[START_DATE_COL] += pd.DateOffset(months=1)
-                    stages = Deck.stages_starting_dates_final_simulation(uow)
-                    first_stage = stages[0]
-                    last_stage = stages[-1] + relativedelta(months=1)
-                    df = df.with_columns(pl.col(VALUE_COL))
-                    df = df.with_columns(
-                        pl.when(pl.col(START_DATE_COL) == last_stage)
-                        .then(pl.lit(limit))
-                        .alias(VALUE_COL)
-                    )
-                    df = df.with_columns(
-                        pl.when(pl.col(START_DATE_COL) == last_stage)
-                        .then(pl.lit(first_stage))
-                        .alias(START_DATE_COL)
-                    )
+                upper_bound_df = _replace_initial_bounds(
+                    upper_bound_df, float("inf")
+                )
+                lower_bound_df = _replace_initial_bounds(lower_bound_df, 0.0)
 
+            upper_bound_df = upper_bound_df.sort(grouping_columns)
             upper_bounds = (
                 upper_bound_df.group_by(grouping_columns, maintain_order=True)
                 .sum()[VALUE_COL]
                 .to_numpy()
             )
+            lower_bound_df = lower_bound_df.sort(grouping_columns)
             lower_bounds = (
                 lower_bound_df.group_by(grouping_columns, maintain_order=True)
                 .sum()[VALUE_COL]
@@ -1196,52 +1205,59 @@ class OperationVariableBounds:
     @classmethod
     def _stored_volume_bounds(
         cls,
-        df: pd.DataFrame,
+        df: pl.DataFrame,
         uow: AbstractUnitOfWork,
         synthesis_unit: str,
         ordered_entities: Dict[str, list],
         entity_column: Optional[str] = None,
         initial: bool = False,
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """
         Adiciona ao DataFrame da síntese os limites inferior e superior
         para as variáveis de Volume Armazenado Absoluto (VARM) e Volume
         Armazenado Percentual (VARP) para cada UHE.
         """
 
+        def _replace_initial_bounds(
+            df: pl.DataFrame, col: str, bound: float
+        ) -> pl.DataFrame:
+            df = df.with_columns(pl.col(START_DATE_COL).dt.offset_by("1mo"))
+            stages = Deck.stages_starting_dates_final_simulation(uow)
+            first_stage = stages[0]
+            last_stage = stages[-1] + relativedelta(months=1)
+            df = df.with_columns(
+                pl.when(pl.col(START_DATE_COL) == last_stage)
+                .then(bound)
+                .otherwise(pl.col(col))
+                .alias(col)
+            )
+            df = df.with_columns(
+                pl.when(pl.col(START_DATE_COL) == last_stage)
+                .then(first_stage)
+                .otherwise(pl.col(START_DATE_COL))
+                .alias(START_DATE_COL)
+            )
+            return df
+
         def _get_group_and_cast_bounds() -> Tuple[np.ndarray, np.ndarray]:
             volume_bounds_in_stages_df = Deck.hydro_volume_bounds_in_stages(uow)
-            synthesis_hydro_codes = df[HYDRO_CODE_COL].unique().tolist()
-            volume_bounds_in_stages_df = volume_bounds_in_stages_df.loc[
-                volume_bounds_in_stages_df[HYDRO_CODE_COL].isin(
-                    synthesis_hydro_codes
-                )
-            ].reset_index(drop=True)
+            synthesis_hydro_codes = df[HYDRO_CODE_COL].unique().to_list()
+            volume_bounds_in_stages_df = volume_bounds_in_stages_df.filter(
+                pl.col(HYDRO_CODE_COL).is_in(synthesis_hydro_codes)
+            )
             if initial:
-                volume_bounds_in_stages_df[START_DATE_COL] += pd.DateOffset(
-                    months=1
+                volume_bounds_in_stages_df = _replace_initial_bounds(
+                    volume_bounds_in_stages_df, LOWER_BOUND_COL, 0.0
                 )
-                stages = Deck.stages_starting_dates_final_simulation(uow)
-                first_stage = stages[0]
-                last_stage = stages[-1] + relativedelta(months=1)
-                volume_bounds_in_stages_df.loc[
-                    volume_bounds_in_stages_df[START_DATE_COL] == last_stage,
-                    UPPER_BOUND_COL,
-                ] = float("inf")
-                volume_bounds_in_stages_df.loc[
-                    volume_bounds_in_stages_df[START_DATE_COL] == last_stage,
-                    LOWER_BOUND_COL,
-                ] = 0.0
-                volume_bounds_in_stages_df.loc[
-                    volume_bounds_in_stages_df[START_DATE_COL] == last_stage,
-                    START_DATE_COL,
-                ] = first_stage
+                volume_bounds_in_stages_df = _replace_initial_bounds(
+                    volume_bounds_in_stages_df, UPPER_BOUND_COL, float("inf")
+                )
 
             grouped_bounds_df = (
-                volume_bounds_in_stages_df.groupby(
-                    grouping_columns, as_index=False
+                volume_bounds_in_stages_df.group_by(
+                    grouping_columns, maintain_order=True
                 )
-                .sum(numeric_only=True)[[LOWER_BOUND_COL, UPPER_BOUND_COL]]
+                .sum()[[LOWER_BOUND_COL, UPPER_BOUND_COL]]
                 .to_numpy()
             )
             lower_bounds = grouped_bounds_df[:, 0]
@@ -1253,47 +1269,61 @@ class OperationVariableBounds:
             return lower_bounds, upper_bounds
 
         def _repeat_bounds_by_scenario(
-            df: pd.DataFrame,
+            df: pl.DataFrame,
             lower_bounds: np.ndarray,
             upper_bounds: np.ndarray,
-        ) -> pd.DataFrame:
+        ) -> pl.DataFrame:
             num_entities = (
                 len(ordered_entities[entity_column]) if entity_column else 1
             )
             num_stages = len(ordered_entities[STAGE_COL])
             num_scenarios = len(ordered_entities[SCENARIO_COL])
             num_blocks = len(ordered_entities[BLOCK_COL])
-            df = df.sort_values(grouping_columns)
-            df[LOWER_BOUND_COL] = cls._repeats_data_by_scenario(
-                lower_bounds,
-                num_entities,
-                num_stages,
-                num_scenarios,
-                num_blocks,
-            )
-            df[UPPER_BOUND_COL] = cls._repeats_data_by_scenario(
-                upper_bounds,
-                num_entities,
-                num_stages,
-                num_scenarios,
-                num_blocks,
+            df = df.sort(grouping_columns)
+            df = df.with_columns(
+                pl.Series(
+                    name=LOWER_BOUND_COL,
+                    values=cls._repeats_data_by_scenario(
+                        lower_bounds,
+                        num_entities,
+                        num_stages,
+                        num_scenarios,
+                        num_blocks,
+                    ),
+                ),
+                pl.Series(
+                    name=UPPER_BOUND_COL,
+                    values=cls._repeats_data_by_scenario(
+                        upper_bounds,
+                        num_entities,
+                        num_stages,
+                        num_scenarios,
+                        num_blocks,
+                    ),
+                ),
             )
             return df
 
         def _sort_and_round_bounds(
-            df: pd.DataFrame,
+            df: pl.DataFrame,
             already_had_limits: bool,
-        ) -> pd.DataFrame:
+        ) -> pl.DataFrame:
             num_digits = 2
-
-            df[VALUE_COL] = np.round(df[VALUE_COL], num_digits)
-            df[LOWER_BOUND_COL] = np.round(df[LOWER_BOUND_COL], num_digits)
-            df[UPPER_BOUND_COL] = np.round(df[UPPER_BOUND_COL], num_digits)
+            df = df.with_columns(pl.col(VALUE_COL).round(num_digits))
+            df = df.sort(grouping_columns)
+            df = df.with_columns(
+                pl.col(LOWER_BOUND_COL).round(num_digits),
+                pl.col(UPPER_BOUND_COL).round(num_digits),
+            )
             if (
                 synthesis_unit == Unit.hm3_modif.value
                 and not already_had_limits
             ):
-                df[VALUE_COL] += df[LOWER_BOUND_COL]
+                df = df.with_columns(
+                    (pl.col(VALUE_COL) + pl.col(LOWER_BOUND_COL)).alias(
+                        VALUE_COL
+                    )
+                )
             return df
 
         has_limits = (
