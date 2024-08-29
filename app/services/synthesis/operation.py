@@ -1205,7 +1205,7 @@ class OperationSynthetizer:
     @classmethod
     def __stub_resolve_initial_stored_volumes(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """
         Resolve a síntese de volumes armazenados iniciais para uma UHE,
         processando informações existentes no `pmo.dat` e adequando
@@ -1215,7 +1215,7 @@ class OperationSynthetizer:
 
         def _get_final_storage_synthesis_data(
             synthesis: OperationSynthesis,
-        ) -> Tuple[pd.DataFrame, dict]:
+        ) -> Tuple[pl.DataFrame, dict]:
             final_storage_synthesis = OperationSynthesis(
                 variable=variable_map[synthesis.variable],
                 spatial_resolution=synthesis.spatial_resolution,
@@ -1237,19 +1237,30 @@ class OperationSynthetizer:
                 else "valor_percentual"
             )
             if synthesis.variable == varmi:
-                hidr = Deck.hidr(uow)
-                initial_storage_data[value_column] += hidr.loc[
-                    initial_storage_data[HYDRO_CODE_COL].to_numpy(),
-                    "volume_minimo",
-                ].to_numpy()
-            initial_storage_data = initial_storage_data.loc[
-                initial_storage_data[HYDRO_CODE_COL].isin(hydros)
-            ]
-            initial_storage_values = (
-                initial_storage_data.set_index(HYDRO_CODE_COL)
-                .loc[hydros, value_column]
-                .to_numpy()
+                hidr = pl.from_pandas(Deck.hidr(uow).reset_index())
+                initial_storage_data = initial_storage_data.join(
+                    hidr[[HYDRO_CODE_COL, "volume_minimo"]], on=HYDRO_CODE_COL
+                )
+                initial_storage_data = initial_storage_data.with_columns(
+                    (pl.col(value_column) + pl.col("volume_minimo")).alias(
+                        value_column
+                    )
+                )
+
+            initial_storage_data = initial_storage_data.filter(
+                pl.col(HYDRO_CODE_COL).is_in(hydros)
             )
+            entity_order = pl.DataFrame({
+                "tmp": list(range(len(hydros))),
+                HYDRO_CODE_COL: hydros,
+            })
+            initial_storage_data = initial_storage_data.join(
+                entity_order, on=HYDRO_CODE_COL
+            )
+            initial_storage_values = initial_storage_data.sort("tmp")[
+                value_column
+            ].to_numpy()
+
             return initial_storage_values
 
         def _get_initial_stage_indices(entities: dict) -> np.ndarray:
@@ -1271,28 +1282,27 @@ class OperationSynthetizer:
             return initial_stage_indices
 
         def _fill_initial_storage_df(
-            df: pd.DataFrame,
+            df: pl.DataFrame,
             indices: np.ndarray,
             values: np.ndarray,
             entities: dict,
-        ) -> pd.DataFrame:
+        ) -> pl.DataFrame:
             scenarios = [
                 s for s in entities[SCENARIO_COL] if str(s).isnumeric()
             ]
             num_scenarios = len(scenarios)
-            initial_storage_df = df.copy()
-            initial_storage_values_df = initial_storage_df[VALUE_COL].to_numpy()
+            initial_storage_values_df = df[VALUE_COL].to_numpy()
             initial_storage_values_df[num_scenarios:] = (
                 initial_storage_values_df[:-num_scenarios]
             )
             initial_storage_values_df[indices] = np.repeat(
                 values, num_scenarios
             )
-            initial_storage_df[VALUE_COL] = initial_storage_values_df
-            initial_storage_df[VALUE_COL] = initial_storage_df[
-                VALUE_COL
-            ].fillna(0.0)
-            return initial_storage_df
+            df = df.with_columns(
+                pl.Series(name=VALUE_COL, values=initial_storage_values_df)
+            )
+            df = df.with_columns(pl.col(VALUE_COL).fill_nan(0.0))
+            return df
 
         varmi = Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL
         varmf = Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL
@@ -1624,34 +1634,41 @@ class OperationSynthetizer:
         """
 
         def _replace_scenario_info(
-            df: pd.DataFrame,
+            df: pl.DataFrame,
             num_stages: int,
             num_scenarios: int,
             num_blocks: int,
             num_thermals: int,
-        ) -> pd.DataFrame:
+        ) -> pl.DataFrame:
             """
             Substitui a informação de cenário por um intervalo fixo de `1`a
             `num_scenarios`, caso os dados fornecidos contenham informações
             de cenários de índices não regulares.
             """
-            df[SCENARIO_COL] = np.tile(
-                np.tile(
-                    np.repeat(np.arange(1, num_scenarios + 1), num_blocks),
-                    num_stages,
-                ),
-                num_thermals,
+            df = df.with_columns(
+                pl.Series(
+                    name=SCENARIO_COL,
+                    values=np.tile(
+                        np.tile(
+                            np.repeat(
+                                np.arange(1, num_scenarios + 1), num_blocks
+                            ),
+                            num_stages,
+                        ),
+                        num_thermals,
+                    ),
+                )
             )
             return df
 
         def _add_stage_info(
-            df: pd.DataFrame,
+            df: pl.DataFrame,
             num_stages: int,
             num_scenarios: int,
             num_blocks: int,
             num_thermals: int,
             end_dates: np.ndarray,
-        ) -> pd.DataFrame:
+        ) -> pl.DataFrame:
             """
             Adiciona informações de estágio a um DataFrame, utilizando o
             número de valores de data distintos fornecidos para definir uma
@@ -1664,19 +1681,21 @@ class OperationSynthetizer:
             end_dates_to_df_column: np.ndarray = np.tile(
                 np.repeat(end_dates, num_scenarios * num_blocks), num_thermals
             )
-            df[STAGE_COL] = stages_to_df_column
-            df[END_DATE_COL] = end_dates_to_df_column
+            df = df.with_columns(
+                pl.Series(name=STAGE_COL, values=stages_to_df_column),
+                pl.Series(name=END_DATE_COL, values=end_dates_to_df_column),
+            )
             return df
 
         def _add_block_duration_info(
-            df: pd.DataFrame,
+            df: pl.DataFrame,
             num_stages: int,
             num_scenarios: int,
             num_blocks: int,
             num_thermals: int,
             blocks: List[int],
             start_dates: List[datetime],
-        ) -> pd.DataFrame:
+        ) -> pl.DataFrame:
             """
             Adiciona informações de duração de patamares a um DataFrame, utilizando
             as informações dos patamares e datas de início dos estágios.
@@ -1784,7 +1803,7 @@ class OperationSynthetizer:
         synthesis: OperationSynthesis,
         sbm_index: int,
         sbm_name: str,
-    ) -> Optional[pd.DataFrame]:
+    ) -> Optional[pl.DataFrame]:
         """
         Obtém os dados da síntese de operação para todas as UTE
         de um submercado a partir do arquivo de saída do NWLISTOP.
@@ -1802,7 +1821,7 @@ class OperationSynthetizer:
                 submercado=sbm_index,
             )
         if df is not None:
-            df[SUBMARKET_CODE_COL] = sbm_index
+            df = df.with_columns(pl.lit(sbm_index).alias(SUBMARKET_CODE_COL))
         return cls._post_resolve_GTER_UTE_entity(df, uow)
 
     @classmethod

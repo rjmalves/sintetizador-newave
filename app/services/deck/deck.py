@@ -3358,7 +3358,7 @@ class Deck:
         return df
 
     @classmethod
-    def initial_stored_volume(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def initial_stored_volume(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         initial_stored_volume = cls.DECK_DATA_CACHING.get(
             "initial_stored_volume"
         )
@@ -3376,10 +3376,12 @@ class Deck:
                     initial_stored_volume, uow
                 )
             )
+            initial_stored_volume = pl.from_pandas(initial_stored_volume)
             cls.DECK_DATA_CACHING["initial_stored_volume"] = (
                 initial_stored_volume
             )
-        return initial_stored_volume.copy()
+
+        return initial_stored_volume
 
     @classmethod
     def eer_code_order(cls, uow: AbstractUnitOfWork) -> List[int]:

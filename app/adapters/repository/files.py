@@ -234,7 +234,7 @@ class AbstractFilesRepository(ABC):
         spatial_resolution: SpatialResolution,
         *args,
         **kwargs,
-    ) -> Optional[pd.DataFrame]:
+    ) -> Optional[pl.DataFrame]:
         pass
 
     @abstractmethod
@@ -1262,7 +1262,7 @@ class RawFilesRepository(AbstractFilesRepository):
         spatial_resolution: SpatialResolution,
         *args,
         **kwargs,
-    ) -> Optional[pd.DataFrame]:
+    ) -> Optional[pl.DataFrame]:
         try:
             regra = self.__regras.get((variable, spatial_resolution))
             if regra is None:

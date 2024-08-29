@@ -1219,18 +1219,19 @@ class OperationVariableBounds:
         """
 
         def _replace_initial_bounds(
-            df: pl.DataFrame, col: str, bound: float
+            df: pl.DataFrame, bounds: dict[str, float]
         ) -> pl.DataFrame:
             df = df.with_columns(pl.col(START_DATE_COL).dt.offset_by("1mo"))
             stages = Deck.stages_starting_dates_final_simulation(uow)
             first_stage = stages[0]
             last_stage = stages[-1] + relativedelta(months=1)
-            df = df.with_columns(
-                pl.when(pl.col(START_DATE_COL) == last_stage)
-                .then(bound)
-                .otherwise(pl.col(col))
-                .alias(col)
-            )
+            for col, bound in bounds.items():
+                df = df.with_columns(
+                    pl.when(pl.col(START_DATE_COL) == last_stage)
+                    .then(bound)
+                    .otherwise(pl.col(col))
+                    .alias(col)
+                )
             df = df.with_columns(
                 pl.when(pl.col(START_DATE_COL) == last_stage)
                 .then(first_stage)
@@ -1247,12 +1248,13 @@ class OperationVariableBounds:
             )
             if initial:
                 volume_bounds_in_stages_df = _replace_initial_bounds(
-                    volume_bounds_in_stages_df, LOWER_BOUND_COL, 0.0
-                )
-                volume_bounds_in_stages_df = _replace_initial_bounds(
-                    volume_bounds_in_stages_df, UPPER_BOUND_COL, float("inf")
+                    volume_bounds_in_stages_df,
+                    {LOWER_BOUND_COL: 0.0, UPPER_BOUND_COL: float("inf")},
                 )
 
+            volume_bounds_in_stages_df = volume_bounds_in_stages_df.sort(
+                grouping_columns
+            )
             grouped_bounds_df = (
                 volume_bounds_in_stages_df.group_by(
                     grouping_columns, maintain_order=True
