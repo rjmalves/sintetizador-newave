@@ -1855,19 +1855,17 @@ class Deck:
         ].reset_index(drop=True)
 
     @classmethod
-    def thermal_generation_bounds(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def thermal_generation_bounds(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         def _add_submarket_data(
-            df: pd.DataFrame, uow: AbstractUnitOfWork
-        ) -> pd.DataFrame:
+            df: pl.DataFrame, uow: AbstractUnitOfWork
+        ) -> pl.DataFrame:
             map = cls.thermal_submarket_map(uow)
-            df = df.rename(
-                columns={
-                    "nome_usina": THERMAL_NAME_COL,
-                    "codigo_usina": THERMAL_CODE_COL,
-                }
-            )
+            df = df.rename({
+                "nome_usina": THERMAL_NAME_COL,
+                "codigo_usina": THERMAL_CODE_COL,
+            })
             df = df.join(
-                map[[SUBMARKET_CODE_COL, SUBMARKET_NAME_COL]],
+                map[[THERMAL_CODE_COL, SUBMARKET_CODE_COL, SUBMARKET_NAME_COL]],
                 on=THERMAL_CODE_COL,
             )
             return df
@@ -1879,75 +1877,98 @@ class Deck:
             bounds_df = cls._thermal_generation_bounds_pmo(uow)
             if bounds_df is None:
                 bounds_df = cls._thermal_generation_bounds_term_manutt_expt(uow)
-            bounds_df = _add_submarket_data(bounds_df, uow)
+            bounds_df = _add_submarket_data(pl.from_pandas(bounds_df), uow)
             thermal_generation_bounds = bounds_df
             cls.DECK_DATA_CACHING["thermal_generation_bounds"] = (
                 thermal_generation_bounds
             )
-        return thermal_generation_bounds.copy()
+        return thermal_generation_bounds
 
     @classmethod
-    def exchange_bounds(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def exchange_bounds(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         def _drops_exchange_direction_flag(
-            bounds_df: pd.DataFrame,
-        ) -> pd.DataFrame:
+            bounds_df: pl.DataFrame,
+        ) -> pl.DataFrame:
             """
             Inverte as colunas submercado_de e submercado_para a
             partir do valor da coluna sentido, aplicada apenas para
             o DataFrame de limites de intercâmbio do sistema.dat.
             """
-            filtro = bounds_df["sentido"] == 1
-            (
-                bounds_df.loc[filtro, EXCHANGE_SOURCE_CODE_COL],
-                bounds_df.loc[filtro, EXCHANGE_TARGET_CODE_COL],
-            ) = (
-                bounds_df.loc[filtro, EXCHANGE_TARGET_CODE_COL],
-                bounds_df.loc[filtro, EXCHANGE_SOURCE_CODE_COL],
+            bounds_df = bounds_df.with_columns(
+                pl.when(pl.col("sentido") == 1)
+                .then(pl.col(EXCHANGE_TARGET_CODE_COL))
+                .otherwise(pl.col(EXCHANGE_SOURCE_CODE_COL))
+                .alias(EXCHANGE_SOURCE_CODE_COL),
+                pl.when(pl.col("sentido") == 1)
+                .then(pl.col(EXCHANGE_SOURCE_CODE_COL))
+                .otherwise(pl.col(EXCHANGE_TARGET_CODE_COL))
+                .alias(EXCHANGE_TARGET_CODE_COL),
             )
-            return bounds_df.drop(columns=["sentido"])
+            return bounds_df.drop(["sentido"])
 
         def _cast_exchange_bounds_to_MWmes(
-            exchange_block_bounds_df: pd.DataFrame,
-            exchange_average_bounds_df: pd.DataFrame,
-            block_length_df: pd.DataFrame,
-        ) -> pd.DataFrame:
+            exchange_block_bounds_df: pl.DataFrame,
+            exchange_average_bounds_df: pl.DataFrame,
+            block_length_df: pl.DataFrame,
+        ) -> pl.DataFrame:
             """
             Obtem limites de intercâmbio em MWmes a partir de limites
             em MWmed e P.U. e das durações de cada patamar. Estes limites
             são compatíveis com o visto no nwlistop.
             """
-            exchange_block_bounds_df[VALUE_COL] = (
-                exchange_block_bounds_df.apply(
-                    lambda linha: exchange_average_bounds_df.loc[
-                        (
-                            exchange_average_bounds_df[EXCHANGE_SOURCE_CODE_COL]
-                            == linha[EXCHANGE_SOURCE_CODE_COL]
-                        )
-                        & (
-                            exchange_average_bounds_df[EXCHANGE_TARGET_CODE_COL]
-                            == linha[EXCHANGE_TARGET_CODE_COL]
-                        )
-                        & (
-                            exchange_average_bounds_df[START_DATE_COL]
-                            == linha[START_DATE_COL]
-                        ),
-                        VALUE_COL,
-                    ].iloc[0]
-                    * linha[VALUE_COL],
-                    axis=1,
+            exchange_block_bounds_df = exchange_block_bounds_df.with_columns(
+                (
+                    pl.col(EXCHANGE_SOURCE_CODE_COL).cast(str)
+                    + "-"
+                    + pl.col(EXCHANGE_TARGET_CODE_COL).cast(str)
+                    + "-"
+                    + pl.col(START_DATE_COL).cast(str)
+                ).alias("tmp")
+            )
+            exchange_average_bounds_df = (
+                exchange_average_bounds_df.with_columns(
+                    (
+                        pl.col(EXCHANGE_SOURCE_CODE_COL).cast(str)
+                        + "-"
+                        + pl.col(EXCHANGE_TARGET_CODE_COL).cast(str)
+                        + "-"
+                        + pl.col(START_DATE_COL).cast(str)
+                    ).alias("tmp")
                 )
             )
-            block_length_df = block_length_df.sort_values([
+            exchange_block_bounds_df = exchange_block_bounds_df.join(
+                exchange_average_bounds_df.rename({VALUE_COL: "tmp_val"})[
+                    ["tmp", "tmp_val"]
+                ],
+                on="tmp",
+            )
+            exchange_block_bounds_df = exchange_block_bounds_df.with_columns(
+                (pl.col(VALUE_COL) * pl.col("tmp_val")).alias(VALUE_COL)
+            )
+            exchange_block_bounds_df = exchange_block_bounds_df.drop([
+                "tmp",
+                "tmp_val",
+            ])
+
+            block_length_df = block_length_df.sort([
                 START_DATE_COL,
                 BLOCK_COL,
             ])
-            n_pares_limites = exchange_block_bounds_df.drop_duplicates([
+            n_pares_limites = exchange_block_bounds_df.unique([
                 EXCHANGE_SOURCE_CODE_COL,
                 EXCHANGE_TARGET_CODE_COL,
             ]).shape[0]
-            exchange_block_bounds_df[VALUE_COL] *= np.tile(
-                block_length_df[VALUE_COL].to_numpy(), n_pares_limites
+            exchange_block_bounds_df = exchange_block_bounds_df.with_columns(
+                pl.Series(
+                    name="tmp",
+                    values=np.tile(
+                        block_length_df[VALUE_COL].to_numpy(), n_pares_limites
+                    ),
+                )
             )
+            exchange_block_bounds_df = exchange_block_bounds_df.with_columns(
+                pl.col(VALUE_COL) * pl.col("tmp")
+            ).drop("tmp")
 
             return exchange_block_bounds_df
 
@@ -1958,13 +1979,14 @@ class Deck:
                 pd.DataFrame,
                 "limites de intercâmbio",
             )
-            exchange_average_bounds_df = exchange_average_bounds_df.rename(
-                columns={
-                    "submercado_de": EXCHANGE_SOURCE_CODE_COL,
-                    "submercado_para": EXCHANGE_TARGET_CODE_COL,
-                    "data": START_DATE_COL,
-                }
+            exchange_average_bounds_df = pl.from_pandas(
+                exchange_average_bounds_df
             )
+            exchange_average_bounds_df = exchange_average_bounds_df.rename({
+                "submercado_de": EXCHANGE_SOURCE_CODE_COL,
+                "submercado_para": EXCHANGE_TARGET_CODE_COL,
+                "data": START_DATE_COL,
+            })
             exchange_average_bounds_df = _drops_exchange_direction_flag(
                 exchange_average_bounds_df
             )
@@ -1975,9 +1997,8 @@ class Deck:
                 exchange_average_bounds_df,
                 block_length_df,
             )
-            exchange_bounds = exchange_bounds.reset_index(drop=True)
             cls.DECK_DATA_CACHING["exchange_bounds"] = exchange_bounds
-        return exchange_bounds.copy()
+        return exchange_bounds
 
     @classmethod
     def costs(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
@@ -2099,7 +2120,7 @@ class Deck:
         return hydros.copy()
 
     @classmethod
-    def flow_diversion(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def flow_diversion(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         def _filter_stages(
             df: pd.DataFrame, uow: AbstractUnitOfWork
         ) -> pd.DataFrame:
@@ -2168,10 +2189,10 @@ class Deck:
             flow_diversion = _add_missing_hydros(flow_diversion, uow)
             flow_diversion = _make_bound_columns(flow_diversion)
             flow_diversion = _repeat_by_block(flow_diversion, uow)
-            flow_diversion = flow_diversion.reset_index(drop=True)
+            flow_diversion = pl.from_pandas(flow_diversion)
 
             cls.DECK_DATA_CACHING["flow_diversion"] = flow_diversion
-        return flow_diversion.copy()
+        return flow_diversion
 
     @classmethod
     def _get_value_and_unit_from_modif_entry(
@@ -2491,7 +2512,7 @@ class Deck:
     @classmethod
     def hydro_turbined_flow_bounds(
         cls, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """
         Obtém um DataFrame com os limites cadastrais de vazão turbinada
         de cada usina hidrelétrica.
@@ -2509,7 +2530,7 @@ class Deck:
             flow_units = line[max_flow_per_unit].to_numpy()
             return np.sum(num_units * flow_units, dtype=np.float64)
 
-        def _get_hydro_data(uow: AbstractUnitOfWork) -> pd.DataFrame:
+        def _get_hydro_data(uow: AbstractUnitOfWork) -> pl.DataFrame:
             df = cls.hidr(uow).reset_index()
             hydro_codes = cls.hydro_code_order(uow)
             df[UPPER_BOUND_COL] = df.apply(
@@ -2519,10 +2540,10 @@ class Deck:
             df = df.loc[
                 df[HYDRO_CODE_COL].isin(hydro_codes),
                 [HYDRO_CODE_COL, LOWER_BOUND_COL, UPPER_BOUND_COL],
-            ].set_index(HYDRO_CODE_COL)
+            ]
             df[LOWER_BOUND_UNIT_COL] = Unit.m3s.value
             df[UPPER_BOUND_UNIT_COL] = Unit.m3s.value
-            return df
+            return pl.from_pandas(df)
 
         hydro_turbined_flow_bounds = cls.DECK_DATA_CACHING.get(
             "hydro_turbined_flow_bounds"
@@ -2536,12 +2557,12 @@ class Deck:
             cls.DECK_DATA_CACHING["hydro_turbined_flow_bounds"] = (
                 hydro_turbined_flow_bounds
             )
-        return hydro_turbined_flow_bounds.copy()
+        return hydro_turbined_flow_bounds
 
     @classmethod
     def hydro_turbined_flow_bounds_with_changes(
         cls, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """
         Obtém um DataFrame com os limites de vazão turbinada
         de cada usina hidrelétrica, sem considerar modificações que variam
@@ -2585,7 +2606,7 @@ class Deck:
             flow_units = line[max_flow_per_unit].to_numpy()
             return np.sum(num_units * flow_units, dtype=np.float64)
 
-        def _get_hydro_data(uow: AbstractUnitOfWork) -> pd.DataFrame:
+        def _get_hydro_data(uow: AbstractUnitOfWork) -> pl.DataFrame:
             df = cls.hidr(uow).reset_index()
             hydro_codes = cls.hydro_code_order(uow)
             df = _apply_changes_to_hydro_data(df, uow)
@@ -2596,10 +2617,10 @@ class Deck:
             df = df.loc[
                 df[HYDRO_CODE_COL].isin(hydro_codes),
                 [HYDRO_CODE_COL, LOWER_BOUND_COL, UPPER_BOUND_COL],
-            ].set_index(HYDRO_CODE_COL)
+            ]
             df[LOWER_BOUND_UNIT_COL] = Unit.m3s.value
             df[UPPER_BOUND_UNIT_COL] = Unit.m3s.value
-            return df
+            return pl.from_pandas(df)
 
         hydro_turbined_flow_bounds_with_changes = cls.DECK_DATA_CACHING.get(
             "hydro_turbined_flow_bounds_with_changes"
@@ -2608,18 +2629,18 @@ class Deck:
             hydro_turbined_flow_bounds = _get_hydro_data(uow)
             entities = cls.hydro_eer_submarket_map(uow)
             hydro_turbined_flow_bounds = hydro_turbined_flow_bounds.join(
-                entities
+                entities, on=HYDRO_CODE_COL
             )
             hydro_turbined_flow_bounds_with_changes = hydro_turbined_flow_bounds
             cls.DECK_DATA_CACHING["hydro_turbined_flow_bounds_with_changes"] = (
                 hydro_turbined_flow_bounds_with_changes
             )
-        return hydro_turbined_flow_bounds_with_changes.copy()
+        return hydro_turbined_flow_bounds_with_changes
 
     @classmethod
     def hydro_turbined_flow_bounds_in_stages(
         cls, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """
         Obtém um DataFrame com os limites de vazão turbinada de cada usina
         hidrelétrica para cada estágio do problema, considerando possíveis
@@ -2627,40 +2648,51 @@ class Deck:
         """
 
         def _expand_to_stages(
-            df: pd.DataFrame, uow: AbstractUnitOfWork
-        ) -> pd.DataFrame:
-            df = df.reset_index()
+            df: pl.DataFrame, uow: AbstractUnitOfWork
+        ) -> pl.DataFrame:
             num_hydros = df.shape[0]
-            dates = np.array(cls.stages_starting_dates_final_simulation(uow))
-            num_stages = len(dates)
-            df = pd.concat([df] * num_stages, ignore_index=True)
-            df[START_DATE_COL] = np.repeat(dates, num_hydros)
-            return df.sort_values([HYDRO_CODE_COL, START_DATE_COL]).reset_index(
-                drop=True
+            dates = np.array(
+                cls.stages_starting_dates_final_simulation(uow),
+                dtype=np.datetime64,
             )
+            num_stages = len(dates)
+            df = pl.concat([df] * num_stages)
+            df = df.with_columns(
+                pl.Series(
+                    name=START_DATE_COL, values=np.repeat(dates, num_hydros)
+                )
+            )
+            return df.sort([HYDRO_CODE_COL, START_DATE_COL])
 
         def _expand_to_blocks(
-            df: pd.DataFrame, uow: AbstractUnitOfWork
-        ) -> pd.DataFrame:
-            df = df.reset_index(drop=True)
-            dates = np.array(cls.stages_starting_dates_final_simulation(uow))
+            df: pl.DataFrame, uow: AbstractUnitOfWork
+        ) -> pl.DataFrame:
+            dates = np.array(
+                cls.stages_starting_dates_final_simulation(uow),
+                dtype=np.datetime64,
+            )
             num_stages = len(dates)
             num_hydros = df.shape[0] // num_stages
             num_blocks = cls.num_blocks(uow) + 1
-            df = pd.concat([df] * num_blocks, ignore_index=True)
-            df = df.sort_values([HYDRO_CODE_COL, START_DATE_COL])
-            df[BLOCK_COL] = np.tile(
-                np.arange(num_blocks), num_hydros * num_stages
+            df = pl.concat([df] * num_blocks)
+            df = df.sort([HYDRO_CODE_COL, START_DATE_COL])
+            df = df.with_columns(
+                pl.Series(
+                    name=BLOCK_COL,
+                    values=np.tile(
+                        np.arange(num_blocks), num_hydros * num_stages
+                    ),
+                )
             )
-            return df.sort_values([
+            return df.sort([
                 HYDRO_CODE_COL,
                 START_DATE_COL,
                 BLOCK_COL,
-            ]).reset_index(drop=True)
+            ])
 
         def _add_hydro_bounds_changes_to_stages(
-            df: pd.DataFrame, uow: AbstractUnitOfWork
-        ) -> pd.DataFrame:
+            df: pl.DataFrame, uow: AbstractUnitOfWork
+        ) -> pl.DataFrame:
             df = cls._get_hydro_data_changes_from_modif_to_stages(
                 df, LOWER_BOUND_COL, LOWER_BOUND_UNIT_COL, TURBMINT, uow
             )
@@ -2683,7 +2715,7 @@ class Deck:
             cls.DECK_DATA_CACHING["hydro_turbined_flow_bounds_in_stages"] = (
                 hydro_turbined_flow_bounds_in_stages
             )
-        return hydro_turbined_flow_bounds_in_stages.copy()
+        return hydro_turbined_flow_bounds_in_stages
 
     @classmethod
     def hydro_outflow_bounds(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
@@ -2753,7 +2785,7 @@ class Deck:
     @classmethod
     def hydro_outflow_bounds_in_stages(
         cls, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """
         Obtém um DataFrame com os limites de vazão turbinada de cada usina
         hidrelétrica para cada estágio do problema, considerando possíveis
@@ -2808,7 +2840,7 @@ class Deck:
             m3s_df = _expand_to_stages(m3s_df, uow)
             m3s_df = _add_hydro_bounds_changes_to_stages(m3s_df, uow)
             m3s_df = _expand_to_blocks(m3s_df, uow)
-            hydro_outflow_bounds_in_stages = m3s_df
+            hydro_outflow_bounds_in_stages = pl.from_pandas(m3s_df)
             cls.DECK_DATA_CACHING["hydro_outflow_bounds_in_stages"] = (
                 hydro_outflow_bounds_in_stages
             )
@@ -2927,14 +2959,14 @@ class Deck:
         return num_blocks
 
     @classmethod
-    def block_lengths(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        def __eval_pat0(df_pat: pd.DataFrame) -> pd.DataFrame:
-            df_pat_0 = df_pat.groupby(START_DATE_COL, as_index=False).sum(
-                numeric_only=True
+    def block_lengths(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
+        def __eval_pat0(df_pat: pl.DataFrame) -> pl.DataFrame:
+            df_pat_0 = df_pat.group_by(START_DATE_COL).sum()
+            df_pat_0 = df_pat_0.with_columns(
+                pl.lit(0, dtype=pl.Int64).alias(BLOCK_COL),
             )
-            df_pat_0[BLOCK_COL] = 0
-            df_pat = pd.concat([df_pat, df_pat_0], ignore_index=True)
-            df_pat.sort_values([START_DATE_COL, BLOCK_COL], inplace=True)
+            df_pat = pl.concat([df_pat, df_pat_0])
+            df_pat = df_pat.sort([START_DATE_COL, BLOCK_COL])
             return df_pat
 
         block_lengths = cls.DECK_DATA_CACHING.get("block_lengths")
@@ -2944,28 +2976,31 @@ class Deck:
                 pd.DataFrame,
                 "duração dos patamares",
             )
-            block_lengths = block_lengths.rename(
-                columns={"data": START_DATE_COL, "patamar": BLOCK_COL}
-            )
+            block_lengths = pl.from_pandas(block_lengths)
+            block_lengths = block_lengths.rename({
+                "data": START_DATE_COL,
+                "patamar": BLOCK_COL,
+            })
             block_lengths = __eval_pat0(block_lengths)
             cls.DECK_DATA_CACHING["block_lengths"] = block_lengths
-        return block_lengths.copy()
+        return block_lengths
 
     @classmethod
-    def exchange_block_limits(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        def __eval_pat0(df_pat: pd.DataFrame) -> pd.DataFrame:
-            df_pat_0 = df_pat.loc[df_pat[BLOCK_COL] == 1].copy()
-            df_pat_0[BLOCK_COL] = 0
-            df_pat_0[VALUE_COL] = 1.0
-            df_pat = pd.concat([df_pat, df_pat_0], ignore_index=True)
-            df_pat.sort_values(
+    def exchange_block_limits(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
+        def __eval_pat0(df_pat: pl.DataFrame) -> pl.DataFrame:
+            df_pat_0 = df_pat.filter(pl.col(BLOCK_COL) == 1)
+            df_pat_0 = df_pat_0.with_columns(
+                pl.lit(0, dtype=pl.Int64).alias(BLOCK_COL),
+                pl.lit(1.0).alias(VALUE_COL),
+            )
+            df_pat = pl.concat([df_pat, df_pat_0])
+            df_pat = df_pat.sort(
                 [
                     EXCHANGE_SOURCE_CODE_COL,
                     EXCHANGE_TARGET_CODE_COL,
                     START_DATE_COL,
                     BLOCK_COL,
                 ],
-                inplace=True,
             )
             return df_pat
 
@@ -2978,18 +3013,17 @@ class Deck:
                 pd.DataFrame,
                 "limites de intercâmbio dos patamares",
             )
-            exchange_block_limits = exchange_block_limits.rename(
-                columns={
-                    "submercado_de": EXCHANGE_SOURCE_CODE_COL,
-                    "submercado_para": EXCHANGE_TARGET_CODE_COL,
-                    "data": START_DATE_COL,
-                }
-            )
+            exchange_block_limits = pl.from_pandas(exchange_block_limits)
+            exchange_block_limits = exchange_block_limits.rename({
+                "submercado_de": EXCHANGE_SOURCE_CODE_COL,
+                "submercado_para": EXCHANGE_TARGET_CODE_COL,
+                "data": START_DATE_COL,
+            })
             exchange_block_limits = __eval_pat0(exchange_block_limits)
             cls.DECK_DATA_CACHING["exchange_block_limits"] = (
                 exchange_block_limits
             )
-        return exchange_block_limits.copy()
+        return exchange_block_limits
 
     @classmethod
     def _initial_stored_energy_from_pmo(

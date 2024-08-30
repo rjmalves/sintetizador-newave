@@ -181,26 +181,26 @@ def __valida_limites(
             raise
 
 
-def __valida_metadata(chave: str, df_metadata: pd.DataFrame, calculated: bool):
+def __valida_metadata(chave: str, df_metadata: pl.DataFrame, calculated: bool):
     s = OperationSynthesis.factory(chave)
     assert s is not None
-    assert str(s) in df_metadata["chave"].tolist()
-    assert s.variable.short_name in df_metadata["nome_curto_variavel"].tolist()
-    assert s.variable.long_name in df_metadata["nome_longo_variavel"].tolist()
+    assert str(s) in df_metadata["chave"].to_list()
+    assert s.variable.short_name in df_metadata["nome_curto_variavel"].to_list()
+    assert s.variable.long_name in df_metadata["nome_longo_variavel"].to_list()
     assert (
         s.spatial_resolution.value
-        in df_metadata["nome_curto_agregacao"].tolist()
+        in df_metadata["nome_curto_agregacao"].to_list()
     )
     assert (
         s.spatial_resolution.long_name
-        in df_metadata["nome_longo_agregacao"].tolist()
+        in df_metadata["nome_longo_agregacao"].to_list()
     )
     unit_str = UNITS[s].value if s in UNITS else ""
-    assert unit_str in df_metadata["unidade"].tolist()
-    assert calculated in df_metadata["calculado"].tolist()
+    assert unit_str in df_metadata["unidade"].to_list()
+    assert calculated in df_metadata["calculado"].to_list()
     assert (
         OperationVariableBounds.is_bounded(s)
-        in df_metadata["limitado"].tolist()
+        in df_metadata["limitado"].to_list()
     )
 
 

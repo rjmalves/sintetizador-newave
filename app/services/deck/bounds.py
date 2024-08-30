@@ -1,7 +1,6 @@
 from typing import Callable, Dict, List, Optional, Tuple, Type, TypeVar
 
 import numpy as np
-import pandas as pd  # type: ignore
 import polars as pl
 from dateutil.relativedelta import relativedelta  # type: ignore
 from inewave.newave import (
@@ -1094,8 +1093,8 @@ class OperationVariableBounds:
 
     @classmethod
     def _group_hydro_df(
-        cls, df: pd.DataFrame, grouping_column: Optional[str] = None
-    ) -> pd.DataFrame:
+        cls, df: pl.DataFrame, grouping_column: Optional[str] = None
+    ) -> pl.DataFrame:
         """
         Realiza a agregação de variáveis fornecidas a nível de UHE
         para uma síntese de REEs, SBMs ou para o SIN. A agregação
@@ -1141,8 +1140,8 @@ class OperationVariableBounds:
 
     @classmethod
     def _group_thermal_df(
-        cls, df: pd.DataFrame, grouping_column: Optional[str] = None
-    ) -> pd.DataFrame:
+        cls, df: pl.DataFrame, grouping_column: Optional[str] = None
+    ) -> pl.DataFrame:
         """
         Realiza a agregação de variáveis fornecidas a nível de UHE
         para uma síntese de REEs, SBMs ou para o SIN. A agregação
@@ -1182,8 +1181,8 @@ class OperationVariableBounds:
 
     @classmethod
     def _group_hydro_df_vol_flow_cast(
-        cls, df: pd.DataFrame, grouping_column: Optional[str] = None
-    ) -> pd.DataFrame:
+        cls, df: pl.DataFrame, grouping_column: Optional[str] = None
+    ) -> pl.DataFrame:
         """
         Realiza a agregação de variáveis fornecidas a nível de UHE
         para uma síntese de REEs, SBMs ou para o SIN, convertendo
@@ -1194,10 +1193,12 @@ class OperationVariableBounds:
         """
         df_group = cls._group_hydro_df(df, grouping_column)
         for c in [VALUE_COL, LOWER_BOUND_COL, UPPER_BOUND_COL]:
-            df_group[c] = (
-                df_group[c]
-                * (STAGE_DURATION_HOURS * HM3_M3S_MONTHLY_FACTOR)
-                / df_group[BLOCK_DURATION_COL]
+            df_group = df_group.with_columns(
+                (
+                    pl.col(c)
+                    * (STAGE_DURATION_HOURS * HM3_M3S_MONTHLY_FACTOR)
+                    / pl.col(BLOCK_DURATION_COL)
+                ).alias(c)
             )
 
         return df_group
@@ -1347,12 +1348,12 @@ class OperationVariableBounds:
     @classmethod
     def _outflow_bounds(
         cls,
-        df: pd.DataFrame,
+        df: pl.DataFrame,
         uow: AbstractUnitOfWork,
         synthesis_unit: str,
         ordered_entities: Dict[str, list],
         entity_column: Optional[str] = None,
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """
         Adiciona ao DataFrame da síntese os limites inferior e superior
         para as variáveis de Volume Defluente (VDEF) e Vazão Defluente (QDEF)
@@ -1361,14 +1362,14 @@ class OperationVariableBounds:
 
         def _get_group_for_bounds() -> Tuple[np.ndarray, np.ndarray]:
             outflow_bounds = Deck.hydro_outflow_bounds_in_stages(uow)
-            synthesis_hydro_codes = df[HYDRO_CODE_COL].unique().tolist()
-            outflow_bounds = outflow_bounds.loc[
-                outflow_bounds[HYDRO_CODE_COL].isin(synthesis_hydro_codes)
-            ].reset_index(drop=True)
+            synthesis_hydro_codes = df[HYDRO_CODE_COL].unique().to_list()
+            outflow_bounds = outflow_bounds.filter(
+                pl.col(HYDRO_CODE_COL).is_in(synthesis_hydro_codes)
+            )
 
             grouped_bounds_df = (
-                outflow_bounds.groupby(grouping_columns, as_index=False)
-                .sum(numeric_only=True)[[LOWER_BOUND_COL, UPPER_BOUND_COL]]
+                outflow_bounds.group_by(grouping_columns, maintain_order=True)
+                .sum()[[LOWER_BOUND_COL, UPPER_BOUND_COL]]
                 .to_numpy()
             )
             lower_bounds = grouped_bounds_df[:, 0]
@@ -1377,48 +1378,64 @@ class OperationVariableBounds:
             return lower_bounds, upper_bounds
 
         def _repeat_bounds_by_scenario_and_cast(
-            df: pd.DataFrame,
+            df: pl.DataFrame,
             lower_bounds: np.ndarray,
             upper_bounds: np.ndarray,
-        ) -> pd.DataFrame:
+        ) -> pl.DataFrame:
             num_entities = (
                 len(ordered_entities[entity_column]) if entity_column else 1
             )
             num_stages = len(ordered_entities[STAGE_COL])
             num_scenarios = len(ordered_entities[SCENARIO_COL])
             num_blocks = len(ordered_entities[BLOCK_COL])
-            df = df.sort_values(grouping_columns)
-            df[LOWER_BOUND_COL] = cls._repeats_data_by_scenario(
-                lower_bounds,
-                num_entities,
-                num_stages,
-                num_scenarios,
-                num_blocks,
-            )
-            df[UPPER_BOUND_COL] = cls._repeats_data_by_scenario(
-                upper_bounds,
-                num_entities,
-                num_stages,
-                num_scenarios,
-                num_blocks,
+            df = df.sort(grouping_columns)
+            df = df.with_columns(
+                pl.Series(
+                    name=LOWER_BOUND_COL,
+                    values=cls._repeats_data_by_scenario_and_block(
+                        lower_bounds,
+                        num_entities,
+                        num_stages,
+                        num_scenarios,
+                        num_blocks,
+                    ),
+                ),
+                pl.Series(
+                    name=UPPER_BOUND_COL,
+                    values=cls._repeats_data_by_scenario_and_block(
+                        upper_bounds,
+                        num_entities,
+                        num_stages,
+                        num_scenarios,
+                        num_blocks,
+                    ),
+                ),
             )
             if synthesis_unit == Unit.hm3.value:
-                for col in [LOWER_BOUND_COL, UPPER_BOUND_COL]:
-                    df[col] = (
-                        df[col]
-                        * df[BLOCK_DURATION_COL]
+                df = df.with_columns(
+                    (
+                        pl.col(LOWER_BOUND_COL)
+                        * pl.col(BLOCK_DURATION_COL)
                         / (HM3_M3S_MONTHLY_FACTOR * STAGE_DURATION_HOURS)
-                    )
+                    ).alias(LOWER_BOUND_COL),
+                    (
+                        pl.col(UPPER_BOUND_COL)
+                        * pl.col(BLOCK_DURATION_COL)
+                        / (HM3_M3S_MONTHLY_FACTOR * STAGE_DURATION_HOURS)
+                    ).alias(UPPER_BOUND_COL),
+                )
             return df
 
         def _sort_and_round_bounds(
-            df: pd.DataFrame,
-        ) -> pd.DataFrame:
+            df: pl.DataFrame,
+        ) -> pl.DataFrame:
             num_digits = 2
-            df = df.sort_values(sorting_columns)
-            df[VALUE_COL] = np.round(df[VALUE_COL], num_digits)
-            df[LOWER_BOUND_COL] = np.round(df[LOWER_BOUND_COL], num_digits)
-            df[UPPER_BOUND_COL] = np.round(df[UPPER_BOUND_COL], num_digits)
+            df = df.sort(sorting_columns)
+            df = df.with_columns(
+                pl.col(VALUE_COL).round(num_digits),
+                pl.col(LOWER_BOUND_COL).round(num_digits),
+                pl.col(UPPER_BOUND_COL).round(num_digits),
+            )
             return df
 
         entity_column_list = [entity_column] if entity_column else []
@@ -1442,12 +1459,12 @@ class OperationVariableBounds:
     @classmethod
     def _turbined_flow_bounds(
         cls,
-        df: pd.DataFrame,
+        df: pl.DataFrame,
         uow: AbstractUnitOfWork,
         synthesis_unit: str,
         ordered_entities: Dict[str, list],
         entity_column: Optional[str] = None,
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """
         Adiciona ao DataFrame da síntese os limites inferior e superior
         para as variáveis de Volume Turbinado (VTUR) e Vazão Turbinada (QTUR)
@@ -1462,14 +1479,16 @@ class OperationVariableBounds:
             turbined_flow_bounds = Deck.hydro_turbined_flow_bounds_in_stages(
                 uow
             )
-            synthesis_hydro_codes = df[HYDRO_CODE_COL].unique().tolist()
-            turbined_flow_bounds = turbined_flow_bounds.loc[
-                turbined_flow_bounds[HYDRO_CODE_COL].isin(synthesis_hydro_codes)
-            ].reset_index(drop=True)
+            synthesis_hydro_codes = df[HYDRO_CODE_COL].unique().to_list()
+            turbined_flow_bounds = turbined_flow_bounds.filter(
+                pl.col(HYDRO_CODE_COL).is_in(synthesis_hydro_codes)
+            )
 
             grouped_bounds_df = (
-                turbined_flow_bounds.groupby(grouping_columns, as_index=False)
-                .sum(numeric_only=True)[[LOWER_BOUND_COL, UPPER_BOUND_COL]]
+                turbined_flow_bounds.group_by(
+                    grouping_columns, maintain_order=True
+                )
+                .sum()[[LOWER_BOUND_COL, UPPER_BOUND_COL]]
                 .to_numpy()
             )
 
@@ -1479,48 +1498,64 @@ class OperationVariableBounds:
             return lower_bounds, upper_bounds
 
         def _repeat_bounds_by_scenario_and_cast(
-            df: pd.DataFrame,
+            df: pl.DataFrame,
             lower_bounds: np.ndarray,
             upper_bounds: np.ndarray,
-        ) -> pd.DataFrame:
+        ) -> pl.DataFrame:
             num_entities = (
                 len(ordered_entities[entity_column]) if entity_column else 1
             )
             num_stages = len(ordered_entities[STAGE_COL])
             num_scenarios = len(ordered_entities[SCENARIO_COL])
             num_blocks = len(ordered_entities[BLOCK_COL])
-            df = df.sort_values(grouping_columns)
-            df[LOWER_BOUND_COL] = cls._repeats_data_by_scenario(
-                lower_bounds,
-                num_entities,
-                num_stages,
-                num_scenarios,
-                num_blocks,
-            )
-            df[UPPER_BOUND_COL] = cls._repeats_data_by_scenario(
-                upper_bounds,
-                num_entities,
-                num_stages,
-                num_scenarios,
-                num_blocks,
+            df = df.sort(grouping_columns)
+            df = df.with_columns(
+                pl.Series(
+                    name=LOWER_BOUND_COL,
+                    values=cls._repeats_data_by_scenario(
+                        lower_bounds,
+                        num_entities,
+                        num_stages,
+                        num_scenarios,
+                        num_blocks,
+                    ),
+                ),
+                pl.Series(
+                    name=UPPER_BOUND_COL,
+                    values=cls._repeats_data_by_scenario(
+                        upper_bounds,
+                        num_entities,
+                        num_stages,
+                        num_scenarios,
+                        num_blocks,
+                    ),
+                ),
             )
             if synthesis_unit == Unit.hm3.value:
-                for col in [LOWER_BOUND_COL, UPPER_BOUND_COL]:
-                    df[col] = (
-                        df[col]
-                        * df[BLOCK_DURATION_COL]
+                df = df.with_columns(
+                    (
+                        pl.col(LOWER_BOUND_COL)
+                        * pl.col(BLOCK_DURATION_COL)
                         / (HM3_M3S_MONTHLY_FACTOR * STAGE_DURATION_HOURS)
-                    )
+                    ).alias(LOWER_BOUND_COL),
+                    (
+                        pl.col(UPPER_BOUND_COL)
+                        * pl.col(BLOCK_DURATION_COL)
+                        / (HM3_M3S_MONTHLY_FACTOR * STAGE_DURATION_HOURS)
+                    ).alias(UPPER_BOUND_COL),
+                )
             return df
 
         def _sort_and_round_bounds(
-            df: pd.DataFrame,
-        ) -> pd.DataFrame:
+            df: pl.DataFrame,
+        ) -> pl.DataFrame:
             num_digits = 2
-            df = df.sort_values(sorting_columns)
-            df[VALUE_COL] = np.round(df[VALUE_COL], num_digits)
-            df[LOWER_BOUND_COL] = np.round(df[LOWER_BOUND_COL], num_digits)
-            df[UPPER_BOUND_COL] = np.round(df[UPPER_BOUND_COL], num_digits)
+            df = df.sort(sorting_columns)
+            df = df.with_columns(
+                pl.col(VALUE_COL).round(num_digits),
+                pl.col(LOWER_BOUND_COL).round(num_digits),
+                pl.col(UPPER_BOUND_COL).round(num_digits),
+            )
             return df
 
         entity_column_list = [entity_column] if entity_column else []
@@ -1544,12 +1579,12 @@ class OperationVariableBounds:
     @classmethod
     def _flow_diversion_bounds(
         cls,
-        df: pd.DataFrame,
+        df: pl.DataFrame,
         uow: AbstractUnitOfWork,
         synthesis_unit: str,
         ordered_entities: Dict[str, list],
         entity_column: Optional[str] = None,
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """
         Adiciona ao DataFrame da síntese os limites inferior e superior
         para as variáveis de Volume Retirado (VRET) e Vazão Retirada (QRET)
@@ -1558,16 +1593,16 @@ class OperationVariableBounds:
 
         def _get_group_for_bounds() -> Tuple[np.ndarray, np.ndarray]:
             flow_diversion_bounds = Deck.flow_diversion(uow)
-            synthesis_hydro_codes = df[HYDRO_CODE_COL].unique().tolist()
-            flow_diversion_bounds = flow_diversion_bounds.loc[
-                flow_diversion_bounds[HYDRO_CODE_COL].isin(
-                    synthesis_hydro_codes
-                )
-            ].reset_index(drop=True)
+            synthesis_hydro_codes = df[HYDRO_CODE_COL].unique().to_list()
+            flow_diversion_bounds = flow_diversion_bounds.filter(
+                pl.col(HYDRO_CODE_COL).is_in(synthesis_hydro_codes)
+            )
 
             grouped_bounds_df = (
-                flow_diversion_bounds.groupby(grouping_columns, as_index=False)
-                .sum(numeric_only=True)[[LOWER_BOUND_COL, UPPER_BOUND_COL]]
+                flow_diversion_bounds.group_by(
+                    grouping_columns, maintain_order=True
+                )
+                .sum()[[LOWER_BOUND_COL, UPPER_BOUND_COL]]
                 .to_numpy()
             )
             lower_bounds = grouped_bounds_df[:, 0]
@@ -1576,48 +1611,64 @@ class OperationVariableBounds:
             return lower_bounds, upper_bounds
 
         def _repeat_bounds_by_scenario_and_cast(
-            df: pd.DataFrame,
+            df: pl.DataFrame,
             lower_bounds: np.ndarray,
             upper_bounds: np.ndarray,
-        ) -> pd.DataFrame:
+        ) -> pl.DataFrame:
             num_entities = (
                 len(ordered_entities[entity_column]) if entity_column else 1
             )
             num_stages = len(ordered_entities[STAGE_COL])
             num_scenarios = len(ordered_entities[SCENARIO_COL])
             num_blocks = len(ordered_entities[BLOCK_COL])
-            df = df.sort_values(grouping_columns)
-            df[LOWER_BOUND_COL] = cls._repeats_data_by_scenario(
-                lower_bounds,
-                num_entities,
-                num_stages,
-                num_scenarios,
-                num_blocks,
-            )
-            df[UPPER_BOUND_COL] = cls._repeats_data_by_scenario(
-                upper_bounds,
-                num_entities,
-                num_stages,
-                num_scenarios,
-                num_blocks,
+            df = df.sort(grouping_columns)
+            df = df.with_columns(
+                pl.Series(
+                    name=LOWER_BOUND_COL,
+                    values=cls._repeats_data_by_scenario(
+                        lower_bounds,
+                        num_entities,
+                        num_stages,
+                        num_scenarios,
+                        num_blocks,
+                    ),
+                ),
+                pl.Series(
+                    name=UPPER_BOUND_COL,
+                    values=cls._repeats_data_by_scenario(
+                        upper_bounds,
+                        num_entities,
+                        num_stages,
+                        num_scenarios,
+                        num_blocks,
+                    ),
+                ),
             )
             if synthesis_unit == Unit.hm3.value:
-                for col in [LOWER_BOUND_COL, UPPER_BOUND_COL]:
-                    df[col] = (
-                        df[col]
-                        * df[BLOCK_DURATION_COL]
+                df = df.with_columns(
+                    (
+                        pl.col(LOWER_BOUND_COL)
+                        * pl.col(BLOCK_DURATION_COL)
                         / (HM3_M3S_MONTHLY_FACTOR * STAGE_DURATION_HOURS)
-                    )
+                    ).alias(LOWER_BOUND_COL),
+                    (
+                        pl.col(UPPER_BOUND_COL)
+                        * pl.col(BLOCK_DURATION_COL)
+                        / (HM3_M3S_MONTHLY_FACTOR * STAGE_DURATION_HOURS)
+                    ).alias(UPPER_BOUND_COL),
+                )
             return df
 
         def _sort_and_round_bounds(
-            df: pd.DataFrame,
-        ) -> pd.DataFrame:
+            df: pl.DataFrame,
+        ) -> pl.DataFrame:
             num_digits = 2
-            df = df.sort_values(sorting_columns)
-            df[VALUE_COL] = np.round(df[VALUE_COL], num_digits)
-            df[LOWER_BOUND_COL] = np.round(df[LOWER_BOUND_COL], num_digits)
-            df[UPPER_BOUND_COL] = np.round(df[UPPER_BOUND_COL], num_digits)
+            df = df.sort(sorting_columns)
+            df = df.with_columns(
+                pl.col(VALUE_COL).round(num_digits),
+                pl.col(LOWER_BOUND_COL).round(num_digits),
+                pl.col(UPPER_BOUND_COL).round(num_digits),
+            )
             return df
 
         entity_column_list = [entity_column] if entity_column else []
@@ -1671,34 +1722,36 @@ class OperationVariableBounds:
 
     @classmethod
     def _qdes_vdes_uhe_bounds(
-        cls, df: pd.DataFrame, uow: AbstractUnitOfWork, synthesis_unit: str
-    ) -> pd.DataFrame:
+        cls, df: pl.DataFrame, uow: AbstractUnitOfWork, synthesis_unit: str
+    ) -> pl.DataFrame:
         """
         Adiciona ao DataFrame da síntese os limites inferior e superior
         para as variáveis de Volume Desviado (VDES) e Vazão Desviada (QDES)
         para cada UHE.
         """
         # TODO - Procurar limite superior no modif.dat
-        df[LOWER_BOUND_COL] = 0.0
-        df[UPPER_BOUND_COL] = float("inf")
+        df = df.with_columns(
+            pl.lit(0.0).alias(LOWER_BOUND_COL),
+            pl.lit(float("inf")).alias(UPPER_BOUND_COL),
+        )
         return df
 
     @classmethod
     def _exchange_bounds(
         cls,
-        df: pd.DataFrame,
+        df: pl.DataFrame,
         uow: AbstractUnitOfWork,
         synthesis_unit: str,
         ordered_entities: Dict[str, list],
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """
         Adiciona ao DataFrame da síntese os limites inferior e superior
         para a variável de Intercâmbio (INT) por par de submercados.
         """
 
         def _apply_exchange_bounds_in_MWmes(
-            df: pd.DataFrame, exchange_block_bounds_df: pd.DataFrame
-        ) -> pd.DataFrame:
+            df: pl.DataFrame, exchange_block_bounds_df: pl.DataFrame
+        ) -> pl.DataFrame:
             """
             Cria as colunas de limites de intercâmbio em MWmes no DataFrame
             da síntese que foi recebido.
@@ -1706,83 +1759,80 @@ class OperationVariableBounds:
             par de submercados e o sentido do intercâmbio, sendo um deles
             sempre <= 0.
             """
-            start_dates = df[START_DATE_COL].unique().tolist()
-            num_stages = len(start_dates)
-            num_scenarios = len(df[SCENARIO_COL].unique())
-            num_blocks = len(df[BLOCK_COL].unique())
+            start_dates = np.array(
+                df[START_DATE_COL].unique().to_list(), dtype=np.datetime64
+            )
             # Filtra os pares de submercados de limites dentre os
             # que existem no df
-            PAIR_TMP_COL = "par_sim"
-            R_PAIR_TMP_COL = "par_sbm_r"
-            df[PAIR_TMP_COL] = (
-                df[EXCHANGE_SOURCE_CODE_COL].astype(str)
-                + "-"
-                + df[EXCHANGE_TARGET_CODE_COL].astype(str)
+            PAIR_TMP_COL = "par_sbm"
+            PAIR_TMP_COL_R = "par_sbm_r"
+            df = df.with_columns(
+                (
+                    pl.col(EXCHANGE_SOURCE_CODE_COL).cast(str)
+                    + "-"
+                    + pl.col(EXCHANGE_TARGET_CODE_COL).cast(str)
+                    + "-"
+                    + pl.col(START_DATE_COL).cast(str)
+                    + "-"
+                    + pl.col(BLOCK_COL).cast(str)
+                ).alias(PAIR_TMP_COL)
             )
-            exchange_block_bounds_df[PAIR_TMP_COL] = (
-                exchange_block_bounds_df[EXCHANGE_SOURCE_CODE_COL].astype(str)
-                + "-"
-                + exchange_block_bounds_df[EXCHANGE_TARGET_CODE_COL].astype(str)
-            )
-            exchange_block_bounds_df[R_PAIR_TMP_COL] = (
-                exchange_block_bounds_df[EXCHANGE_TARGET_CODE_COL].astype(str)
-                + "-"
-                + exchange_block_bounds_df[EXCHANGE_SOURCE_CODE_COL].astype(str)
-            )
-            exchange_block_bounds_df = (
-                exchange_block_bounds_df.loc[
-                    exchange_block_bounds_df[START_DATE_COL].isin(start_dates)
-                ]
-                .sort_values([
-                    EXCHANGE_SOURCE_CODE_COL,
-                    EXCHANGE_TARGET_CODE_COL,
-                    START_DATE_COL,
-                ])
-                .reset_index(drop=True)
-            )
-
-            pares_sbm_df = df[PAIR_TMP_COL].unique().tolist()
-            pares_sbm_limites_r = (
-                exchange_block_bounds_df[R_PAIR_TMP_COL].unique().tolist()
-            )
-            pares_sbm_limites = (
-                exchange_block_bounds_df[PAIR_TMP_COL].unique().tolist()
+            exchange_block_bounds_df = exchange_block_bounds_df.with_columns(
+                (
+                    pl.col(EXCHANGE_SOURCE_CODE_COL).cast(str)
+                    + "-"
+                    + pl.col(EXCHANGE_TARGET_CODE_COL).cast(str)
+                    + "-"
+                    + pl.col(START_DATE_COL).cast(str)
+                    + "-"
+                    + pl.col(BLOCK_COL).cast(str)
+                ).alias(PAIR_TMP_COL),
+                (
+                    pl.col(EXCHANGE_TARGET_CODE_COL).cast(str)
+                    + "-"
+                    + pl.col(EXCHANGE_SOURCE_CODE_COL).cast(str)
+                    + "-"
+                    + pl.col(START_DATE_COL).cast(str)
+                    + "-"
+                    + pl.col(BLOCK_COL).cast(str)
+                ).alias(PAIR_TMP_COL_R),
             )
 
-            # Inicializa limites com valores default
-            df[LOWER_BOUND_COL] = -float("inf")
-            df[UPPER_BOUND_COL] = float("inf")
-            # Aplica os limites, considerando o par de submercados
-            # e o sentido reverso como sinal negativo
-            for p in pares_sbm_df:
-                if p in pares_sbm_limites_r:
-                    bounds = -cls._repeats_data_by_scenario(
-                        exchange_block_bounds_df.loc[
-                            exchange_block_bounds_df[R_PAIR_TMP_COL] == p,
-                            VALUE_COL,
-                        ].to_numpy(),
-                        1,
-                        num_stages,
-                        num_scenarios,
-                        num_blocks,
-                    )
-                    df.loc[df[PAIR_TMP_COL] == p, LOWER_BOUND_COL] = bounds
-                if p in pares_sbm_limites:
-                    bounds = cls._repeats_data_by_scenario(
-                        exchange_block_bounds_df.loc[
-                            exchange_block_bounds_df[PAIR_TMP_COL] == p,
-                            VALUE_COL,
-                        ].to_numpy(),
-                        1,
-                        num_stages,
-                        num_scenarios,
-                        num_blocks,
-                    )
-                    df.loc[df[PAIR_TMP_COL] == p, UPPER_BOUND_COL] = bounds
+            exchange_block_bounds_df = exchange_block_bounds_df.filter(
+                pl.col(START_DATE_COL) >= start_dates[0]
+            ).sort([
+                EXCHANGE_SOURCE_CODE_COL,
+                EXCHANGE_TARGET_CODE_COL,
+                START_DATE_COL,
+            ])
 
-            df[LOWER_BOUND_COL] = np.round(df[LOWER_BOUND_COL], 1)
-            df[UPPER_BOUND_COL] = np.round(df[UPPER_BOUND_COL], 1)
-            return df.drop(columns=[PAIR_TMP_COL])
+            df = df.join(
+                exchange_block_bounds_df[[PAIR_TMP_COL, VALUE_COL]].rename({
+                    VALUE_COL: UPPER_BOUND_COL
+                }),
+                on=PAIR_TMP_COL,
+            )
+            df = df.join(
+                exchange_block_bounds_df[[PAIR_TMP_COL_R, VALUE_COL]].rename({
+                    PAIR_TMP_COL_R: PAIR_TMP_COL,
+                    VALUE_COL: LOWER_BOUND_COL,
+                }),
+                on=PAIR_TMP_COL,
+            )
+            df = df.with_columns(
+                (pl.col(LOWER_BOUND_COL) * -1).alias(LOWER_BOUND_COL)
+            )
+            num_digits = 1
+            df = df.with_columns(
+                pl.col(LOWER_BOUND_COL)
+                .fill_nan(-float("inf"))
+                .round(num_digits),
+                pl.col(UPPER_BOUND_COL)
+                .fill_nan(float("inf"))
+                .round(num_digits),
+            )
+
+            return df.drop([PAIR_TMP_COL])
 
         # Lê e converte os limites de intercâmbio para MWmes,
         # pois os arquivos de entrada são em MWmed com P.U e
@@ -1793,12 +1843,12 @@ class OperationVariableBounds:
     @classmethod
     def _thermal_generation_bounds(
         cls,
-        df: pd.DataFrame,
+        df: pl.DataFrame,
         uow: AbstractUnitOfWork,
         synthesis_unit: str,
         ordered_entities: Dict[str, list],
         entity_column: Optional[str] = None,
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """
         Realiza o cálculo dos limites de geração térmica para cada
         UTE, SBM e SIN, considerando os limites por usina fornecidos
@@ -1816,26 +1866,23 @@ class OperationVariableBounds:
         ) -> Tuple[np.ndarray, np.ndarray]:
             bounds_df = Deck.thermal_generation_bounds(uow)
             dates = Deck.stages_starting_dates_final_simulation(uow)
-            bounds_df = bounds_df.loc[bounds_df[START_DATE_COL] >= dates[0]]
+            bounds_df = bounds_df.filter(pl.col(START_DATE_COL) >= dates[0])
             if entity_column:
-                bounds_entities = bounds_df[entity_column].unique().tolist()
+                bounds_entities = bounds_df[entity_column].unique().to_list()
                 diff = list(set(entity_list).difference(bounds_entities))
                 for d in diff:
-                    bounds_df_sample = bounds_df.loc[
-                        bounds_df[entity_column] == bounds_entities[0]
-                    ].copy()
-                    bounds_df_sample[entity_column] = d
-                    bounds_df_sample[LOWER_BOUND_COL] = 0
-                    bounds_df_sample[UPPER_BOUND_COL] = 0
-                    bounds_df = pd.concat(
-                        [bounds_df, bounds_df_sample], ignore_index=True
+                    bounds_df_sample = bounds_df.filter(
+                        pl.col(entity_column) == bounds_entities[0]
                     )
-            grouped_bounds_df = bounds_df.groupby(
-                grouping_columns, as_index=False
-            ).sum(numeric_only=True)
+                    bounds_df_sample = bounds_df_sample.with_columns(
+                        pl.lit(d).alias(entity_column),
+                        pl.lit(0.0).alias(LOWER_BOUND_COL),
+                        pl.lit(0.0).alias(UPPER_BOUND_COL),
+                    )
+                    bounds_df = pl.concat([bounds_df, bounds_df_sample])
             grouped_bounds_df = (
-                bounds_df.groupby(grouping_columns, as_index=False)
-                .sum(numeric_only=True)[[LOWER_BOUND_COL, UPPER_BOUND_COL]]
+                bounds_df.group_by(grouping_columns, maintain_order=True)
+                .sum()[[LOWER_BOUND_COL, UPPER_BOUND_COL]]
                 .to_numpy()
             )
             lower_bounds = grouped_bounds_df[:, 0]
@@ -1844,46 +1891,65 @@ class OperationVariableBounds:
             return lower_bounds, upper_bounds
 
         def _repeat_bounds_by_scenario_and_block(
-            df: pd.DataFrame,
+            df: pl.DataFrame,
             lower_bounds: np.ndarray,
             upper_bounds: np.ndarray,
-        ) -> pd.DataFrame:
+        ) -> pl.DataFrame:
             num_entities = (
                 len(ordered_entities[entity_column]) if entity_column else 1
             )
             num_stages = len(ordered_entities[STAGE_COL])
             num_scenarios = len(ordered_entities[SCENARIO_COL])
             num_blocks = len(ordered_entities[BLOCK_COL])
-            df = df.sort_values(grouping_columns)
-            df[LOWER_BOUND_COL] = cls._repeats_data_by_scenario_and_block(
-                lower_bounds,
-                num_entities,
-                num_stages,
-                num_scenarios,
-                num_blocks,
-            )
-            df[UPPER_BOUND_COL] = cls._repeats_data_by_scenario_and_block(
-                upper_bounds,
-                num_entities,
-                num_stages,
-                num_scenarios,
-                num_blocks,
+            df = df.sort(grouping_columns)
+            df = df.with_columns(
+                pl.Series(
+                    name=LOWER_BOUND_COL,
+                    values=cls._repeats_data_by_scenario_and_block(
+                        lower_bounds,
+                        num_entities,
+                        num_stages,
+                        num_scenarios,
+                        num_blocks,
+                    ),
+                ),
+                pl.Series(
+                    name=UPPER_BOUND_COL,
+                    values=cls._repeats_data_by_scenario_and_block(
+                        upper_bounds,
+                        num_entities,
+                        num_stages,
+                        num_scenarios,
+                        num_blocks,
+                    ),
+                ),
             )
             return df
 
-        def _cast_bounds(df: pd.DataFrame) -> pd.DataFrame:
-            df[LOWER_BOUND_COL] *= df[BLOCK_DURATION_COL] / STAGE_DURATION_HOURS
-            df[UPPER_BOUND_COL] *= df[BLOCK_DURATION_COL] / STAGE_DURATION_HOURS
+        def _cast_bounds(df: pl.DataFrame) -> pl.DataFrame:
+            df = df.with_columns(
+                (
+                    pl.col(LOWER_BOUND_COL)
+                    * pl.col(BLOCK_DURATION_COL)
+                    / STAGE_DURATION_HOURS
+                ).alias(LOWER_BOUND_COL),
+                (
+                    pl.col(UPPER_BOUND_COL)
+                    * pl.col(BLOCK_DURATION_COL)
+                    / STAGE_DURATION_HOURS
+                ).alias(UPPER_BOUND_COL),
+            )
             return df
 
         def _sort_and_round_bounds(
-            df: pd.DataFrame,
-        ) -> pd.DataFrame:
+            df: pl.DataFrame,
+        ) -> pl.DataFrame:
             num_digits = 2
-
-            df[VALUE_COL] = np.round(df[VALUE_COL], num_digits)
-            df[LOWER_BOUND_COL] = np.round(df[LOWER_BOUND_COL], num_digits)
-            df[UPPER_BOUND_COL] = np.round(df[UPPER_BOUND_COL], num_digits)
+            df = df.with_columns(
+                pl.col(VALUE_COL).round(num_digits),
+                pl.col(LOWER_BOUND_COL).round(num_digits),
+                pl.col(UPPER_BOUND_COL).round(num_digits),
+            )
             return df
 
         entity_column_list = [entity_column] if entity_column else []
@@ -1927,10 +1993,10 @@ class OperationVariableBounds:
     def resolve_bounds(
         cls,
         s: OperationSynthesis,
-        df: pd.DataFrame,
+        df: pl.DataFrame,
         ordered_synthesis_entities: Dict[str, list],
         uow: AbstractUnitOfWork,
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """
         Adiciona colunas de limite inferior e superior a um DataFrame,
         calculando os valores necessários caso a variável seja limitada
