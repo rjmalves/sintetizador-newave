@@ -1,94 +1,96 @@
-from inewave.newave import (
-    Dger,
-    Ree,
-    Confhd,
-    Dsvagua,
-    Modif,
-    Conft,
-    Sistema,
-    Curva,
-    Clast,
-    Term,
-    Manutt,
-    Expt,
-    Hidr,
-    Patamar,
-    Shist,
-    Pmo,
-    Newavetim,
-    Vazoes,
-    Engnat,
-    Energiaf,
-    Enavazf,
-    Vazaof,
-    Energiab,
-    Enavazb,
-    Vazaob,
-    Energias,
-    # Enavazs,
-    Vazaos,
-)
-from inewave.newave.modelos.modif import (
-    VOLMIN,
-    VOLMAX,
-    VMINT,
-    VMAXT,
-    VAZMIN,
-    VAZMINT,
-    VAZMAXT,
-    TURBMINT,
-    TURBMAXT,
-    NUMCNJ,
-    NUMMAQ,
-    CFUGA,
-    CMONT,
-)
 import logging
 from datetime import datetime, timedelta
-from dateutil.relativedelta import relativedelta  # type: ignore
-import pandas as pd  # type: ignore
-import numpy as np  # type: ignore
 from functools import partial
-from typing import Any, Optional, TypeVar, Type, List, Tuple, Union, Dict
+from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
+
+import numpy as np  # type: ignore
+import pandas as pd  # type: ignore
 from cfinterface.components.register import Register
-from app.services.unitofwork import AbstractUnitOfWork
-from app.model.operation.unit import Unit
-from app.utils.graph import Graph
+from dateutil.relativedelta import relativedelta  # type: ignore
+from inewave.newave import (
+    Clast,
+    Confhd,
+    Conft,
+    Curva,
+    Dger,
+    Dsvagua,
+    Enavazb,
+    Enavazf,
+    Energiab,
+    Energiaf,
+    Energias,
+    Engnat,
+    Expt,
+    Hidr,
+    Manutt,
+    Modif,
+    Newavetim,
+    Patamar,
+    Pmo,
+    Ree,
+    Shist,
+    Sistema,
+    Term,
+    Vazaob,
+    Vazaof,
+    # Enavazs,
+    Vazaos,
+    Vazoes,
+)
+from inewave.newave.modelos.modif import (
+    CFUGA,
+    CMONT,
+    NUMCNJ,
+    NUMMAQ,
+    TURBMAXT,
+    TURBMINT,
+    VAZMAXT,
+    VAZMIN,
+    VAZMINT,
+    VMAXT,
+    VMINT,
+    VOLMAX,
+    VOLMIN,
+)
+
 from app.internal.constants import (
-    STRING_DF_TYPE,
-    HYDRO_CODE_COL,
-    HYDRO_NAME_COL,
-    THERMAL_CODE_COL,
-    THERMAL_NAME_COL,
+    BLOCK_COL,
+    CONFIG_COL,
     EER_CODE_COL,
     EER_NAME_COL,
-    SUBMARKET_CODE_COL,
-    SUBMARKET_NAME_COL,
     EXCHANGE_SOURCE_CODE_COL,
     EXCHANGE_TARGET_CODE_COL,
-    VALUE_COL,
-    CONFIG_COL,
-    START_DATE_COL,
-    LOWER_BOUND_COL,
-    UPPER_BOUND_COL,
-    LOWER_BOUND_UNIT_COL,
-    UPPER_BOUND_UNIT_COL,
-    BLOCK_COL,
-    SCENARIO_COL,
-    PRODUCTIVITY_TMP_COL,
-    VOLUME_FOR_PRODUCTIVITY_TMP_COL,
-    HM3_M3S_MONTHLY_FACTOR,
     FOLLOWING_HYDRO_COL,
     HEIGHT_POLY_COLS,
-    LOSS_KIND_COL,
+    HM3_M3S_MONTHLY_FACTOR,
+    HYDRO_CODE_COL,
+    HYDRO_NAME_COL,
     LOSS_COL,
+    LOSS_KIND_COL,
+    LOWER_BOUND_COL,
+    LOWER_BOUND_UNIT_COL,
     LOWER_DROP_COL,
-    SPEC_PRODUCTIVITY_COL,
-    VOLUME_REGULATION_COL,
-    RUN_OF_RIVER_REFERENCE_VOLUME_COL,
-    UPPER_DROP_COL,
     NET_DROP_COL,
+    PRODUCTIVITY_TMP_COL,
+    RUN_OF_RIVER_REFERENCE_VOLUME_COL,
+    SCENARIO_COL,
+    SPEC_PRODUCTIVITY_COL,
+    START_DATE_COL,
+    STRING_DF_TYPE,
+    SUBMARKET_CODE_COL,
+    SUBMARKET_NAME_COL,
+    THERMAL_CODE_COL,
+    THERMAL_NAME_COL,
+    UPPER_BOUND_COL,
+    UPPER_BOUND_UNIT_COL,
+    UPPER_DROP_COL,
+    VALUE_COL,
+    VOLUME_FOR_PRODUCTIVITY_TMP_COL,
+    VOLUME_REGULATION_COL,
 )
+from app.model.operation.unit import Unit
+from app.services.unitofwork import AbstractUnitOfWork
+from app.utils.graph import Graph
 
 
 class Deck:
@@ -831,14 +833,31 @@ class Deck:
             shist = cls._get_shist(uow)
             span = cls._validate_data(shist.varredura, int, "tipo de varredura")
             if span == 1:
+                history_input_starting_year = cls._validate_data(
+                    cls.dger(uow).ano_inicial_historico,
+                    int,
+                    "ano inicial do histórico",
+                )
+                num_history_input_years = cls.vazoes(uow).shape[0] // 12
+                history_input_end_year = (
+                    history_input_starting_year + num_history_input_years - 1
+                )
                 study_starting_year = cls.study_period_starting_year(uow)
-                history_starting_year = cls._validate_data(
+                final_simulation_last_year = (
+                    min([
+                        history_input_end_year,
+                        study_starting_year,
+                    ])
+                    - 2
+                )
+
+                span_starting_year = cls._validate_data(
                     shist.ano_inicio_varredura,
                     int,
                     "número de séries históricas na simulação",
                 )
                 num_history_years = (
-                    study_starting_year - history_starting_year - 2
+                    final_simulation_last_year - span_starting_year + 1
                 )
             else:
                 num_history_years = len(
@@ -941,29 +960,37 @@ class Deck:
             "num_hydro_simulation_stages_policy"
         )
         if num_hydro_simulation_stages_policy is None:
-            ano_inicio = cls.study_period_starting_year(uow)
-            mes_inicio = cls.study_period_starting_month(uow)
+            starting_year = cls.study_period_starting_year(uow)
+            starting_moonth = cls.study_period_starting_month(uow)
             eers = cls.eers(uow)
-            mes_fim_hib = eers["mes_fim_individualizado"].iloc[0]
-            ano_fim_hib = eers["ano_fim_individualizado"].iloc[0]
+            hydro_sim_ending_month = eers["mes_fim_individualizado"].iloc[0]
+            hydro_sim_ending_year = eers["ano_fim_individualizado"].iloc[0]
 
-            if mes_fim_hib is not None and ano_fim_hib is not None:
-                data_inicio_estudo = datetime(
-                    year=ano_inicio,
-                    month=mes_inicio,
-                    day=1,
-                )
-                data_fim_individualizado = datetime(
-                    year=int(ano_fim_hib),
-                    month=int(mes_fim_hib),
-                    day=1,
-                )
-                tempo_individualizado = (
-                    data_fim_individualizado - data_inicio_estudo
-                )
-                num_hydro_simulation_stages_policy = int(
-                    round(tempo_individualizado / timedelta(days=30))
-                )
+            if ~np.isnan(hydro_sim_ending_month) and ~np.isnan(
+                hydro_sim_ending_year
+            ):
+                if (
+                    hydro_sim_ending_month is not None
+                    and hydro_sim_ending_year is not None
+                ):
+                    study_starting_date = datetime(
+                        year=starting_year,
+                        month=starting_moonth,
+                        day=1,
+                    )
+                    hydro_sim_ending_date = datetime(
+                        year=int(hydro_sim_ending_year),
+                        month=int(hydro_sim_ending_month),
+                        day=1,
+                    )
+                    tempo_individualizado = (
+                        hydro_sim_ending_date - study_starting_date
+                    )
+                    num_hydro_simulation_stages_policy = int(
+                        round(tempo_individualizado / timedelta(days=30))
+                    )
+                else:
+                    num_hydro_simulation_stages_policy = 0
             else:
                 num_hydro_simulation_stages_policy = 0
             cls.DECK_DATA_CACHING["num_hydro_simulation_stages_policy"] = (
@@ -1316,9 +1343,10 @@ class Deck:
                 eer_df[VALUE_COL] = 0.0
                 lower_bound_dfs.append(eer_df)
             lower_bound_df = pd.concat(lower_bound_dfs, ignore_index=True)
-            lower_bound_df = lower_bound_df.sort_values(
-                [EER_CODE_COL, START_DATE_COL]
-            )
+            lower_bound_df = lower_bound_df.sort_values([
+                EER_CODE_COL,
+                START_DATE_COL,
+            ])
             return lower_bound_df
 
         def _cast_perc_to_absolute(df: pd.DataFrame) -> pd.DataFrame:
@@ -1326,9 +1354,10 @@ class Deck:
             df = df.sort_values([EER_CODE_COL, START_DATE_COL]).reset_index(
                 drop=True
             )
-            upper_bound_df = upper_bound_df.sort_values(
-                [EER_CODE_COL, START_DATE_COL]
-            ).reset_index(drop=True)
+            upper_bound_df = upper_bound_df.sort_values([
+                EER_CODE_COL,
+                START_DATE_COL,
+            ]).reset_index(drop=True)
             df[VALUE_COL] = df[VALUE_COL] * upper_bound_df[VALUE_COL] / 100.0
             return df
 
@@ -1399,16 +1428,14 @@ class Deck:
                         ABSOLUTE_VALUE_COL,
                     ]
                 ]
-                .groupby(
-                    [
-                        START_DATE_COL,
-                        CONFIG_COL,
-                        EER_CODE_COL,
-                        EER_NAME_COL,
-                        SUBMARKET_CODE_COL,
-                        SUBMARKET_NAME_COL,
-                    ]
-                )
+                .groupby([
+                    START_DATE_COL,
+                    CONFIG_COL,
+                    EER_CODE_COL,
+                    EER_NAME_COL,
+                    SUBMARKET_CODE_COL,
+                    SUBMARKET_NAME_COL,
+                ])
                 .sum()
             ).reset_index()
             eer_codes = cls.eer_code_order(uow)
@@ -1419,22 +1446,20 @@ class Deck:
             missing_dfs: list[pd.DataFrame] = []
             dates = df[START_DATE_COL].unique()
             for eer in missing_eers:
-                missing_df = pd.DataFrame(
-                    {
-                        START_DATE_COL: dates,
-                        CONFIG_COL: configurations_df.loc[
-                            configuration_df[START_DATE_COL].isin(dates),
-                            VALUE_COL,
-                        ].to_numpy(),
-                        EER_CODE_COL: [eer] * len(dates),
-                        EER_NAME_COL: [eers.at[eer, EER_NAME_COL]] * len(dates),
-                        SUBMARKET_CODE_COL: [eers.at[eer, SUBMARKET_CODE_COL]]
-                        * len(dates),
-                        SUBMARKET_NAME_COL: [eers.at[eer, SUBMARKET_NAME_COL]]
-                        * len(dates),
-                        ABSOLUTE_VALUE_COL: [0.0] * len(dates),
-                    }
-                )
+                missing_df = pd.DataFrame({
+                    START_DATE_COL: dates,
+                    CONFIG_COL: configurations_df.loc[
+                        configuration_df[START_DATE_COL].isin(dates),
+                        VALUE_COL,
+                    ].to_numpy(),
+                    EER_CODE_COL: [eer] * len(dates),
+                    EER_NAME_COL: [eers.at[eer, EER_NAME_COL]] * len(dates),
+                    SUBMARKET_CODE_COL: [eers.at[eer, SUBMARKET_CODE_COL]]
+                    * len(dates),
+                    SUBMARKET_NAME_COL: [eers.at[eer, SUBMARKET_NAME_COL]]
+                    * len(dates),
+                    ABSOLUTE_VALUE_COL: [0.0] * len(dates),
+                })
                 missing_dfs.append(missing_df)
             df = pd.concat([df] + missing_dfs, ignore_index=True)
             df = df.sort_values([EER_CODE_COL, START_DATE_COL, CONFIG_COL])
@@ -1540,9 +1565,10 @@ class Deck:
         configs_df = _filter_study_period(configs_df)
         configs_df = _add_entity_data(configs_df)
         configs_df = _add_values(configs_df, maximum_storage_df)
-        stored_energy_upper_bounds = configs_df.sort_values(
-            [EER_CODE_COL, START_DATE_COL]
-        )
+        stored_energy_upper_bounds = configs_df.sort_values([
+            EER_CODE_COL,
+            START_DATE_COL,
+        ])
 
         return stored_energy_upper_bounds.reset_index(drop=True)
 
@@ -1696,9 +1722,10 @@ class Deck:
             num_stages = len(dates)
             df = pd.concat([df] * num_stages, ignore_index=True)
             df[START_DATE_COL] = np.repeat(dates, num_thermals)
-            return df.sort_values(
-                [THERMAL_CODE_COL, START_DATE_COL]
-            ).reset_index(drop=True)
+            return df.sort_values([
+                THERMAL_CODE_COL,
+                START_DATE_COL,
+            ]).reset_index(drop=True)
 
         def _add_term_lower_bounds(
             df: pd.DataFrame, term: pd.DataFrame, uow: AbstractUnitOfWork
@@ -1915,12 +1942,14 @@ class Deck:
                     axis=1,
                 )
             )
-            block_length_df = block_length_df.sort_values(
-                [START_DATE_COL, BLOCK_COL]
-            )
-            n_pares_limites = exchange_block_bounds_df.drop_duplicates(
-                [EXCHANGE_SOURCE_CODE_COL, EXCHANGE_TARGET_CODE_COL]
-            ).shape[0]
+            block_length_df = block_length_df.sort_values([
+                START_DATE_COL,
+                BLOCK_COL,
+            ])
+            n_pares_limites = exchange_block_bounds_df.drop_duplicates([
+                EXCHANGE_SOURCE_CODE_COL,
+                EXCHANGE_TARGET_CODE_COL,
+            ]).shape[0]
             exchange_block_bounds_df[VALUE_COL] *= np.tile(
                 block_length_df[VALUE_COL].to_numpy(), n_pares_limites
             )
@@ -2582,9 +2611,11 @@ class Deck:
             df[BLOCK_COL] = np.tile(
                 np.arange(num_blocks), num_hydros * num_stages
             )
-            return df.sort_values(
-                [HYDRO_CODE_COL, START_DATE_COL, BLOCK_COL]
-            ).reset_index(drop=True)
+            return df.sort_values([
+                HYDRO_CODE_COL,
+                START_DATE_COL,
+                BLOCK_COL,
+            ]).reset_index(drop=True)
 
         def _add_hydro_bounds_changes_to_stages(
             df: pd.DataFrame, uow: AbstractUnitOfWork
@@ -2714,9 +2745,11 @@ class Deck:
             df[BLOCK_COL] = np.tile(
                 np.arange(num_blocks), num_hydros * num_stages
             )
-            return df.sort_values(
-                [HYDRO_CODE_COL, START_DATE_COL, BLOCK_COL]
-            ).reset_index(drop=True)
+            return df.sort_values([
+                HYDRO_CODE_COL,
+                START_DATE_COL,
+                BLOCK_COL,
+            ]).reset_index(drop=True)
 
         def _add_hydro_bounds_changes_to_stages(
             df: pd.DataFrame, uow: AbstractUnitOfWork
@@ -3127,14 +3160,12 @@ class Deck:
             missing_eers = [
                 eer for eer in eer_codes if eer not in df[EER_CODE_COL].tolist()
             ]
-            missing_df = pd.DataFrame(
-                {
-                    EER_CODE_COL: missing_eers,
-                    EER_NAME_COL: eers.loc[missing_eers, EER_NAME_COL].tolist(),
-                    ABSOLUTE_VALUE_COL: [np.nan] * len(missing_eers),
-                    PERCENT_VALUE_COL: [100.0] * len(missing_eers),
-                }
-            )
+            missing_df = pd.DataFrame({
+                EER_CODE_COL: missing_eers,
+                EER_NAME_COL: eers.loc[missing_eers, EER_NAME_COL].tolist(),
+                ABSOLUTE_VALUE_COL: [np.nan] * len(missing_eers),
+                PERCENT_VALUE_COL: [100.0] * len(missing_eers),
+            })
             if not missing_df.empty:
                 df = pd.concat([df, missing_df], ignore_index=True)
             df[EER_CODE_COL] = df[EER_CODE_COL].astype(int)
