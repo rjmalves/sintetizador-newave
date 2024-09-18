@@ -54,7 +54,7 @@ def test_num_synthetic_scenarios_final_simulation(test_settings):
 
 def test_num_history_years(test_settings):
     val = deck.num_history_years(uow)
-    assert val == 89
+    assert val == 90
 
 
 def test_num_thermal_maintenance_years(test_settings):
