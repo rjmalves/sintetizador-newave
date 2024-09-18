@@ -1305,10 +1305,11 @@ class Deck:
         """
 
         def _add_missing_eer_bounds(df: pl.DataFrame) -> pl.DataFrame:
-            df = df.filter(
-                pl.col(START_DATE_COL)
-                >= Deck.stages_starting_dates_final_simulation(uow)[0]
+            dates = np.array(
+                cls.stages_starting_dates_final_simulation(uow),
+                dtype=np.datetime64,
             )
+            df = df.filter(pl.col(START_DATE_COL) >= dates[0])
 
             eers_minimum_storage = df[EER_CODE_COL].unique().to_list()
             eer_codes = Deck.eer_code_order(uow)
@@ -1517,7 +1518,10 @@ class Deck:
         """
 
         def _filter_study_period(df: pl.DataFrame) -> pl.DataFrame:
-            dates = cls.stages_starting_dates_final_simulation(uow)
+            dates = np.array(
+                cls.stages_starting_dates_final_simulation(uow),
+                dtype=np.datetime64,
+            )
             df = df.filter(
                 pl.col(START_DATE_COL).is_between(dates[0], dates[-1])
             )
@@ -1729,7 +1733,10 @@ class Deck:
             df: pd.DataFrame, uow: AbstractUnitOfWork
         ) -> pd.DataFrame:
             num_thermals = df.shape[0]
-            dates = np.array(cls.stages_starting_dates_final_simulation(uow))
+            dates = np.array(
+                cls.stages_starting_dates_final_simulation(uow),
+                dtype=np.datetime64,
+            )
             num_stages = len(dates)
             df = pd.concat([df] * num_stages, ignore_index=True)
             df[START_DATE_COL] = np.repeat(dates, num_thermals)
@@ -2133,7 +2140,10 @@ class Deck:
         def _filter_stages(
             df: pl.DataFrame, uow: AbstractUnitOfWork
         ) -> pl.DataFrame:
-            dates = cls.stages_starting_dates_final_simulation(uow)
+            dates = np.array(
+                cls.stages_starting_dates_final_simulation(uow),
+                dtype=np.datetime64,
+            )
             df = df.filter(
                 pl.col(START_DATE_COL).is_between(dates[0], dates[-1])
             )

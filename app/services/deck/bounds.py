@@ -946,9 +946,14 @@ class OperationVariableBounds:
             df: pl.DataFrame, bound: float
         ) -> pl.DataFrame:
             df = df.with_columns(pl.col(START_DATE_COL).dt.offset_by("1mo"))
-            stages = Deck.stages_starting_dates_final_simulation(uow)
+            stages = np.array(
+                Deck.stages_starting_dates_final_simulation(uow),
+                dtype=np.datetime64,
+            )
             first_stage = stages[0]
-            last_stage = stages[-1] + relativedelta(months=1)
+            last_stage = np.add(
+                stages[-1], np.timedelta64(1, "M"), casting="unsafe"
+            )
             df = df.with_columns(
                 pl.when(pl.col(START_DATE_COL) == last_stage)
                 .then(bound)
@@ -1865,7 +1870,10 @@ class OperationVariableBounds:
             entity_column: Optional[str], entity_list: list
         ) -> Tuple[np.ndarray, np.ndarray]:
             bounds_df = Deck.thermal_generation_bounds(uow)
-            dates = Deck.stages_starting_dates_final_simulation(uow)
+            dates = np.array(
+                Deck.stages_starting_dates_final_simulation(uow),
+                dtype=np.datetime64,
+            )
             bounds_df = bounds_df.filter(pl.col(START_DATE_COL) >= dates[0])
             if entity_column:
                 bounds_entities = bounds_df[entity_column].unique().to_list()

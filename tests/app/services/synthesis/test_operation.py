@@ -272,7 +272,7 @@ def test_calcula_patamar_medio_soma(test_settings):
         codigo_usina=[6],
     )
 
-    __valida_limites(df.loc[df["codigo_usina"] != 309])
+    __valida_limites(df.filter(pl.col("codigo_usina") != 309))
     __valida_metadata(synthesis_str, df_meta, False)
 
 

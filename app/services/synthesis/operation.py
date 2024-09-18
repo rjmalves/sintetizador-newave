@@ -1159,7 +1159,9 @@ class OperationSynthetizer:
                 s for s in entities[SCENARIO_COL] if str(s).isnumeric()
             ])
             initial_storage_df = df
-            initial_storage_values_df = initial_storage_df[VALUE_COL].to_numpy()
+            initial_storage_values_df = initial_storage_df[VALUE_COL].to_numpy(
+                writable=True
+            )
             initial_storage_values_df[num_scenarios:] = (
                 initial_storage_values_df[:-num_scenarios]
             )
@@ -1341,21 +1343,15 @@ class OperationSynthetizer:
         # Monta a lista de arestas e constroi o grafo
         # direcionado das usinas (JUSANTE -> MONTANTE)
         hydro_codes = entities[HYDRO_CODE_COL]
-        num_entries_by_hydro = df.filter(
-            pl.col(HYDRO_CODE_COL) == hydro_codes[0]
-        ).shape[0]
-        downstream_hydro_codes = []
-        for hydro_code in hydro_codes:
-            downstream_hydro_code = hydro_df.filter(
-                pl.col(HYDRO_CODE_COL) == hydro_code
-            )["codigo_usina_jusante"][0]
-            downstream_hydro_codes.append(downstream_hydro_code)
-        df = df.with_columns(
-            pl.Series(
-                name="downstream_code",
-                values=np.repeat(num_entries_by_hydro, num_entries_by_hydro),
-            )
-        )
+
+        # Extracts dataframe data as dicts of numpy arrays
+        sorted_hydro_prods = {
+            c: df.filter(pl.col(HYDRO_CODE_COL) == c)[
+                PRODUCTIVITY_TMP_COL
+            ].to_numpy()
+            for c in hydro_codes
+        }
+
         np_edges = list(
             hydro_df.filter(
                 pl.col(HYDRO_CODE_COL).is_in(hydro_codes),
@@ -1366,28 +1362,6 @@ class OperationSynthetizer:
         # Percorre todas as usinas a partir de um BFS, tendo
         # como nó de origem o 0 (MAR).
 
-        df = df.with_columns(
-            (
-                pl.col(HYDRO_CODE_COL).cast(pl.String)
-                + "_"
-                + pl.col(STAGE_COL).cast(pl.String)
-                + "_"
-                + pl.col(SCENARIO_COL).cast(pl.String)
-                + "_"
-                + pl.col(BLOCK_COL).cast(pl.String)
-            ).alias("tmp"),
-            (
-                pl.col("downstream_code").cast(pl.String)
-                + "_"
-                + pl.col(STAGE_COL).cast(pl.String)
-                + "_"
-                + pl.col(SCENARIO_COL).cast(pl.String)
-                + "_"
-                + pl.col(BLOCK_COL).cast(pl.String)
-            ).alias("downstream_tmp"),
-            pl.lit(0.0).alias("downstream_productivity"),
-        )
-
         for hydro_code in hydro_nodes_bfs:
             cls._log(f"Calculando prodt. acumulada para {hydro_code}...")
             downstream_hydro_code = hydro_df.filter(
@@ -1395,26 +1369,21 @@ class OperationSynthetizer:
             )["codigo_usina_jusante"][0]
             if downstream_hydro_code == 0:
                 continue
-            hydro_productivity = df.filter(
-                pl.col(HYDRO_CODE_COL) == hydro_code
-            )[PRODUCTIVITY_TMP_COL].to_numpy()
-            downstream_productivity = df.filter(
-                pl.col(HYDRO_CODE_COL) == downstream_hydro_code
-            )[PRODUCTIVITY_TMP_COL].to_numpy()
-            if downstream_productivity.shape[0] == 0:
-                downstream_productivity = np.zeros_like(hydro_productivity)
 
-            accumulated_productivity = (
-                hydro_productivity + downstream_productivity
+            sorted_hydro_prods[hydro_code] = (
+                sorted_hydro_prods[hydro_code]
+                + sorted_hydro_prods[downstream_hydro_code]
             )
 
-            # df = df.with_columns
-
-            df = df.with_columns(
-                pl.when(pl.col(HYDRO_CODE_COL) == hydro_code)
-                .then(hydro_productivity + downstream_productivity)
-                .otherwise(pl.col(PRODUCTIVITY_TMP_COL))
+        # Updates df
+        df = df.with_columns(
+            pl.Series(
+                name=PRODUCTIVITY_TMP_COL,
+                values=np.concatenate([
+                    sorted_hydro_prods[c] for c in hydro_codes
+                ]),
             )
+        )
 
         return df
 
@@ -1484,9 +1453,6 @@ class OperationSynthetizer:
                 BLOCK_COL,
             ])
 
-            stored_volume_df[VALUE_COL] = (
-                stored_volume_df[VALUE_COL] - stored_volume_df[LOWER_BOUND_COL]
-            ) * net_drop_df[PRODUCTIVITY_TMP_COL].to_numpy()
             stored_volume_df = stored_volume_df.with_columns(
                 (
                     (pl.col(VALUE_COL) - pl.col(LOWER_BOUND_COL))
