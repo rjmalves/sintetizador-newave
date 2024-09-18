@@ -1,111 +1,111 @@
+from datetime import datetime
 from os.path import join
+from typing import Optional, Tuple
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pandas as pd
-from datetime import datetime
-from unittest.mock import patch, MagicMock
-from app.services.unitofwork import factory
-from app.model.operation.operationsynthesis import OperationSynthesis, UNITS
-from app.services.synthesis.operation import OperationSynthetizer
-from app.services.deck.bounds import OperationVariableBounds
-from app.internal.constants import (
-    HM3_M3S_MONTHLY_FACTOR,
-    OPERATION_SYNTHESIS_METADATA_OUTPUT,
-)
-from typing import Optional, Tuple
-from inewave.newave import Ree, Confhd, Patamar
-
+from inewave.newave import Confhd, Patamar, Ree
 from inewave.nwlistop import (
+    Cdef,
+    Cdefsin,
     Cmarg,
     Cmargmed,
-    ValorAgua,
-    Pivarm,
-    Pivarmincr,
+    Coper,
     Cterm,
     Ctermsin,
-    Coper,
     CustoFuturo,
+    Def,
+    Defsin,
+    Eaf,
     Eafb,
     Eafbm,
     Eafbsin,
-    Eaf,
     Eafm,
+    Earmf,
+    Earmfm,
     # Eafsin, # TODO - substituir quando existir na inewave
     Earmfp,
     Earmfpm,
     Earmfpsin,
-    Earmf,
-    Earmfm,
     Earmfsin,
-    Ghidr,
-    Ghidrm,
-    Ghidrsin,
+    Edesvc,
+    Edesvcm,
+    Edesvcsin,
+    Evapo,
+    Evapom,
+    Evaporsin,
     # Gfiol, # TODO - substituir quando existir na inewave
     # Gfiolm, # TODO - substituir quando existir na inewave
     # Gfiolsin, # TODO - substituir quando existir na inewave
     Evert,
     Evertm,
     Evertsin,
+    Exces,
+    Excessin,
+    Ghidr,
+    Ghidrm,
+    Ghidrsin,
+    Ghiduh,
     Ghtot,
     Ghtotm,
     Ghtotsin,
     Gtert,
     Gttot,
     Gttotsin,
-    Perdf,
-    Perdfm,
-    Perdfsin,
-    Verturb,
-    Verturbm,
-    Verturbsin,
-    Edesvc,
-    Edesvcm,
-    Edesvcsin,
+    Hjus,
+    Hliq,
+    Hmont,
+    Intercambio,
+    Mercl,
+    Merclsin,
     # Edesvf, # TODO - substituir quando existir na inewave
     # Edesvfm, # TODO - substituir quando existir na inewave
     # Edesvfsin, # TODO - substituir quando existir na inewave
     Mevmin,
     Mevminm,
     Mevminsin,
-    Vmort,
-    Vmortm,
-    Vmortsin,
-    Evapo,
-    Evapom,
-    Evaporsin,
+    Perdf,
+    Perdfm,
+    Perdfsin,
+    Pivarm,
+    Pivarmincr,
     Qafluh,
+    Qdesviouh,
     Qincruh,
     Qturuh,
     Qvertuh,
-    Varmuh,
+    ValorAgua,
     Varmpuh,
-    Ghiduh,
-    Def,
-    Defsin,
-    Exces,
-    Excessin,
-    Intercambio,
-    Cdef,
-    Cdefsin,
-    Mercl,
-    Merclsin,
-    ViolFpha,
+    Varmuh,
+    Verturb,
+    Verturbm,
+    Verturbsin,
+    Vevapuh,
     ViolEvmin,
     ViolEvminm,
     ViolEvminsin,
-    Vretiradauh,
-    Qdesviouh,
-    ViolGhminuh,
+    ViolFpha,
     ViolGhmin,
     ViolGhminm,
     ViolGhminsin,
-    Hmont,
-    Hjus,
-    Hliq,
-    Vevapuh,
-    ViolPosEvap,
+    ViolGhminuh,
     ViolNegEvap,
+    ViolPosEvap,
+    Vmort,
+    Vmortm,
+    Vmortsin,
+    Vretiradauh,
 )
 
+from app.internal.constants import (
+    HM3_M3S_MONTHLY_FACTOR,
+    OPERATION_SYNTHESIS_METADATA_OUTPUT,
+)
+from app.model.operation.operationsynthesis import UNITS, OperationSynthesis
+from app.services.deck.bounds import OperationVariableBounds
+from app.services.synthesis.operation import OperationSynthetizer
+from app.services.unitofwork import factory
 from tests.conftest import DECK_TEST_DIR, q
 
 uow = factory("FS", DECK_TEST_DIR, q)

@@ -1,12 +1,12 @@
-from unittest.mock import patch, MagicMock
-import pandas as pd
 from typing import Optional, Tuple
+from unittest.mock import MagicMock, patch
 
-from app.services.unitofwork import factory
-from app.model.scenario.scenariosynthesis import ScenarioSynthesis, UNITS
-from app.services.synthesis.scenario import ScenarioSynthetizer
+import pandas as pd
+
 from app.internal.constants import SCENARIO_SYNTHESIS_METADATA_OUTPUT
-
+from app.model.scenario.scenariosynthesis import UNITS, ScenarioSynthesis
+from app.services.synthesis.scenario import ScenarioSynthetizer
+from app.services.unitofwork import factory
 from tests.conftest import DECK_TEST_DIR, q
 
 uow = factory("FS", DECK_TEST_DIR, q)
