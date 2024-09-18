@@ -1,12 +1,11 @@
 import logging
 from datetime import datetime
 from logging import DEBUG, ERROR, INFO, WARNING
-from multiprocessing import Pool
+from multiprocessing import get_context
 from traceback import print_exc
 from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar
 
 import numpy as np
-import pandas as pd  # type: ignore
 import polars as pl
 
 from app.internal.constants import (
@@ -498,23 +497,23 @@ class OperationSynthetizer:
         de um submercado a partir dos arquivos de saída do NWLISTOP.
         """
 
-        submarkets = Deck.submarkets(uow).reset_index()
-        real_submarkets = submarkets.loc[
-            submarkets["ficticio"] == 0, :
-        ].sort_values(SUBMARKET_CODE_COL)
-        sbms_idx = real_submarkets[SUBMARKET_CODE_COL].unique()
-        sbms_name = [
-            real_submarkets.loc[
-                real_submarkets[SUBMARKET_CODE_COL] == s, SUBMARKET_NAME_COL
-            ].iloc[0]
-            for s in sbms_idx
-        ]
+        submarkets = Deck.submarkets(uow)
+        real_submarkets = submarkets.filter(pl.col("ficticio") == 0).sort(
+            SUBMARKET_CODE_COL
+        )
+
+        sbms_idx = real_submarkets[SUBMARKET_CODE_COL].unique(
+            maintain_order=True
+        )
+        sbms_name = real_submarkets[SUBMARKET_NAME_COL].unique(
+            maintain_order=True
+        )
 
         n_procs = int(Settings().processors)
         with time_and_log(
             message_root="Tempo para obter dados de SBM", logger=cls.logger
         ):
-            with Pool(processes=n_procs) as pool:
+            with get_context("spawn").Pool(processes=n_procs) as pool:
                 async_res = {
                     idx: pool.apply_async(
                         cls._resolve_SBM_entity, (uow, synthesis, idx, name)
@@ -592,7 +591,7 @@ class OperationSynthetizer:
         with time_and_log(
             message_root="Tempo para obter dados de SBP", logger=cls.logger
         ):
-            with Pool(processes=n_procs) as pool:
+            with get_context("spawn").Pool(processes=n_procs) as pool:
                 async_res = {
                     f"{idx1}-{idx2}": pool.apply_async(
                         cls._resolve_SBP_entity,
@@ -658,7 +657,7 @@ class OperationSynthetizer:
         de um REE a partir dos arquivos de saída do NWLISTOP.
         """
 
-        eers = Deck.eers(uow).reset_index().sort_values(EER_CODE_COL)
+        eers = Deck.eers(uow).sort(EER_CODE_COL)
         eers_idx = eers[EER_CODE_COL]
         eers_name = eers[EER_NAME_COL]
 
@@ -666,7 +665,7 @@ class OperationSynthetizer:
         with time_and_log(
             message_root="Tempo para ler dados de REE", logger=cls.logger
         ):
-            with Pool(processes=n_procs) as pool:
+            with get_context("spawn").Pool(processes=n_procs) as pool:
                 async_res = {
                     idx: pool.apply_async(
                         cls._resolve_REE_entity, (uow, synthesis, idx, name)
@@ -754,6 +753,7 @@ class OperationSynthetizer:
         }
 
         aux_df = Deck.hydro_eer_submarket_map(uow)
+
         return cls._post_resolve_entity(
             df,
             synthesis,
@@ -788,7 +788,7 @@ class OperationSynthetizer:
             )
             return df
 
-        hydros = Deck.hydros(uow).reset_index().sort_values(HYDRO_CODE_COL)
+        hydros = Deck.hydros(uow).sort(HYDRO_CODE_COL)
         hydros_idx = hydros[HYDRO_CODE_COL]
         hydros_name = hydros[HYDRO_NAME_COL]
 
@@ -797,7 +797,7 @@ class OperationSynthetizer:
             message_root="Tempo para ler dados de UHE",
             logger=cls.logger,
         ):
-            with Pool(processes=n_procs) as pool:
+            with get_context("spawn").Pool(processes=n_procs) as pool:
                 async_res = {
                     name: pool.apply_async(
                         cls._resolve_UHE_entity, (uow, synthesis, idx, name)
@@ -1188,9 +1188,8 @@ class OperationSynthetizer:
             SpatialResolution.SISTEMA_INTERLIGADO: None,
         }
 
-        initial_storage_data = pl.from_pandas(
-            cls._initial_stored_energy_df(synthesis, uow)
-        )
+        initial_storage_data = cls._initial_stored_energy_df(synthesis, uow)
+
         final_storage_df, entities = _get_final_storage_synthesis_data(
             synthesis
         )
@@ -1338,53 +1337,91 @@ class OperationSynthetizer:
     def _calc_accumulated_productivity(
         cls, df: pl.DataFrame, entities: dict, uow: AbstractUnitOfWork
     ) -> pl.DataFrame:
-        hydro_df = Deck.hydros(uow).reset_index()
+        hydro_df = Deck.hydros(uow)
         # Monta a lista de arestas e constroi o grafo
         # direcionado das usinas (JUSANTE -> MONTANTE)
         hydro_codes = entities[HYDRO_CODE_COL]
+        num_entries_by_hydro = df.filter(
+            pl.col(HYDRO_CODE_COL) == hydro_codes[0]
+        ).shape[0]
+        downstream_hydro_codes = []
+        for hydro_code in hydro_codes:
+            downstream_hydro_code = hydro_df.filter(
+                pl.col(HYDRO_CODE_COL) == hydro_code
+            )["codigo_usina_jusante"][0]
+            downstream_hydro_codes.append(downstream_hydro_code)
+        df = df.with_columns(
+            pl.Series(
+                name="downstream_code",
+                values=np.repeat(num_entries_by_hydro, num_entries_by_hydro),
+            )
+        )
         np_edges = list(
-            hydro_df.loc[
-                hydro_df[HYDRO_CODE_COL].isin(hydro_codes),
-                ["codigo_usina_jusante", HYDRO_CODE_COL],
-            ].to_numpy()
+            hydro_df.filter(
+                pl.col(HYDRO_CODE_COL).is_in(hydro_codes),
+            )["codigo_usina_jusante", HYDRO_CODE_COL].to_numpy()
         )
         edges = [tuple(e) for e in np_edges]
         hydro_nodes_bfs = Graph(edges, directed=True).bfs(0)[1:]
         # Percorre todas as usinas a partir de um BFS, tendo
         # como nó de origem o 0 (MAR).
+
+        df = df.with_columns(
+            (
+                pl.col(HYDRO_CODE_COL).cast(pl.String)
+                + "_"
+                + pl.col(STAGE_COL).cast(pl.String)
+                + "_"
+                + pl.col(SCENARIO_COL).cast(pl.String)
+                + "_"
+                + pl.col(BLOCK_COL).cast(pl.String)
+            ).alias("tmp"),
+            (
+                pl.col("downstream_code").cast(pl.String)
+                + "_"
+                + pl.col(STAGE_COL).cast(pl.String)
+                + "_"
+                + pl.col(SCENARIO_COL).cast(pl.String)
+                + "_"
+                + pl.col(BLOCK_COL).cast(pl.String)
+            ).alias("downstream_tmp"),
+            pl.lit(0.0).alias("downstream_productivity"),
+        )
+
         for hydro_code in hydro_nodes_bfs:
-            hydro_name = hydro_df.loc[
-                hydro_df[HYDRO_CODE_COL] == hydro_code, HYDRO_CODE_COL
-            ].iloc[0]
-            cls._log(f"Calculando prodt. acumulada para {hydro_name}...")
-            downstream_hydro_code = hydro_df.loc[
-                hydro_df[HYDRO_CODE_COL] == hydro_code,
-                "codigo_usina_jusante",
-            ].iloc[0]
+            cls._log(f"Calculando prodt. acumulada para {hydro_code}...")
+            downstream_hydro_code = hydro_df.filter(
+                pl.col(HYDRO_CODE_COL) == hydro_code
+            )["codigo_usina_jusante"][0]
             if downstream_hydro_code == 0:
                 continue
-            downstream_hydro_name = hydro_df.loc[
-                hydro_df[HYDRO_CODE_COL] == downstream_hydro_code,
-                HYDRO_CODE_COL,
-            ].iloc[0]
-            hydro_productivity = df.loc[
-                df[HYDRO_CODE_COL] == hydro_name, PRODUCTIVITY_TMP_COL
-            ]
-            downstream_productivity = df.loc[
-                df[HYDRO_CODE_COL] == downstream_hydro_name,
-                PRODUCTIVITY_TMP_COL,
-            ].to_numpy()
-            if (
-                not hydro_productivity.empty
-                and len(downstream_productivity) > 0
-            ):
-                hydro_productivity += downstream_productivity
+            hydro_productivity = df.filter(
+                pl.col(HYDRO_CODE_COL) == hydro_code
+            )[PRODUCTIVITY_TMP_COL].to_numpy()
+            downstream_productivity = df.filter(
+                pl.col(HYDRO_CODE_COL) == downstream_hydro_code
+            )[PRODUCTIVITY_TMP_COL].to_numpy()
+            if downstream_productivity.shape[0] == 0:
+                downstream_productivity = np.zeros_like(hydro_productivity)
+
+            accumulated_productivity = (
+                hydro_productivity + downstream_productivity
+            )
+
+            # df = df.with_columns
+
+            df = df.with_columns(
+                pl.when(pl.col(HYDRO_CODE_COL) == hydro_code)
+                .then(hydro_productivity + downstream_productivity)
+                .otherwise(pl.col(PRODUCTIVITY_TMP_COL))
+            )
+
         return df
 
     @classmethod
     def __stub_EARM_UHE(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """
         Realiza o cálculo da energia armazenada em cada UHE a partir
         dos volumes armazenados e das quedas líquidas.
@@ -1392,46 +1429,56 @@ class OperationSynthetizer:
 
         def _get_synthesis_data(
             synthesis: OperationSynthesis,
-        ) -> Tuple[pd.DataFrame, dict]:
+        ) -> Tuple[pl.DataFrame, dict]:
             df = cls._get_from_cache(synthesis)
             entities = cls._get_ordered_entities(synthesis)
             return df, entities
 
         def _add_productivity(
-            net_drop_df: pd.DataFrame, net_drop_entities: dict
-        ) -> pd.DataFrame:
-            hidr = Deck.hidr(uow)
+            net_drop_df: pl.DataFrame, net_drop_entities: dict
+        ) -> pl.DataFrame:
+            hidr = pl.from_pandas(Deck.hidr(uow).reset_index())
             hydro_codes = net_drop_entities[HYDRO_CODE_COL]
-            num_entries_by_hydro = net_drop_df.loc[
-                net_drop_df[HYDRO_CODE_COL] == hydro_codes[0]
-            ].shape[0]
+            hidr = hidr.filter(pl.col(HYDRO_CODE_COL).is_in(hydro_codes))
+            num_entries_by_hydro = net_drop_df.filter(
+                pl.col(HYDRO_CODE_COL) == hydro_codes[0]
+            ).shape[0]
             specific_productivity = np.repeat(
-                hidr.loc[hydro_codes, "produtibilidade_especifica"].to_numpy(),
+                hidr["produtibilidade_especifica"].to_numpy(),
                 num_entries_by_hydro,
             )
             specific_productivity *= HM3_M3S_MONTHLY_FACTOR
-            net_drop_df[PRODUCTIVITY_TMP_COL] = specific_productivity
-            net_drop_df[PRODUCTIVITY_TMP_COL] *= net_drop_df[VALUE_COL]
+            net_drop_df = net_drop_df.sort(HYDRO_CODE_COL)
+            net_drop_df = net_drop_df.with_columns(
+                pl.Series(
+                    name=PRODUCTIVITY_TMP_COL, values=specific_productivity
+                )
+            )
+            net_drop_df = net_drop_df.with_columns(
+                (pl.col(PRODUCTIVITY_TMP_COL) * pl.col(VALUE_COL)).alias(
+                    PRODUCTIVITY_TMP_COL
+                )
+            )
             return net_drop_df
 
         def _cast_volume_to_energy(
-            stored_volume_df: pd.DataFrame,
-            net_drop_df: pd.DataFrame,
+            stored_volume_df: pl.DataFrame,
+            net_drop_df: pl.DataFrame,
             stored_volume_entities: dict,
-        ) -> pd.DataFrame:
+        ) -> pl.DataFrame:
             stored_volume_hydro_codes = stored_volume_entities[HYDRO_CODE_COL]
             stored_volume_hydro_blocks = stored_volume_entities[BLOCK_COL]
-            net_drop_df = net_drop_df.loc[
-                net_drop_df[HYDRO_CODE_COL].isin(stored_volume_hydro_codes)
-                & net_drop_df[BLOCK_COL].isin(stored_volume_hydro_blocks)
-            ].copy()
+            net_drop_df = net_drop_df.filter(
+                pl.col(HYDRO_CODE_COL).is_in(stored_volume_hydro_codes)
+                & pl.col(BLOCK_COL).is_in(stored_volume_hydro_blocks)
+            )
 
-            net_drop_df = net_drop_df.sort_values([
+            net_drop_df = net_drop_df.sort([
                 HYDRO_CODE_COL,
                 STAGE_COL,
                 BLOCK_COL,
             ])
-            stored_volume_df = stored_volume_df.sort_values([
+            stored_volume_df = stored_volume_df.sort([
                 HYDRO_CODE_COL,
                 STAGE_COL,
                 BLOCK_COL,
@@ -1440,11 +1487,17 @@ class OperationSynthetizer:
             stored_volume_df[VALUE_COL] = (
                 stored_volume_df[VALUE_COL] - stored_volume_df[LOWER_BOUND_COL]
             ) * net_drop_df[PRODUCTIVITY_TMP_COL].to_numpy()
-            stored_volume_df[LOWER_BOUND_COL] = 0.0
-            stored_volume_df[UPPER_BOUND_COL] = (
-                stored_volume_df[UPPER_BOUND_COL]
-                - stored_volume_df[LOWER_BOUND_COL]
-            ) * net_drop_df[PRODUCTIVITY_TMP_COL].to_numpy()
+            stored_volume_df = stored_volume_df.with_columns(
+                (
+                    (pl.col(VALUE_COL) - pl.col(LOWER_BOUND_COL))
+                    * net_drop_df[PRODUCTIVITY_TMP_COL]
+                ).alias(VALUE_COL),
+                pl.lit(0.0).alias(LOWER_BOUND_COL),
+                (
+                    (pl.col(UPPER_BOUND_COL) - pl.col(LOWER_BOUND_COL))
+                    * net_drop_df[PRODUCTIVITY_TMP_COL]
+                ).alias(UPPER_BOUND_COL),
+            )
             return stored_volume_df
 
         with time_and_log(
@@ -1584,7 +1637,7 @@ class OperationSynthetizer:
             with time_and_log(
                 message_root="Tempo para obter dados de SBM", logger=cls.logger
             ):
-                with Pool(processes=n_procs) as pool:
+                with get_context("spawn").Pool(processes=n_procs) as pool:
                     async_res = {
                         idx: pool.apply_async(
                             cls._resolve_SBM_entity_MER_MERL,
@@ -1718,17 +1771,17 @@ class OperationSynthetizer:
             as informações dos patamares e datas de início dos estágios.
             """
             df_block_lengths = Deck.block_lengths(uow)
-            df_block_lengths = df_block_lengths.loc[
-                df_block_lengths[BLOCK_COL].isin(blocks)
-            ]
+            df_block_lengths = df_block_lengths.filter(
+                pl.col(BLOCK_COL).is_in(blocks)
+            )
             block_durations = np.zeros(
                 (num_scenarios * num_blocks * num_stages,), dtype=np.float64
             )
             data_block_size = num_scenarios * num_blocks
             for i, d in enumerate(start_dates):
-                date_durations = df_block_lengths.loc[
-                    df_block_lengths[START_DATE_COL] == d, VALUE_COL
-                ].to_numpy()
+                date_durations = df_block_lengths.filter(
+                    pl.col(START_DATE_COL) == d
+                )[VALUE_COL].to_numpy()
                 i_i = i * data_block_size
                 i_f = i_i + data_block_size
                 block_durations[i_i:i_f] = np.tile(
@@ -1864,17 +1917,17 @@ class OperationSynthetizer:
             df = df.sort(s.spatial_resolution.sorting_synthesis_df_columns)
             return df
 
-        submarkets = Deck.submarkets(uow).reset_index()
-        real_submarkets = submarkets.loc[
-            submarkets["ficticio"] == 0, :
-        ].sort_values(SUBMARKET_CODE_COL)
-        sbms_idx = real_submarkets[SUBMARKET_CODE_COL].unique()
-        sbms_name = [
-            real_submarkets.loc[
-                real_submarkets[SUBMARKET_CODE_COL] == s, SUBMARKET_NAME_COL
-            ].iloc[0]
-            for s in sbms_idx
-        ]
+        submarkets = Deck.submarkets(uow)
+        real_submarkets = submarkets.filter(pl.col("ficticio") == 0).sort(
+            SUBMARKET_CODE_COL
+        )
+
+        sbms_idx = real_submarkets[SUBMARKET_CODE_COL].unique(
+            maintain_order=True
+        )
+        sbms_name = real_submarkets[SUBMARKET_NAME_COL].unique(
+            maintain_order=True
+        )
 
         n_procs = int(Settings().processors)
         synthesis = OperationSynthesis(
@@ -1885,7 +1938,7 @@ class OperationSynthetizer:
             message_root="Tempo para ler dados de UTE",
             logger=cls.logger,
         ):
-            with Pool(processes=n_procs) as pool:
+            with get_context("spawn").Pool(processes=n_procs) as pool:
                 async_res = {
                     idx: pool.apply_async(
                         cls._resolve_GTER_UTE_entity,
@@ -1958,7 +2011,7 @@ class OperationSynthetizer:
     @classmethod
     def _initial_stored_energy_df(
         cls, s: OperationSynthesis, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """
         Realiza a extração dos dados de energia armazenada inicial
         do `pmo.dat` em MWmes, agrupando para se obter
@@ -1973,41 +2026,40 @@ class OperationSynthetizer:
         max_column = "earmax"
 
         initial_stored_energy_df = Deck.initial_stored_energy(uow)
-        initial_stored_energy_df[EER_CODE_COL] = Deck.eer_code_order(uow)
         if s.spatial_resolution == SpatialResolution.RESERVATORIO_EQUIVALENTE:
-            return initial_stored_energy_df.rename(
-                columns={EER_CODE_COL: GROUPING_TMP_COL}
-            )
+            return initial_stored_energy_df.rename({
+                EER_CODE_COL: GROUPING_TMP_COL
+            })
 
-        initial_stored_energy_df[max_column] = (
-            100
-            * initial_stored_energy_df["valor_MWmes"]
-            / initial_stored_energy_df["valor_percentual"]
+        initial_stored_energy_df = initial_stored_energy_df.with_columns(
+            (
+                (pl.col("valor_MWmes") * 100.0) / pl.col("valor_percentual")
+            ).alias(max_column)
         )
+
         if s.spatial_resolution == SpatialResolution.SUBMERCADO:
             eers_submarkets_map = Deck.eer_submarket_map(uow)
-            initial_stored_energy_df.dropna(inplace=True)
-            initial_stored_energy_df[GROUPING_TMP_COL] = (
-                initial_stored_energy_df.apply(
-                    lambda line: eers_submarkets_map.at[
-                        line[EER_CODE_COL],
-                        SUBMARKET_CODE_COL,
-                    ],
-                    axis=1,
-                )
+            initial_stored_energy_df = initial_stored_energy_df.drop_nulls()
+            initial_stored_energy_df = initial_stored_energy_df.join(
+                eers_submarkets_map.rename({
+                    SUBMARKET_CODE_COL: GROUPING_TMP_COL
+                })[EER_CODE_COL, GROUPING_TMP_COL],
+                on=EER_CODE_COL,
+                how="inner",
             )
+
         elif s.spatial_resolution == SpatialResolution.SISTEMA_INTERLIGADO:
-            initial_stored_energy_df[GROUPING_TMP_COL] = 1
-        initial_stored_energy_df = (
-            initial_stored_energy_df.groupby(GROUPING_TMP_COL)
-            .sum(numeric_only=True)
-            .reset_index()
+            initial_stored_energy_df = initial_stored_energy_df.with_columns(
+                pl.lit(1).alias(GROUPING_TMP_COL)
+            )
+
+        initial_stored_energy_df = initial_stored_energy_df.group_by(
+            GROUPING_TMP_COL, maintain_order=True
+        ).sum()
+        initial_stored_energy_df = initial_stored_energy_df.with_columns(
+            (pl.col("valor_MWmes") * 100.0) / pl.col(max_column)
         )
-        initial_stored_energy_df["valor_percentual"] = (
-            100
-            * initial_stored_energy_df["valor_MWmes"]
-            / (initial_stored_energy_df[max_column])
-        )
+
         return initial_stored_energy_df
 
     @classmethod
@@ -2237,6 +2289,7 @@ class OperationSynthetizer:
         df = cls._resolve_spatial_resolution(s, uow)
         if df is not None:
             df = cls._resolve_bounds(s, df, uow)
+
         return df
 
     @classmethod

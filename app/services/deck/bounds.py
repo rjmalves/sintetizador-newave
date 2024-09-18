@@ -1392,7 +1392,7 @@ class OperationVariableBounds:
             df = df.with_columns(
                 pl.Series(
                     name=LOWER_BOUND_COL,
-                    values=cls._repeats_data_by_scenario_and_block(
+                    values=cls._repeats_data_by_scenario(
                         lower_bounds,
                         num_entities,
                         num_stages,
@@ -1402,7 +1402,7 @@ class OperationVariableBounds:
                 ),
                 pl.Series(
                     name=UPPER_BOUND_COL,
-                    values=cls._repeats_data_by_scenario_and_block(
+                    values=cls._repeats_data_by_scenario(
                         upper_bounds,
                         num_entities,
                         num_stages,

@@ -1,6 +1,5 @@
 import logging
 from datetime import datetime, timedelta
-from functools import partial
 from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 import numpy as np  # type: ignore
@@ -77,7 +76,6 @@ from app.internal.constants import (
     SCENARIO_COL,
     SPEC_PRODUCTIVITY_COL,
     START_DATE_COL,
-    STRING_DF_TYPE,
     SUBMARKET_CODE_COL,
     SUBMARKET_NAME_COL,
     THERMAL_CODE_COL,
@@ -693,13 +691,13 @@ class Deck:
             return pd.DataFrame()
 
     @classmethod
-    def vazoes(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def vazoes(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         vazoes = cls.DECK_DATA_CACHING.get("vazoes")
         if vazoes is None:
             vazoes = cls._validate_data(
                 cls._get_vazoes(uow).vazoes, pd.DataFrame, "vazoes"
             )
-            cls.DECK_DATA_CACHING["vazoes"] = vazoes
+            cls.DECK_DATA_CACHING["vazoes"] = pl.from_pandas(vazoes)
         return vazoes.copy()
 
     @classmethod
@@ -1268,32 +1266,31 @@ class Deck:
         return hydro_simulation_stages_ending_date_final_simulation
 
     @classmethod
-    def _configurations_pmo(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def _configurations_pmo(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         pmo = cls.pmo(uow)
         configurations = pmo.configuracoes_qualquer_modificacao
         if isinstance(configurations, pd.DataFrame):
-            configurations = configurations.rename(
-                columns={"data": START_DATE_COL}
+            configurations = pl.from_pandas(
+                configurations.rename({"data": START_DATE_COL})
             )
         return configurations
 
     @classmethod
-    def _configurations_dger(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def _configurations_dger(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         dates = cls.stages_starting_dates_final_simulation(uow)
         configurations = list(range(1, len(dates) + 1))
-        return pd.DataFrame(
+        return pl.DataFrame(
             data={START_DATE_COL: dates, VALUE_COL: configurations}
         )
 
     @classmethod
-    def configurations(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def configurations(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         configurations = cls.DECK_DATA_CACHING.get("configurations")
         if configurations is None:
             configurations = cls._configurations_pmo(uow)
             if configurations is None:
                 configurations = cls._configurations_dger(uow)
 
-            configurations = pl.from_pandas(configurations)
             cls.DECK_DATA_CACHING["configurations"] = configurations
         return configurations
 
@@ -1353,12 +1350,13 @@ class Deck:
             "eer_stored_energy_lower_bounds"
         )
         if eer_stored_energy_lower_bounds is None:
-            minimum_perc_storage_df = cls._validate_data(
-                cls.curva(uow).curva_seguranca,
-                pd.DataFrame,
-                "curva de segurança",
+            minimum_perc_storage_df = pl.from_pandas(
+                cls._validate_data(
+                    cls.curva(uow).curva_seguranca,
+                    pd.DataFrame,
+                    "curva de segurança",
+                )
             )
-            minimum_perc_storage_df = pl.from_pandas(minimum_perc_storage_df)
             minimum_perc_storage_df = minimum_perc_storage_df.rename({
                 "data": START_DATE_COL
             })
@@ -1373,34 +1371,49 @@ class Deck:
     @classmethod
     def _stored_energy_upper_bounds_inputs(
         cls, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame | None:
+    ) -> pl.DataFrame | None:
         def _join_drop_data(
-            df: pd.DataFrame, stage_date: datetime
-        ) -> pd.DataFrame:
+            df: pl.DataFrame, stage_date: datetime
+        ) -> pl.DataFrame:
             drops_df = cls.hydro_drops_in_stages(uow)
-            drops_df = drops_df.loc[
-                drops_df[START_DATE_COL] == stage_date
-            ].set_index(HYDRO_CODE_COL)
-            return df.drop(columns=["usina"]).join(drops_df, how="inner")
-
-        def _join_hydros_data(df: pd.DataFrame) -> pd.DataFrame:
-            hydros = cls.hydros(uow)
-            return df.join(hydros[[FOLLOWING_HYDRO_COL]], how="inner")
-
-        def _join_bounds_data(df: pd.DataFrame) -> pd.DataFrame:
-            bounds_df = cls.hydro_volume_bounds_with_changes(uow)
-            return df.join(
-                bounds_df[[LOWER_BOUND_COL, UPPER_BOUND_COL]], how="inner"
+            drops_df = drops_df.filter(pl.col(START_DATE_COL) == stage_date)
+            return df.drop(["usina"]).join(
+                drops_df, on=HYDRO_CODE_COL, how="inner"
             )
 
-        def _volume_to_energy(df: pd.DataFrame) -> pd.DataFrame:
-            df.loc[df[VOLUME_REGULATION_COL] != "M", ABSOLUTE_VALUE_COL] = 0.0
-            df[ABSOLUTE_VALUE_COL] *= df[PRODUCTIVITY_TMP_COL]
+        def _join_hydros_data(df: pl.DataFrame) -> pl.DataFrame:
+            hydros = cls.hydros(uow)
+            return df.join(
+                hydros[[HYDRO_CODE_COL, FOLLOWING_HYDRO_COL]],
+                on=HYDRO_CODE_COL,
+                how="inner",
+            )
+
+        def _join_bounds_data(df: pl.DataFrame) -> pl.DataFrame:
+            bounds_df = cls.hydro_volume_bounds_with_changes(uow)
+            return df.join(
+                bounds_df[[LOWER_BOUND_COL, UPPER_BOUND_COL]],
+                on=HYDRO_CODE_COL,
+                how="inner",
+            )
+
+        def _volume_to_energy(df: pl.DataFrame) -> pl.DataFrame:
+            df = df.with_columns(
+                pl.when(pl.col(VOLUME_REGULATION_COL) != "M")
+                .then(0.0)
+                .otherwise(pl.col(ABSOLUTE_VALUE_COL))
+                .alias(ABSOLUTE_VALUE_COL)
+            )
+            df = df.with_columns(
+                (pl.col(AssertionError) * pl.col(PRODUCTIVITY_TMP_COL)).alias(
+                    ABSOLUTE_VALUE_COL
+                )
+            )
             return df
 
         def _cast_to_eers_and_fill_missing(
-            df: pd.DataFrame, configurations_df: pd.DataFrame
-        ) -> pd.DataFrame:
+            df: pl.DataFrame,
+        ) -> pl.DataFrame:
             df = (
                 df[
                     [
@@ -1413,73 +1426,73 @@ class Deck:
                         ABSOLUTE_VALUE_COL,
                     ]
                 ]
-                .groupby([
-                    START_DATE_COL,
-                    CONFIG_COL,
-                    EER_CODE_COL,
-                    EER_NAME_COL,
-                    SUBMARKET_CODE_COL,
-                    SUBMARKET_NAME_COL,
-                ])
+                .group_by(
+                    [
+                        START_DATE_COL,
+                        CONFIG_COL,
+                        EER_CODE_COL,
+                        EER_NAME_COL,
+                        SUBMARKET_CODE_COL,
+                        SUBMARKET_NAME_COL,
+                    ],
+                    maintain_order=True,
+                )
                 .sum()
-            ).reset_index()
+            )
             eer_codes = cls.eer_code_order(uow)
-            eers = cls.eer_submarket_map(uow)
+            eers_maximum_storage = df[EER_CODE_COL].to_list()
             missing_eers = [
-                eer for eer in eer_codes if eer not in df[EER_CODE_COL].tolist()
+                eer for eer in eer_codes if eer not in eers_maximum_storage
             ]
-            missing_dfs: list[pd.DataFrame] = []
-            dates = df[START_DATE_COL].unique()
-            for eer in missing_eers:
-                missing_df = pd.DataFrame({
-                    START_DATE_COL: dates,
-                    CONFIG_COL: configurations_df.loc[
-                        configuration_df[START_DATE_COL].isin(dates),
-                        VALUE_COL,
-                    ].to_numpy(),
-                    EER_CODE_COL: [eer] * len(dates),
-                    EER_NAME_COL: [eers.at[eer, EER_NAME_COL]] * len(dates),
-                    SUBMARKET_CODE_COL: [eers.at[eer, SUBMARKET_CODE_COL]]
-                    * len(dates),
-                    SUBMARKET_NAME_COL: [eers.at[eer, SUBMARKET_NAME_COL]]
-                    * len(dates),
-                    ABSOLUTE_VALUE_COL: [0.0] * len(dates),
-                })
-                missing_dfs.append(missing_df)
-            df = pd.concat([df] + missing_dfs, ignore_index=True)
-            df = df.sort_values([EER_CODE_COL, START_DATE_COL, CONFIG_COL])
+            dfs = [df]
+            for c in missing_eers:
+                eer_df = df.filter(
+                    pl.col(EER_CODE_COL) == eers_maximum_storage[0]
+                )
+                eer_df = eer_df.with_columns(
+                    pl.lit(c, dtype=df[EER_CODE_COL].dtype).alias(EER_CODE_COL),
+                    pl.lit(0.0).alias(ABSOLUTE_VALUE_COL),
+                )
+                dfs.append(eer_df)
+
+            df = pl.concat(dfs)
+            df = df.sort([EER_CODE_COL, START_DATE_COL, CONFIG_COL])
             return df
 
         ABSOLUTE_VALUE_COL = "valor_hm3"
 
-        df = cls.initial_stored_volume(uow).set_index(HYDRO_CODE_COL)
-        dfs: list[pd.DataFrame] = []
+        df = cls.initial_stored_volume(uow)
+        dfs: list[pl.DataFrame] = []
         configuration_df = cls.configurations(uow)
         dates = cls.stages_starting_dates_final_simulation(uow)
-        for _, line in configuration_df.iterrows():
+        for _, line in configuration_df.iter_rows():
             configuration_date = line[START_DATE_COL]
             if configuration_date not in dates:
                 continue
             # Calcula prodts no máximo
-            stage_df = df.copy()
+            stage_df = df
             stage_df = _join_drop_data(stage_df, configuration_date)
             stage_df = _join_bounds_data(stage_df)
             stage_df = _join_hydros_data(stage_df)
-            stage_df[ABSOLUTE_VALUE_COL] = (
-                stage_df[UPPER_BOUND_COL] - stage_df[LOWER_BOUND_COL]
+            stage_df = stage_df.with_columns(
+                (pl.col(UPPER_BOUND_COL) - pl.col(LOWER_BOUND_COL)).alias(
+                    ABSOLUTE_VALUE_COL
+                )
             )
             stage_df = cls._evaluate_productivity(
                 stage_df, volume_col=ABSOLUTE_VALUE_COL
             )
             stage_df = cls._accumulate_productivity(stage_df)
-            stage_df[CONFIG_COL] = line[VALUE_COL]
+            stage_df = stage_df.with_columns(
+                pl.lit(line[VALUE_COL]).alias(CONFIG_COL)
+            )
             dfs.append(stage_df)
 
-        df = pd.concat(dfs, ignore_index=True)
+        df = pl.concat(dfs)
         df = _volume_to_energy(df)
-        df = _cast_to_eers_and_fill_missing(df, configuration_df)
+        df = _cast_to_eers_and_fill_missing(df)
 
-        df = df.rename(columns={ABSOLUTE_VALUE_COL: VALUE_COL})
+        df = df.rename({ABSOLUTE_VALUE_COL: VALUE_COL})
 
         df = df[
             [
@@ -1491,13 +1504,13 @@ class Deck:
                 SUBMARKET_NAME_COL,
                 VALUE_COL,
             ]
-        ].reset_index(drop=True)
+        ]
         return df
 
     @classmethod
     def _stored_energy_upper_bounds_pmo(
         cls, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """
         Obtem os limites superiores de armazenamento de energia para
         cada REE em MWmes, para o período de estudo.
@@ -1554,6 +1567,7 @@ class Deck:
         configs_df = cls.configurations(uow)
         configs_df = configs_df.rename({
             VALUE_COL: CONFIG_COL,
+            "data": START_DATE_COL,
         })
         configs_df = _filter_study_period(configs_df)
         configs_df = _add_entity_data(configs_df)
@@ -1585,25 +1599,26 @@ class Deck:
         return stored_energy_upper_bounds
 
     @classmethod
-    def convergence(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def convergence(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         convergence = cls.DECK_DATA_CACHING.get("convergence")
         if convergence is None:
             pmo = cls.pmo(uow)
-            convergence = cls._validate_data(
-                pmo.convergencia,
-                pd.DataFrame,
-                "convergência",
+            convergence = pl.from_pandas(
+                cls._validate_data(
+                    pmo.convergencia,
+                    pd.DataFrame,
+                    "convergência",
+                )
             )
 
             cls.DECK_DATA_CACHING["convergence"] = convergence
-        return convergence.copy()
+        return convergence
 
+    # TODO - refatorar para polars
     @classmethod
     def _apply_thermal_bounds_maintenance_and_changes(
         cls, df: pd.DataFrame, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-        pass
-
         def _apply_thermal_single_change(
             df: pd.DataFrame,
             thermal_code: int,
@@ -1697,6 +1712,7 @@ class Deck:
         df = _apply_maintenance(df, uow)
         return df
 
+    # TODO - refatorar para polars
     @classmethod
     def _thermal_generation_bounds_term_manutt_expt(
         cls, uow: AbstractUnitOfWork
@@ -1822,6 +1838,7 @@ class Deck:
         ].copy()
         return bounds_df
 
+    # TODO - refatorar para polars
     @classmethod
     def _thermal_generation_bounds_pmo(
         cls, uow: AbstractUnitOfWork
@@ -1974,13 +1991,12 @@ class Deck:
 
         exchange_bounds = cls.DECK_DATA_CACHING.get("exchange_bounds")
         if exchange_bounds is None:
-            exchange_average_bounds_df = cls._validate_data(
-                cls._get_sistema(uow).limites_intercambio,
-                pd.DataFrame,
-                "limites de intercâmbio",
-            )
             exchange_average_bounds_df = pl.from_pandas(
-                exchange_average_bounds_df
+                cls._validate_data(
+                    cls._get_sistema(uow).limites_intercambio,
+                    pd.DataFrame,
+                    "limites de intercâmbio",
+                )
             )
             exchange_average_bounds_df = exchange_average_bounds_df.rename({
                 "submercado_de": EXCHANGE_SOURCE_CODE_COL,
@@ -2001,18 +2017,20 @@ class Deck:
         return exchange_bounds
 
     @classmethod
-    def costs(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def costs(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         costs = cls.DECK_DATA_CACHING.get("costs")
         if costs is None:
             pmo = cls.pmo(uow)
-            costs = cls._validate_data(
-                pmo.custo_operacao_series_simuladas,
-                pd.DataFrame,
-                "custos de operação",
+            costs = pl.from_pandas(
+                cls._validate_data(
+                    pmo.custo_operacao_series_simuladas,
+                    pd.DataFrame,
+                    "custos de operação",
+                )
             )
 
             cls.DECK_DATA_CACHING["costs"] = costs
-        return costs.copy()
+        return costs
 
     @classmethod
     def num_iterations(cls, uow: AbstractUnitOfWork) -> int:
@@ -2029,67 +2047,60 @@ class Deck:
         return num_iterations
 
     @classmethod
-    def runtimes(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def runtimes(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         runtimes = cls.DECK_DATA_CACHING.get("runtimes")
         if runtimes is None:
             arq = cls.newavetim(uow)
-            runtimes = cls._validate_data(
-                arq.tempos_etapas,
-                pd.DataFrame,
-                "tempos de execução",
+            runtimes = pl.from_pandas(
+                cls._validate_data(
+                    arq.tempos_etapas,
+                    pd.DataFrame,
+                    "tempos de execução",
+                )
             )
 
             cls.DECK_DATA_CACHING["runtimes"] = runtimes
         return runtimes
 
     @classmethod
-    def submarkets(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def submarkets(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         submarkets = cls.DECK_DATA_CACHING.get("submarkets")
         if submarkets is None:
-            submarkets = cls._validate_data(
-                cls._get_sistema(uow).custo_deficit,
-                pd.DataFrame,
-                "submercados",
+            submarkets = pl.from_pandas(
+                cls._validate_data(
+                    cls._get_sistema(uow).custo_deficit,
+                    pd.DataFrame,
+                    "submercados",
+                )
             )
-            submarkets = submarkets.rename(
-                columns={
-                    "codigo_submercado": SUBMARKET_CODE_COL,
-                    "nome_submercado": SUBMARKET_NAME_COL,
-                }
-            )
-            submarkets = submarkets.drop_duplicates(
-                subset=[SUBMARKET_CODE_COL]
-            ).reset_index(drop=True)
-            submarkets = submarkets.astype({SUBMARKET_NAME_COL: STRING_DF_TYPE})
-            submarkets = submarkets.set_index(SUBMARKET_CODE_COL)
+            submarkets = submarkets.rename({
+                "codigo_submercado": SUBMARKET_CODE_COL,
+                "nome_submercado": SUBMARKET_NAME_COL,
+            }).unique([SUBMARKET_CODE_COL])
             cls.DECK_DATA_CACHING["submarkets"] = submarkets
-        return submarkets.copy()
+        return submarkets
 
     @classmethod
-    def eers(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def eers(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         eers = cls.DECK_DATA_CACHING.get("eers")
         if eers is None:
-            eers = cls._validate_data(
-                cls._get_ree(uow).rees, pd.DataFrame, "REEs"
+            eers = pl.from_pandas(
+                cls._validate_data(cls._get_ree(uow).rees, pd.DataFrame, "REEs")
             )
-            eers = eers.rename(
-                columns={
-                    "codigo": EER_CODE_COL,
-                    "nome": EER_NAME_COL,
-                    "submercado": SUBMARKET_CODE_COL,
-                }
-            )
-            eers = eers.astype({EER_NAME_COL: STRING_DF_TYPE})
-            eers = eers.set_index(EER_CODE_COL)
+            eers = eers.rename({
+                "codigo": EER_CODE_COL,
+                "nome": EER_NAME_COL,
+                "submercado": SUBMARKET_CODE_COL,
+            })
             cls.DECK_DATA_CACHING["eers"] = eers
-        return eers.copy()
+        return eers
 
     @classmethod
     def hybrid_policy(cls, uow: AbstractUnitOfWork) -> bool:
         hybrid_policy = cls.DECK_DATA_CACHING.get("hybrid_policy")
         if hybrid_policy is None:
             eers = cls.eers(uow)
-            val = bool(eers["ano_fim_individualizado"].isna().sum() == 0)
+            val = bool(eers["ano_fim_individualizado"].is_nan().sum() == 0)
             hybrid_policy = cls._validate_data(
                 val,
                 bool,
@@ -2099,97 +2110,99 @@ class Deck:
         return hybrid_policy
 
     @classmethod
-    def hydros(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def hydros(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         hydros = cls.DECK_DATA_CACHING.get("hydros")
         if hydros is None:
-            hydros = cls._validate_data(
-                cls._get_confhd(uow).usinas,
-                pd.DataFrame,
-                "configuração de hidrelétricas",
+            hydros = pl.from_pandas(
+                cls._validate_data(
+                    cls._get_confhd(uow).usinas,
+                    pd.DataFrame,
+                    "configuração de hidrelétricas",
+                )
             )
-            hydros = hydros.rename(
-                columns={
-                    "codigo_usina": HYDRO_CODE_COL,
-                    "nome_usina": HYDRO_NAME_COL,
-                    "ree": EER_CODE_COL,
-                }
-            )
-            hydros = hydros.astype({HYDRO_NAME_COL: STRING_DF_TYPE})
-            hydros = hydros.set_index(HYDRO_CODE_COL)
+            hydros = hydros.rename({
+                "codigo_usina": HYDRO_CODE_COL,
+                "nome_usina": HYDRO_NAME_COL,
+                "ree": EER_CODE_COL,
+            })
             cls.DECK_DATA_CACHING["hydros"] = hydros
-        return hydros.copy()
+        return hydros
 
     @classmethod
     def flow_diversion(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         def _filter_stages(
-            df: pd.DataFrame, uow: AbstractUnitOfWork
-        ) -> pd.DataFrame:
-            return df.loc[
-                df[START_DATE_COL].isin(
-                    cls.stages_starting_dates_final_simulation(uow)
-                )
-            ].copy()
+            df: pl.DataFrame, uow: AbstractUnitOfWork
+        ) -> pl.DataFrame:
+            dates = cls.stages_starting_dates_final_simulation(uow)
+            df = df.filter(
+                pl.col(START_DATE_COL).is_between(dates[0], dates[-1])
+            )
+            return df
 
         def _add_missing_hydros(
-            df: pd.DataFrame, uow: AbstractUnitOfWork
-        ) -> pd.DataFrame:
+            df: pl.DataFrame, uow: AbstractUnitOfWork
+        ) -> pl.DataFrame:
             hydros = cls.hydros(uow)
-            hydro_codes = hydros.index.tolist()
-            hydro_codes_in_df = df[HYDRO_CODE_COL].unique().tolist()
+            hydro_codes = hydros[HYDRO_CODE_COL].unique().to_list()
+            hydro_codes_in_df = df[HYDRO_CODE_COL].unique().to_list()
             missing_hydros = [
                 c for c in hydro_codes if c not in hydro_codes_in_df
             ]
-            dfs_missing_hydros: list[pd.DataFrame] = []
+            dfs = [df]
             for c in missing_hydros:
-                df_hydro = df.loc[
-                    df[HYDRO_CODE_COL] == hydro_codes_in_df[0]
-                ].copy()
-                df_hydro[HYDRO_CODE_COL] = c
-                df_hydro[VALUE_COL] = 0.0
-                dfs_missing_hydros.append(df_hydro)
-            df = pd.concat([df] + dfs_missing_hydros, ignore_index=True)
-            df = df.sort_values([HYDRO_CODE_COL, START_DATE_COL])
+                hydro_df = df.filter(
+                    pl.col(HYDRO_CODE_COL) == hydro_codes_in_df[0]
+                )
+                hydro_df = hydro_df.with_columns(
+                    pl.lit(c, dtype=df[HYDRO_CODE_COL].dtype).alias(
+                        HYDRO_CODE_COL
+                    ),
+                    pl.lit(0.0).alias(VALUE_COL),
+                )
+
+                dfs.append(hydro_df)
+            df = pl.concat(dfs)
+
+            df = df.sort([HYDRO_CODE_COL, START_DATE_COL])
             return df
 
-        def _make_bound_columns(df: pd.DataFrame) -> pd.DataFrame:
-            df[VALUE_COL] *= -1
-            df[LOWER_BOUND_COL] = df[VALUE_COL]
-            df[UPPER_BOUND_COL] = df[VALUE_COL]
-            df[LOWER_BOUND_UNIT_COL] = Unit.m3s.value
-            df[UPPER_BOUND_UNIT_COL] = Unit.m3s.value
+        def _make_bound_columns(df: pl.DataFrame) -> pl.DataFrame:
+            df = df.with_columns((-pl.col(VALUE_COL)).alias(VALUE_COL))
+            df = df.with_columns(
+                pl.col(VALUE_COL).alias(LOWER_BOUND_COL),
+                pl.col(VALUE_COL).alias(UPPER_BOUND_COL),
+                pl.lit(Unit.m3s.value).alias(LOWER_BOUND_UNIT_COL),
+                pl.lit(Unit.m3s.value).alias(UPPER_BOUND_UNIT_COL),
+            )
             return df
 
         def _repeat_by_block(
-            df: pd.DataFrame, uow: AbstractUnitOfWork
-        ) -> pd.DataFrame:
-            df[BLOCK_COL] = 0
+            df: pl.DataFrame, uow: AbstractUnitOfWork
+        ) -> pl.DataFrame:
+            df = df.with_columns(pl.lit(0, dtype=pl.Int64).alias(BLOCK_COL))
             return df
 
         flow_diversion = cls.DECK_DATA_CACHING.get("flow_diversion")
         if flow_diversion is None:
-            flow_diversion = cls._validate_data(
-                cls._get_dsvagua(uow).desvios,
-                pd.DataFrame,
-                "desvio de água das hidrelétricas",
+            flow_diversion = pl.from_pandas(
+                cls._validate_data(
+                    cls._get_dsvagua(uow).desvios,
+                    pd.DataFrame,
+                    "desvio de água das hidrelétricas",
+                )
             )
-            flow_diversion = flow_diversion.rename(
-                columns={
-                    "codigo_usina": HYDRO_CODE_COL,
-                    "data": START_DATE_COL,
-                }
-            )
-            flow_diversion = (
-                flow_diversion.groupby([HYDRO_CODE_COL, START_DATE_COL])[
-                    VALUE_COL
-                ]
-                .sum()
-                .reset_index()
-            )
+            flow_diversion = flow_diversion.rename({
+                "codigo_usina": HYDRO_CODE_COL,
+                "data": START_DATE_COL,
+            })
+            flow_diversion = flow_diversion.group_by([
+                HYDRO_CODE_COL,
+                START_DATE_COL,
+            ]).sum()[[HYDRO_CODE_COL, START_DATE_COL, VALUE_COL]]
             flow_diversion = _filter_stages(flow_diversion, uow)
             flow_diversion = _add_missing_hydros(flow_diversion, uow)
             flow_diversion = _make_bound_columns(flow_diversion)
             flow_diversion = _repeat_by_block(flow_diversion, uow)
-            flow_diversion = pl.from_pandas(flow_diversion)
 
             cls.DECK_DATA_CACHING["flow_diversion"] = flow_diversion
         return flow_diversion
@@ -2346,7 +2359,7 @@ class Deck:
     @classmethod
     def hydro_volume_bounds_with_changes(
         cls, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """
         Obtém um DataFrame com os limites de volume armazenado
         de cada usina hidrelétrica, sem considerar modificações que variam
@@ -2569,6 +2582,7 @@ class Deck:
         no tempo.
         """
 
+        # TODO - refatorar para polars
         def _apply_changes_to_hydro_data(
             df: pd.DataFrame, uow: AbstractUnitOfWork
         ):
@@ -2594,6 +2608,7 @@ class Deck:
                         ] = num_units_register.numero_maquinas
             return df
 
+        # TODO - refatorar para polars
         def _calc_turbined_flow_bounds(line: pd.Series) -> float:
             num_groups = line["numero_conjuntos_maquinas"]
             num_units_per_group = [
@@ -2606,6 +2621,7 @@ class Deck:
             flow_units = line[max_flow_per_unit].to_numpy()
             return np.sum(num_units * flow_units, dtype=np.float64)
 
+        # TODO - refatorar para polars
         def _get_hydro_data(uow: AbstractUnitOfWork) -> pl.DataFrame:
             df = cls.hidr(uow).reset_index()
             hydro_codes = cls.hydro_code_order(uow)
@@ -2718,42 +2734,43 @@ class Deck:
         return hydro_turbined_flow_bounds_in_stages
 
     @classmethod
-    def hydro_outflow_bounds(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def hydro_outflow_bounds(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         """
         Obtém um DataFrame com os limites cadastrais de vazão turbinada
         de cada usina hidrelétrica.
         """
 
-        def _get_hydro_data(uow: AbstractUnitOfWork) -> pd.DataFrame:
-            df = cls.hidr(uow).reset_index()
+        def _get_hydro_data(uow: AbstractUnitOfWork) -> pl.DataFrame:
+            df = pl.from_pandas(cls.hidr(uow).reset_index())
             hydro_codes = cls.hydro_code_order(uow)
-            df = df.loc[
-                df[HYDRO_CODE_COL].isin(hydro_codes),
-                [HYDRO_CODE_COL, "vazao_minima_historica"],
-            ].set_index(HYDRO_CODE_COL)
-            df = df.rename(
-                columns={
-                    "vazao_minima_historica": LOWER_BOUND_COL,
-                }
+            df = df.filter(pl.col(HYDRO_CODE_COL).is_in(hydro_codes))[
+                [HYDRO_CODE_COL, "vazao_minima_historica"]
+            ]
+            df = df.rename({
+                "vazao_minima_historica": LOWER_BOUND_COL,
+            })
+            df = df.cast({LOWER_BOUND_COL: float})
+            df = df.with_columns(
+                pl.lit(float("inf")).alias(UPPER_BOUND_COL),
+                pl.lit(Unit.m3s.value).alias(LOWER_BOUND_UNIT_COL),
+                pl.lit(Unit.m3s.value).alias(UPPER_BOUND_UNIT_COL),
             )
-            df = df.astype({LOWER_BOUND_COL: float})
-            df[UPPER_BOUND_COL] = float("inf")
-            df[LOWER_BOUND_UNIT_COL] = Unit.m3s.value
-            df[UPPER_BOUND_UNIT_COL] = Unit.m3s.value
             return df
 
         hydro_outflow_bounds = cls.DECK_DATA_CACHING.get("hydro_outflow_bounds")
         if hydro_outflow_bounds is None:
             hydro_outflow_bounds = _get_hydro_data(uow)
             entities = cls.hydro_eer_submarket_map(uow)
-            hydro_outflow_bounds = hydro_outflow_bounds.join(entities)
+            hydro_outflow_bounds = hydro_outflow_bounds.join(
+                entities, on=HYDRO_CODE_COL
+            )
             cls.DECK_DATA_CACHING["hydro_outflow_bounds"] = hydro_outflow_bounds
-        return hydro_outflow_bounds.copy()
+        return hydro_outflow_bounds
 
     @classmethod
     def hydro_outflow_bounds_with_changes(
         cls, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """
         Obtém um DataFrame com os limites de vazão turbinada
         de cada usina hidrelétrica, sem considerar modificações que variam
@@ -2761,9 +2778,8 @@ class Deck:
         """
 
         def _add_hydro_bounds_changes(
-            df: pd.DataFrame, uow: AbstractUnitOfWork
-        ) -> pd.DataFrame:
-            df = df.copy()
+            df: pl.DataFrame, uow: AbstractUnitOfWork
+        ) -> pl.DataFrame:
             df = cls._get_hydro_data_changes_from_modif(
                 df, LOWER_BOUND_COL, LOWER_BOUND_UNIT_COL, VAZMIN, uow
             )
@@ -2780,7 +2796,7 @@ class Deck:
             cls.DECK_DATA_CACHING["hydro_outflow_bounds_with_changes"] = (
                 hydro_outflow_bounds_with_changes
             )
-        return hydro_outflow_bounds_with_changes.copy()
+        return hydro_outflow_bounds_with_changes
 
     @classmethod
     def hydro_outflow_bounds_in_stages(
@@ -2793,40 +2809,51 @@ class Deck:
         """
 
         def _expand_to_stages(
-            df: pd.DataFrame, uow: AbstractUnitOfWork
-        ) -> pd.DataFrame:
-            df = df.reset_index()
+            df: pl.DataFrame, uow: AbstractUnitOfWork
+        ) -> pl.DataFrame:
             num_hydros = df.shape[0]
-            dates = np.array(cls.stages_starting_dates_final_simulation(uow))
-            num_stages = len(dates)
-            df = pd.concat([df] * num_stages, ignore_index=True)
-            df[START_DATE_COL] = np.repeat(dates, num_hydros)
-            return df.sort_values([HYDRO_CODE_COL, START_DATE_COL]).reset_index(
-                drop=True
+            dates = np.array(
+                cls.stages_starting_dates_final_simulation(uow),
+                dtype=np.datetime64,
             )
+            num_stages = len(dates)
+            df = pl.concat([df] * num_stages)
+            df = df.with_columns(
+                pl.Series(
+                    name=START_DATE_COL, values=np.repeat(dates, num_hydros)
+                )
+            )
+            return df.sort([HYDRO_CODE_COL, START_DATE_COL])
 
         def _expand_to_blocks(
-            df: pd.DataFrame, uow: AbstractUnitOfWork
-        ) -> pd.DataFrame:
-            df = df.reset_index()
-            dates = np.array(cls.stages_starting_dates_final_simulation(uow))
+            df: pl.DataFrame, uow: AbstractUnitOfWork
+        ) -> pl.DataFrame:
+            dates = np.array(
+                cls.stages_starting_dates_final_simulation(uow),
+                dtype=np.datetime64,
+            )
             num_stages = len(dates)
             num_hydros = df.shape[0] // num_stages
             num_blocks = cls.num_blocks(uow) + 1
-            df = pd.concat([df] * num_blocks, ignore_index=True)
-            df = df.sort_values([HYDRO_CODE_COL, START_DATE_COL])
-            df[BLOCK_COL] = np.tile(
-                np.arange(num_blocks), num_hydros * num_stages
+            df = pl.concat([df] * num_blocks)
+            df = df.sort([HYDRO_CODE_COL, START_DATE_COL])
+            df = df.with_columns(
+                pl.Series(
+                    name=BLOCK_COL,
+                    values=np.tile(
+                        np.arange(num_blocks), num_hydros * num_stages
+                    ),
+                )
             )
-            return df.sort_values([
+            return df.sort([
                 HYDRO_CODE_COL,
                 START_DATE_COL,
                 BLOCK_COL,
-            ]).reset_index(drop=True)
+            ])
 
         def _add_hydro_bounds_changes_to_stages(
-            df: pd.DataFrame, uow: AbstractUnitOfWork
-        ) -> pd.DataFrame:
+            df: pl.DataFrame, uow: AbstractUnitOfWork
+        ) -> pl.DataFrame:
             df = cls._get_hydro_data_changes_from_modif_to_stages(
                 df, LOWER_BOUND_COL, LOWER_BOUND_UNIT_COL, VAZMINT, uow
             )
@@ -2840,21 +2867,21 @@ class Deck:
             m3s_df = _expand_to_stages(m3s_df, uow)
             m3s_df = _add_hydro_bounds_changes_to_stages(m3s_df, uow)
             m3s_df = _expand_to_blocks(m3s_df, uow)
-            hydro_outflow_bounds_in_stages = pl.from_pandas(m3s_df)
+            hydro_outflow_bounds_in_stages = m3s_df
             cls.DECK_DATA_CACHING["hydro_outflow_bounds_in_stages"] = (
                 hydro_outflow_bounds_in_stages
             )
-        return hydro_outflow_bounds_in_stages.copy()
+        return hydro_outflow_bounds_in_stages
 
     @classmethod
-    def hydro_drops(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def hydro_drops(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         """
         Obtém um DataFrame com os dados cadastrais de níveis de canal
         de montante e jusante, perdas e regularização
         de cada usina hidrelétrica.
         """
 
-        def _get_hydro_data(uow: AbstractUnitOfWork) -> pd.DataFrame:
+        def _get_hydro_data(uow: AbstractUnitOfWork) -> pl.DataFrame:
             df = cls.hidr(uow).reset_index()
             hydro_codes = cls.hydro_code_order(uow)
             df = df.loc[
@@ -2869,19 +2896,21 @@ class Deck:
                     RUN_OF_RIVER_REFERENCE_VOLUME_COL,
                     SPEC_PRODUCTIVITY_COL,
                 ],
-            ].set_index(HYDRO_CODE_COL)
-            return df
+            ]
+            return pl.from_pandas(df)
 
         hydro_drops = cls.DECK_DATA_CACHING.get("hydro_drops")
         if hydro_drops is None:
             hydro_drops = _get_hydro_data(uow)
             entities = cls.hydro_eer_submarket_map(uow)
-            hydro_drops = hydro_drops.join(entities)
+            hydro_drops = hydro_drops.join(
+                entities, on=HYDRO_CODE_COL, how="inner"
+            )
             cls.DECK_DATA_CACHING["hydro_drops"] = hydro_drops
-        return hydro_drops.copy()
+        return hydro_drops
 
     @classmethod
-    def hydro_drops_in_stages(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def hydro_drops_in_stages(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         """
         Obtém um DataFrame com os dados cadastrais de níveis de canal
         de montante e jusante, perdas e regularização
@@ -2890,21 +2919,29 @@ class Deck:
         """
 
         def _expand_to_stages(
-            df: pd.DataFrame, uow: AbstractUnitOfWork
-        ) -> pd.DataFrame:
-            df = df.reset_index()
+            df: pl.DataFrame, uow: AbstractUnitOfWork
+        ) -> pl.DataFrame:
             num_hydros = df.shape[0]
-            dates = np.array(cls.stages_starting_dates_final_simulation(uow))
-            num_stages = len(dates)
-            df = pd.concat([df] * num_stages, ignore_index=True)
-            df[START_DATE_COL] = np.repeat(dates, num_hydros)
-            return df.sort_values([HYDRO_CODE_COL, START_DATE_COL]).reset_index(
-                drop=True
+            dates = np.array(
+                cls.stages_starting_dates_final_simulation(uow),
+                dtype=np.datetime64,
             )
+            num_stages = len(dates)
+            df = pl.concat([df] * num_stages)
+            df = df.with_columns(
+                pl.Series(
+                    name=START_DATE_COL, values=np.repeat(dates, num_hydros)
+                )
+            )
+            return df.sort([HYDRO_CODE_COL, START_DATE_COL])
 
         def _add_hydro_drops_changes_to_stages(
-            df: pd.DataFrame, uow: AbstractUnitOfWork
-        ) -> pd.DataFrame:
+            df: pl.DataFrame, uow: AbstractUnitOfWork
+        ) -> pl.DataFrame:
+            df = df.with_columns(
+                pl.lit(Unit.m.value).alias(LOWER_BOUND_UNIT_COL),
+                pl.lit(Unit.m.value).alias(UPPER_BOUND_UNIT_COL),
+            )
             df = cls._get_hydro_data_changes_from_modif_to_stages(
                 df, HEIGHT_POLY_COLS[0], LOWER_BOUND_UNIT_COL, CMONT, uow
             )
@@ -2919,32 +2956,30 @@ class Deck:
         if hydro_drops_in_stages is None:
             df = cls.hydro_drops(uow)
             df = _expand_to_stages(df, uow)
-            df = _add_hydro_drops_changes_to_stages(df.copy(), uow)
+            df = _add_hydro_drops_changes_to_stages(df, uow)
             hydro_drops_in_stages = df
             cls.DECK_DATA_CACHING["hydro_drops_in_stages"] = (
                 hydro_drops_in_stages
             )
-        return hydro_drops_in_stages.copy()
+        return hydro_drops_in_stages
 
     @classmethod
-    def thermals(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def thermals(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         thermals = cls.DECK_DATA_CACHING.get("thermals")
         if thermals is None:
-            thermals = cls._validate_data(
-                cls._get_conft(uow).usinas, pd.DataFrame, "UTEs"
+            thermals = pl.from_pandas(
+                cls._validate_data(
+                    cls._get_conft(uow).usinas, pd.DataFrame, "UTEs"
+                )
             )
-            thermals = thermals.drop(columns="codigo_usina")
-            thermals = thermals.rename(
-                columns={
-                    "classe": THERMAL_CODE_COL,
-                    "nome_usina": THERMAL_NAME_COL,
-                    "submercado": SUBMARKET_CODE_COL,
-                }
-            )
-            thermals = thermals.astype({THERMAL_NAME_COL: STRING_DF_TYPE})
-            thermals = thermals.set_index(THERMAL_CODE_COL)
+            thermals = thermals.drop(["codigo_usina"])
+            thermals = thermals.rename({
+                "classe": THERMAL_CODE_COL,
+                "nome_usina": THERMAL_NAME_COL,
+                "submercado": SUBMARKET_CODE_COL,
+            })
             cls.DECK_DATA_CACHING["thermals"] = thermals
-        return thermals.copy()
+        return thermals
 
     @classmethod
     def num_blocks(cls, uow: AbstractUnitOfWork) -> int:
@@ -2971,12 +3006,13 @@ class Deck:
 
         block_lengths = cls.DECK_DATA_CACHING.get("block_lengths")
         if block_lengths is None:
-            block_lengths = cls._validate_data(
-                cls._get_patamar(uow).duracao_mensal_patamares,
-                pd.DataFrame,
-                "duração dos patamares",
+            block_lengths = pl.from_pandas(
+                cls._validate_data(
+                    cls._get_patamar(uow).duracao_mensal_patamares,
+                    pd.DataFrame,
+                    "duração dos patamares",
+                )
             )
-            block_lengths = pl.from_pandas(block_lengths)
             block_lengths = block_lengths.rename({
                 "data": START_DATE_COL,
                 "patamar": BLOCK_COL,
@@ -3008,12 +3044,13 @@ class Deck:
             "exchange_block_limits"
         )
         if exchange_block_limits is None:
-            exchange_block_limits = cls._validate_data(
-                cls._get_patamar(uow).intercambio_patamares,
-                pd.DataFrame,
-                "limites de intercâmbio dos patamares",
+            exchange_block_limits = pl.from_pandas(
+                cls._validate_data(
+                    cls._get_patamar(uow).intercambio_patamares,
+                    pd.DataFrame,
+                    "limites de intercâmbio dos patamares",
+                )
             )
-            exchange_block_limits = pl.from_pandas(exchange_block_limits)
             exchange_block_limits = exchange_block_limits.rename({
                 "submercado_de": EXCHANGE_SOURCE_CODE_COL,
                 "submercado_para": EXCHANGE_TARGET_CODE_COL,
@@ -3028,25 +3065,23 @@ class Deck:
     @classmethod
     def _initial_stored_energy_from_pmo(
         cls, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame | None:
+    ) -> pl.DataFrame | None:
         df_pmo = cls.pmo(uow).energia_armazenada_inicial
         if isinstance(df_pmo, pd.DataFrame):
-            eers = cls.eers(uow).reset_index()
-            df_pmo[EER_CODE_COL] = df_pmo["nome_ree"].apply(
-                lambda x: eers.loc[eers[EER_NAME_COL] == x, EER_CODE_COL].iloc[
-                    0
-                ]
+            df_pmo = pl.from_pandas(df_pmo)
+            df_pmo = df_pmo.rename({"nome_ree": EER_NAME_COL})
+            eers = cls.eers(uow)
+            df_pmo = df_pmo.join(
+                eers[[EER_CODE_COL, EER_NAME_COL]], on=EER_NAME_COL
             )
-            df_pmo = df_pmo.rename(columns={"nome_ree": EER_NAME_COL})
-            df_pmo = df_pmo.set_index([EER_CODE_COL])
-            df_pmo = df_pmo.sort_index()
+            df_pmo = df_pmo.sort(EER_CODE_COL)
         return df_pmo
 
     @classmethod
     def _evaluate_productivity(
-        cls, df: pd.DataFrame, volume_col: str = VOLUME_FOR_PRODUCTIVITY_TMP_COL
-    ) -> pd.DataFrame:
-        def _evaluate_upper_drop_at_volume(line: pd.Series) -> float:
+        cls, df: pl.DataFrame, volume_col: str = VOLUME_FOR_PRODUCTIVITY_TMP_COL
+    ) -> pl.DataFrame:
+        def _evaluate_upper_drop_at_volume(line: dict) -> float:
             coefs = [line[c] for c in HEIGHT_POLY_COLS]
             if line[VOLUME_REGULATION_COL] == "M":
                 coefs_integral = [0] + [
@@ -3055,9 +3090,8 @@ class Deck:
                 min_volume = line[LOWER_BOUND_COL]
                 max_volume = line[UPPER_BOUND_COL]
                 net_volume = max_volume - min_volume
-                percent_volume = (
-                    line[volume_col] / net_volume if net_volume > 0 else 0
-                )
+                volume = line[volume_col] or 0.0
+                percent_volume = volume / net_volume if net_volume > 0 else 0
                 reversed_coefs_integral = list(reversed(coefs_integral))
                 min_integral = np.polyval(
                     reversed_coefs_integral,
@@ -3078,69 +3112,79 @@ class Deck:
                 )
             return hmon
 
-        def _fill_volume_run_of_river(line: pd.Series):
-            if pd.isna(line[volume_col]):
-                return 0.0
-            else:
-                return line[volume_col]
-
-        def _apply_losses(line: pd.Series, col: str):
-            if line[LOSS_KIND_COL] == 1:
-                return line[col] * (1 - line[LOSS_COL])
-            elif line[LOSS_KIND_COL] == 2:
-                return line[col] - line[LOSS_COL]
-
-        def _eval_productivity(df: pd.DataFrame):
-            df[UPPER_DROP_COL] = df.apply(
-                _evaluate_upper_drop_at_volume, axis=1
+        def _eval_productivity(df: pl.DataFrame) -> pl.DataFrame:
+            df = df.with_columns(
+                pl.struct(df.columns)
+                .map_elements(
+                    _evaluate_upper_drop_at_volume, return_dtype=pl.Float64
+                )
+                .alias(UPPER_DROP_COL)
             )
-            df[NET_DROP_COL] = df[UPPER_DROP_COL] - df[LOWER_DROP_COL]
-            df[volume_col] = df.apply(_fill_volume_run_of_river, axis=1)
-            df[PRODUCTIVITY_TMP_COL] = df[SPEC_PRODUCTIVITY_COL] * df.apply(
-                partial(_apply_losses, col=NET_DROP_COL), axis=1
+            df = df.with_columns(
+                (pl.col(UPPER_DROP_COL) - pl.col(LOWER_DROP_COL)).alias(
+                    NET_DROP_COL
+                )
             )
-            df[PRODUCTIVITY_TMP_COL] *= HM3_M3S_MONTHLY_FACTOR
+            df = df.with_columns(
+                pl.when(pl.col(volume_col).is_nan())
+                .then(0.0)
+                .otherwise(pl.col(volume_col))
+                .alias(volume_col),
+                pl.when(pl.col(LOSS_KIND_COL) == 1)
+                .then(pl.col(NET_DROP_COL) * (1 - pl.col(LOSS_COL)))
+                .otherwise(pl.col(NET_DROP_COL) - pl.col(LOSS_COL))
+                .alias(NET_DROP_COL),
+            )
+            df = df.with_columns(
+                (
+                    pl.col(SPEC_PRODUCTIVITY_COL)
+                    * pl.col(NET_DROP_COL)
+                    * HM3_M3S_MONTHLY_FACTOR
+                ).alias(PRODUCTIVITY_TMP_COL)
+            )
+
             return df
 
         return _eval_productivity(df)
 
     @classmethod
-    def _accumulate_productivity(cls, df: pd.DataFrame) -> pd.DataFrame:
-        np_edges = list(
-            df.reset_index()[[FOLLOWING_HYDRO_COL, HYDRO_CODE_COL]].to_numpy()
-        )
+    def _accumulate_productivity(cls, df: pl.DataFrame) -> pl.DataFrame:
+        np_edges = list(df[[FOLLOWING_HYDRO_COL, HYDRO_CODE_COL]].to_numpy())
         edges = [tuple(e) for e in np_edges]
         bfs = Graph(edges, directed=True).bfs(0)[1:]
         for hydro_code in bfs:
-            downstream_hydro_code = df.at[
-                hydro_code,
-                FOLLOWING_HYDRO_COL,
-            ]
+            downstream_hydro_code = df.filter(
+                pl.col(HYDRO_CODE_COL) == hydro_code
+            )[FOLLOWING_HYDRO_COL][0]
             if downstream_hydro_code == 0:
                 continue
-            downstream_productivity = df.at[
-                downstream_hydro_code,
-                PRODUCTIVITY_TMP_COL,
-            ]
-            df.at[hydro_code, PRODUCTIVITY_TMP_COL] += downstream_productivity
+            downstream_productivity = df.filter(
+                pl.col(HYDRO_CODE_COL) == hydro_code
+            )[PRODUCTIVITY_TMP_COL][0]
+            df = df.with_columns(
+                pl.when(pl.col(HYDRO_CODE_COL) == hydro_code)
+                .then(pl.col(PRODUCTIVITY_TMP_COL) + downstream_productivity)
+                .otherwise(pl.col(PRODUCTIVITY_TMP_COL))
+            )
         return df
 
     @classmethod
     def _hydro_accumulated_productivity_at_volume(
         cls,
         uow: AbstractUnitOfWork,
-        df: pd.DataFrame,
+        df: pl.DataFrame,
         volume_col: str = VOLUME_FOR_PRODUCTIVITY_TMP_COL,
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """
         Calcula a produtividade acumulada das usinas hidrelétricas
         fornecidas em `df`, em um volume dado na coluna `volume_col`.
         O `df` fornecido deve ter como `index` o código das usinas.
         """
 
-        def _join_hidr_data(df: pd.DataFrame) -> pd.DataFrame:
-            hidr = cls.hidr(uow)
+        def _join_hidr_data(df: pl.DataFrame) -> pl.DataFrame:
+            hidr = pl.from_pandas(cls.hidr(uow).reset_index())
             hidr_cols = [
+                HYDRO_CODE_COL,
                 RUN_OF_RIVER_REFERENCE_VOLUME_COL,
                 LOSS_COL,
                 LOSS_KIND_COL,
@@ -3150,19 +3194,23 @@ class Deck:
             ]
             return df.join(
                 hidr[hidr_cols + HEIGHT_POLY_COLS],
+                on=HYDRO_CODE_COL,
                 how="inner",
             )
 
-        def _join_bounds_data(df: pd.DataFrame) -> pd.DataFrame:
+        def _join_bounds_data(df: pl.DataFrame) -> pl.DataFrame:
             bounds_df = cls.hydro_volume_bounds_with_changes(uow)
-            return df.join(bounds_df, how="inner")
+            return df.join(bounds_df, on=HYDRO_CODE_COL, how="inner")
 
-        def _join_hydros_data(df: pd.DataFrame) -> pd.DataFrame:
+        def _join_hydros_data(df: pl.DataFrame) -> pl.DataFrame:
             hydros = cls.hydros(uow)
-            return df.join(hydros[[FOLLOWING_HYDRO_COL]], how="inner")
+            return df.join(
+                hydros[[HYDRO_CODE_COL, FOLLOWING_HYDRO_COL]],
+                on=HYDRO_CODE_COL,
+                how="inner",
+            )
 
-        df = df.copy()
-        df_cols = df.columns.tolist()
+        df_cols = df.columns
         df = _join_hidr_data(df)
         df = _join_bounds_data(df)
         df = _join_hydros_data(df)
@@ -3173,7 +3221,7 @@ class Deck:
     @classmethod
     def _initial_stored_energy_from_confhd_hidr(
         cls, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame | None:
+    ) -> pl.DataFrame | None:
         """
         Realiza o cálculo da energia armazenada inicial a partir
         de entrada de dados do CONFHD e HIDR.
@@ -3188,34 +3236,47 @@ class Deck:
         consideradas.
         """
 
-        def _join_drop_data(df: pd.DataFrame) -> pd.DataFrame:
+        def _join_drop_data(df: pl.DataFrame) -> pl.DataFrame:
             drops_df = cls.hydro_drops_in_stages(uow)
             stage_date = cls.stages_starting_dates_final_simulation(uow)[0]
-            drops_df = drops_df.loc[
-                drops_df[START_DATE_COL] == stage_date
-            ].set_index(HYDRO_CODE_COL)
-            return df.drop(columns=["usina"]).join(drops_df, how="inner")
+            drops_df = drops_df.filter(pl.col(START_DATE_COL) == stage_date)
+            return df.drop(["usina"]).join(
+                drops_df, on=HYDRO_CODE_COL, how="inner"
+            )
 
-        def _join_bounds_data(df: pd.DataFrame) -> pd.DataFrame:
+        def _join_bounds_data(df: pl.DataFrame) -> pl.DataFrame:
             bounds_df = cls.hydro_volume_bounds_with_changes(uow)
             return df.join(
-                bounds_df[[LOWER_BOUND_COL, UPPER_BOUND_COL]], how="inner"
+                bounds_df[[HYDRO_CODE_COL, LOWER_BOUND_COL, UPPER_BOUND_COL]],
+                on=HYDRO_CODE_COL,
+                how="inner",
             )
 
-        def _volume_to_energy(df: pd.DataFrame) -> pd.DataFrame:
-            df.loc[df[VOLUME_REGULATION_COL] != "M", ABSOLUTE_VALUE_COL] = 0.0
-            df[ABSOLUTE_VALUE_COL] *= df[PRODUCTIVITY_TMP_COL]
-            df.loc[df[VOLUME_REGULATION_COL] != "M", MAX_STORED_VOLUME_COL] = (
-                0.0
+        def _volume_to_energy(df: pl.DataFrame) -> pl.DataFrame:
+            df = df.with_columns(
+                pl.when(pl.col(VOLUME_REGULATION_COL) != "M")
+                .then(0.0)
+                .otherwise(pl.col(ABSOLUTE_VALUE_COL))
+                .alias(ABSOLUTE_VALUE_COL),
+                pl.when(pl.col(VOLUME_REGULATION_COL) != "M")
+                .then(0.0)
+                .otherwise(pl.col(MAX_STORED_VOLUME_COL))
+                .alias(MAX_STORED_VOLUME_COL),
             )
-            df[MAXIMUM_STORED_ENERGY_COL] = (
-                df[MAX_STORED_VOLUME_COL] * df[MAX_PRODUCTIVITY_COL]
+            df = df.with_columns(
+                (
+                    pl.col(ABSOLUTE_VALUE_COL) * pl.col(PRODUCTIVITY_TMP_COL)
+                ).alias(ABSOLUTE_VALUE_COL),
+                (
+                    pl.col(MAX_STORED_VOLUME_COL) * pl.col(MAX_PRODUCTIVITY_COL)
+                ).alias(MAXIMUM_STORED_ENERGY_COL),
             )
             return df
 
-        def _cast_to_eers_and_fill_missing(df: pd.DataFrame) -> pd.DataFrame:
+        def _cast_to_eers_and_fill_missing(df: pl.DataFrame) -> pl.DataFrame:
             df = df.join(
-                cls.hydro_eer_submarket_map(uow).drop(columns=["usina"]),
+                cls.hydro_eer_submarket_map(uow).drop(["usina"]),
+                on=HYDRO_CODE_COL,
                 how="inner",
             )
             df = (
@@ -3227,34 +3288,50 @@ class Deck:
                         MAXIMUM_STORED_ENERGY_COL,
                     ]
                 ]
-                .groupby([EER_CODE_COL, EER_NAME_COL])
+                .group_by([EER_CODE_COL, EER_NAME_COL], maintain_order=True)
                 .sum()
-            ).reset_index()
+            )
             eer_codes = cls.eer_code_order(uow)
             eers = cls.eers(uow)
+            existing_eers = df[EER_CODE_COL].to_list()
             missing_eers = [
-                eer for eer in eer_codes if eer not in df[EER_CODE_COL].tolist()
+                eer for eer in eer_codes if eer not in existing_eers
             ]
-            missing_df = pd.DataFrame({
-                EER_CODE_COL: missing_eers,
-                EER_NAME_COL: eers.loc[missing_eers, EER_NAME_COL].tolist(),
-                ABSOLUTE_VALUE_COL: [np.nan] * len(missing_eers),
-                PERCENT_VALUE_COL: [100.0] * len(missing_eers),
-            })
-            if not missing_df.empty:
-                df = pd.concat([df, missing_df], ignore_index=True)
-            df[EER_CODE_COL] = df[EER_CODE_COL].astype(int)
-            return df.set_index(EER_CODE_COL)
+            dfs = []
+            for c in missing_eers:
+                eer_df = df.filter(pl.col(EER_CODE_COL) == existing_eers[0])
 
-        def _eval_percent_value(df: pd.DataFrame) -> pd.DataFrame:
-            df[PERCENT_VALUE_COL] = (
-                df[ABSOLUTE_VALUE_COL] / df[MAXIMUM_STORED_ENERGY_COL] * 100.0
+                eer_df = eer_df.with_columns(
+                    pl.lit(c, dtype=df[EER_CODE_COL].dtype).alias(EER_CODE_COL),
+                    pl.lit(
+                        eers.filter(pl.col(EER_CODE_COL) == c)[EER_NAME_COL][0]
+                    ).alias(EER_NAME_COL),
+                    pl.lit(np.nan).alias(ABSOLUTE_VALUE_COL),
+                    pl.lit(100.0).alias(PERCENT_VALUE_COL),
+                )
+                dfs.append(eer_df)
+
+            if len(dfs) > 0:
+                df = pl.concat([df] + dfs)
+            return df
+
+        def _eval_percent_value(df: pl.DataFrame) -> pl.DataFrame:
+            df = df.with_columns(
+                (
+                    pl.col(ABSOLUTE_VALUE_COL)
+                    / pl.col(MAXIMUM_STORED_ENERGY_COL)
+                    * 100.0
+                ).alias(PERCENT_VALUE_COL)
             )
             return df
 
-        def _join_hydros_data(df: pd.DataFrame) -> pd.DataFrame:
+        def _join_hydros_data(df: pl.DataFrame) -> pl.DataFrame:
             hydros = cls.hydros(uow)
-            return df.join(hydros[[FOLLOWING_HYDRO_COL]], how="inner")
+            return df.join(
+                hydros[[HYDRO_CODE_COL, FOLLOWING_HYDRO_COL]],
+                on=HYDRO_CODE_COL,
+                how="inner",
+            )
 
         MAX_PRODUCTIVITY_COL = "prod_max"
         MAX_STORED_VOLUME_COL = "varmax"
@@ -3263,10 +3340,10 @@ class Deck:
         ABSOLUTE_VALUE_FINAL_COL = "valor_MWmes"
         PERCENT_VALUE_COL = "valor_percentual"
 
-        df = cls.initial_stored_volume(uow).set_index(HYDRO_CODE_COL)
+        df = cls.initial_stored_volume(uow)
 
         # Calcula prodts no ponto inicial
-        absolute_df = df.copy()
+        absolute_df = df
         absolute_df = _join_drop_data(absolute_df)
         absolute_df = _join_bounds_data(absolute_df)
         absolute_df = _join_hydros_data(absolute_df)
@@ -3277,37 +3354,41 @@ class Deck:
 
         # Calcula prodts no máximo
         df_cols = df.columns
-        percent_df = _join_bounds_data(df.copy())
-        percent_df[ABSOLUTE_VALUE_COL] = (
-            percent_df[UPPER_BOUND_COL] - percent_df[LOWER_BOUND_COL]
-        )
+        percent_df = _join_bounds_data(df)
+
         percent_df = percent_df[df_cols]
         percent_df = _join_drop_data(percent_df)
         percent_df = _join_bounds_data(percent_df)
         percent_df = _join_hydros_data(percent_df)
-        percent_df[ABSOLUTE_VALUE_COL] = (
-            percent_df[UPPER_BOUND_COL] - percent_df[LOWER_BOUND_COL]
+
+        percent_df = percent_df.with_columns(
+            (pl.col(UPPER_BOUND_COL) - pl.col(LOWER_BOUND_COL)).alias(
+                ABSOLUTE_VALUE_COL
+            )
         )
         percent_df = cls._evaluate_productivity(
             percent_df, volume_col=ABSOLUTE_VALUE_COL
         )
         percent_df = cls._accumulate_productivity(percent_df)
-        percent_df = percent_df.rename(
-            columns={
-                ABSOLUTE_VALUE_COL: MAX_STORED_VOLUME_COL,
-                PRODUCTIVITY_TMP_COL: MAX_PRODUCTIVITY_COL,
-            }
-        )
+        percent_df = percent_df.rename({
+            ABSOLUTE_VALUE_COL: MAX_STORED_VOLUME_COL,
+            PRODUCTIVITY_TMP_COL: MAX_PRODUCTIVITY_COL,
+        })
 
         # Combina os resultados para calcular EARMi em % da EARMax
         df = absolute_df.join(
-            percent_df[[MAX_STORED_VOLUME_COL, MAX_PRODUCTIVITY_COL]],
+            percent_df[
+                [HYDRO_CODE_COL, MAX_STORED_VOLUME_COL, MAX_PRODUCTIVITY_COL]
+            ],
+            on=HYDRO_CODE_COL,
             how="inner",
         )
+
         df = _volume_to_energy(df)
         df = _cast_to_eers_and_fill_missing(
             df[
                 [
+                    HYDRO_CODE_COL,
                     ABSOLUTE_VALUE_COL,
                     MAX_STORED_VOLUME_COL,
                     MAXIMUM_STORED_ENERGY_COL,
@@ -3315,80 +3396,99 @@ class Deck:
             ]
         )
         df = _eval_percent_value(df)
-        df = df.rename(columns={ABSOLUTE_VALUE_COL: ABSOLUTE_VALUE_FINAL_COL})
-
-        return df[[EER_NAME_COL, ABSOLUTE_VALUE_FINAL_COL, PERCENT_VALUE_COL]]
+        df = df.rename({ABSOLUTE_VALUE_COL: ABSOLUTE_VALUE_FINAL_COL})
+        return df[
+            [
+                EER_CODE_COL,
+                EER_NAME_COL,
+                ABSOLUTE_VALUE_FINAL_COL,
+                PERCENT_VALUE_COL,
+            ]
+        ]
 
     @classmethod
-    def initial_stored_energy(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def initial_stored_energy(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         initial_stored_energy = cls.DECK_DATA_CACHING.get(
             "initial_stored_energy"
         )
         if initial_stored_energy is None:
+            initial_stored_energy = None
             initial_stored_energy = cls._initial_stored_energy_from_pmo(uow)
             if initial_stored_energy is None:
                 initial_stored_energy = (
                     cls._initial_stored_energy_from_confhd_hidr(uow)
                 )
             initial_stored_energy = cls._validate_data(
-                initial_stored_energy, pd.DataFrame, "EARM inicial"
+                initial_stored_energy, pl.DataFrame, "EARM inicial"
             )
             cls.DECK_DATA_CACHING["initial_stored_energy"] = (
                 initial_stored_energy
             )
-        return initial_stored_energy.copy()
+        return initial_stored_energy
 
     @classmethod
     def _initial_stored_volume_from_pmo(
         cls, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame | None:
+    ) -> pl.DataFrame | None:
         df = cls.pmo(uow).volume_armazenado_inicial
         if df is None:
             return df
-        return df.rename(
-            columns={
-                "codigo_usina": HYDRO_CODE_COL,
-                "nome_usina": HYDRO_NAME_COL,
-            }
-        )
+        return pl.from_pandas(df).rename({
+            "codigo_usina": HYDRO_CODE_COL,
+            "nome_usina": HYDRO_NAME_COL,
+        })
 
     @classmethod
     def _initial_stored_volume_from_confhd_hidr(
         cls, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame | None:
-        df = cls.confhd(uow)[
-            [HYDRO_CODE_COL, "nome_usina", "volume_inicial_percentual"]
-        ].set_index(HYDRO_CODE_COL)
-        df = df.rename(
-            columns={
-                "nome_usina": HYDRO_NAME_COL,
-                "volume_inicial_percentual": "valor_percentual",
-            }
+    ) -> pl.DataFrame | None:
+        df = pl.from_pandas(
+            cls.confhd(uow)[
+                [HYDRO_CODE_COL, "nome_usina", "volume_inicial_percentual"]
+            ]
         )
-        hidr = cls.hidr(uow)
+        df = df.rename({
+            "nome_usina": HYDRO_NAME_COL,
+            "volume_inicial_percentual": "valor_percentual",
+        })
+        hidr = pl.from_pandas(cls.hidr(uow).reset_index())
         volume_bounds = cls.hydro_volume_bounds_with_changes(uow)
-        volume_bounds = volume_bounds[[LOWER_BOUND_COL, UPPER_BOUND_COL]]
-        df = df.join(hidr, how="inner")
-        df = df.join(volume_bounds, how="inner")
-        df["valor_hm3"] = df.apply(
-            lambda line: line["valor_percentual"]
-            / 100.0
-            * (line[UPPER_BOUND_COL] - line[LOWER_BOUND_COL]),
-            axis=1,
+        volume_bounds = volume_bounds[
+            [HYDRO_CODE_COL, LOWER_BOUND_COL, UPPER_BOUND_COL]
+        ]
+        df = df.join(hidr, on=HYDRO_CODE_COL, how="inner")
+        df = df.join(volume_bounds, on=HYDRO_CODE_COL, how="inner")
+        df = df.with_columns(
+            (
+                pl.col("valor_percentual")
+                / 100.0
+                * (pl.col(UPPER_BOUND_COL) - pl.col(LOWER_BOUND_COL))
+            ).alias("valor_hm3")
         )
-        df.loc[df["tipo_regulacao"] != "M", "valor_hm3"] = np.nan
-        df.loc[df["tipo_regulacao"] != "M", "valor_percentual"] = 0.0
+        df = df.with_columns(
+            pl.when(pl.col("tipo_regulacao") != "M")
+            .then(np.nan)
+            .otherwise(pl.col("valor_hm3"))
+            .alias("valor_hm3"),
+            pl.when(pl.col("tipo_regulacao") != "M")
+            .then(0.0)
+            .otherwise(pl.col("valor_percentual"))
+            .alias("valor_percentual"),
+        )
 
-        return df[
-            [HYDRO_NAME_COL, "valor_hm3", "valor_percentual"]
-        ].reset_index()
+        return df[[HYDRO_NAME_COL, "valor_hm3", "valor_percentual"]]
 
     @classmethod
     def _initial_stored_volume_pre_study_condition(
-        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
+        cls, df: pl.DataFrame, uow: AbstractUnitOfWork
+    ) -> pl.DataFrame:
         if cls.num_pre_study_period_years(uow) > 0:
-            df.loc[~df["valor_hm3"].isna(), "valor_percentual"] = 100.0
+            df = df.with_columns(
+                pl.when(~pl.col("valor_hm3").is_nan())
+                .then(100.0)
+                .otherwise(pl.col("valor_percentual"))
+                .alias("valor_percentual")
+            )
         return df
 
     @classmethod
@@ -3403,14 +3503,14 @@ class Deck:
                     cls._initial_stored_volume_from_confhd_hidr(uow)
                 )
             initial_stored_volume = cls._validate_data(
-                initial_stored_volume, pd.DataFrame, "VARM inicial"
+                initial_stored_volume, pl.DataFrame, "VARM inicial"
             )
+
             initial_stored_volume = (
                 cls._initial_stored_volume_pre_study_condition(
                     initial_stored_volume, uow
                 )
             )
-            initial_stored_volume = pl.from_pandas(initial_stored_volume)
             cls.DECK_DATA_CACHING["initial_stored_volume"] = (
                 initial_stored_volume
             )
@@ -3421,7 +3521,7 @@ class Deck:
     def eer_code_order(cls, uow: AbstractUnitOfWork) -> List[int]:
         eer_code_order = cls.DECK_DATA_CACHING.get("eer_code_order")
         if eer_code_order is None:
-            eer_code_order = cls.eers(uow).index.tolist()
+            eer_code_order = cls.eers(uow)[EER_CODE_COL].to_list()
             cls.DECK_DATA_CACHING["eer_code_order"] = eer_code_order
         return eer_code_order
 
@@ -3429,40 +3529,35 @@ class Deck:
     def hydro_code_order(cls, uow: AbstractUnitOfWork) -> List[int]:
         hydro_code_order = cls.DECK_DATA_CACHING.get("hydro_code_order")
         if hydro_code_order is None:
-            hydro_code_order = cls.hydros(uow).index.tolist()
+            hydro_code_order = cls.hydros(uow)[HYDRO_CODE_COL].to_list()
             cls.DECK_DATA_CACHING["hydro_code_order"] = hydro_code_order
         return hydro_code_order
 
     @classmethod
     def hydro_eer_submarket_map(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         aux_df = cls.DECK_DATA_CACHING.get("hydro_eer_submarket_map")
-        # TODO - replace with pl.DataFrame
         if aux_df is None:
             hydros = cls.hydros(uow)
             eers = cls.eers(uow)
             submarkets = cls.submarkets(uow)
-            aux_df = hydros[[HYDRO_NAME_COL, EER_CODE_COL]].copy()
+            aux_df = hydros[[HYDRO_CODE_COL, HYDRO_NAME_COL, EER_CODE_COL]]
             aux_df = aux_df.join(
-                eers[[EER_NAME_COL, SUBMARKET_CODE_COL]], on=EER_CODE_COL
+                eers[[EER_CODE_COL, EER_NAME_COL, SUBMARKET_CODE_COL]],
+                on=EER_CODE_COL,
             )
             aux_df = aux_df.join(
-                submarkets[[SUBMARKET_NAME_COL]], on=SUBMARKET_CODE_COL
+                submarkets[[SUBMARKET_CODE_COL, SUBMARKET_NAME_COL]],
+                on=SUBMARKET_CODE_COL,
             )
-            aux_df = pl.from_pandas(aux_df.reset_index())
             cls.DECK_DATA_CACHING["hydro_eer_submarket_map"] = aux_df
         return aux_df
 
     @classmethod
-    def eer_submarket_map(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def eer_submarket_map(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         aux_df = cls.DECK_DATA_CACHING.get("eer_submarket_map")
         if aux_df is None:
             aux_df = cls.hydro_eer_submarket_map(uow)
-            aux_df = aux_df.unique(subset=[EER_CODE_COL])[
-                EER_CODE_COL,
-                EER_NAME_COL,
-                SUBMARKET_CODE_COL,
-                SUBMARKET_NAME_COL,
-            ]
+            aux_df = aux_df.unique(subset=[EER_CODE_COL])
             cls.DECK_DATA_CACHING["eer_submarket_map"] = aux_df
         return aux_df
 
@@ -3470,20 +3565,13 @@ class Deck:
     def thermal_submarket_map(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         aux_df = cls.DECK_DATA_CACHING.get("thermal_submarket_map")
         if aux_df is None:
-            thermals = Deck.thermals(uow).reset_index()
-            thermals = thermals.set_index(THERMAL_NAME_COL)
+            thermals = Deck.thermals(uow)
             submarkets = cls.submarkets(uow)
 
-            aux_df = pd.DataFrame(
-                data={
-                    THERMAL_CODE_COL: thermals[THERMAL_CODE_COL].tolist(),
-                    THERMAL_NAME_COL: thermals.index.tolist(),
-                    SUBMARKET_CODE_COL: thermals[SUBMARKET_CODE_COL].tolist(),
-                }
+            aux_df = thermals.join(
+                submarkets[[SUBMARKET_CODE_COL, SUBMARKET_NAME_COL]],
+                on=SUBMARKET_CODE_COL,
             )
-            aux_df[SUBMARKET_NAME_COL] = aux_df[SUBMARKET_CODE_COL].apply(
-                lambda c: submarkets.at[c, SUBMARKET_NAME_COL]
-            )
-            aux_df = pl.from_pandas(aux_df)
+
             cls.DECK_DATA_CACHING["thermal_submarket_map"] = aux_df
         return aux_df
