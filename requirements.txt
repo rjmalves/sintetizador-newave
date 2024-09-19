@@ -1,5 +1,5 @@
 click
 pandas
 pyarrow
-inewave>=1.9.1
+inewave>=1.9.2
 numba
