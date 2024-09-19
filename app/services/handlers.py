@@ -1,13 +1,14 @@
 import pathlib
 import shutil
-from app.model.settings import Settings
+
 import app.domain.commands as commands
-from app.services.unitofwork import AbstractUnitOfWork
-from app.services.synthesis.system import SystemSynthetizer
+from app.model.settings import Settings
 from app.services.synthesis.execution import ExecutionSynthetizer
-from app.services.synthesis.scenario import ScenarioSynthetizer
 from app.services.synthesis.operation import OperationSynthetizer
 from app.services.synthesis.policy import PolicySynthetizer
+from app.services.synthesis.scenario import ScenarioSynthetizer
+from app.services.synthesis.system import SystemSynthetizer
+from app.services.unitofwork import AbstractUnitOfWork
 
 
 def synthetize_system(

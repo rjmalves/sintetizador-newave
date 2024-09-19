@@ -1,20 +1,22 @@
-from typing import Callable, Dict, List, TypeVar, Optional
-import pandas as pd  # type: ignore
 import logging
-from app.utils.timing import time_and_log
-from logging import INFO, ERROR
+from logging import ERROR, INFO
 from traceback import print_exc
-from app.utils.regex import match_variables_with_wildcards
-from app.services.unitofwork import AbstractUnitOfWork
-from app.model.policy.variable import Variable
-from app.model.policy.policysynthesis import (
-    PolicySynthesis,
-    SUPPORTED_SYNTHESIS,
-)
+from typing import Callable, Dict, List, Optional, TypeVar
+
+import pandas as pd  # type: ignore
+
 from app.internal.constants import (
-    POLICY_SYNTHESIS_SUBDIR,
     POLICY_SYNTHESIS_METADATA_OUTPUT,
+    POLICY_SYNTHESIS_SUBDIR,
 )
+from app.model.policy.policysynthesis import (
+    SUPPORTED_SYNTHESIS,
+    PolicySynthesis,
+)
+from app.model.policy.variable import Variable
+from app.services.unitofwork import AbstractUnitOfWork
+from app.utils.regex import match_variables_with_wildcards
+from app.utils.timing import time_and_log
 
 
 class PolicySynthetizer:
@@ -123,6 +125,12 @@ class PolicySynthetizer:
                 s.variable.long_name,
             ]
         with uow:
+            existing_df = uow.export.read_df(POLICY_SYNTHESIS_METADATA_OUTPUT)
+            if existing_df is not None:
+                metadata_df = pd.concat(
+                    [existing_df, metadata_df], ignore_index=True
+                )
+                metadata_df = metadata_df.drop_duplicates()
             uow.export.synthetize_df(
                 metadata_df, POLICY_SYNTHESIS_METADATA_OUTPUT
             )

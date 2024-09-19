@@ -1,7 +1,8 @@
-from app.services.unitofwork import factory
-import pandas as pd
-import pyarrow.parquet as pq  # type: ignore
 from unittest.mock import patch
+
+import pandas as pd
+
+from app.services.unitofwork import factory
 from tests.conftest import DECK_TEST_DIR, q
 
 

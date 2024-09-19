@@ -1,12 +1,10 @@
+import pandas as pd
+
 from app.adapters.repository.files import factory
-from app.model.operation import variable as operationvariable
 from app.model.operation import (
     spatialresolution as operationspatialresolution,
 )
-
-
-import pandas as pd
-
+from app.model.operation import variable as operationvariable
 from tests.conftest import DECK_TEST_DIR
 
 

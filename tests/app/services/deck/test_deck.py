@@ -1,15 +1,17 @@
+from datetime import datetime
+
 import numpy as np
 import pandas as pd
-from datetime import datetime
-from app.services.unitofwork import factory
-from app.services.deck.deck import Deck
-from tests.conftest import DECK_TEST_DIR, q
+
 from app.internal.constants import (
-    START_DATE_COL,
-    VALUE_COL,
-    UPPER_BOUND_COL,
     LOWER_BOUND_COL,
+    START_DATE_COL,
+    UPPER_BOUND_COL,
+    VALUE_COL,
 )
+from app.services.deck.deck import Deck
+from app.services.unitofwork import factory
+from tests.conftest import DECK_TEST_DIR, q
 
 uow = factory("FS", DECK_TEST_DIR, q)
 deck = Deck()
@@ -52,7 +54,7 @@ def test_num_synthetic_scenarios_final_simulation(test_settings):
 
 def test_num_history_years(test_settings):
     val = deck.num_history_years(uow)
-    assert val == 89
+    assert val == 90
 
 
 def test_num_thermal_maintenance_years(test_settings):

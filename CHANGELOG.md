@@ -1,15 +1,25 @@
+# v2.1.2
+
+- Suporte ao versionamento de arquivos do NWLISTOP automaticamente quando ocorre mudança de formato
+- Correção na síntese da operação em casos com simulação final agregada
+- Concatenação dos arquivos de `ESTATISTICAS_*` e `METADADOS_*` com informações previamente existentes
+
 # v2.1.1
+
 - Correção na montagem das séries de cada ano simulado quando feita simulação final histórica [#47](https://github.com/rjmalves/sintetizador-newave/issues/47)
 
 # v2.1.0
+
 - Suporte a versões >= 29.4 do modelo NEWAVE devido a renomeação de diversos arquivos de saída utilizados pelo sintetizador [#44](https://github.com/rjmalves/sintetizador-newave/issues/44)
 - Implementada síntese do Custo Futuro (`CFU_SIN.parquet`) verificado no processo de simulação final [#45](https://github.com/rjmalves/sintetizador-newave/issues/45)
 - Implementada síntese do Custo Total (`CTO_SIN.parquet`) obtido através da soma entre custo do estágio e custo futuro.
 
 # v2.0.1
+
 - Fix no processamento de variáveis que só estão disponíveis no NWLISTOP por patamares e o valor médio dos patamares era calculado pelo sintetizador (`HLIQ`, `HJUS`).
 
 # v2.0.0
+
 - Suporte a Python 3.8 descontinuado. Apenas versões de Python >= 3.10 são suportadas nos ambientes de CI e tem garantia de reprodutibilidade.
 - Descontinuado o uso do `pylama` como linter para garantir padrões PEP de código devido à falta de suporte em Python >= 3.12. Adoção do [ruff](https://github.com/astral-sh/ruff) em substituição.
 - Refatoração dos processos de síntese, contemplando reuso de código e padronização de nomes de funções e variáveis
@@ -29,7 +39,6 @@
 - Logging do processo de síntese melhorado e resumido, incluindo os tempos gastos em cada etapa do processo [#39](https://github.com/rjmalves/sintetizador-newave/issues/39)
 - Diversas informações existentes no `pmo.dat` passaram a ser calculadas internamente para compatibilidade total com execuções do modelo que vão direto para a Simulação Final [#42](https://github.com/rjmalves/sintetizador-newave/issues/42)
 - Criação da abstração `Deck` que centraliza as conversões de formato e implementação de cálculos já realizados pelo modelo quando necessários para padronização do restante dos módulos de síntese [#40](https://github.com/rjmalves/sintetizador-newave/issues/40)
-
 
 # v1.2.0 (v1-compat)
 
