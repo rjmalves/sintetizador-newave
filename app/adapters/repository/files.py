@@ -1152,11 +1152,13 @@ class RawFilesRepository(AbstractFilesRepository):
         return df
 
     def __agg_cmo_dfs(self, dir: str, submercado: int) -> pd.DataFrame:
+        Cmargmed.set_version(self.__version)
         df_med = Cmargmed.read(
             join(dir, f"cmarg{str(submercado).zfill(3)}-med.out")
         ).valores
         df_med["patamar"] = 0
         df_med = self.__fix_indices_cenarios(df_med)
+        Cmarg.set_version(self.__version)
         df_pats = Cmarg.read(
             join(dir, f"cmarg{str(submercado).zfill(3)}.out")
         ).valores
