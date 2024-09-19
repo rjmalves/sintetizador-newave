@@ -833,14 +833,31 @@ class Deck:
             shist = cls._get_shist(uow)
             span = cls._validate_data(shist.varredura, int, "tipo de varredura")
             if span == 1:
+                history_input_starting_year = cls._validate_data(
+                    cls.dger(uow).ano_inicial_historico,
+                    int,
+                    "ano inicial do histórico",
+                )
+                num_history_input_years = cls.vazoes(uow).shape[0] // 12
+                history_input_end_year = (
+                    history_input_starting_year + num_history_input_years - 1
+                )
                 study_starting_year = cls.study_period_starting_year(uow)
-                history_starting_year = cls._validate_data(
+                final_simulation_last_year = (
+                    min([
+                        history_input_end_year,
+                        study_starting_year,
+                    ])
+                    - 2
+                )
+
+                span_starting_year = cls._validate_data(
                     shist.ano_inicio_varredura,
                     int,
                     "número de séries históricas na simulação",
                 )
                 num_history_years = (
-                    study_starting_year - history_starting_year - 2
+                    final_simulation_last_year - span_starting_year + 1
                 )
             else:
                 num_history_years = len(
