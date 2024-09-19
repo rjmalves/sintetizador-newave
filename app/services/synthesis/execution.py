@@ -1,23 +1,23 @@
-from typing import Callable, Dict, List, Optional, TypeVar
-import pandas as pd  # type: ignore
 import logging
+from logging import ERROR, INFO
 from traceback import print_exc
+from typing import Callable, Dict, List, Optional, TypeVar
 
-from app.services.unitofwork import AbstractUnitOfWork
-from app.utils.timing import time_and_log
-from logging import INFO, ERROR
-from app.utils.regex import match_variables_with_wildcards
-from app.model.execution.variable import Variable
-from app.model.execution.executionsynthesis import (
-    ExecutionSynthesis,
-    SUPPORTED_SYNTHESIS,
-)
-from app.services.deck.deck import Deck
+import pandas as pd  # type: ignore
 
 from app.internal.constants import (
-    EXECUTION_SYNTHESIS_SUBDIR,
     EXECUTION_SYNTHESIS_METADATA_OUTPUT,
+    EXECUTION_SYNTHESIS_SUBDIR,
 )
+from app.model.execution.executionsynthesis import (
+    SUPPORTED_SYNTHESIS,
+    ExecutionSynthesis,
+)
+from app.model.execution.variable import Variable
+from app.services.deck.deck import Deck
+from app.services.unitofwork import AbstractUnitOfWork
+from app.utils.regex import match_variables_with_wildcards
+from app.utils.timing import time_and_log
 
 # TODO - rever nomes das colunas
 # TODO - tirar tempo total
@@ -38,7 +38,8 @@ class ExecutionSynthetizer:
     @classmethod
     def _default_args(cls) -> List[ExecutionSynthesis]:
         args = [
-            ExecutionSynthesis.factory(a) for a in cls.DEFAULT_EXECUTION_SYNTHESIS_ARGS
+            ExecutionSynthesis.factory(a)
+            for a in cls.DEFAULT_EXECUTION_SYNTHESIS_ARGS
         ]
         return [arg for arg in args if arg is not None]
 
@@ -70,7 +71,9 @@ class ExecutionSynthetizer:
                 synthesis_variables = cls._default_args()
             else:
                 all_variables = cls._match_wildcards(variables)
-                synthesis_variables = cls._process_variable_arguments(all_variables)
+                synthesis_variables = cls._process_variable_arguments(
+                    all_variables
+                )
         except Exception as e:
             print_exc()
             cls._log(str(e), ERROR)
@@ -142,7 +145,17 @@ class ExecutionSynthetizer:
                 s.variable.long_name,
             ]
         with uow:
-            uow.export.synthetize_df(metadata_df, EXECUTION_SYNTHESIS_METADATA_OUTPUT)
+            existing_df = uow.export.read_df(
+                EXECUTION_SYNTHESIS_METADATA_OUTPUT
+            )
+            if existing_df is not None:
+                metadata_df = pd.concat(
+                    [existing_df, metadata_df], ignore_index=True
+                )
+                metadata_df = metadata_df.drop_duplicates()
+            uow.export.synthetize_df(
+                metadata_df, EXECUTION_SYNTHESIS_METADATA_OUTPUT
+            )
 
     @classmethod
     def _synthetize_single_variable(
@@ -171,6 +184,12 @@ class ExecutionSynthetizer:
                 return None
 
     @classmethod
+    def enforce_version(cls, uow: AbstractUnitOfWork):
+        version = Deck.pmo(uow).versao_modelo
+        if version is not None:
+            uow.version = version
+
+    @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
         cls.logger = logging.getLogger("main")
         uow.subdir = EXECUTION_SYNTHESIS_SUBDIR
@@ -178,7 +197,10 @@ class ExecutionSynthetizer:
             message_root="Tempo para sintese da execucao",
             logger=cls.logger,
         ):
-            synthesis_variables = cls._preprocess_synthesis_variables(variables, uow)
+            cls.enforce_version(uow)
+            synthesis_variables = cls._preprocess_synthesis_variables(
+                variables, uow
+            )
             success_synthesis: List[ExecutionSynthesis] = []
             for s in synthesis_variables:
                 r = cls._synthetize_single_variable(s, uow)

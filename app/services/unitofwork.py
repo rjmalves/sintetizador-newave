@@ -23,6 +23,7 @@ class AbstractUnitOfWork(ABC):
     def __init__(self, q: Queue) -> None:
         self._queue = q
         self._subdir = ""
+        self._version = "latest"
 
     def __enter__(self) -> "AbstractUnitOfWork":
         return self
@@ -43,6 +44,14 @@ class AbstractUnitOfWork(ABC):
     @abstractmethod
     def export(self) -> AbstractExportRepository:
         raise NotImplementedError
+
+    @property
+    def version(self) -> str:
+        return self._version
+
+    @version.setter
+    def version(self, s: str):
+        self._version = s
 
     @property
     def queue(self) -> Queue:
@@ -68,7 +77,7 @@ class FSUnitOfWork(AbstractUnitOfWork):
     def __create_repository(self):
         if self._files is None:
             self._files = files_factory(
-                Settings().file_repository, str(self._path)
+                Settings().file_repository, str(self._path), self._version
             )
         if self._exporter is None:
             synthesis_outdir = (
@@ -103,6 +112,14 @@ class FSUnitOfWork(AbstractUnitOfWork):
         if self._exporter is None:
             raise RuntimeError()
         return self._exporter
+
+    @property
+    def version(self) -> str:
+        return self._version
+
+    @version.setter
+    def version(self, s: str):
+        self._version = s
 
     def rollback(self):
         pass

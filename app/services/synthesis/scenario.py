@@ -1,49 +1,54 @@
-from typing import Callable, Dict, List, Tuple, Optional, TypeVar
-import pandas as pd  # type: ignore
-import numpy as np  # type: ignore
 import logging
-from traceback import print_exc
-from multiprocessing import Pool
-from logging import INFO, ERROR
 from datetime import datetime
+from logging import ERROR, INFO
+from multiprocessing import Pool
+from traceback import print_exc
+from typing import Callable, Dict, List, Optional, Tuple, TypeVar
+
+import numpy as np  # type: ignore
+import pandas as pd  # type: ignore
 from dateutil.relativedelta import relativedelta  # type: ignore
-from app.services.unitofwork import AbstractUnitOfWork
-from app.utils.log import Log
-from app.utils.timing import time_and_log
-from app.utils.regex import match_variables_with_wildcards
-from app.utils.operations import calc_statistics
-from app.model.settings import Settings
-from app.services.deck.deck import Deck
-from app.model.scenario.variable import Variable
-from app.model.scenario.spatialresolution import SpatialResolution
-from app.model.scenario.step import Step
-from app.model.scenario.scenariosynthesis import (
-    ScenarioSynthesis,
-    SUPPORTED_SYNTHESIS,
-    UNITS,
-)
+
 from app.internal.constants import (
-    STAGE_COL,
-    MONTH_COL,
-    VALUE_COL,
-    DATE_COL,
-    START_DATE_COL,
-    END_DATE_COL,
     CONFIG_COL,
+    DATE_COL,
+    EER_CODE_COL,
+    END_DATE_COL,
+    HYDRO_CODE_COL,
+    ITERATION_COL,
+    LOWER_BOUND_COL,
     LTA_COL,
     LTA_VALUE_COL,
-    ITERATION_COL,
-    SPAN_COL,
-    SCENARIO_COL,
-    HYDRO_CODE_COL,
-    EER_CODE_COL,
-    SUBMARKET_CODE_COL,
+    MONTH_COL,
     NULL_INFLOW_STATION,
-    STRING_DF_TYPE,
-    VARIABLE_COL,
+    SCENARIO_COL,
+    SCENARIO_SYNTHESIS_METADATA_OUTPUT,
     SCENARIO_SYNTHESIS_STATS_ROOT,
     SCENARIO_SYNTHESIS_SUBDIR,
+    SPAN_COL,
+    STAGE_COL,
+    START_DATE_COL,
+    STRING_DF_TYPE,
+    SUBMARKET_CODE_COL,
+    UPPER_BOUND_COL,
+    VALUE_COL,
+    VARIABLE_COL,
 )
+from app.model.scenario.scenariosynthesis import (
+    SUPPORTED_SYNTHESIS,
+    UNITS,
+    ScenarioSynthesis,
+)
+from app.model.scenario.spatialresolution import SpatialResolution
+from app.model.scenario.step import Step
+from app.model.scenario.variable import Variable
+from app.model.settings import Settings
+from app.services.deck.deck import Deck
+from app.services.unitofwork import AbstractUnitOfWork
+from app.utils.log import Log
+from app.utils.operations import calc_statistics
+from app.utils.regex import match_variables_with_wildcards
+from app.utils.timing import time_and_log
 
 
 class ScenarioSynthetizer:
@@ -185,14 +190,12 @@ class ScenarioSynthetizer:
             ].tolist()
             upstream_hydro_codes = [u for u in upstream_hydro_codes if u != 0]
             upstream_inflow_stations = list(
-                set(
-                    [
-                        hydros.loc[
-                            hydros["codigo_usina"] == uhe_montante, "posto"
-                        ].iloc[0]
-                        for uhe_montante in upstream_hydro_codes
-                    ]
-                )
+                set([
+                    hydros.loc[
+                        hydros["codigo_usina"] == uhe_montante, "posto"
+                    ].iloc[0]
+                    for uhe_montante in upstream_hydro_codes
+                ])
             )
             for upstream_station in upstream_inflow_stations:
                 natural_inflow = (
@@ -333,9 +336,10 @@ class ScenarioSynthetizer:
                 )
                 lta_hydro_dfs.append(lta_hydro_df)
 
-            return pd.concat(lta_hydro_dfs, ignore_index=True).sort_values(
-                [STAGE_COL, HYDRO_CODE_COL]
-            )
+            return pd.concat(lta_hydro_dfs, ignore_index=True).sort_values([
+                STAGE_COL,
+                HYDRO_CODE_COL,
+            ])
 
     @classmethod
     def _resolve_starting_stage(
@@ -439,9 +443,10 @@ class ScenarioSynthetizer:
                 .to_numpy()
                 .flatten()
             )
-            return np.concatenate(
-                [additional_tendency_configurations, configurations]
-            )
+            return np.concatenate([
+                additional_tendency_configurations,
+                configurations,
+            ])
 
         months_column = cls._generate_model_dataframe_month_column(uow)
         stages_column = cls._generate_model_dataframe_stage_column(
@@ -1473,7 +1478,15 @@ class ScenarioSynthetizer:
                 UNITS[s].value if s in UNITS else "",
             ]
         with uow:
-            uow.export.synthetize_df(metadata_df, "METADADOS_CENARIOS")
+            existing_df = uow.export.read_df(SCENARIO_SYNTHESIS_METADATA_OUTPUT)
+            if existing_df is not None:
+                metadata_df = pd.concat(
+                    [existing_df, metadata_df], ignore_index=True
+                )
+                metadata_df = metadata_df.drop_duplicates()
+            uow.export.synthetize_df(
+                metadata_df, SCENARIO_SYNTHESIS_METADATA_OUTPUT
+            )
 
     @classmethod
     def _add_synthesis_stats(cls, s: ScenarioSynthesis, df: pd.DataFrame):
@@ -1547,6 +1560,17 @@ class ScenarioSynthetizer:
                 filename = (
                     f"{SCENARIO_SYNTHESIS_STATS_ROOT}_{res.value}_{step.value}"
                 )
+                existing_df = uow.export.read_df(filename)
+                if existing_df is not None:
+                    df = pd.concat([existing_df, df], ignore_index=True)
+                    df = df.drop_duplicates(
+                        subset=[
+                            c
+                            for c in df.columns
+                            if c
+                            not in [VALUE_COL, UPPER_BOUND_COL, LOWER_BOUND_COL]
+                        ]
+                    )
                 uow.export.synthetize_df(df, filename)
 
     @classmethod
@@ -1606,6 +1630,12 @@ class ScenarioSynthetizer:
                 return None
 
     @classmethod
+    def enforce_version(cls, uow: AbstractUnitOfWork):
+        version = Deck.pmo(uow).versao_modelo
+        if version is not None:
+            uow.version = version
+
+    @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
         """
         Realiza a síntese dos cenários para as variáveis fornecidas,
@@ -1618,6 +1648,7 @@ class ScenarioSynthetizer:
         with time_and_log(
             message_root="Tempo para síntese dos cenários", logger=cls.logger
         ):
+            cls.enforce_version(uow)
             valid_synthesis = cls._preprocess_synthesis_variables(
                 variables, uow
             )
