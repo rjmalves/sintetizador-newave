@@ -303,7 +303,7 @@ class AbstractFilesRepository(ABC):
 
 
 class RawFilesRepository(AbstractFilesRepository):
-    def __init__(self, tmppath: str, version: str):
+    def __init__(self, tmppath: str, version: str = "latest"):
         self.__tmppath = tmppath
         self.__version = version
         self.__caso = Caso.read(join(str(self.__tmppath), "caso.dat"))
