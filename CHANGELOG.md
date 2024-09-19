@@ -2,7 +2,6 @@
 
 - Correções inseridas nas releases `v2.1.x` em compatibilidade com as releases `v2.0.x`
 - Correção na montagem das séries de cada ano simulado quando feita simulação final histórica [#47](https://github.com/rjmalves/sintetizador-newave/issues/47)
-- Suporte ao versionamento de arquivos do NWLISTOP automaticamente quando ocorre mudança de formato
 - Correção na síntese da operação em casos com simulação final agregada
 - Concatenação dos arquivos de `ESTATISTICAS_*` e `METADADOS_*` com informações previamente existentes
 
