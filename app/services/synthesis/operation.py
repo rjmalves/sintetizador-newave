@@ -2236,6 +2236,14 @@ class OperationSynthetizer:
                 OperationVariableBounds.is_bounded(s),
             ]
         with uow:
+            existing_df = uow.export.read_df(
+                OPERATION_SYNTHESIS_METADATA_OUTPUT
+            )
+            if existing_df is not None:
+                metadata_df = pd.concat(
+                    [existing_df, metadata_df], ignore_index=True
+                )
+                metadata_df = metadata_df.drop_duplicates()
             uow.export.synthetize_df(
                 metadata_df, OPERATION_SYNTHESIS_METADATA_OUTPUT
             )
@@ -2315,9 +2323,19 @@ class OperationSynthetizer:
                 df = df.sort_values(
                     res.sorting_synthesis_df_columns
                 ).reset_index(drop=True)
-                uow.export.synthetize_df(
-                    df, f"{OPERATION_SYNTHESIS_STATS_ROOT}_{res.value}"
-                )
+                stats_filename = f"{OPERATION_SYNTHESIS_STATS_ROOT}_{res.value}"
+                existing_df = uow.export.read_df(stats_filename)
+                if existing_df is not None:
+                    df = pd.concat([existing_df, df], ignore_index=True)
+                    df = df.drop_duplicates(
+                        subset=[
+                            c
+                            for c in df.columns
+                            if c
+                            not in [VALUE_COL, UPPER_BOUND_COL, LOWER_BOUND_COL]
+                        ]
+                    )
+                uow.export.synthetize_df(df, stats_filename)
 
     @classmethod
     def _preprocess_synthesis_variables(

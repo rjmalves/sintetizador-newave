@@ -1,3 +1,4 @@
+import os
 import pathlib
 from abc import ABC, abstractmethod
 from typing import Dict, Type
@@ -14,6 +15,10 @@ class AbstractExportRepository(ABC):
         super().__init__()
 
     @abstractmethod
+    def read_df(self, filename: str) -> pd.DataFrame | None:
+        pass
+
+    @abstractmethod
     def synthetize_df(self, df: pd.DataFrame, filename: str) -> bool:
         pass
 
@@ -25,6 +30,13 @@ class ParquetExportRepository(AbstractExportRepository):
     @property
     def path(self) -> pathlib.Path:
         return pathlib.Path(self.__path)
+
+    def read_df(self, filename: str) -> pd.DataFrame | None:
+        arq = self.path.joinpath(filename + ".parquet")
+        if os.path.isfile(arq):
+            return pd.read_parquet(arq)
+        else:
+            return None
 
     def synthetize_df(self, df: pd.DataFrame, filename: str) -> bool:
         pq.write_table(
@@ -46,6 +58,13 @@ class CSVExportRepository(AbstractExportRepository):
     def path(self) -> pathlib.Path:
         return pathlib.Path(self.__path)
 
+    def read_df(self, filename: str) -> pd.DataFrame | None:
+        arq = self.path.joinpath(filename + ".csv")
+        if os.path.isfile(arq):
+            return pd.read_csv(arq)
+        else:
+            return None
+
     def synthetize_df(self, df: pd.DataFrame, filename: str) -> bool:
         enforce_utc(df).to_csv(
             self.path.joinpath(filename + ".csv"), index=False
@@ -60,6 +79,9 @@ class TestExportRepository(AbstractExportRepository):
     @property
     def path(self) -> pathlib.Path:
         return pathlib.Path(self.__path)
+
+    def read_df(self, filename: str) -> pd.DataFrame | None:
+        return None
 
     def synthetize_df(self, df: pd.DataFrame, filename: str) -> bool:
         return df

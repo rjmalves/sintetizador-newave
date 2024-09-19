@@ -168,6 +168,12 @@ class SystemSynthetizer:
                 s.variable.long_name,
             ]
         with uow:
+            existing_df = uow.export.read_df(SYSTEM_SYNTHESIS_METADATA_OUTPUT)
+            if existing_df is not None:
+                metadata_df = pd.concat(
+                    [existing_df, metadata_df], ignore_index=True
+                )
+                metadata_df = metadata_df.drop_duplicates()
             uow.export.synthetize_df(
                 metadata_df, SYSTEM_SYNTHESIS_METADATA_OUTPUT
             )

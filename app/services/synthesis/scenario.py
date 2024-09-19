@@ -16,11 +16,13 @@ from app.internal.constants import (
     END_DATE_COL,
     HYDRO_CODE_COL,
     ITERATION_COL,
+    LOWER_BOUND_COL,
     LTA_COL,
     LTA_VALUE_COL,
     MONTH_COL,
     NULL_INFLOW_STATION,
     SCENARIO_COL,
+    SCENARIO_SYNTHESIS_METADATA_OUTPUT,
     SCENARIO_SYNTHESIS_STATS_ROOT,
     SCENARIO_SYNTHESIS_SUBDIR,
     SPAN_COL,
@@ -28,6 +30,7 @@ from app.internal.constants import (
     START_DATE_COL,
     STRING_DF_TYPE,
     SUBMARKET_CODE_COL,
+    UPPER_BOUND_COL,
     VALUE_COL,
     VARIABLE_COL,
 )
@@ -1475,7 +1478,15 @@ class ScenarioSynthetizer:
                 UNITS[s].value if s in UNITS else "",
             ]
         with uow:
-            uow.export.synthetize_df(metadata_df, "METADADOS_CENARIOS")
+            existing_df = uow.export.read_df(SCENARIO_SYNTHESIS_METADATA_OUTPUT)
+            if existing_df is not None:
+                metadata_df = pd.concat(
+                    [existing_df, metadata_df], ignore_index=True
+                )
+                metadata_df = metadata_df.drop_duplicates()
+            uow.export.synthetize_df(
+                metadata_df, SCENARIO_SYNTHESIS_METADATA_OUTPUT
+            )
 
     @classmethod
     def _add_synthesis_stats(cls, s: ScenarioSynthesis, df: pd.DataFrame):
@@ -1549,6 +1560,17 @@ class ScenarioSynthetizer:
                 filename = (
                     f"{SCENARIO_SYNTHESIS_STATS_ROOT}_{res.value}_{step.value}"
                 )
+                existing_df = uow.export.read_df(filename)
+                if existing_df is not None:
+                    df = pd.concat([existing_df, df], ignore_index=True)
+                    df = df.drop_duplicates(
+                        subset=[
+                            c
+                            for c in df.columns
+                            if c
+                            not in [VALUE_COL, UPPER_BOUND_COL, LOWER_BOUND_COL]
+                        ]
+                    )
                 uow.export.synthetize_df(df, filename)
 
     @classmethod
