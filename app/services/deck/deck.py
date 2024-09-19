@@ -943,29 +943,37 @@ class Deck:
             "num_hydro_simulation_stages_policy"
         )
         if num_hydro_simulation_stages_policy is None:
-            ano_inicio = cls.study_period_starting_year(uow)
-            mes_inicio = cls.study_period_starting_month(uow)
+            starting_year = cls.study_period_starting_year(uow)
+            starting_moonth = cls.study_period_starting_month(uow)
             eers = cls.eers(uow)
-            mes_fim_hib = eers["mes_fim_individualizado"].iloc[0]
-            ano_fim_hib = eers["ano_fim_individualizado"].iloc[0]
+            hydro_sim_ending_month = eers["mes_fim_individualizado"].iloc[0]
+            hydro_sim_ending_year = eers["ano_fim_individualizado"].iloc[0]
 
-            if mes_fim_hib is not None and ano_fim_hib is not None:
-                data_inicio_estudo = datetime(
-                    year=ano_inicio,
-                    month=mes_inicio,
-                    day=1,
-                )
-                data_fim_individualizado = datetime(
-                    year=int(ano_fim_hib),
-                    month=int(mes_fim_hib),
-                    day=1,
-                )
-                tempo_individualizado = (
-                    data_fim_individualizado - data_inicio_estudo
-                )
-                num_hydro_simulation_stages_policy = int(
-                    round(tempo_individualizado / timedelta(days=30))
-                )
+            if ~np.isnan(hydro_sim_ending_month) and ~np.isnan(
+                hydro_sim_ending_year
+            ):
+                if (
+                    hydro_sim_ending_month is not None
+                    and hydro_sim_ending_year is not None
+                ):
+                    study_starting_date = datetime(
+                        year=starting_year,
+                        month=starting_moonth,
+                        day=1,
+                    )
+                    hydro_sim_ending_date = datetime(
+                        year=int(hydro_sim_ending_year),
+                        month=int(hydro_sim_ending_month),
+                        day=1,
+                    )
+                    tempo_individualizado = (
+                        hydro_sim_ending_date - study_starting_date
+                    )
+                    num_hydro_simulation_stages_policy = int(
+                        round(tempo_individualizado / timedelta(days=30))
+                    )
+                else:
+                    num_hydro_simulation_stages_policy = 0
             else:
                 num_hydro_simulation_stages_policy = 0
             cls.DECK_DATA_CACHING["num_hydro_simulation_stages_policy"] = (
