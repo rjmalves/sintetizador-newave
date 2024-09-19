@@ -1,16 +1,15 @@
-click
-pandas
-pyarrow
-inewave>=1.5.0
-numba
+# dependencies
+-r requirements.txt
+# test dependencies
+pytest
+pytest-cov
+# code quality dependencies
 ruff
 mypy
-pytest-cov
-pytest
-sphinx
-sphinx-gallery
+# docs dependencies
 sphinx-rtd-theme
-plotly
+sphinx-gallery
+sphinx
 numpydoc
-nb2plots
-black
+plotly
+matplotlib
