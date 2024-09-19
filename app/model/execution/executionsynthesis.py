@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import List, Optional
+
 from app.model.execution.variable import Variable
 
 

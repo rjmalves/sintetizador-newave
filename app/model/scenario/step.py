@@ -1,4 +1,5 @@
 from enum import Enum
+
 from app.internal.constants import (
     ITERATION_COL,
     SPAN_COL,

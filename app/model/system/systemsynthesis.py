@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Optional
+
 from app.model.system.variable import Variable
 
 

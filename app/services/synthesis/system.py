@@ -1,30 +1,31 @@
-from typing import Callable, Dict, List, TypeVar, Optional
-import pandas as pd  # type: ignore
 import logging
-from dateutil.relativedelta import relativedelta  # type: ignore
-from app.utils.timing import time_and_log
-from logging import INFO, ERROR
+from logging import ERROR, INFO
 from traceback import print_exc
-from app.utils.regex import match_variables_with_wildcards
-from app.services.deck.deck import Deck
-from app.services.unitofwork import AbstractUnitOfWork
-from app.model.system.variable import Variable
-from app.model.system.systemsynthesis import (
-    SystemSynthesis,
-    SUPPORTED_SYNTHESIS,
-)
+from typing import Callable, Dict, List, Optional, TypeVar
+
+import pandas as pd  # type: ignore
+from dateutil.relativedelta import relativedelta  # type: ignore
 
 from app.internal.constants import (
-    SYSTEM_SYNTHESIS_SUBDIR,
-    SYSTEM_SYNTHESIS_METADATA_OUTPUT,
-    STAGE_DURATION_HOURS,
-    STAGE_COL,
-    START_DATE_COL,
     END_DATE_COL,
-    VALUE_COL,
+    STAGE_COL,
+    STAGE_DURATION_HOURS,
+    START_DATE_COL,
     SUBMARKET_CODE_COL,
     SUBMARKET_NAME_COL,
+    SYSTEM_SYNTHESIS_METADATA_OUTPUT,
+    SYSTEM_SYNTHESIS_SUBDIR,
+    VALUE_COL,
 )
+from app.model.system.systemsynthesis import (
+    SUPPORTED_SYNTHESIS,
+    SystemSynthesis,
+)
+from app.model.system.variable import Variable
+from app.services.deck.deck import Deck
+from app.services.unitofwork import AbstractUnitOfWork
+from app.utils.regex import match_variables_with_wildcards
+from app.utils.timing import time_and_log
 
 # TODO - rever nomes das colunas
 

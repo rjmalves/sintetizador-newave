@@ -1,16 +1,19 @@
 from dataclasses import dataclass
 from typing import Optional
-from app.model.scenario.variable import Variable
+
+from app.internal.constants import (
+    END_DATE_COL,
+    LTA_VALUE_COL,
+    START_DATE_COL,
+    VALUE_COL,
+)
+from app.internal.constants import (
+    SCENARIO_SYNTHESIS_COMMON_COLUMNS as COLUMNS,
+)
 from app.model.scenario.spatialresolution import SpatialResolution
 from app.model.scenario.step import Step
 from app.model.scenario.unit import Unit
-from app.internal.constants import (
-    SCENARIO_SYNTHESIS_COMMON_COLUMNS as COLUMNS,
-    VALUE_COL,
-    LTA_VALUE_COL,
-    START_DATE_COL,
-    END_DATE_COL,
-)
+from app.model.scenario.variable import Variable
 
 
 @dataclass
@@ -20,13 +23,11 @@ class ScenarioSynthesis:
     step: Step
 
     def __repr__(self) -> str:
-        return "_".join(
-            [
-                self.variable.value,
-                self.spatial_resolution.value,
-                self.step.value,
-            ]
-        )
+        return "_".join([
+            self.variable.value,
+            self.spatial_resolution.value,
+            self.step.value,
+        ])
 
     def __hash__(self) -> int:
         return hash(
@@ -39,13 +40,11 @@ class ScenarioSynthesis:
         if not isinstance(o, ScenarioSynthesis):
             return False
         else:
-            return all(
-                [
-                    self.variable == o.variable,
-                    self.spatial_resolution == o.spatial_resolution,
-                    self.step == o.step,
-                ]
-            )
+            return all([
+                self.variable == o.variable,
+                self.spatial_resolution == o.spatial_resolution,
+                self.step == o.step,
+            ])
 
     @classmethod
     def factory(cls, synthesis: str) -> Optional["ScenarioSynthesis"]:
@@ -61,7 +60,10 @@ class ScenarioSynthesis:
 
     @property
     def entity_df_columns(self) -> list[str]:
-        return self.spatial_resolution.entity_df_columns + self.step.entity_df_columns
+        return (
+            self.spatial_resolution.entity_df_columns
+            + self.step.entity_df_columns
+        )
 
     @property
     def all_synthesis_df_columns(self) -> list[str]:
@@ -84,7 +86,11 @@ class ScenarioSynthesis:
     @property
     def non_entity_sorting_synthesis_df_columns(self) -> list[str]:
         sorting_columns = self.sorting_synthesis_df_columns
-        return [c for c in sorting_columns if c not in self.entity_synthesis_df_columns]
+        return [
+            c
+            for c in sorting_columns
+            if c not in self.entity_synthesis_df_columns
+        ]
 
 
 SUPPORTED_SYNTHESIS: list[str] = [

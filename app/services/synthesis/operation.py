@@ -1,59 +1,61 @@
-from typing import Callable, Dict, List, Tuple, Optional, TypeVar, Any
-import pandas as pd  # type: ignore
-import numpy as np
 import logging
 from datetime import datetime
-from traceback import print_exc
-from logging import INFO, WARNING, ERROR, DEBUG
+from logging import DEBUG, ERROR, INFO, WARNING
 from multiprocessing import Pool
-from app.utils.graph import Graph
-from app.utils.log import Log
-from app.utils.timing import time_and_log
-from app.utils.regex import match_variables_with_wildcards
-from app.utils.operations import calc_statistics
+from traceback import print_exc
+from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar
+
+import numpy as np
+import pandas as pd  # type: ignore
+
+from app.internal.constants import (
+    BLOCK_COL,
+    BLOCK_DURATION_COL,
+    EER_CODE_COL,
+    EER_NAME_COL,
+    END_DATE_COL,
+    EXCHANGE_SOURCE_CODE_COL,
+    EXCHANGE_TARGET_CODE_COL,
+    GROUPING_TMP_COL,
+    HM3_M3S_MONTHLY_FACTOR,
+    HYDRO_CODE_COL,
+    HYDRO_NAME_COL,
+    LOWER_BOUND_COL,
+    OPERATION_SYNTHESIS_COMMON_COLUMNS,
+    OPERATION_SYNTHESIS_METADATA_OUTPUT,
+    OPERATION_SYNTHESIS_STATS_ROOT,
+    OPERATION_SYNTHESIS_SUBDIR,
+    PRODUCTIVITY_TMP_COL,
+    SCENARIO_COL,
+    STAGE_COL,
+    STAGE_DURATION_HOURS,
+    START_DATE_COL,
+    STATS_OR_SCENARIO_COL,
+    STRING_DF_TYPE,
+    SUBMARKET_CODE_COL,
+    SUBMARKET_NAME_COL,
+    THERMAL_CODE_COL,
+    UPPER_BOUND_COL,
+    VALUE_COL,
+    VARIABLE_COL,
+)
+from app.model.operation.operationsynthesis import (
+    SUPPORTED_SYNTHESIS,
+    SYNTHESIS_DEPENDENCIES,
+    UNITS,
+    OperationSynthesis,
+)
+from app.model.operation.spatialresolution import SpatialResolution
+from app.model.operation.variable import Variable
 from app.model.settings import Settings
 from app.services.deck.bounds import OperationVariableBounds
 from app.services.deck.deck import Deck
 from app.services.unitofwork import AbstractUnitOfWork
-from app.model.operation.variable import Variable
-from app.model.operation.spatialresolution import SpatialResolution
-from app.model.operation.operationsynthesis import (
-    OperationSynthesis,
-    SUPPORTED_SYNTHESIS,
-    SYNTHESIS_DEPENDENCIES,
-    UNITS,
-)
-from app.internal.constants import (
-    HM3_M3S_MONTHLY_FACTOR,
-    STAGE_DURATION_HOURS,
-    STAGE_COL,
-    START_DATE_COL,
-    END_DATE_COL,
-    SCENARIO_COL,
-    BLOCK_COL,
-    BLOCK_DURATION_COL,
-    VALUE_COL,
-    OPERATION_SYNTHESIS_COMMON_COLUMNS,
-    EER_CODE_COL,
-    EER_NAME_COL,
-    SUBMARKET_CODE_COL,
-    SUBMARKET_NAME_COL,
-    HYDRO_CODE_COL,
-    HYDRO_NAME_COL,
-    THERMAL_CODE_COL,
-    EXCHANGE_SOURCE_CODE_COL,
-    EXCHANGE_TARGET_CODE_COL,
-    VARIABLE_COL,
-    GROUPING_TMP_COL,
-    PRODUCTIVITY_TMP_COL,
-    LOWER_BOUND_COL,
-    UPPER_BOUND_COL,
-    STRING_DF_TYPE,
-    OPERATION_SYNTHESIS_METADATA_OUTPUT,
-    OPERATION_SYNTHESIS_STATS_ROOT,
-    OPERATION_SYNTHESIS_SUBDIR,
-    STATS_OR_SCENARIO_COL,
-)
+from app.utils.graph import Graph
+from app.utils.log import Log
+from app.utils.operations import calc_statistics
+from app.utils.regex import match_variables_with_wildcards
+from app.utils.timing import time_and_log
 
 
 class OperationSynthetizer:
@@ -165,14 +167,11 @@ class OperationSynthetizer:
                 and not has_hydro
             ):
                 continue
-            if all(
-                [
-                    v.variable == Variable.VALOR_AGUA,
-                    v.spatial_resolution
-                    == SpatialResolution.USINA_HIDROELETRICA,
-                    not has_hydro,
-                ]
-            ):
+            if all([
+                v.variable == Variable.VALOR_AGUA,
+                v.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+                not has_hydro,
+            ]):
                 continue
             valid_variables.append(v)
         cls._log(f"Sinteses: {valid_variables}")
@@ -1360,12 +1359,16 @@ class OperationSynthetizer:
                 & net_drop_df[BLOCK_COL].isin(stored_volume_hydro_blocks)
             ].copy()
 
-            net_drop_df = net_drop_df.sort_values(
-                [HYDRO_CODE_COL, STAGE_COL, BLOCK_COL]
-            )
-            stored_volume_df = stored_volume_df.sort_values(
-                [HYDRO_CODE_COL, STAGE_COL, BLOCK_COL]
-            )
+            net_drop_df = net_drop_df.sort_values([
+                HYDRO_CODE_COL,
+                STAGE_COL,
+                BLOCK_COL,
+            ])
+            stored_volume_df = stored_volume_df.sort_values([
+                HYDRO_CODE_COL,
+                STAGE_COL,
+                BLOCK_COL,
+            ])
 
             stored_volume_df[VALUE_COL] = (
                 stored_volume_df[VALUE_COL] - stored_volume_df[LOWER_BOUND_COL]
@@ -2001,141 +2004,119 @@ class OperationSynthetizer:
         f = None
         if s.variable == Variable.ENERGIA_VERTIDA:
             f = cls.__stub_EVER
-        elif all(
-            [
-                s.variable
-                in [
-                    Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
-                    Variable.ENERGIA_ARMAZENADA_PERCENTUAL_INICIAL,
-                ],
-                s.spatial_resolution
-                in [
-                    SpatialResolution.RESERVATORIO_EQUIVALENTE,
-                    SpatialResolution.SUBMERCADO,
-                    SpatialResolution.SISTEMA_INTERLIGADO,
-                ],
-            ]
-        ):
+        elif all([
+            s.variable
+            in [
+                Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
+                Variable.ENERGIA_ARMAZENADA_PERCENTUAL_INICIAL,
+            ],
+            s.spatial_resolution
+            in [
+                SpatialResolution.RESERVATORIO_EQUIVALENTE,
+                SpatialResolution.SUBMERCADO,
+                SpatialResolution.SISTEMA_INTERLIGADO,
+            ],
+        ]):
             f = cls._stub_resolve_initial_stored_energy
-        elif all(
-            [
-                s.variable
-                in [
-                    Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
-                    Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
-                ],
-                s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
-            ]
-        ):
+        elif all([
+            s.variable
+            in [
+                Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
+                Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
+            ],
+            s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+        ]):
             f = cls.__stub_resolve_initial_stored_volumes
-        elif all(
-            [
-                s.variable
-                in [
-                    Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
-                    Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
-                    Variable.VOLUME_AFLUENTE,
-                    Variable.VOLUME_INCREMENTAL,
-                    Variable.VOLUME_DEFLUENTE,
-                    Variable.VOLUME_VERTIDO,
-                    Variable.VOLUME_TURBINADO,
-                    Variable.VOLUME_RETIRADO,
-                    Variable.VOLUME_DESVIADO,
-                    Variable.VOLUME_EVAPORADO,
-                    Variable.VIOLACAO_EVAPORACAO,
-                    Variable.VIOLACAO_FPHA,
-                    Variable.VIOLACAO_POSITIVA_EVAPORACAO,
-                    Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
-                ],
-                s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
-            ]
-        ):
+        elif all([
+            s.variable
+            in [
+                Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
+                Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+                Variable.VOLUME_AFLUENTE,
+                Variable.VOLUME_INCREMENTAL,
+                Variable.VOLUME_DEFLUENTE,
+                Variable.VOLUME_VERTIDO,
+                Variable.VOLUME_TURBINADO,
+                Variable.VOLUME_RETIRADO,
+                Variable.VOLUME_DESVIADO,
+                Variable.VOLUME_EVAPORADO,
+                Variable.VIOLACAO_EVAPORACAO,
+                Variable.VIOLACAO_FPHA,
+                Variable.VIOLACAO_POSITIVA_EVAPORACAO,
+                Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
+            ],
+            s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
+        ]):
             f = cls._hydro_resolution_variable_map
-        elif all(
-            [
-                s.variable
-                in [
-                    Variable.VAZAO_AFLUENTE,
-                    Variable.VAZAO_INCREMENTAL,
-                    Variable.VAZAO_DEFLUENTE,
-                    Variable.VAZAO_VERTIDA,
-                    Variable.VAZAO_TURBINADA,
-                    Variable.VAZAO_RETIRADA,
-                    Variable.VAZAO_DESVIADA,
-                    Variable.VAZAO_EVAPORADA,
-                ],
-                s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
-            ]
-        ):
+        elif all([
+            s.variable
+            in [
+                Variable.VAZAO_AFLUENTE,
+                Variable.VAZAO_INCREMENTAL,
+                Variable.VAZAO_DEFLUENTE,
+                Variable.VAZAO_VERTIDA,
+                Variable.VAZAO_TURBINADA,
+                Variable.VAZAO_RETIRADA,
+                Variable.VAZAO_DESVIADA,
+                Variable.VAZAO_EVAPORADA,
+            ],
+            s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
+        ]):
             f = cls._flow_volume_hydro_variable_map
-        elif all(
-            [
-                s.variable
-                in [
-                    Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
-                    Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
-                ],
-                s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
-            ]
-        ):
+        elif all([
+            s.variable
+            in [
+                Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
+                Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
+            ],
+            s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
+        ]):
             f = cls._absolute_percent_volume_variable_map
         elif s.variable in [Variable.ENERGIA_DEFLUENCIA_MINIMA]:
             f = cls.__stub_EVMIN
-        elif all(
-            [
-                s.variable
-                in [
-                    Variable.VAZAO_TURBINADA,
-                    Variable.VAZAO_VERTIDA,
-                    Variable.VAZAO_RETIRADA,
-                    Variable.VAZAO_DESVIADA,
-                ],
-                s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
-            ]
-        ):
+        elif all([
+            s.variable
+            in [
+                Variable.VAZAO_TURBINADA,
+                Variable.VAZAO_VERTIDA,
+                Variable.VAZAO_RETIRADA,
+                Variable.VAZAO_DESVIADA,
+            ],
+            s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+        ]):
             f = cls._convert_volume_to_flow
-        elif all(
-            [
-                s.variable
-                in [
-                    Variable.VOLUME_AFLUENTE,
-                    Variable.VOLUME_INCREMENTAL,
-                ],
-                s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
-            ]
-        ):
+        elif all([
+            s.variable
+            in [
+                Variable.VOLUME_AFLUENTE,
+                Variable.VOLUME_INCREMENTAL,
+            ],
+            s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+        ]):
             f = cls._convert_flow_to_volume
-        elif all(
-            [
-                s.variable == Variable.VAZAO_DEFLUENTE,
-                s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
-            ]
-        ):
+        elif all([
+            s.variable == Variable.VAZAO_DEFLUENTE,
+            s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+        ]):
             f = cls.__stub_QDEF
-        elif all(
-            [
-                s.variable == Variable.VOLUME_DEFLUENTE,
-                s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
-            ]
-        ):
+        elif all([
+            s.variable == Variable.VOLUME_DEFLUENTE,
+            s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+        ]):
             f = cls.__stub_VDEF
-        elif all(
-            [
-                s.variable == Variable.VIOLACAO_EVAPORACAO,
-                s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
-            ]
-        ):
+        elif all([
+            s.variable == Variable.VIOLACAO_EVAPORACAO,
+            s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+        ]):
             f = cls.__stub_VEVAP
-        elif all(
-            [
-                s.variable
-                in [
-                    Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
-                    Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
-                ],
-                s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
-            ]
-        ):
+        elif all([
+            s.variable
+            in [
+                Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
+                Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
+            ],
+            s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+        ]):
             f = cls.__stub_EARM_UHE
         elif s.variable in [Variable.MERCADO, Variable.MERCADO_LIQUIDO]:
             f = cls.__stub_MER_MERL

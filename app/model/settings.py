@@ -1,5 +1,6 @@
-from app.utils.singleton import Singleton
 from os import getenv
+
+from app.utils.singleton import Singleton
 
 
 class Settings(metaclass=Singleton):

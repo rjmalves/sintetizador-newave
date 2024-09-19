@@ -1,20 +1,23 @@
 from enum import Enum
 from typing import Optional
+
 from app.internal.constants import (
-    HYDRO_CODE_COL,
-    THERMAL_CODE_COL,
-    EER_CODE_COL,
+    BLOCK_DURATION_COL,
     EEP_COL,
-    SUBMARKET_CODE_COL,
+    EER_CODE_COL,
+    END_DATE_COL,
     EXCHANGE_SOURCE_CODE_COL,
     EXCHANGE_TARGET_CODE_COL,
-    START_DATE_COL,
-    END_DATE_COL,
-    BLOCK_DURATION_COL,
-    VALUE_COL,
-    OPERATION_SYNTHESIS_COMMON_COLUMNS as COLUMNS,
+    HYDRO_CODE_COL,
     LOWER_BOUND_COL,
+    START_DATE_COL,
+    SUBMARKET_CODE_COL,
+    THERMAL_CODE_COL,
     UPPER_BOUND_COL,
+    VALUE_COL,
+)
+from app.internal.constants import (
+    OPERATION_SYNTHESIS_COMMON_COLUMNS as COLUMNS,
 )
 
 
@@ -96,12 +99,18 @@ class SpatialResolution(Enum):
 
     @property
     def all_synthesis_df_columns(self) -> list[str]:
-        return self.entity_df_columns + COLUMNS + [LOWER_BOUND_COL, UPPER_BOUND_COL]
+        return (
+            self.entity_df_columns
+            + COLUMNS
+            + [LOWER_BOUND_COL, UPPER_BOUND_COL]
+        )
 
     @property
     def entity_synthesis_df_columns(self) -> list[str]:
         all_columns = self.all_synthesis_df_columns
-        return [c for c in all_columns if c not in [BLOCK_DURATION_COL, VALUE_COL]]
+        return [
+            c for c in all_columns if c not in [BLOCK_DURATION_COL, VALUE_COL]
+        ]
 
     @property
     def sorting_synthesis_df_columns(self) -> list[str]:
@@ -122,4 +131,8 @@ class SpatialResolution(Enum):
     @property
     def non_entity_sorting_synthesis_df_columns(self) -> list[str]:
         sorting_columns = self.sorting_synthesis_df_columns
-        return [c for c in sorting_columns if c not in self.entity_synthesis_df_columns]
+        return [
+            c
+            for c in sorting_columns
+            if c not in self.entity_synthesis_df_columns
+        ]

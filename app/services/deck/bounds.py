@@ -1,37 +1,39 @@
-import pandas as pd  # type: ignore
+from typing import Callable, Dict, List, Optional, Tuple, Type, TypeVar
+
 import numpy as np
+import pandas as pd  # type: ignore
 from dateutil.relativedelta import relativedelta
-from typing import Dict, List, Tuple, Callable, Type, TypeVar, Optional
-from app.model.operation.variable import Variable
-from app.model.operation.unit import Unit
-from app.model.operation.spatialresolution import SpatialResolution
-from app.model.operation.operationsynthesis import OperationSynthesis
-from app.services.unitofwork import AbstractUnitOfWork
-from app.services.deck.deck import Deck
+from inewave.newave import (
+    Patamar,
+    Sistema,
+)
+
 from app.internal.constants import (
-    START_DATE_COL,
-    STAGE_COL,
-    HYDRO_CODE_COL,
-    EER_CODE_COL,
-    THERMAL_CODE_COL,
-    SUBMARKET_CODE_COL,
-    EXCHANGE_SOURCE_CODE_COL,
-    EXCHANGE_TARGET_CODE_COL,
     BLOCK_COL,
     BLOCK_DURATION_COL,
-    SCENARIO_COL,
-    UPPER_BOUND_COL,
-    LOWER_BOUND_COL,
-    VALUE_COL,
-    STAGE_DURATION_HOURS,
+    EER_CODE_COL,
+    EXCHANGE_SOURCE_CODE_COL,
+    EXCHANGE_TARGET_CODE_COL,
     HM3_M3S_MONTHLY_FACTOR,
+    HYDRO_CODE_COL,
     IDENTIFICATION_COLUMNS,
+    LOWER_BOUND_COL,
+    SCENARIO_COL,
+    STAGE_COL,
+    STAGE_DURATION_HOURS,
+    START_DATE_COL,
+    SUBMARKET_CODE_COL,
+    THERMAL_CODE_COL,
+    UPPER_BOUND_COL,
+    VALUE_COL,
 )
+from app.model.operation.operationsynthesis import OperationSynthesis
+from app.model.operation.spatialresolution import SpatialResolution
+from app.model.operation.unit import Unit
+from app.model.operation.variable import Variable
+from app.services.deck.deck import Deck
+from app.services.unitofwork import AbstractUnitOfWork
 from app.utils.operations import fast_group_df
-from inewave.newave import (
-    Sistema,
-    Patamar,
-)
 
 
 class OperationVariableBounds:
@@ -1677,13 +1679,11 @@ class OperationVariableBounds:
                 exchange_block_bounds_df.loc[
                     exchange_block_bounds_df[START_DATE_COL].isin(start_dates)
                 ]
-                .sort_values(
-                    [
-                        EXCHANGE_SOURCE_CODE_COL,
-                        EXCHANGE_TARGET_CODE_COL,
-                        START_DATE_COL,
-                    ]
-                )
+                .sort_values([
+                    EXCHANGE_SOURCE_CODE_COL,
+                    EXCHANGE_TARGET_CODE_COL,
+                    START_DATE_COL,
+                ])
                 .reset_index(drop=True)
             )
 

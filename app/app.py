@@ -1,11 +1,13 @@
-import click
 import os
 import time
+from multiprocessing import Manager
+
+import click
+
 import app.domain.commands as commands
 import app.services.handlers as handlers
 from app.services.unitofwork import factory
 from app.utils.log import Log
-from multiprocessing import Manager
 
 
 @click.group()
