@@ -1,11 +1,12 @@
+import errno
 import logging
 import logging.handlers
-from multiprocessing.queues import Queue
-from multiprocessing import Process
-from typing import Optional
-import errno
-import time
 import sys
+import time
+from multiprocessing import Process
+from multiprocessing.queues import Queue
+from typing import Optional
+
 from app.utils.singleton import Singleton
 
 

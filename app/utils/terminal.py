@@ -1,6 +1,5 @@
 import asyncio
-from typing import List, Tuple, Optional
-
+from typing import List, Optional, Tuple
 
 RETRY_DEFAULT = 3
 TIMEOUT_DEFAULT = 10
@@ -42,9 +41,7 @@ async def run_terminal(
     proc = await asyncio.create_subprocess_shell(
         cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
     )
-    stdout, stderr = await asyncio.wait_for(
-        proc.communicate(), timeout=timeout
-    )
+    stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
     if stdout:
         return proc.returncode, stdout.decode("utf-8")
     if stderr:

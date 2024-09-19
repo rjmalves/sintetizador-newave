@@ -1,12 +1,14 @@
-import pandas as pd  # type: ignore
+from typing import Callable, Dict, List
+
 import numpy as np  # type: ignore
+import pandas as pd  # type: ignore
+
 from app.internal.constants import (
     PANDAS_GROUPING_ENGINE,
+    QUANTILES_FOR_STATISTICS,
     SCENARIO_COL,
     VALUE_COL,
-    QUANTILES_FOR_STATISTICS,
 )
-from typing import Dict, Callable, List
 
 
 def fast_group_df(

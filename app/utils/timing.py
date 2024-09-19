@@ -1,11 +1,9 @@
 import time
-from logging import Logger
-from logging import INFO
+from logging import INFO, Logger
 from typing import Optional
 
 
 class time_and_log:
-
     def __init__(
         self,
         message_root: Optional[str] = None,

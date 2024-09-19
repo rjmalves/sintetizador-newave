@@ -1,21 +1,22 @@
 from abc import ABC, abstractmethod
-from os import chdir, curdir
-from typing import Dict, Type
-from pathlib import Path
 from multiprocessing import Queue
-from app.model.settings import Settings
-from app.adapters.repository.files import (
-    AbstractFilesRepository,
-)
+from os import chdir, curdir
+from pathlib import Path
+from typing import Dict, Type
+
 from app.adapters.repository.export import (
     AbstractExportRepository,
-)
-from app.adapters.repository.files import (
-    factory as files_factory,
 )
 from app.adapters.repository.export import (
     factory as export_factory,
 )
+from app.adapters.repository.files import (
+    AbstractFilesRepository,
+)
+from app.adapters.repository.files import (
+    factory as files_factory,
+)
+from app.model.settings import Settings
 
 
 class AbstractUnitOfWork(ABC):
