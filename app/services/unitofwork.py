@@ -77,7 +77,7 @@ class FSUnitOfWork(AbstractUnitOfWork):
     def __create_repository(self):
         if self._files is None:
             self._files = files_factory(
-                Settings().file_repository, str(self._path)
+                Settings().file_repository, str(self._path), self._version
             )
         if self._exporter is None:
             synthesis_outdir = (
