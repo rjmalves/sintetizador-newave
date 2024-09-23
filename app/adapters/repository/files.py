@@ -301,8 +301,9 @@ class AbstractFilesRepository(ABC):
 
 
 class RawFilesRepository(AbstractFilesRepository):
-    def __init__(self, tmppath: str):
+    def __init__(self, tmppath: str, version: str = "latest"):
         self.__tmppath = tmppath
+        self.__version = version
         self.__caso = Caso.read(join(str(self.__tmppath), "caso.dat"))
         self.__arquivos: Optional[Arquivos] = None
         self.__indices: Optional[pd.DataFrame] = None
@@ -1015,11 +1016,13 @@ class RawFilesRepository(AbstractFilesRepository):
         return df
 
     def __agg_cmo_dfs(self, dir: str, submercado: int) -> pd.DataFrame:
+        Cmargmed.set_version(self.__version)
         df_med = Cmargmed.read(
             join(dir, f"cmarg{str(submercado).zfill(3)}-med.out")
         ).valores
         df_med["patamar"] = 0
         df_med = self.__fix_indices_cenarios(df_med)
+        Cmarg.set_version(self.__version)
         df_pats = Cmarg.read(
             join(dir, f"cmarg{str(submercado).zfill(3)}.out")
         ).valores

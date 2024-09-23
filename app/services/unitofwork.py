@@ -23,6 +23,7 @@ class AbstractUnitOfWork(ABC):
     def __init__(self, q: Queue) -> None:
         self._queue = q
         self._subdir = ""
+        self._version = "latest"
 
     def __enter__(self) -> "AbstractUnitOfWork":
         return self
@@ -43,6 +44,14 @@ class AbstractUnitOfWork(ABC):
     @abstractmethod
     def export(self) -> AbstractExportRepository:
         raise NotImplementedError
+
+    @property
+    def version(self) -> str:
+        return self._version
+
+    @version.setter
+    def version(self, s: str):
+        self._version = s
 
     @property
     def queue(self) -> Queue:

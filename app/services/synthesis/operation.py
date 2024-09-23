@@ -2411,6 +2411,12 @@ class OperationSynthetizer:
                 return None
 
     @classmethod
+    def enforce_version(cls, uow: AbstractUnitOfWork):
+        version = Deck.pmo(uow).versao_modelo
+        if version is not None:
+            uow.version = version
+
+    @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
         """
         Realiza a síntese de operação para as variáveis operativas
@@ -2424,6 +2430,7 @@ class OperationSynthetizer:
             message_root="Tempo para sintese da operacao",
             logger=cls.logger,
         ):
+            cls.enforce_version(uow)
             synthesis_with_dependencies = cls._preprocess_synthesis_variables(
                 variables, uow
             )
