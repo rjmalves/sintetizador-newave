@@ -1380,6 +1380,9 @@ class Deck:
             lower_bound_df = _add_missing_eer_bounds(minimum_perc_storage_df)
             lower_bound_df = _cast_perc_to_absolute(lower_bound_df)
             eer_stored_energy_lower_bounds = _add_entity_data(lower_bound_df)
+            eer_stored_energy_lower_bounds = cls._consider_post_study_years(
+                eer_stored_energy_lower_bounds, uow
+            )
             cls.DECK_DATA_CACHING["eer_stored_energy_lower_bounds"] = (
                 eer_stored_energy_lower_bounds
             )
@@ -1885,6 +1888,7 @@ class Deck:
             if bounds_df is None:
                 bounds_df = cls._thermal_generation_bounds_term_manutt_expt(uow)
             bounds_df = _add_submarket_data(bounds_df, uow)
+            bounds_df = cls._consider_post_study_years(bounds_df, uow)
             thermal_generation_bounds = bounds_df
             cls.DECK_DATA_CACHING["thermal_generation_bounds"] = (
                 thermal_generation_bounds
@@ -1974,6 +1978,9 @@ class Deck:
                 exchange_average_bounds_df
             )
             exchange_block_bounds_df = cls.exchange_block_limits(uow)
+            exchange_average_bounds_df = cls._consider_post_study_years(
+                exchange_average_bounds_df, uow
+            )
             block_length_df = cls.block_lengths(uow)
             exchange_bounds = _cast_exchange_bounds_to_MWmes(
                 exchange_block_bounds_df,
@@ -2174,6 +2181,7 @@ class Deck:
             flow_diversion = _make_bound_columns(flow_diversion)
             flow_diversion = _repeat_by_block(flow_diversion, uow)
             flow_diversion = flow_diversion.reset_index(drop=True)
+            flow_diversion = cls._consider_post_study_years(flow_diversion, uow)
 
             cls.DECK_DATA_CACHING["flow_diversion"] = flow_diversion
         return flow_diversion.copy()
@@ -2441,6 +2449,8 @@ class Deck:
             hm3_df = _expand_to_stages(hm3_df, uow)
             df = _add_hydro_bounds_changes_to_stages(hm3_df.copy(), uow)
             casted_df = _cast_bounds_to_hm3(df, hm3_df)
+            casted_df = cls._consider_post_study_years(casted_df, uow)
+
             hydro_volume_bounds_in_stages = casted_df
             cls.DECK_DATA_CACHING["hydro_volume_bounds_in_stages"] = (
                 hydro_volume_bounds_in_stages
@@ -2638,6 +2648,8 @@ class Deck:
             m3s_df = _expand_to_stages(m3s_df, uow)
             m3s_df = _add_hydro_bounds_changes_to_stages(m3s_df, uow)
             m3s_df = _expand_to_blocks(m3s_df, uow)
+            m3s_df = cls._consider_post_study_years(m3s_df, uow)
+
             hydro_turbined_flow_bounds_in_stages = m3s_df
             cls.DECK_DATA_CACHING["hydro_turbined_flow_bounds_in_stages"] = (
                 hydro_turbined_flow_bounds_in_stages
@@ -2767,6 +2779,8 @@ class Deck:
             m3s_df = _expand_to_stages(m3s_df, uow)
             m3s_df = _add_hydro_bounds_changes_to_stages(m3s_df, uow)
             m3s_df = _expand_to_blocks(m3s_df, uow)
+            m3s_df = cls._consider_post_study_years(m3s_df, uow)
+
             hydro_outflow_bounds_in_stages = m3s_df
             cls.DECK_DATA_CACHING["hydro_outflow_bounds_in_stages"] = (
                 hydro_outflow_bounds_in_stages
@@ -2847,6 +2861,8 @@ class Deck:
             df = cls.hydro_drops(uow)
             df = _expand_to_stages(df, uow)
             df = _add_hydro_drops_changes_to_stages(df.copy(), uow)
+            df = cls._consider_post_study_years(df, uow)
+
             hydro_drops_in_stages = df
             cls.DECK_DATA_CACHING["hydro_drops_in_stages"] = (
                 hydro_drops_in_stages
@@ -2886,6 +2902,24 @@ class Deck:
         return num_blocks
 
     @classmethod
+    def _consider_post_study_years(
+        cls, df: pd.DataFrame, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        num_years_to_add = cls.num_post_study_period_years_final_simulation(uow)
+        if num_years_to_add == 0:
+            return df
+        else:
+            years = list(set(df[START_DATE_COL].dt.year.to_list()))
+            last_year = max(years)
+            df_last_year = df.loc[df[START_DATE_COL].dt.year == last_year]
+            dfs_post_study_years = []
+            for post_year in range(1, num_years_to_add + 1):
+                df_post_year = df_last_year.copy()
+                df_post_year[START_DATE_COL] += pd.DateOffset(years=post_year)
+                dfs_post_study_years.append(df_post_year)
+            return pd.concat([df] + dfs_post_study_years, ignore_index=True)
+
+    @classmethod
     def block_lengths(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         def __eval_pat0(df_pat: pd.DataFrame) -> pd.DataFrame:
             df_pat_0 = df_pat.groupby(START_DATE_COL, as_index=False).sum(
@@ -2906,6 +2940,7 @@ class Deck:
             block_lengths = block_lengths.rename(
                 columns={"data": START_DATE_COL, "patamar": BLOCK_COL}
             )
+            block_lengths = cls._consider_post_study_years(block_lengths, uow)
             block_lengths = __eval_pat0(block_lengths)
             cls.DECK_DATA_CACHING["block_lengths"] = block_lengths
         return block_lengths.copy()
@@ -2943,6 +2978,9 @@ class Deck:
                     "submercado_para": EXCHANGE_TARGET_CODE_COL,
                     "data": START_DATE_COL,
                 }
+            )
+            exchange_block_limits = cls._consider_post_study_years(
+                exchange_block_limits, uow
             )
             exchange_block_limits = __eval_pat0(exchange_block_limits)
             cls.DECK_DATA_CACHING["exchange_block_limits"] = (
