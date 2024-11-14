@@ -1,7 +1,7 @@
 Instalação
 ============
 
-O *sintetizador-newave* é compatível com versões de Python >= 3.8. 
+O *sintetizador-newave* é compatível com versões de Python >= 3.10. 
 
 Instalando a partir do repositório oficial
 -------------------------------------------
