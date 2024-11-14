@@ -2343,19 +2343,26 @@ class OperationSynthetizer:
         `OPERACAO_{agregacao}`.
         """
         for res, dfs in cls.SYNTHESIS_STATS.items():
-            with uow:
-                df = pd.concat(dfs, ignore_index=True)
-                df = df[[VARIABLE_COL] + res.all_synthesis_df_columns]
-                df = df.astype({VARIABLE_COL: STRING_DF_TYPE})
-                df = df.sort_values(
-                    [VARIABLE_COL] + res.sorting_synthesis_df_columns
-                ).reset_index(drop=True)
-                stats_filename = f"{OPERATION_SYNTHESIS_STATS_ROOT}_{res.value}"
-                existing_df = uow.export.read_df(stats_filename)
-                if existing_df is not None:
-                    df = pd.concat([existing_df, df], ignore_index=True)
-                    df = df.drop_duplicates()
-                uow.export.synthetize_df(df, stats_filename)
+            with time_and_log(
+                message_root="Tempo para exportacao"
+                + f" das estatisticas de {res.value}",
+                logger=cls.logger,
+            ):
+                with uow:
+                    df = pd.concat(dfs, ignore_index=True)
+                    df = df[[VARIABLE_COL] + res.all_synthesis_df_columns]
+                    df = df.astype({VARIABLE_COL: STRING_DF_TYPE})
+                    df = df.sort_values(
+                        [VARIABLE_COL] + res.sorting_synthesis_df_columns
+                    ).reset_index(drop=True)
+                    stats_filename = (
+                        f"{OPERATION_SYNTHESIS_STATS_ROOT}_{res.value}"
+                    )
+                    existing_df = uow.export.read_df(stats_filename)
+                    if existing_df is not None:
+                        df = pd.concat([existing_df, df], ignore_index=True)
+                        df = df.drop_duplicates()
+                    uow.export.synthetize_df(df, stats_filename)
 
     @classmethod
     def _preprocess_synthesis_variables(
