@@ -1867,9 +1867,11 @@ class Deck:
                     "valor_MWmed"
                 ].to_numpy()
         start_date = cls.stages_starting_dates_final_simulation(uow)[0]
-        return bounds_df.loc[
+        bounds_df = bounds_df.loc[
             bounds_df[START_DATE_COL] >= start_date
         ].reset_index(drop=True)
+        bounds_df = cls._consider_post_study_years(bounds_df, uow)
+        return bounds_df
 
     @classmethod
     def thermal_generation_bounds(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
@@ -1897,7 +1899,7 @@ class Deck:
             if bounds_df is None:
                 bounds_df = cls._thermal_generation_bounds_term_manutt_expt(uow)
             bounds_df = _add_submarket_data(bounds_df, uow)
-            bounds_df = cls._consider_post_study_years(bounds_df, uow)
+
             thermal_generation_bounds = bounds_df
             cls.DECK_DATA_CACHING["thermal_generation_bounds"] = (
                 thermal_generation_bounds
@@ -2460,7 +2462,6 @@ class Deck:
             hm3_df = _expand_to_stages(hm3_df, uow)
             df = _add_hydro_bounds_changes_to_stages(hm3_df.copy(), uow)
             casted_df = _cast_bounds_to_hm3(df, hm3_df)
-            casted_df = cls._consider_post_study_years(casted_df, uow)
 
             hydro_volume_bounds_in_stages = casted_df
             cls.DECK_DATA_CACHING["hydro_volume_bounds_in_stages"] = (
@@ -2659,7 +2660,6 @@ class Deck:
             m3s_df = _expand_to_stages(m3s_df, uow)
             m3s_df = _add_hydro_bounds_changes_to_stages(m3s_df, uow)
             m3s_df = _expand_to_blocks(m3s_df, uow)
-            m3s_df = cls._consider_post_study_years(m3s_df, uow)
 
             hydro_turbined_flow_bounds_in_stages = m3s_df
             cls.DECK_DATA_CACHING["hydro_turbined_flow_bounds_in_stages"] = (
@@ -2790,7 +2790,6 @@ class Deck:
             m3s_df = _expand_to_stages(m3s_df, uow)
             m3s_df = _add_hydro_bounds_changes_to_stages(m3s_df, uow)
             m3s_df = _expand_to_blocks(m3s_df, uow)
-            m3s_df = cls._consider_post_study_years(m3s_df, uow)
 
             hydro_outflow_bounds_in_stages = m3s_df
             cls.DECK_DATA_CACHING["hydro_outflow_bounds_in_stages"] = (
@@ -2872,7 +2871,6 @@ class Deck:
             df = cls.hydro_drops(uow)
             df = _expand_to_stages(df, uow)
             df = _add_hydro_drops_changes_to_stages(df.copy(), uow)
-            df = cls._consider_post_study_years(df, uow)
 
             hydro_drops_in_stages = df
             cls.DECK_DATA_CACHING["hydro_drops_in_stages"] = (
