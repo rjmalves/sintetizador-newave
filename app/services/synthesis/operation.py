@@ -2433,7 +2433,6 @@ class OperationSynthetizer:
                     )
                 return None
             except Exception as e:
-                print_exc()
                 cls._log(str(e), ERROR)
                 cls._log(
                     f"Nao foi possível realizar a sintese de: {filename}",
@@ -2456,6 +2455,7 @@ class OperationSynthetizer:
         e então são resolvidas de acordo com a síntese.
         """
         cls.logger = logging.getLogger("main")
+        Deck.logger = cls.logger
         uow.subdir = OPERATION_SYNTHESIS_SUBDIR
         with time_and_log(
             message_root="Tempo para sintese da operacao",

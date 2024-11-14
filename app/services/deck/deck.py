@@ -1,6 +1,6 @@
-import logging
 from datetime import datetime, timedelta
 from functools import partial
+from logging import ERROR, INFO, Logger
 from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 import numpy as np  # type: ignore
@@ -100,20 +100,24 @@ class Deck:
     """
 
     T = TypeVar("T")
-    logger: Optional[logging.Logger] = None
+    logger: Optional[Logger] = None
 
     DECK_DATA_CACHING: Dict[str, Any] = {}
+
+    @classmethod
+    def _log(cls, msg: str, level: int = INFO):
+        if cls.logger is not None:
+            cls.logger.log(level, msg)
 
     @classmethod
     def _get_dger(cls, uow: AbstractUnitOfWork) -> Dger:
         with uow:
             dger = uow.files.get_dger()
             if dger is None:
-                if cls.logger is not None:
-                    cls.logger.error(
-                        "Erro no processamento do dger.dat para"
-                        + " síntese da operação"
-                    )
+                cls._log(
+                    "Erro no processamento do dger.dat para sintese",
+                    ERROR,
+                )
                 raise RuntimeError()
             return dger
 
@@ -122,11 +126,10 @@ class Deck:
         with uow:
             shist = uow.files.get_shist()
             if shist is None:
-                if cls.logger is not None:
-                    cls.logger.error(
-                        "Erro no processamento do shist.dat para"
-                        + " síntese da operação"
-                    )
+                cls._log(
+                    "Erro no processamento do shist.dat para sintese",
+                    ERROR,
+                )
                 raise RuntimeError()
             return shist
 
@@ -135,11 +138,10 @@ class Deck:
         with uow:
             curva = uow.files.get_curva()
             if curva is None:
-                if cls.logger is not None:
-                    cls.logger.error(
-                        "Erro no processamento do curva.dat para"
-                        + " síntese da operação"
-                    )
+                cls._log(
+                    "Erro no processamento do curva.dat para sintese",
+                    ERROR,
+                )
                 raise RuntimeError()
             return curva
 
@@ -148,11 +150,10 @@ class Deck:
         with uow:
             ree = uow.files.get_ree()
             if ree is None:
-                if cls.logger is not None:
-                    cls.logger.error(
-                        "Erro no processamento do ree.dat para"
-                        + " síntese da operação"
-                    )
+                cls._log(
+                    "Erro no processamento do ree.dat para sintese",
+                    ERROR,
+                )
                 raise RuntimeError()
             return ree
 
@@ -161,11 +162,10 @@ class Deck:
         with uow:
             confhd = uow.files.get_confhd()
             if confhd is None:
-                if cls.logger is not None:
-                    cls.logger.error(
-                        "Erro no processamento do confhd.dat para"
-                        + " síntese da operação"
-                    )
+                cls._log(
+                    "Erro no processamento do confhd.dat para sintese",
+                    ERROR,
+                )
                 raise RuntimeError()
             return confhd
 
@@ -174,11 +174,10 @@ class Deck:
         with uow:
             dsvagua = uow.files.get_dsvagua()
             if dsvagua is None:
-                if cls.logger is not None:
-                    cls.logger.error(
-                        "Erro no processamento do dsvagua.dat para"
-                        + " síntese da operação"
-                    )
+                cls._log(
+                    "Erro no processamento do dsvagua.dat para sintese",
+                    ERROR,
+                )
                 raise RuntimeError()
             return dsvagua
 
@@ -187,11 +186,10 @@ class Deck:
         with uow:
             modif = uow.files.get_modif()
             if modif is None:
-                if cls.logger is not None:
-                    cls.logger.error(
-                        "Erro no processamento do modif.dat para"
-                        + " síntese da operação"
-                    )
+                cls._log(
+                    "Erro no processamento do modif.dat para sintese",
+                    ERROR,
+                )
                 raise RuntimeError()
             return modif
 
@@ -200,11 +198,10 @@ class Deck:
         with uow:
             hidr = uow.files.get_hidr()
             if hidr is None:
-                if cls.logger is not None:
-                    cls.logger.error(
-                        "Erro no processamento do hidr.dat para"
-                        + " síntese da operação"
-                    )
+                cls._log(
+                    "Erro no processamento do hidr.dat para sintese",
+                    ERROR,
+                )
                 raise RuntimeError()
             return hidr
 
@@ -213,11 +210,10 @@ class Deck:
         with uow:
             vazoes = uow.files.get_vazoes()
             if vazoes is None:
-                if cls.logger is not None:
-                    cls.logger.error(
-                        "Erro no processamento do vazoes.dat para"
-                        + " síntese da operação"
-                    )
+                cls._log(
+                    "Erro no processamento do vazoes.dat para sintese",
+                    ERROR,
+                )
                 raise RuntimeError()
             return vazoes
 
@@ -226,11 +222,10 @@ class Deck:
         with uow:
             conft = uow.files.get_conft()
             if conft is None:
-                if cls.logger is not None:
-                    cls.logger.error(
-                        "Erro no processamento do conft.dat para"
-                        + " síntese da operação"
-                    )
+                cls._log(
+                    "Erro no processamento do conft.dat para sintese",
+                    ERROR,
+                )
                 raise RuntimeError()
             return conft
 
@@ -239,76 +234,70 @@ class Deck:
         with uow:
             sist = uow.files.get_sistema()
             if sist is None:
-                if cls.logger is not None:
-                    cls.logger.error(
-                        "Erro no processamento do sistema.dat para"
-                        + " síntese da operação"
-                    )
+                cls._log(
+                    "Erro no processamento do sistema.dat para sintese",
+                    ERROR,
+                )
                 raise RuntimeError()
             return sist
 
     @classmethod
     def _get_clast(cls, uow: AbstractUnitOfWork) -> Clast:
         with uow:
-            sist = uow.files.get_clast()
-            if sist is None:
-                if cls.logger is not None:
-                    cls.logger.error(
-                        "Erro no processamento do clast.dat para"
-                        + " síntese da operação"
-                    )
+            clast = uow.files.get_clast()
+            if clast is None:
+                cls._log(
+                    "Erro no processamento do clast.dat para sintese",
+                    ERROR,
+                )
                 raise RuntimeError()
-            return sist
+            return clast
 
     @classmethod
     def _get_term(cls, uow: AbstractUnitOfWork) -> Term:
         with uow:
-            sist = uow.files.get_term()
-            if sist is None:
-                if cls.logger is not None:
-                    cls.logger.error(
-                        "Erro no processamento do term.dat para"
-                        + " síntese da operação"
-                    )
+            term = uow.files.get_term()
+            if term is None:
+                cls._log(
+                    "Erro no processamento do term.dat para sintese",
+                    ERROR,
+                )
                 raise RuntimeError()
-            return sist
+            return term
 
     @classmethod
     def _get_manutt(cls, uow: AbstractUnitOfWork) -> Manutt:
         with uow:
-            sist = uow.files.get_manutt()
-            if sist is None:
-                if cls.logger is not None:
-                    cls.logger.error(
-                        "Erro no processamento do manutt.dat para"
-                        + " síntese da operação"
-                    )
+            manutt = uow.files.get_manutt()
+            if manutt is None:
+                cls._log(
+                    "Erro no processamento do manutt.dat para sintese",
+                    ERROR,
+                )
                 raise RuntimeError()
-            return sist
+            return manutt
 
     @classmethod
     def _get_expt(cls, uow: AbstractUnitOfWork) -> Expt:
         with uow:
-            sist = uow.files.get_expt()
-            if sist is None:
-                if cls.logger is not None:
-                    cls.logger.error(
-                        "Erro no processamento do expt.dat para"
-                        + " síntese da operação"
-                    )
+            expt = uow.files.get_expt()
+            if expt is None:
+                cls._log(
+                    "Erro no processamento do expt.dat para sintese",
+                    ERROR,
+                )
                 raise RuntimeError()
-            return sist
+            return expt
 
     @classmethod
     def _get_patamar(cls, uow: AbstractUnitOfWork) -> Patamar:
         with uow:
             pat = uow.files.get_patamar()
             if pat is None:
-                if cls.logger is not None:
-                    cls.logger.error(
-                        "Erro no processamento do patamar.dat para"
-                        + " síntese da operação"
-                    )
+                cls._log(
+                    "Erro no processamento do patamar.dat para sintese",
+                    ERROR,
+                )
                 raise RuntimeError()
             return pat
 
@@ -317,11 +306,10 @@ class Deck:
         with uow:
             pmo = uow.files.get_pmo()
             if pmo is None:
-                if cls.logger is not None:
-                    cls.logger.error(
-                        "Erro no processamento do pmo.dat para"
-                        + " síntese da operação"
-                    )
+                cls._log(
+                    "Erro no processamento do pmo.dat para sintese",
+                    ERROR,
+                )
                 raise RuntimeError()
             return pmo
 
@@ -330,11 +318,10 @@ class Deck:
         with uow:
             newavetim = uow.files.get_newavetim()
             if newavetim is None:
-                if cls.logger is not None:
-                    cls.logger.error(
-                        "Erro no processamento do newave.tim para"
-                        + " síntese da operação"
-                    )
+                cls._log(
+                    "Erro no processamento do newave.tim para sintese",
+                    ERROR,
+                )
                 raise RuntimeError()
             return newavetim
 
@@ -343,11 +330,10 @@ class Deck:
         with uow:
             engnat = uow.files.get_engnat()
             if engnat is None:
-                if cls.logger is not None:
-                    cls.logger.error(
-                        "Erro no processamento do engnat.dat para"
-                        + " síntese dos cenários"
-                    )
+                cls._log(
+                    "Erro no processamento do engnat.dat para sintese",
+                    ERROR,
+                )
                 raise RuntimeError()
             return engnat
 
@@ -420,9 +406,8 @@ class Deck:
     @classmethod
     def _validate_data(cls, data, type: Type[T], msg: str = "dados") -> T:
         if not isinstance(data, type):
-            if cls.logger is not None:
-                cls.logger.error(f"Erro na leitura de {msg}")
-            raise RuntimeError()
+            cls._log(f"Erro de validação: {msg}", ERROR)
+            raise AssertionError(f"Erro de validação: {msg}", ERROR)
         return data
 
     @classmethod
@@ -432,7 +417,7 @@ class Deck:
             dger = cls._validate_data(
                 cls._get_dger(uow),
                 Dger,
-                "dger",
+                "processamento do dger.dat",
             )
             cls.DECK_DATA_CACHING["dger"] = dger
         return dger
@@ -444,7 +429,7 @@ class Deck:
             pmo = cls._validate_data(
                 cls._get_pmo(uow),
                 Pmo,
-                "pmo",
+                "processamento do pmo.dat",
             )
             cls.DECK_DATA_CACHING["pmo"] = pmo
         return pmo
@@ -456,7 +441,7 @@ class Deck:
             curva = cls._validate_data(
                 cls._get_curva(uow),
                 Curva,
-                "curva",
+                "processamento do curva.dat",
             )
             cls.DECK_DATA_CACHING["curva"] = curva
         return curva
@@ -465,7 +450,11 @@ class Deck:
     def modif(cls, uow: AbstractUnitOfWork) -> Modif:
         modif = cls.DECK_DATA_CACHING.get("modif")
         if modif is None:
-            modif = cls._validate_data(cls._get_modif(uow), Modif, "modif")
+            modif = cls._validate_data(
+                cls._get_modif(uow),
+                Modif,
+                "processamento do modif.dat",
+            )
             cls.DECK_DATA_CACHING["modif"] = modif
         return modif
 
@@ -474,7 +463,9 @@ class Deck:
         confhd = cls.DECK_DATA_CACHING.get("confhd")
         if confhd is None:
             confhd = cls._validate_data(
-                cls._get_confhd(uow).usinas, pd.DataFrame, "confhd"
+                cls._get_confhd(uow).usinas,
+                pd.DataFrame,
+                "processamento do confhd.dat",
             )
             cls.DECK_DATA_CACHING["confhd"] = confhd
         return confhd.copy()
@@ -484,7 +475,9 @@ class Deck:
         clast = cls.DECK_DATA_CACHING.get("clast")
         if clast is None:
             clast = cls._validate_data(
-                cls._get_clast(uow).usinas, pd.DataFrame, "clast"
+                cls._get_clast(uow).usinas,
+                pd.DataFrame,
+                "processamento do clast.dat",
             )
             cls.DECK_DATA_CACHING["clast"] = clast
         return clast.copy()
@@ -494,7 +487,9 @@ class Deck:
         term = cls.DECK_DATA_CACHING.get("term")
         if term is None:
             term = cls._validate_data(
-                cls._get_term(uow).usinas, pd.DataFrame, "term"
+                cls._get_term(uow).usinas,
+                pd.DataFrame,
+                "processamento do term.dat",
             )
             cls.DECK_DATA_CACHING["term"] = term
         return term.copy()
@@ -517,7 +512,11 @@ class Deck:
                         "potencia",
                     ]
                 )
-            manutt = cls._validate_data(df_manutt, pd.DataFrame, "manutt")
+            manutt = cls._validate_data(
+                df_manutt,
+                pd.DataFrame,
+                "processamento do manutt.dat",
+            )
             cls.DECK_DATA_CACHING["manutt"] = manutt
         return manutt.copy()
 
@@ -526,7 +525,9 @@ class Deck:
         expt = cls.DECK_DATA_CACHING.get("expt")
         if expt is None:
             expt = cls._validate_data(
-                cls._get_expt(uow).expansoes, pd.DataFrame, "expt"
+                cls._get_expt(uow).expansoes,
+                pd.DataFrame,
+                "processamento do expt.dat",
             )
             cls.DECK_DATA_CACHING["expt"] = expt
         return expt.copy()
@@ -536,7 +537,9 @@ class Deck:
         hidr = cls.DECK_DATA_CACHING.get("hidr")
         if hidr is None:
             hidr = cls._validate_data(
-                cls._get_hidr(uow).cadastro, pd.DataFrame, "hidr"
+                cls._get_hidr(uow).cadastro,
+                pd.DataFrame,
+                "processamento do hidr.dat",
             )
             cls.DECK_DATA_CACHING["hidr"] = hidr
         return hidr.copy()
@@ -548,7 +551,7 @@ class Deck:
             newavetim = cls._validate_data(
                 cls._get_newavetim(uow),
                 Newavetim,
-                "newavetim",
+                "processamento do newave.tim",
             )
             cls.DECK_DATA_CACHING["newavetim"] = newavetim
         return newavetim
@@ -560,7 +563,7 @@ class Deck:
             engnat = cls._validate_data(
                 cls._get_engnat(uow).series,
                 pd.DataFrame,
-                "engnat",
+                "processamento do engnat.dat",
             )
             cls.DECK_DATA_CACHING["engnat"] = engnat
         return engnat
@@ -696,7 +699,9 @@ class Deck:
         vazoes = cls.DECK_DATA_CACHING.get("vazoes")
         if vazoes is None:
             vazoes = cls._validate_data(
-                cls._get_vazoes(uow).vazoes, pd.DataFrame, "vazoes"
+                cls._get_vazoes(uow).vazoes,
+                pd.DataFrame,
+                "processamento do vazoes.dat",
             )
             cls.DECK_DATA_CACHING["vazoes"] = vazoes
         return vazoes.copy()
@@ -711,7 +716,7 @@ class Deck:
             pre_study_period_starting_month = cls._validate_data(
                 dger.mes_inicio_pre_estudo,
                 int,
-                "mês de início do pré-estudo",
+                "mes de inicio do pre-estudo (dger.dat)",
             )
             cls.DECK_DATA_CACHING["pre_study_period_starting_month"] = (
                 pre_study_period_starting_month
@@ -728,7 +733,7 @@ class Deck:
             study_period_starting_month = cls._validate_data(
                 dger.mes_inicio_estudo,
                 int,
-                "mês de início do estudo",
+                "mes de inicio do estudo (dger.dat)",
             )
             cls.DECK_DATA_CACHING["study_period_starting_month"] = (
                 study_period_starting_month
@@ -745,7 +750,7 @@ class Deck:
             study_period_starting_year = cls._validate_data(
                 dger.ano_inicio_estudo,
                 int,
-                "ano de início do estudo",
+                "ano de inicio do estudo (dger.dat)",
             )
             cls.DECK_DATA_CACHING["study_period_starting_year"] = (
                 study_period_starting_year
@@ -762,7 +767,7 @@ class Deck:
             num_pre_study_period_years = cls._validate_data(
                 dger.num_anos_pre_estudo,
                 int,
-                "número de anos do pré-estudo",
+                "numero de anos do pre-estudo (dger.dat)",
             )
             cls.DECK_DATA_CACHING["num_pre_study_period_years"] = (
                 num_pre_study_period_years
@@ -779,7 +784,7 @@ class Deck:
             num_study_period_years = cls._validate_data(
                 dger.num_anos_estudo,
                 int,
-                "número de anos do estudo",
+                "numero de anos do estudo (dger.dat)",
             )
             cls.DECK_DATA_CACHING["num_study_period_years"] = (
                 num_study_period_years
@@ -800,7 +805,7 @@ class Deck:
             num_post_study_period_years_final_simulation = cls._validate_data(
                 dger.num_anos_pos_sim_final,
                 int,
-                "número de anos do período pós-estudo na simulação",
+                "numero de anos do pos-estudo na simulacao final (dger.dat)",
             )
             cls.DECK_DATA_CACHING[
                 "num_post_study_period_years_final_simulation"
@@ -819,7 +824,7 @@ class Deck:
             num_synthetic_scenarios_final_simulation = cls._validate_data(
                 dger.num_series_sinteticas,
                 int,
-                "número de séries sintéticas na simulação",
+                "numero de series sinteticas na simulacao final (dger.dat)",
             )
             cls.DECK_DATA_CACHING[
                 "num_synthetic_scenarios_final_simulation"
@@ -831,12 +836,16 @@ class Deck:
         num_history_years = cls.DECK_DATA_CACHING.get("num_history_years")
         if num_history_years is None:
             shist = cls._get_shist(uow)
-            span = cls._validate_data(shist.varredura, int, "tipo de varredura")
+            span = cls._validate_data(
+                shist.varredura,
+                int,
+                "tipo de varredura (sfhist.dat)",
+            )
             if span == 1:
                 history_input_starting_year = cls._validate_data(
                     cls.dger(uow).ano_inicial_historico,
                     int,
-                    "ano inicial do histórico",
+                    "ano de inicio do historico (dger.dat)",
                 )
                 num_history_input_years = cls.vazoes(uow).shape[0] // 12
                 history_input_end_year = (
@@ -854,7 +863,7 @@ class Deck:
                 span_starting_year = cls._validate_data(
                     shist.ano_inicio_varredura,
                     int,
-                    "número de séries históricas na simulação",
+                    "ano de inicio da varredura (sfhist.dat)",
                 )
                 num_history_years = (
                     final_simulation_last_year - span_starting_year + 1
@@ -864,7 +873,7 @@ class Deck:
                     cls._validate_data(
                         shist.anos_inicio_simulacoes,
                         list,
-                        "anos de início das simulações",
+                        "anos de inicio das simulacoes (sfhist.dat)",
                     )
                 )
             cls.DECK_DATA_CACHING["num_history_years"] = num_history_years
@@ -880,7 +889,7 @@ class Deck:
             num_thermal_maintenance_years = cls._validate_data(
                 dger.num_anos_manutencao_utes,
                 int,
-                "número de anos de manutenção de UTEs",
+                "numero de anos com manutencoes de UTEs (dger.dat)",
             )
             cls.DECK_DATA_CACHING["num_thermal_maintenance_years"] = (
                 num_thermal_maintenance_years
@@ -913,7 +922,7 @@ class Deck:
             final_simulation_type = cls._validate_data(
                 dger.tipo_simulacao_final,
                 int,
-                "tipo da simulação final",
+                "tipo de simulacao final (dger.dat)",
             )
             cls.DECK_DATA_CACHING["final_simulation_type"] = (
                 final_simulation_type
@@ -930,7 +939,7 @@ class Deck:
             final_simulation_aggregation = cls._validate_data(
                 dger.agregacao_simulacao_final,
                 int,
-                "tipo da simulação final",
+                "agregacao da simulacao final (dger.dat)",
             )
             cls.DECK_DATA_CACHING["final_simulation_aggregation"] = (
                 final_simulation_aggregation
@@ -1037,7 +1046,7 @@ class Deck:
             models_wind_generation = cls._validate_data(
                 cls.dger(uow).considera_geracao_eolica != 0,
                 int,
-                "consideração da geração eólica",
+                "consideracao de incerteza eolica (dger.dat)",
             )
             cls.DECK_DATA_CACHING["models_wind_generation"] = (
                 models_wind_generation
@@ -1053,7 +1062,7 @@ class Deck:
             scenario_generation_model_type = cls._validate_data(
                 cls.dger(uow).consideracao_media_anual_afluencias,
                 int,
-                "opção do modelo PAR(p)",
+                "opcao do modelo PAR(p) (dger.dat)",
             )
             cls.DECK_DATA_CACHING["scenario_generation_model_type"] = (
                 scenario_generation_model_type
@@ -1071,7 +1080,7 @@ class Deck:
             scenario_generation_model_max_order = cls._validate_data(
                 cls.dger(uow).ordem_maxima_parp,
                 int,
-                "ordem máxima do modelo PAR(p)",
+                "ordem maxima do modelo PAR(p) (dger.dat)",
             )
             cls.DECK_DATA_CACHING["scenario_generation_model_max_order"] = (
                 scenario_generation_model_max_order
@@ -1372,7 +1381,7 @@ class Deck:
             minimum_perc_storage_df = cls._validate_data(
                 cls.curva(uow).curva_seguranca,
                 pd.DataFrame,
-                "curva de segurança",
+                "curva de seguranca (curva.dat)",
             )
             minimum_perc_storage_df = minimum_perc_storage_df.rename(
                 columns={"data": START_DATE_COL}
@@ -1600,7 +1609,7 @@ class Deck:
             convergence = cls._validate_data(
                 pmo.convergencia,
                 pd.DataFrame,
-                "convergência",
+                "processo iterativo de convergencia (pmo.dat)",
             )
 
             cls.DECK_DATA_CACHING["convergence"] = convergence
@@ -1965,7 +1974,7 @@ class Deck:
             exchange_average_bounds_df = cls._validate_data(
                 cls._get_sistema(uow).limites_intercambio,
                 pd.DataFrame,
-                "limites de intercâmbio",
+                "limites de intercambio (sistema.dat)",
             )
             exchange_average_bounds_df = exchange_average_bounds_df.rename(
                 columns={
@@ -1999,7 +2008,7 @@ class Deck:
             costs = cls._validate_data(
                 pmo.custo_operacao_series_simuladas,
                 pd.DataFrame,
-                "custos de operação",
+                "custo de operacao das series simuladas (pmo.dat)",
             )
 
             cls.DECK_DATA_CACHING["costs"] = costs
@@ -2013,7 +2022,7 @@ class Deck:
             num_iterations = cls._validate_data(
                 int(df["iteracao"].max()),
                 int,
-                "número de iterações",
+                "numero de iteracoes na convergencia (pmo.dat)",
             )
 
             cls.DECK_DATA_CACHING["num_iterations"] = num_iterations
@@ -2027,7 +2036,7 @@ class Deck:
             runtimes = cls._validate_data(
                 arq.tempos_etapas,
                 pd.DataFrame,
-                "tempos de execução",
+                "tempos por etapa da execucao (newave.tim)",
             )
 
             cls.DECK_DATA_CACHING["runtimes"] = runtimes
@@ -2040,7 +2049,7 @@ class Deck:
             submarkets = cls._validate_data(
                 cls._get_sistema(uow).custo_deficit,
                 pd.DataFrame,
-                "submercados",
+                "submercados e custos de deficit (sistema.dat)",
             )
             submarkets = submarkets.rename(
                 columns={
@@ -2061,7 +2070,9 @@ class Deck:
         eers = cls.DECK_DATA_CACHING.get("eers")
         if eers is None:
             eers = cls._validate_data(
-                cls._get_ree(uow).rees, pd.DataFrame, "REEs"
+                cls._get_ree(uow).rees,
+                pd.DataFrame,
+                "REEs e periodo individualizado (ree.dat)",
             )
             eers = eers.rename(
                 columns={
@@ -2084,7 +2095,7 @@ class Deck:
             hybrid_policy = cls._validate_data(
                 val,
                 bool,
-                "política híbrida",
+                "fim do horizonte individualizado (ree.dat)",
             )
             cls.DECK_DATA_CACHING["hybrid_policy"] = hybrid_policy
         return hybrid_policy
@@ -2096,7 +2107,7 @@ class Deck:
             hydros = cls._validate_data(
                 cls._get_confhd(uow).usinas,
                 pd.DataFrame,
-                "configuração de hidrelétricas",
+                "cadastro de usinas hidreletricas (confhd.dat)",
             )
             hydros = hydros.rename(
                 columns={
@@ -2161,7 +2172,7 @@ class Deck:
             flow_diversion = cls._validate_data(
                 cls._get_dsvagua(uow).desvios,
                 pd.DataFrame,
-                "desvio de água das hidrelétricas",
+                "retiradas de agua das usinas hidreletricas (dsvagua.dat)",
             )
             flow_diversion = flow_diversion.rename(
                 columns={
@@ -2874,7 +2885,9 @@ class Deck:
         thermals = cls.DECK_DATA_CACHING.get("thermals")
         if thermals is None:
             thermals = cls._validate_data(
-                cls._get_conft(uow).usinas, pd.DataFrame, "UTEs"
+                cls._get_conft(uow).usinas,
+                pd.DataFrame,
+                "cadastro de usinas termeletricas (conft.dat)",
             )
             thermals = thermals.drop(columns="codigo_usina")
             thermals = thermals.rename(
@@ -2896,7 +2909,7 @@ class Deck:
             num_blocks = cls._validate_data(
                 cls._get_patamar(uow).numero_patamares,
                 int,
-                "número de patamares",
+                "numero de patamares (patamar.dat)",
             )
             cls.DECK_DATA_CACHING["num_blocks"] = num_blocks
         return num_blocks
@@ -2935,7 +2948,7 @@ class Deck:
             block_lengths = cls._validate_data(
                 cls._get_patamar(uow).duracao_mensal_patamares,
                 pd.DataFrame,
-                "duração dos patamares",
+                "duracao mensal em P.U. dos patamares (patamar.dat)",
             )
             block_lengths = block_lengths.rename(
                 columns={"data": START_DATE_COL, "patamar": BLOCK_COL}
@@ -2970,7 +2983,7 @@ class Deck:
             exchange_block_limits = cls._validate_data(
                 cls._get_patamar(uow).intercambio_patamares,
                 pd.DataFrame,
-                "limites de intercâmbio dos patamares",
+                "limites de intercambio em P.U. por patamar (patamar.dat)",
             )
             exchange_block_limits = exchange_block_limits.rename(
                 columns={
@@ -3294,7 +3307,9 @@ class Deck:
                     cls._initial_stored_energy_from_confhd_hidr(uow)
                 )
             initial_stored_energy = cls._validate_data(
-                initial_stored_energy, pd.DataFrame, "EARM inicial"
+                initial_stored_energy,
+                pd.DataFrame,
+                "energia armazenada inicial por REE (pmo.dat ou calculada)",
             )
             cls.DECK_DATA_CACHING["initial_stored_energy"] = (
                 initial_stored_energy
@@ -3366,7 +3381,9 @@ class Deck:
                     cls._initial_stored_volume_from_confhd_hidr(uow)
                 )
             initial_stored_volume = cls._validate_data(
-                initial_stored_volume, pd.DataFrame, "VARM inicial"
+                initial_stored_volume,
+                pd.DataFrame,
+                "volume armazenado inicial por UHE (pmo.dat ou calculado)",
             )
             initial_stored_volume = (
                 cls._initial_stored_volume_pre_study_condition(
