@@ -1,12 +1,9 @@
-from typing import Callable, Dict, List, Optional, Tuple, Type, TypeVar
+from logging import ERROR, INFO, Logger
+from typing import Callable, Dict, List, Optional, Tuple, TypeVar
 
 import numpy as np
 import pandas as pd  # type: ignore
 from dateutil.relativedelta import relativedelta  # type: ignore
-from inewave.newave import (
-    Patamar,
-    Sistema,
-)
 
 from app.internal.constants import (
     BLOCK_COL,
@@ -44,6 +41,7 @@ class OperationVariableBounds:
     """
 
     T = TypeVar("T")
+    logger: Optional[Logger] = None
 
     MAPPINGS: Dict[OperationSynthesis, Callable] = {
         OperationSynthesis(
@@ -905,26 +903,9 @@ class OperationVariableBounds:
     }
 
     @classmethod
-    def _get_sistema(cls, uow: AbstractUnitOfWork) -> Sistema:
-        with uow:
-            sistema = uow.files.get_sistema()
-            if sistema is None:
-                raise RuntimeError("Erro na leitura do arquivo sistema.dat")
-            return sistema
-
-    @classmethod
-    def _get_patamar(cls, uow: AbstractUnitOfWork) -> Patamar:
-        with uow:
-            patamar = uow.files.get_patamar()
-            if patamar is None:
-                raise RuntimeError("Erro na leitura do arquivo patamar.dat")
-            return patamar
-
-    @classmethod
-    def _validate_data(cls, data, type: Type[T]) -> T:
-        if not isinstance(data, type):
-            raise RuntimeError("Erro na validação dos dados.")
-        return data
+    def _log(cls, msg: str, level: int = INFO):
+        if cls.logger is not None:
+            cls.logger.log(level, msg)
 
     @classmethod
     def _stored_energy_bounds(
@@ -1874,6 +1855,7 @@ class OperationVariableBounds:
         df: pd.DataFrame,
         ordered_synthesis_entities: Dict[str, list],
         uow: AbstractUnitOfWork,
+        logger: Optional[Logger] = None,
     ) -> pd.DataFrame:
         """
         Adiciona colunas de limite inferior e superior a um DataFrame,
@@ -1881,7 +1863,11 @@ class OperationVariableBounds:
         ou atribuindo -inf e +inf caso contrário.
 
         """
-        if cls.is_bounded(s):
-            return cls.MAPPINGS[s](df, uow, ordered_synthesis_entities)
-        else:
-            return cls._unbounded(df)
+        Deck.logger = logger
+        try:
+            if cls.is_bounded(s):
+                return cls.MAPPINGS[s](df, uow, ordered_synthesis_entities)
+        except ValueError as e:
+            cls._log(f"Erro no calculo de limites: {e}", ERROR)
+            cls._log("Considerando variavel ilimitada.", ERROR)
+        return cls._unbounded(df)
