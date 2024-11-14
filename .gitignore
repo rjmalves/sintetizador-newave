@@ -133,7 +133,7 @@ dmypy.json
 **.parquet
 
 test_case/
-test.py
 .vscode/
 
-nwlistop/
+# Build system
+uv.lock
