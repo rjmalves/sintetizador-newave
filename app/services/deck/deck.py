@@ -114,11 +114,12 @@ class Deck:
         with uow:
             dger = uow.files.get_dger()
             if dger is None:
+                msg = "Erro no processamento do dger.dat para sintese"
                 cls._log(
-                    "Erro no processamento do dger.dat para sintese",
+                    msg,
                     ERROR,
                 )
-                raise RuntimeError()
+                raise RuntimeError(msg)
             return dger
 
     @classmethod
@@ -126,11 +127,12 @@ class Deck:
         with uow:
             shist = uow.files.get_shist()
             if shist is None:
+                msg = "Erro no processamento do shist.dat para sintese"
                 cls._log(
-                    "Erro no processamento do shist.dat para sintese",
+                    msg,
                     ERROR,
                 )
-                raise RuntimeError()
+                raise RuntimeError(msg)
             return shist
 
     @classmethod
@@ -138,11 +140,12 @@ class Deck:
         with uow:
             curva = uow.files.get_curva()
             if curva is None:
+                msg = "Erro no processamento do curva.dat para sintese"
                 cls._log(
-                    "Erro no processamento do curva.dat para sintese",
+                    msg,
                     ERROR,
                 )
-                raise RuntimeError()
+                raise RuntimeError(msg)
             return curva
 
     @classmethod
@@ -150,11 +153,12 @@ class Deck:
         with uow:
             ree = uow.files.get_ree()
             if ree is None:
+                msg = "Erro no processamento do ree.dat para sintese"
                 cls._log(
-                    "Erro no processamento do ree.dat para sintese",
+                    msg,
                     ERROR,
                 )
-                raise RuntimeError()
+                raise RuntimeError(msg)
             return ree
 
     @classmethod
@@ -162,11 +166,12 @@ class Deck:
         with uow:
             confhd = uow.files.get_confhd()
             if confhd is None:
+                msg = "Erro no processamento do confhd.dat para sintese"
                 cls._log(
-                    "Erro no processamento do confhd.dat para sintese",
+                    msg,
                     ERROR,
                 )
-                raise RuntimeError()
+                raise RuntimeError(msg)
             return confhd
 
     @classmethod
@@ -174,11 +179,12 @@ class Deck:
         with uow:
             dsvagua = uow.files.get_dsvagua()
             if dsvagua is None:
+                msg = "Erro no processamento do dsvagua.dat para sintese"
                 cls._log(
-                    "Erro no processamento do dsvagua.dat para sintese",
+                    msg,
                     ERROR,
                 )
-                raise RuntimeError()
+                raise RuntimeError(msg)
             return dsvagua
 
     @classmethod
@@ -186,11 +192,12 @@ class Deck:
         with uow:
             modif = uow.files.get_modif()
             if modif is None:
+                msg = "Erro no processamento do modif.dat para sintese"
                 cls._log(
-                    "Erro no processamento do modif.dat para sintese",
+                    msg,
                     ERROR,
                 )
-                raise RuntimeError()
+                raise RuntimeError(msg)
             return modif
 
     @classmethod
@@ -198,11 +205,12 @@ class Deck:
         with uow:
             hidr = uow.files.get_hidr()
             if hidr is None:
+                msg = "Erro no processamento do hidr.dat para sintese"
                 cls._log(
-                    "Erro no processamento do hidr.dat para sintese",
+                    msg,
                     ERROR,
                 )
-                raise RuntimeError()
+                raise RuntimeError(msg)
             return hidr
 
     @classmethod
@@ -210,11 +218,12 @@ class Deck:
         with uow:
             vazoes = uow.files.get_vazoes()
             if vazoes is None:
+                msg = "Erro no processamento do vazoes.dat para sintese"
                 cls._log(
-                    "Erro no processamento do vazoes.dat para sintese",
+                    msg,
                     ERROR,
                 )
-                raise RuntimeError()
+                raise RuntimeError(msg)
             return vazoes
 
     @classmethod
@@ -222,11 +231,12 @@ class Deck:
         with uow:
             conft = uow.files.get_conft()
             if conft is None:
+                msg = "Erro no processamento do conft.dat para sintese"
                 cls._log(
-                    "Erro no processamento do conft.dat para sintese",
+                    msg,
                     ERROR,
                 )
-                raise RuntimeError()
+                raise RuntimeError(msg)
             return conft
 
     @classmethod
@@ -234,11 +244,12 @@ class Deck:
         with uow:
             sist = uow.files.get_sistema()
             if sist is None:
+                msg = "Erro no processamento do sistema.dat para sintese"
                 cls._log(
-                    "Erro no processamento do sistema.dat para sintese",
+                    msg,
                     ERROR,
                 )
-                raise RuntimeError()
+                raise RuntimeError(msg)
             return sist
 
     @classmethod
@@ -246,11 +257,12 @@ class Deck:
         with uow:
             clast = uow.files.get_clast()
             if clast is None:
+                msg = "Erro no processamento do clast.dat para sintese"
                 cls._log(
-                    "Erro no processamento do clast.dat para sintese",
+                    msg,
                     ERROR,
                 )
-                raise RuntimeError()
+                raise RuntimeError(msg)
             return clast
 
     @classmethod
@@ -258,11 +270,12 @@ class Deck:
         with uow:
             term = uow.files.get_term()
             if term is None:
+                msg = "Erro no processamento do term.dat para sintese"
                 cls._log(
-                    "Erro no processamento do term.dat para sintese",
+                    msg,
                     ERROR,
                 )
-                raise RuntimeError()
+                raise RuntimeError(msg)
             return term
 
     @classmethod
@@ -270,11 +283,12 @@ class Deck:
         with uow:
             manutt = uow.files.get_manutt()
             if manutt is None:
+                msg = "Erro no processamento do manutt.dat para sintese"
                 cls._log(
-                    "Erro no processamento do manutt.dat para sintese",
+                    msg,
                     ERROR,
                 )
-                raise RuntimeError()
+                raise RuntimeError(msg)
             return manutt
 
     @classmethod
@@ -282,11 +296,12 @@ class Deck:
         with uow:
             expt = uow.files.get_expt()
             if expt is None:
+                msg = "Erro no processamento do expt.dat para sintese"
                 cls._log(
-                    "Erro no processamento do expt.dat para sintese",
+                    msg,
                     ERROR,
                 )
-                raise RuntimeError()
+                raise RuntimeError(msg)
             return expt
 
     @classmethod
@@ -294,11 +309,12 @@ class Deck:
         with uow:
             pat = uow.files.get_patamar()
             if pat is None:
+                msg = "Erro no processamento do patamar.dat para sintese"
                 cls._log(
-                    "Erro no processamento do patamar.dat para sintese",
+                    msg,
                     ERROR,
                 )
-                raise RuntimeError()
+                raise RuntimeError(msg)
             return pat
 
     @classmethod
@@ -306,11 +322,12 @@ class Deck:
         with uow:
             pmo = uow.files.get_pmo()
             if pmo is None:
+                msg = "Erro no processamento do pmo.dat para sintese"
                 cls._log(
-                    "Erro no processamento do pmo.dat para sintese",
+                    msg,
                     ERROR,
                 )
-                raise RuntimeError()
+                raise RuntimeError(msg)
             return pmo
 
     @classmethod
@@ -318,11 +335,12 @@ class Deck:
         with uow:
             newavetim = uow.files.get_newavetim()
             if newavetim is None:
+                msg = "Erro no processamento do newave.tim para sintese"
                 cls._log(
-                    "Erro no processamento do newave.tim para sintese",
+                    msg,
                     ERROR,
                 )
-                raise RuntimeError()
+                raise RuntimeError(msg)
             return newavetim
 
     @classmethod
@@ -330,11 +348,12 @@ class Deck:
         with uow:
             engnat = uow.files.get_engnat()
             if engnat is None:
+                msg = "Erro no processamento do engnat.dat para sintese"
                 cls._log(
-                    "Erro no processamento do engnat.dat para sintese",
+                    msg,
                     ERROR,
                 )
-                raise RuntimeError()
+                raise RuntimeError(msg)
             return engnat
 
     @classmethod
@@ -406,8 +425,9 @@ class Deck:
     @classmethod
     def _validate_data(cls, data, type: Type[T], msg: str = "dados") -> T:
         if not isinstance(data, type):
-            cls._log(f"Erro de validação: {msg}", ERROR)
-            raise AssertionError(f"Erro de validação: {msg}", ERROR)
+            msg = f"Erro de validação: {msg}"
+            cls._log(msg, ERROR)
+            raise AssertionError(msg, ERROR)
         return data
 
     @classmethod
