@@ -213,6 +213,7 @@ class SystemSynthetizer:
     @classmethod
     def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
         cls.logger = logging.getLogger("main")
+        Deck.logger = cls.logger
         uow.subdir = SYSTEM_SYNTHESIS_SUBDIR
         with time_and_log(
             message_root="Tempo para sintese da sistema",

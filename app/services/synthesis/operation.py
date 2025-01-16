@@ -2311,10 +2311,10 @@ class OperationSynthetizer:
             stats_df = df.loc[df[STATS_OR_SCENARIO_COL]]
             scenarios_df = scenarios_df.astype({SCENARIO_COL: int})
             stats_df = stats_df.reset_index(drop=True)
+            scenarios_df = scenarios_df.sort_values(
+                s.spatial_resolution.sorting_synthesis_df_columns
+            ).reset_index(drop=True)
             if stats_df.empty:
-                scenarios_df = scenarios_df.sort_values(
-                    s.spatial_resolution.sorting_synthesis_df_columns
-                ).reset_index(drop=True)
                 stats_df = calc_statistics(scenarios_df)
             stats_df = stats_df.drop(columns=[STATS_OR_SCENARIO_COL])
             cls._add_synthesis_stats(s, stats_df)
@@ -2343,30 +2343,26 @@ class OperationSynthetizer:
         `OPERACAO_{agregacao}`.
         """
         for res, dfs in cls.SYNTHESIS_STATS.items():
-            with uow:
-                df = pd.concat(dfs, ignore_index=True)
-                df_columns = df.columns.tolist()
-                columns_without_variable = [
-                    c for c in df_columns if c != VARIABLE_COL
-                ]
-                df = df[[VARIABLE_COL] + columns_without_variable]
-                df = df.astype({VARIABLE_COL: STRING_DF_TYPE})
-                df = df.sort_values(
-                    res.sorting_synthesis_df_columns
-                ).reset_index(drop=True)
-                stats_filename = f"{OPERATION_SYNTHESIS_STATS_ROOT}_{res.value}"
-                existing_df = uow.export.read_df(stats_filename)
-                if existing_df is not None:
-                    df = pd.concat([existing_df, df], ignore_index=True)
-                    df = df.drop_duplicates(
-                        subset=[
-                            c
-                            for c in df.columns
-                            if c
-                            not in [VALUE_COL, UPPER_BOUND_COL, LOWER_BOUND_COL]
-                        ]
+            with time_and_log(
+                message_root="Tempo para exportacao"
+                + f" das estatisticas de {res.value}",
+                logger=cls.logger,
+            ):
+                with uow:
+                    df = pd.concat(dfs, ignore_index=True)
+                    df = df[[VARIABLE_COL] + res.all_synthesis_df_columns]
+                    df = df.astype({VARIABLE_COL: STRING_DF_TYPE})
+                    df = df.sort_values(
+                        [VARIABLE_COL] + res.sorting_synthesis_df_columns
+                    ).reset_index(drop=True)
+                    stats_filename = (
+                        f"{OPERATION_SYNTHESIS_STATS_ROOT}_{res.value}"
                     )
-                uow.export.synthetize_df(df, stats_filename)
+                    existing_df = uow.export.read_df(stats_filename)
+                    if existing_df is not None:
+                        df = pd.concat([existing_df, df], ignore_index=True)
+                        df = df.drop_duplicates()
+                    uow.export.synthetize_df(df, stats_filename)
 
     @classmethod
     def _preprocess_synthesis_variables(
@@ -2433,7 +2429,6 @@ class OperationSynthetizer:
                     )
                 return None
             except Exception as e:
-                print_exc()
                 cls._log(str(e), ERROR)
                 cls._log(
                     f"Nao foi possível realizar a sintese de: {filename}",
@@ -2456,6 +2451,8 @@ class OperationSynthetizer:
         e então são resolvidas de acordo com a síntese.
         """
         cls.logger = logging.getLogger("main")
+        Deck.logger = cls.logger
+        OperationVariableBounds.logger = cls.logger
         uow.subdir = OPERATION_SYNTHESIS_SUBDIR
         with time_and_log(
             message_root="Tempo para sintese da operacao",

@@ -54,7 +54,7 @@ Para realizar a síntese completa do caso, está disponível o comando `completa
 
 Se for desejado não realizar a síntese completa, mas apenas de alguns dos elementos, é possível chamar cada elemento a ser sintetizado::
 
-    $ sintetizador-newave operacao CMO_SBM_EST EARMF_SIN_EST GTER_SBM_PAT
+    $ sintetizador-newave operacao CMO_SBM EARMF_SIN GTER_SBM
 
 O formato de escrita padrão das sínteses é `PARQUET <https://www.databricks.com/glossary/what-is-parquet>`, que é um formato eficiente
 de armazenamento de dados tabulares para aplicações de *big data*.

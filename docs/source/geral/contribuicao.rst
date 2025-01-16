@@ -19,7 +19,7 @@ Para instalar as dependências de desenvolvimento, incluindo as necessárias par
     
     $ git clone https://github.com/rjmalves/sintetizador-newave.git
     $ cd sintetizador-newave
-    $ pip install -r dev-requirements.txt
+    $ pip install .[dev]
 
 .. warning::
 
@@ -48,6 +48,16 @@ ser inferido em qualquer situação, permanencendo incerto para o leitor o tipo 
 execução de teste do programa.
 
 
+Gerenciamento do projeto utilizando o `pyproject.toml` e `uv`
+--------------------------------------------------------------
+
+Como sugerido pela `PyPA <https://www.pypa.io/en/latest/>`_, a definição de um projeto em Python, que antes era feita através do arquivo `setup.py`, que utilizava o módulo `setuptools` para definir dependências, requisitos e dados sobre o projeto, deve passar a ser feita através de um arquivo `pyproject.toml`.
+
+Orientações sobre o conteúdo deste arquivo estão disponíveis `aqui <https://packaging.python.org/en/latest/tutorials/packaging-projects/>`_, e ele é facilmente extendido conforme novas ferramentas são adicionadas ao projeto, criando um único arquivo para configurar todo o projeto.
+
+Para auxiliar a realizar tarefas como instalar localmente, adicionar uma nova dependência, executar um comando dentro de um ambiente específico, dentre outros, recomenda-se utilizar ferramentas específicas para isso, como o `uv <https://docs.astral.sh/uv/guides/projects/>`_.
+
+
 Procedimentos de teste
 -----------------------
 
@@ -57,8 +67,8 @@ A tipagem estática é garantida através do uso de `mypy <http://mypy-lang.org/
 , que é sempre executado nos scripts de Integração Contínua (CI).
 
 Antes de realizar um ``git push`` é recomendado que se realize estes três procedimentos
-descritos, que serão novamente executados pelo ambiente de CI::
+descritos, que serão novamente executados pelo ambiente de CI. Por exemplo, através do `uv`::
 
-    $ pytest ./tests
-    $ mypy ./app
-    $ ruff check ./app
+    $ uv run pytest ./tests
+    $ uv run mypy ./app
+    $ uv run ruff check ./app

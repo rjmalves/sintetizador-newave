@@ -1644,6 +1644,7 @@ class ScenarioSynthetizer:
         e então são resolvidas de acordo com a síntese.
         """
         cls.logger = logging.getLogger("main")
+        Deck.logger = cls.logger
         uow.subdir = SCENARIO_SYNTHESIS_SUBDIR
         with time_and_log(
             message_root="Tempo para síntese dos cenários", logger=cls.logger
