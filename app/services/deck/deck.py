@@ -871,13 +871,15 @@ class Deck:
                 history_input_end_year = (
                     history_input_starting_year + num_history_input_years - 1
                 )
+                study_starting_month = cls.study_period_starting_month(uow)
+                last_year_offset = 2 if study_starting_month != 1 else 1
                 study_starting_year = cls.study_period_starting_year(uow)
                 final_simulation_last_year = (
                     min([
                         history_input_end_year,
                         study_starting_year,
                     ])
-                    - 2
+                    - last_year_offset
                 )
 
                 span_starting_year = cls._validate_data(
