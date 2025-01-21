@@ -52,12 +52,17 @@ from inewave.newave.modelos.modif import (
     VOLMAX,
     VOLMIN,
 )
+from inewave.nwlistcf import Estados, Nwlistcfrel
 
 from app.internal.constants import (
     BLOCK_COL,
+    COEF_TYPE_COL,
+    COEF_VALUE_COL,
     CONFIG_COL,
+    CUT_INDEX_COL,
     EER_CODE_COL,
     EER_NAME_COL,
+    ENTITY_INDEX_COL,
     EXCHANGE_SOURCE_CODE_COL,
     EXCHANGE_TARGET_CODE_COL,
     FOLLOWING_HYDRO_COL,
@@ -65,6 +70,8 @@ from app.internal.constants import (
     HM3_M3S_MONTHLY_FACTOR,
     HYDRO_CODE_COL,
     HYDRO_NAME_COL,
+    ITERATION_COL,
+    LAG_COL,
     LOSS_COL,
     LOSS_KIND_COL,
     LOWER_BOUND_COL,
@@ -75,7 +82,9 @@ from app.internal.constants import (
     RUN_OF_RIVER_REFERENCE_VOLUME_COL,
     SCENARIO_COL,
     SPEC_PRODUCTIVITY_COL,
+    STAGE_COL,
     START_DATE_COL,
+    STATE_VALUE_COL,
     STRING_DF_TYPE,
     SUBMARKET_CODE_COL,
     SUBMARKET_NAME_COL,
@@ -421,6 +430,18 @@ class Deck:
         with uow:
             vazaos = uow.files.get_vazaos()
             return vazaos
+
+    @classmethod
+    def _get_cortes(cls, uow: AbstractUnitOfWork) -> Optional[Nwlistcfrel]:
+        with uow:
+            cortes = uow.files.get_nwlistcf_cortes()
+            return cortes
+
+    @classmethod
+    def _get_estados(cls, uow: AbstractUnitOfWork) -> Optional[Estados]:
+        with uow:
+            estados = uow.files.get_nwlistcf_estados()
+            return estados
 
     @classmethod
     def _validate_data(cls, data, type: Type[T], msg: str = "dados") -> T:
@@ -1128,6 +1149,19 @@ class Deck:
             year=starting_year, month=1, day=1
         ) - relativedelta(months=past_stages)
         return starting_date_with_tendency
+
+    @classmethod
+    def num_forward_series(cls, uow: AbstractUnitOfWork) -> int:
+        num_forward_series = cls.DECK_DATA_CACHING.get("num_forward_series")
+        if num_forward_series is None:
+            dger = cls.dger(uow)
+            num_forward_series = cls._validate_data(
+                dger.num_forwards,
+                int,
+                "número de séries forward (dger.dat)",
+            )
+            cls.DECK_DATA_CACHING["num_forward_series"] = num_forward_series
+        return num_forward_series
 
     @classmethod
     def ending_date_with_post_study_period(
@@ -3487,4 +3521,124 @@ class Deck:
             )
             aux_df = aux_df.set_index(THERMAL_CODE_COL)
             cls.DECK_DATA_CACHING["thermal_submarket_map"] = aux_df
+        return aux_df.copy()
+
+    @classmethod
+    def _policy_df_building_block(
+        cls, cut_df: pd.DataFrame, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        df = cls.DECK_DATA_CACHING.get("_policy_df_building_block")
+
+        if df is None:
+            stages = cut_df[STAGE_COL].unique().tolist()
+            num_stages = len(stages)
+            cut_indexes = cut_df[CUT_INDEX_COL].unique().tolist()
+            num_series = cls.num_forward_series(uow)
+            num_iterations = len(cut_indexes) // num_series
+            df = pd.DataFrame(
+                data={
+                    STAGE_COL: np.repeat(
+                        np.array(stages), num_iterations * num_series
+                    ),
+                    CUT_INDEX_COL: cut_indexes,
+                    ITERATION_COL: np.tile(
+                        np.repeat(np.arange(1, num_iterations + 1), num_series)[
+                            ::-1
+                        ],
+                        num_stages,
+                    ),
+                    SCENARIO_COL: np.tile(
+                        np.tile(np.arange(1, num_series + 1), num_iterations),
+                        num_stages,
+                    ),
+                }
+            )
+            df[COEF_TYPE_COL] = ""
+            df[ENTITY_INDEX_COL] = 0
+            df[LAG_COL] = 0
+            df[COEF_VALUE_COL] = np.nan
+            df[STATE_VALUE_COL] = np.nan
+            cls.DECK_DATA_CACHING["common_policy_df"] = df
+        return df.copy()
+
+    @classmethod
+    def _rhs_entities(
+        cls,
+        cut_df: pd.DataFrame,
+        state_df: pd.DataFrame | None,
+        uow: AbstractUnitOfWork,
+    ) -> pd.DataFrame:
+        # Obtaining RHS: df.drop_duplicates(subset=["IREG"])
+        # TODO
+        pass
+
+    @classmethod
+    def _storage_cut_entities(
+        cls,
+        cut_df: pd.DataFrame,
+        state_df: pd.DataFrame | None,
+        uow: AbstractUnitOfWork,
+    ) -> pd.DataFrame:
+        df = pd.concat(
+            [cls._policy_df_building_block(cut_df, uow)] * 12, ignore_index=True
+        )
+
+        cut_cols = cut_df.columns.tolist()
+        entity_col = [c for c in cut_cols if c in ["REE", "UHE"]][0]
+        value_col = [c for c in cut_cols if c in ["PIEARM", "PIV"]][0]
+        coef_type_map = {
+            "REE": "EARM",
+            "UHE": "VARM",
+        }
+        coef_type_value = coef_type_map[entity_col]
+        df[COEF_TYPE_COL] = coef_type_value
+
+        entity_indices = np.array(cut_df[entity_col].unique().tolist())
+        num_entities = len(entity_indices)
+        df = df.sort_values([STAGE_COL, CUT_INDEX_COL, SCENARIO_COL])
+        num_repeats = cut_df.shape[0] // num_entities
+        df[ENTITY_INDEX_COL] = np.tile(entity_indices, num_repeats)
+
+        df[COEF_VALUE_COL] = cut_df[value_col].to_numpy()
+        if state_df:
+            df[STATE_VALUE_COL] = state_df[coef_type_value].to_numpy()
+        return df
+
+    @classmethod
+    def common_policy_df(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        aux_df = cls.DECK_DATA_CACHING.get("common_policy_df")
+
+        if aux_df is None:
+            cut_df = cls._validate_data(
+                cls._get_cortes(uow).cortes,
+                pd.DataFrame,
+                "Relatório de cortes do NWLISTCF",
+            )
+            cut_df = cut_df.rename(
+                columns={
+                    "PERIODO": STAGE_COL,
+                    "IREG": CUT_INDEX_COL,
+                }
+            )
+            cut_df[STAGE_COL] -= cls.study_period_starting_month(uow) - 1
+
+            state_df = cls._get_estados(uow).estados
+            if state_df is not None:
+                state_df = state_df.rename(
+                    columns={
+                        "PERIODO": STAGE_COL,
+                        "IREG": CUT_INDEX_COL,
+                        "ITEc": ITERATION_COL,
+                        "SIMc": SCENARIO_COL,
+                    }
+                ).drop(columns=["ITEf"])
+                state_df[STAGE_COL] -= cls.study_period_starting_month(uow) - 1
+
+            # Builds policy df
+            aux_df = pd.concat(
+                [cls._storage_cut_entities(cut_df, state_df, uow)],
+                ignore_index=True,
+            )
+
+            cls.DECK_DATA_CACHING["common_policy_df"] = aux_df
         return aux_df.copy()

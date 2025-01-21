@@ -3,7 +3,6 @@ from enum import Enum
 
 class Variable(Enum):
     CORTES = "CORTES"
-    ESTADOS = "ESTADOS"
 
     @classmethod
     def factory(cls, val: str) -> "Variable":
@@ -17,16 +16,10 @@ class Variable(Enum):
 
     @property
     def short_name(self) -> str | None:
-        SHORT_NAMES: dict[str, str] = {
-            "CORTES": "CORTES",
-            "ESTADOS": "ESTADOS",
-        }
+        SHORT_NAMES: dict[str, str] = {"CORTES": "CORTES"}
         return SHORT_NAMES.get(self.value)
 
     @property
     def long_name(self) -> str | None:
-        LONG_NAMES: dict[str, str] = {
-            "CORTES": "Cortes de Benders",
-            "ESTADOS": "Estados Visitados na Construção dos Cortes",
-        }
+        LONG_NAMES: dict[str, str] = {"CORTES": "Cortes de Benders"}
         return LONG_NAMES.get(self.value)

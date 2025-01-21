@@ -61,6 +61,13 @@ CONFIG_COL = "configuracao"
 
 STATS_OR_SCENARIO_COL = "estatistica_ou_cenario"
 
+CUT_INDEX_COL = "indice_corte"
+COEF_TYPE_COL = "tipo_coeficiente"
+ENTITY_INDEX_COL = "indice_entidade"
+LAG_COL = "lag"
+COEF_VALUE_COL = "valor_coeficiente"
+STATE_VALUE_COL = "valor_estado"
+
 
 IDENTIFICATION_COLUMNS = [
     START_DATE_COL,
