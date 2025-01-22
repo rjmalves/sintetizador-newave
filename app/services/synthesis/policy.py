@@ -83,14 +83,23 @@ class PolicySynthetizer:
         cls, synthesis: PolicySynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         RULES: Dict[Variable, Callable] = {
-            Variable.CORTES: cls._resolve_cortes,
+            Variable.CORTES_COEFICIENTES: cls._resolve_cortes_coeficientes,
+            Variable.CORTES_VARIAVEIS: cls._resolve_cortes_variaveis,
         }
         return RULES[synthesis.variable](uow)
 
     @classmethod
-    def _resolve_cortes(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def _resolve_cortes_coeficientes(
+        cls, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
         with uow:
             df = Deck.common_policy_df(uow)
+            return df
+
+    @classmethod
+    def _resolve_cortes_variaveis(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        with uow:
+            df = Deck.policy_variable_units(uow)
             return df
 
     @classmethod
