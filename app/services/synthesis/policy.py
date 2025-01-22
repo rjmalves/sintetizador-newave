@@ -14,6 +14,7 @@ from app.model.policy.policysynthesis import (
     PolicySynthesis,
 )
 from app.model.policy.variable import Variable
+from app.services.deck.deck import Deck
 from app.services.unitofwork import AbstractUnitOfWork
 from app.utils.regex import match_variables_with_wildcards
 from app.utils.timing import time_and_log
@@ -82,27 +83,23 @@ class PolicySynthetizer:
         cls, synthesis: PolicySynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
         RULES: Dict[Variable, Callable] = {
-            Variable.CORTES: cls._resolve_cortes,
-            Variable.ESTADOS: cls._resolve_estados,
+            Variable.CORTES_COEFICIENTES: cls._resolve_cortes_coeficientes,
+            Variable.CORTES_VARIAVEIS: cls._resolve_cortes_variaveis,
         }
         return RULES[synthesis.variable](uow)
 
     @classmethod
-    def _resolve_cortes(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def _resolve_cortes_coeficientes(
+        cls, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
         with uow:
-            arq_cortes = uow.files.get_nwlistcf_cortes()
-            if arq_cortes is None:
-                return None
-            df = arq_cortes.cortes
+            df = Deck.common_policy_df(uow)
             return df
 
     @classmethod
-    def _resolve_estados(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def _resolve_cortes_variaveis(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         with uow:
-            arq_estados = uow.files.get_nwlistcf_estados()
-            if arq_estados is None:
-                return None
-            df = arq_estados.estados
+            df = Deck.policy_variable_units(uow)
             return df
 
     @classmethod

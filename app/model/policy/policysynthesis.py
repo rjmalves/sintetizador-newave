@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Optional
+
 from app.model.policy.variable import Variable
 
 
@@ -17,7 +18,4 @@ class PolicySynthesis:
         )
 
 
-SUPPORTED_SYNTHESIS: list[str] = [
-    "CORTES",
-    "ESTADOS",
-]
+SUPPORTED_SYNTHESIS: list[str] = ["CORTES_COEFICIENTES", "CORTES_VARIAVEIS"]

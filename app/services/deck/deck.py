@@ -52,30 +52,46 @@ from inewave.newave.modelos.modif import (
     VOLMAX,
     VOLMIN,
 )
+from inewave.nwlistcf import Estados, Nwlistcfrel
 
 from app.internal.constants import (
     BLOCK_COL,
+    COEF_TYPE_COL,
+    COEF_VALUE_COL,
     CONFIG_COL,
+    CUT_INDEX_COL,
+    EARM_COEF_CODE,
     EER_CODE_COL,
     EER_NAME_COL,
+    ENA_COEF_CODE,
+    ENTITY_INDEX_COL,
     EXCHANGE_SOURCE_CODE_COL,
     EXCHANGE_TARGET_CODE_COL,
     FOLLOWING_HYDRO_COL,
+    GTER_COEF_CODE,
     HEIGHT_POLY_COLS,
     HM3_M3S_MONTHLY_FACTOR,
     HYDRO_CODE_COL,
     HYDRO_NAME_COL,
+    ITERATION_COL,
+    LAG_COL,
     LOSS_COL,
     LOSS_KIND_COL,
     LOWER_BOUND_COL,
     LOWER_BOUND_UNIT_COL,
     LOWER_DROP_COL,
+    MAX_THERMAL_DISPATCH_LAG,
+    MAXVIOL_COEF_CODE,
     NET_DROP_COL,
     PRODUCTIVITY_TMP_COL,
+    QINC_COEF_CODE,
+    RHS_COEF_CODE,
     RUN_OF_RIVER_REFERENCE_VOLUME_COL,
     SCENARIO_COL,
     SPEC_PRODUCTIVITY_COL,
+    STAGE_COL,
     START_DATE_COL,
+    STATE_VALUE_COL,
     STRING_DF_TYPE,
     SUBMARKET_CODE_COL,
     SUBMARKET_NAME_COL,
@@ -85,10 +101,12 @@ from app.internal.constants import (
     UPPER_BOUND_UNIT_COL,
     UPPER_DROP_COL,
     VALUE_COL,
+    VARM_COEF_CODE,
     VOLUME_FOR_PRODUCTIVITY_TMP_COL,
     VOLUME_REGULATION_COL,
 )
 from app.model.operation.unit import Unit
+from app.model.policy.unit import Unit as PolicyUnit
 from app.services.unitofwork import AbstractUnitOfWork
 from app.utils.graph import Graph
 
@@ -421,6 +439,18 @@ class Deck:
         with uow:
             vazaos = uow.files.get_vazaos()
             return vazaos
+
+    @classmethod
+    def _get_cortes(cls, uow: AbstractUnitOfWork) -> Optional[Nwlistcfrel]:
+        with uow:
+            cortes = uow.files.get_nwlistcf_cortes()
+            return cortes
+
+    @classmethod
+    def _get_estados(cls, uow: AbstractUnitOfWork) -> Optional[Estados]:
+        with uow:
+            estados = uow.files.get_nwlistcf_estados()
+            return estados
 
     @classmethod
     def _validate_data(cls, data, type: Type[T], msg: str = "dados") -> T:
@@ -1128,6 +1158,19 @@ class Deck:
             year=starting_year, month=1, day=1
         ) - relativedelta(months=past_stages)
         return starting_date_with_tendency
+
+    @classmethod
+    def num_forward_series(cls, uow: AbstractUnitOfWork) -> int:
+        num_forward_series = cls.DECK_DATA_CACHING.get("num_forward_series")
+        if num_forward_series is None:
+            dger = cls.dger(uow)
+            num_forward_series = cls._validate_data(
+                dger.num_forwards,
+                int,
+                "número de séries forward (dger.dat)",
+            )
+            cls.DECK_DATA_CACHING["num_forward_series"] = num_forward_series
+        return num_forward_series
 
     @classmethod
     def ending_date_with_post_study_period(
@@ -3488,3 +3531,482 @@ class Deck:
             aux_df = aux_df.set_index(THERMAL_CODE_COL)
             cls.DECK_DATA_CACHING["thermal_submarket_map"] = aux_df
         return aux_df.copy()
+
+    @classmethod
+    def _policy_df_building_block(
+        cls, cut_df: pd.DataFrame, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        df = cls.DECK_DATA_CACHING.get("_policy_df_building_block")
+        if df is None:
+            stages = cut_df[STAGE_COL].unique().tolist()
+            num_stages = len(stages)
+            cut_indexes = cut_df[CUT_INDEX_COL].unique().tolist()
+            num_series = cls.num_forward_series(uow)
+            num_iterations = len(cut_indexes) // (num_series * num_stages)
+            df = pd.DataFrame(
+                data={
+                    STAGE_COL: np.repeat(
+                        np.array(stages), num_iterations * num_series
+                    ),
+                    CUT_INDEX_COL: cut_indexes,
+                    ITERATION_COL: np.tile(
+                        np.repeat(np.arange(1, num_iterations + 1), num_series)[
+                            ::-1
+                        ],
+                        num_stages,
+                    ),
+                    SCENARIO_COL: np.tile(
+                        np.tile(np.arange(num_series, 0, -1), num_iterations),
+                        num_stages,
+                    ),
+                }
+            )
+            df[COEF_TYPE_COL] = ""
+            df[ENTITY_INDEX_COL] = 0
+            df[LAG_COL] = 0
+            df[BLOCK_COL] = 0
+            df[COEF_VALUE_COL] = np.nan
+            df[STATE_VALUE_COL] = np.nan
+            cls.DECK_DATA_CACHING["_policy_df_building_block"] = df
+        return df.copy()
+
+    @classmethod
+    def _rhs_entities(
+        cls,
+        cut_df: pd.DataFrame,
+        state_df: pd.DataFrame | None,
+        uow: AbstractUnitOfWork,
+    ) -> pd.DataFrame:
+        cut_cols = cut_df.columns.tolist()
+        rhs_col = "RHS"
+        obj_func_col = "FUNC.OBJ."
+        entity_col = [c for c in cut_cols if c in ["REE", "UHE"]][0]
+        num_entities = cut_df[entity_col].unique().shape[0]
+        base_df = cls._policy_df_building_block(cut_df, uow)
+
+        rhs_df = cut_df.iloc[::num_entities]
+        base_df[COEF_VALUE_COL] = rhs_df[rhs_col].to_numpy()
+
+        if state_df is not None:
+            obj_df = state_df.iloc[::num_entities]
+            base_df[STATE_VALUE_COL] = obj_df[obj_func_col].to_numpy()
+
+        base_df[COEF_TYPE_COL] = RHS_COEF_CODE
+
+        return base_df
+
+    @classmethod
+    def _eer_hydro_cut_entities(
+        cls,
+        entity_col: str,
+        cut_value_col: str,
+        state_value_col: str | None,
+        coef_type_value: int,
+        lag: int,
+        cut_df: pd.DataFrame,
+        state_df: pd.DataFrame | None,
+        uow: AbstractUnitOfWork,
+    ) -> pd.DataFrame:
+        entity_indices = np.array(cut_df[entity_col].unique().tolist())
+
+        num_entities = len(entity_indices)
+        df = pd.concat(
+            [
+                cls._policy_df_building_block(cut_df, uow)
+                for _ in range(num_entities)
+            ],
+            ignore_index=True,
+        )
+        df[COEF_TYPE_COL] = coef_type_value
+        df[LAG_COL] = lag
+
+        df = df.sort_values(
+            [STAGE_COL, CUT_INDEX_COL, SCENARIO_COL],
+            ascending=[True, False, False],
+        ).reset_index(drop=True)
+        num_repeats = cut_df.shape[0] // num_entities
+        df[ENTITY_INDEX_COL] = np.tile(entity_indices, num_repeats)
+
+        df[COEF_VALUE_COL] = cut_df[cut_value_col].to_numpy()
+        if state_df is not None:
+            df[STATE_VALUE_COL] = state_df[state_value_col].to_numpy()
+        return df
+
+    @classmethod
+    def _storage_cut_entities(
+        cls,
+        cut_df: pd.DataFrame,
+        state_df: pd.DataFrame | None,
+        uow: AbstractUnitOfWork,
+    ) -> pd.DataFrame:
+        cut_cols = cut_df.columns.tolist()
+        entity_col = [c for c in cut_cols if c in ["REE", "UHE"]][0]
+        cut_value_col = [c for c in cut_cols if c in ["PIEARM", "PIVARM"]][0]
+
+        state_cols = state_df.columns.tolist() if state_df is not None else []
+        state_value_col = (
+            [c for c in state_cols if c in ["EARM", "VARM"]][0]
+            if state_df is not None
+            else None
+        )
+
+        coef_type_map = {
+            "REE": EARM_COEF_CODE,
+            "UHE": VARM_COEF_CODE,
+        }
+        coef_type_value = coef_type_map[entity_col]
+
+        df = cls._eer_hydro_cut_entities(
+            entity_col,
+            cut_value_col,
+            state_value_col,
+            coef_type_value,
+            0,
+            cut_df,
+            state_df,
+            uow,
+        )
+        return df
+
+    @classmethod
+    def _inflow_cut_entities(
+        cls,
+        cut_df: pd.DataFrame,
+        state_df: pd.DataFrame | None,
+        uow: AbstractUnitOfWork,
+    ) -> pd.DataFrame:
+        cut_cols = cut_df.columns.tolist()
+        entity_col = [c for c in cut_cols if c in ["REE", "UHE"]][0]
+
+        max_ar_lag = cls.num_stages_with_past_tendency_period(uow)
+
+        dfs: list[pd.DataFrame] = []
+        for lag in range(1, max_ar_lag + 1):
+            cut_value_col = [
+                c for c in cut_cols if c in [f"PIH({lag})", f"PIAFL({lag})"]
+            ][0]
+
+            state_cols = (
+                state_df.columns.tolist() if state_df is not None else []
+            )
+            state_value_col = (
+                [c for c in state_cols if c in [f"EAF({lag})", f"VAF({lag})"]][
+                    0
+                ]
+                if state_df is not None
+                else None
+            )
+
+            coef_type_map = {
+                "REE": ENA_COEF_CODE,
+                "UHE": QINC_COEF_CODE,
+            }
+            coef_type_value = coef_type_map[entity_col]
+            df = cls._eer_hydro_cut_entities(
+                entity_col,
+                cut_value_col,
+                state_value_col,
+                coef_type_value,
+                lag,
+                cut_df,
+                state_df,
+                uow,
+            )
+            dfs.append(df)
+        return pd.concat(dfs, ignore_index=True)
+
+    @classmethod
+    def _eer_in_hydro_cut_entities(
+        cls,
+        entity_col: str,
+        cut_value_col: str,
+        state_value_col: str | None,
+        coef_type_value: int,
+        cut_df: pd.DataFrame,
+        state_df: pd.DataFrame | None,
+        uow: AbstractUnitOfWork,
+    ) -> pd.DataFrame:
+        hydro_df = cls.hydro_eer_submarket_map(uow)
+        hydro_df = hydro_df.reset_index().drop_duplicates(subset=[EER_CODE_COL])
+        entity_indices = hydro_df[HYDRO_CODE_COL].tolist()
+        eer_indices = hydro_df[EER_CODE_COL].tolist()
+
+        num_entities = len(entity_indices)
+        df = pd.concat(
+            [
+                cls._policy_df_building_block(cut_df, uow)
+                for _ in range(num_entities)
+            ],
+            ignore_index=True,
+        )
+        df[COEF_TYPE_COL] = coef_type_value
+        df[LAG_COL] = 0
+        df[BLOCK_COL] = 0
+
+        df = df.sort_values(
+            [STAGE_COL, CUT_INDEX_COL, SCENARIO_COL],
+            ascending=[True, False, False],
+        ).reset_index(drop=True)
+        filtered_cut_df = cut_df.loc[cut_df[entity_col].isin(entity_indices)]
+        num_repeats = filtered_cut_df.shape[0] // num_entities
+        df[ENTITY_INDEX_COL] = np.tile(eer_indices, num_repeats)
+
+        df[COEF_VALUE_COL] = filtered_cut_df[cut_value_col].to_numpy()
+        if state_df is not None:
+            df[STATE_VALUE_COL] = state_df.loc[
+                state_df[entity_col].isin(entity_indices), state_value_col
+            ].to_numpy()
+        return df
+
+    @classmethod
+    def _maxviol_cut_entities(
+        cls,
+        cut_df: pd.DataFrame,
+        state_df: pd.DataFrame | None,
+        uow: AbstractUnitOfWork,
+    ) -> pd.DataFrame:
+        cut_cols = cut_df.columns.tolist()
+        entity_col = [c for c in cut_cols if c in ["REE", "UHE"]][0]
+        cut_value_col = "PIMX_VMN"
+        state_value_col = "MX_CURVA"
+
+        coef_type_value = MAXVIOL_COEF_CODE
+
+        if entity_col == "REE":
+            df = cls._eer_hydro_cut_entities(
+                entity_col,
+                cut_value_col,
+                state_value_col,
+                coef_type_value,
+                0,
+                cut_df,
+                state_df,
+                uow,
+            )
+        else:
+            df = cls._eer_in_hydro_cut_entities(
+                entity_col,
+                cut_value_col,
+                state_value_col,
+                coef_type_value,
+                cut_df,
+                state_df,
+                uow,
+            )
+        return df
+
+    @classmethod
+    def _submarket_cut_entities(
+        cls,
+        entity_col: str,
+        cut_value_col: str,
+        state_value_col: str | None,
+        coef_type_value: int,
+        lag: int,
+        block: int,
+        cut_df: pd.DataFrame,
+        state_df: pd.DataFrame | None,
+        uow: AbstractUnitOfWork,
+    ) -> pd.DataFrame:
+        if entity_col == "REE":
+            eer_df = cls.eers(uow)
+            eer_df = eer_df.reset_index().drop_duplicates(
+                subset=[SUBMARKET_CODE_COL]
+            )
+            entity_indices = eer_df[EER_CODE_COL].tolist()
+            sbm_indices = eer_df[SUBMARKET_CODE_COL].tolist()
+        else:
+            hydro_df = cls.hydro_eer_submarket_map(uow)
+            hydro_df = hydro_df.reset_index().drop_duplicates(
+                subset=[SUBMARKET_CODE_COL]
+            )
+            entity_indices = hydro_df[HYDRO_CODE_COL].tolist()
+            sbm_indices = hydro_df[SUBMARKET_CODE_COL].tolist()
+
+        num_entities = len(entity_indices)
+        df = pd.concat(
+            [
+                cls._policy_df_building_block(cut_df, uow)
+                for _ in range(num_entities)
+            ],
+            ignore_index=True,
+        )
+        df[COEF_TYPE_COL] = coef_type_value
+        df[LAG_COL] = lag
+        df[BLOCK_COL] = block
+
+        df = df.sort_values(
+            [STAGE_COL, CUT_INDEX_COL, SCENARIO_COL],
+            ascending=[True, False, False],
+        ).reset_index(drop=True)
+        filtered_cut_df = cut_df.loc[cut_df[entity_col].isin(entity_indices)]
+        num_repeats = filtered_cut_df.shape[0] // num_entities
+        df[ENTITY_INDEX_COL] = np.tile(sbm_indices, num_repeats)
+
+        df[COEF_VALUE_COL] = filtered_cut_df[cut_value_col].to_numpy()
+        if state_df is not None:
+            df[STATE_VALUE_COL] = state_df.loc[
+                state_df[entity_col].isin(entity_indices), state_value_col
+            ].to_numpy()
+        return df
+
+    @classmethod
+    def _thermal_generation_cut_entities(
+        cls,
+        cut_df: pd.DataFrame,
+        state_df: pd.DataFrame | None,
+        uow: AbstractUnitOfWork,
+    ) -> pd.DataFrame:
+        cut_cols = cut_df.columns.tolist()
+        entity_col = [c for c in cut_cols if c in ["REE", "UHE"]][0]
+
+        num_blocks = cls.num_blocks(uow)
+        max_thermal_lag = MAX_THERMAL_DISPATCH_LAG
+
+        dfs: list[pd.DataFrame] = []
+        for block in range(1, num_blocks + 1):
+            for lag in range(1, max_thermal_lag + 1):
+                cut_value_col = [
+                    c for c in cut_cols if c == f"PIGTAD(P{block}L{lag})"
+                ][0]
+
+                state_cols = (
+                    state_df.columns.tolist() if state_df is not None else []
+                )
+                state_value_col = (
+                    [c for c in state_cols if c == f"SGT(P{block}E{lag})"][0]
+                    if state_df is not None
+                    else None
+                )
+
+                coef_type_value = GTER_COEF_CODE
+                df = cls._submarket_cut_entities(
+                    entity_col,
+                    cut_value_col,
+                    state_value_col,
+                    coef_type_value,
+                    lag,
+                    block,
+                    cut_df,
+                    state_df,
+                    uow,
+                )
+                dfs.append(df)
+        return pd.concat(dfs, ignore_index=True)
+
+    @classmethod
+    def common_policy_df(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        aux_df = cls.DECK_DATA_CACHING.get("common_policy_df")
+
+        if aux_df is None:
+            nwlistcfrel = cls._validate_data(
+                cls._get_cortes(uow),
+                Nwlistcfrel,
+                "Relatório de cortes do NWLISTCF",
+            )
+            cut_df = cls._validate_data(
+                nwlistcfrel.cortes,
+                pd.DataFrame,
+                "Relatório de cortes do NWLISTCF",
+            )
+            cut_df = cut_df.rename(
+                columns={
+                    "PERIODO": STAGE_COL,
+                    "IREG": CUT_INDEX_COL,
+                }
+            )
+            cut_df[STAGE_COL] -= cls.study_period_starting_month(uow) - 1
+            estadosrel = cls._validate_data(
+                cls._get_estados(uow),
+                Estados,
+                "Relatório de estados do NWLISTCF",
+            )
+            state_df = estadosrel.estados
+            if state_df is not None:
+                state_df = state_df.rename(
+                    columns={
+                        "PERIODO": STAGE_COL,
+                        "IREG": CUT_INDEX_COL,
+                        "ITEc": ITERATION_COL,
+                        "SIMc": SCENARIO_COL,
+                    }
+                ).drop(columns=["ITEf"])
+                state_df[STAGE_COL] -= cls.study_period_starting_month(uow) - 1
+
+            # Builds policy df
+            aux_df = pd.concat(
+                [
+                    cls._rhs_entities(cut_df, state_df, uow),
+                    cls._storage_cut_entities(cut_df, state_df, uow),
+                    cls._inflow_cut_entities(cut_df, state_df, uow),
+                    cls._thermal_generation_cut_entities(cut_df, state_df, uow),
+                    cls._maxviol_cut_entities(cut_df, state_df, uow),
+                ],
+                ignore_index=True,
+            )
+
+            cls.DECK_DATA_CACHING["common_policy_df"] = aux_df
+        return aux_df.copy()
+
+    @classmethod
+    def policy_variable_units(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        name = "policy_variable_units"
+        df = cls.DECK_DATA_CACHING.get(name)
+        MAP_COEF_TYPE_SHORT_NAME = {
+            RHS_COEF_CODE: "RHS",
+            EARM_COEF_CODE: "EARM",
+            VARM_COEF_CODE: "VARM",
+            ENA_COEF_CODE: "ENA",
+            QINC_COEF_CODE: "QINC",
+            GTER_COEF_CODE: "GTER",
+            MAXVIOL_COEF_CODE: "MAXVIOL",
+        }
+        MAP_COEF_TYPE_LONG_NAME = {
+            RHS_COEF_CODE: "Right hand side",
+            EARM_COEF_CODE: "Energia armazenada",
+            VARM_COEF_CODE: "Volume armazenado",
+            ENA_COEF_CODE: "Energia natural afluente",
+            QINC_COEF_CODE: "Vazão incremental",
+            GTER_COEF_CODE: "Geração térmica antecipada",
+            MAXVIOL_COEF_CODE: "Máxima violação de volume mínimo operativo",
+        }
+        MAP_COEF_TYPE_UNIT = {
+            RHS_COEF_CODE: PolicyUnit.RS_mes_h.value,
+            EARM_COEF_CODE: PolicyUnit.RS_MWh.value,
+            VARM_COEF_CODE: PolicyUnit.RS_mes_hm3_MWh.value,
+            ENA_COEF_CODE: PolicyUnit.RS_MWh.value,
+            QINC_COEF_CODE: PolicyUnit.RS_mes_hm3_MWh.value,
+            GTER_COEF_CODE: PolicyUnit.RS_MWh.value,
+            MAXVIOL_COEF_CODE: PolicyUnit.RS_MWh.value,
+        }
+        MAP_COEF_TYPE_STATE_UNIT = {
+            RHS_COEF_CODE: PolicyUnit.RS.value,
+            EARM_COEF_CODE: PolicyUnit.MWmes.value,
+            VARM_COEF_CODE: PolicyUnit.hm3.value,
+            ENA_COEF_CODE: PolicyUnit.MWmes.value,
+            QINC_COEF_CODE: PolicyUnit.hm3.value,
+            GTER_COEF_CODE: PolicyUnit.MWmes.value,
+            MAXVIOL_COEF_CODE: PolicyUnit.MWmes.value,
+        }
+        if df is None:
+            cuts_df = cls.common_policy_df(uow)
+            df = cuts_df[
+                [
+                    COEF_TYPE_COL,
+                ]
+            ].drop_duplicates()
+            df["nome_curto_coeficiente"] = df[COEF_TYPE_COL].replace(
+                MAP_COEF_TYPE_SHORT_NAME
+            )
+            df["nome_longo_coeficiente"] = df[COEF_TYPE_COL].replace(
+                MAP_COEF_TYPE_LONG_NAME
+            )
+            df["unidade_coeficiente"] = df[COEF_TYPE_COL].replace(
+                MAP_COEF_TYPE_UNIT
+            )
+            df["unidade_estado"] = df[COEF_TYPE_COL].replace(
+                MAP_COEF_TYPE_STATE_UNIT
+            )
+            df = df.reset_index(drop=True)
+            cls.DECK_DATA_CACHING[name] = df
+        return df.copy()

@@ -3,6 +3,7 @@
 - Pós-processamento das colunas nos arquivos de saída para eliminar informações desnecessárias [#50](https://github.com/rjmalves/sintetizador-newave/issues/50)
 - Melhor tratamento de erros no cálculo de limites, resultado em sínteses ilimitadas como contingência e geração de mensagens adequadas [#51](https://github.com/rjmalves/sintetizador-newave/issues/51)
 - Adição artificial de dados para o período pós-estudo em casos em que o modelo não gera estas informações [#52](https://github.com/rjmalves/sintetizador-newave/issues/52)
+- Refatoração da síntese de política para formato compatível com a saída de cortes das LIBS. Existem duas sínteses: `CORTES_COEFICIENTES` e `CORTES_VARIAVEIS`.
 
 # v2.1.2
 
