@@ -1,0 +1,199 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="pt-BR" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Computation times &mdash; Documentação sintetizador-newave 2.2.0</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a069331e"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/translations.js?v=71a39b36"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Índice" href="../genindex.html" />
+    <link rel="search" title="Buscar" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            sintetizador-newave
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Pesquisar documentos" aria-label="Pesquisar documentos" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Menu de navegação">
+              <p class="caption" role="heading"><span class="caption-text">Apresentação</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../apresentacao/apresentacao.html">Aplicação CLI para síntese das saídas do modelo NEWAVE</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Geral</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../geral/instalacao.html">Instalação</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../geral/instalacao.html#instalando-a-partir-do-repositorio-oficial">Instalando a partir do repositório oficial</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../geral/tutorial.html">Tutorial</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../geral/tutorial.html#categorias-de-sintese">Categorias de Síntese</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../geral/tutorial.html#argumentos-existentes">Argumentos Existentes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../geral/tutorial.html#exemplo-de-uso">Exemplo de Uso</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Exemplos</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="plot_sintese_execucao.html">Síntese da Execução</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plot_sintese_cenarios.html">Síntese dos Cenários</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plot_sintese_operacao.html">Síntese da Operação</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../geral/contribuicao.html">Como contribuir?</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../geral/contribuicao.html#o-modulo-inewave-e-dependencias-de-desenvolvimento">O módulo <code class="xref py py-obj docutils literal notranslate"><span class="pre">inewave</span></code> e dependências de desenvolvimento</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../geral/contribuicao.html#convencoes-de-codigo">Convenções de código</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../geral/contribuicao.html#gerenciamento-do-projeto-utilizando-o-pyproject-toml-e-uv">Gerenciamento do projeto utilizando o <code class="xref py py-obj docutils literal notranslate"><span class="pre">pyproject.toml</span></code> e <code class="xref py py-obj docutils literal notranslate"><span class="pre">uv</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../geral/contribuicao.html#procedimentos-de-teste">Procedimentos de teste</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Referência</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../referencia/saidas.html">Saídas</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../referencia/saidas.html#arquivos-de-saida">Arquivos de Saída</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../referencia/saidas.html#formato-dos-metadados">Formato dos Metadados</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../referencia/saidas.html#formato-das-estatisticas">Formato das Estatísticas</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../referencia/saidas.html#formato-dos-dados-brutos">Formato dos Dados Brutos</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../referencia/modelo.html">Modelo Unificado de Dados</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../referencia/modelo.html#sistema">Sistema</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../referencia/modelo.html#execucao">Execução</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../referencia/modelo.html#cenarios">Cenários</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../referencia/modelo.html#variavel">Variável</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../referencia/modelo.html#agregacao-espacial">Agregação Espacial</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../referencia/modelo.html#etapa">Etapa</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../referencia/modelo.html#politica">Política</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../referencia/modelo.html#operacao">Operação</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../referencia/modelo.html#id1">Variável</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../referencia/modelo.html#id2">Agregação Espacial</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../referencia/modelo.html#estado-do-desenvolvimento">Estado do Desenvolvimento</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Menu de navegação móvel" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">sintetizador-newave</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Navegação da página">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Computation times</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/examples/sg_execution_times.rst.txt" rel="nofollow"> Ver código-fonte da página</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="computation-times">
+<span id="sphx-glr-examples-sg-execution-times"></span><h1>Computation times<a class="headerlink" href="#computation-times" title="Link para este cabeçalho"></a></h1>
+<p><strong>00:01.968</strong> total execution time for 3 files <strong>from examples</strong>:</p>
+<div class="docutils container">
+<style scoped>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet" />
+<link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet" />
+</style>
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script type="text/javascript" class="init">
+$(document).ready( function () {
+    $('table.sg-datatable').DataTable({order: [[1, 'desc']]});
+} );
+</script><table class="table table-striped sg-datatable docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Example</p></th>
+<th class="head"><p>Time</p></th>
+<th class="head"><p>Mem (MB)</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><a class="reference internal" href="plot_sintese_execucao.html#sphx-glr-examples-plot-sintese-execucao-py"><span class="std std-ref">Síntese da Execução</span></a> (<code class="docutils literal notranslate"><span class="pre">plot_sintese_execucao.py</span></code>)</p></td>
+<td><p>00:01.241</p></td>
+<td><p>0.0</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="plot_sintese_operacao.html#sphx-glr-examples-plot-sintese-operacao-py"><span class="std std-ref">Síntese da Operação</span></a> (<code class="docutils literal notranslate"><span class="pre">plot_sintese_operacao.py</span></code>)</p></td>
+<td><p>00:00.621</p></td>
+<td><p>0.0</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="plot_sintese_cenarios.html#sphx-glr-examples-plot-sintese-cenarios-py"><span class="std std-ref">Síntese dos Cenários</span></a> (<code class="docutils literal notranslate"><span class="pre">plot_sintese_cenarios.py</span></code>)</p></td>
+<td><p>00:00.106</p></td>
+<td><p>0.0</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Direitos autorais 2025, Rogerio Alves.</p>
+  </div>
+
+  Compilado com <a href="https://www.sphinx-doc.org/">Sphinx</a> usando um
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">tema</a>
+    fornecido por <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

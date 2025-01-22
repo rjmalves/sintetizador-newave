@@ -1,0 +1,225 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="pt-BR" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Como contribuir? &mdash; Documentação sintetizador-newave 2.2.0</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a069331e"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/translations.js?v=71a39b36"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Índice" href="../genindex.html" />
+    <link rel="search" title="Buscar" href="../search.html" />
+    <link rel="next" title="Saídas" href="../referencia/saidas.html" />
+    <link rel="prev" title="Síntese da Operação" href="../examples/plot_sintese_operacao.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            sintetizador-newave
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Pesquisar documentos" aria-label="Pesquisar documentos" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Menu de navegação">
+              <p class="caption" role="heading"><span class="caption-text">Apresentação</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../apresentacao/apresentacao.html">Aplicação CLI para síntese das saídas do modelo NEWAVE</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Geral</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="instalacao.html">Instalação</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="instalacao.html#instalando-a-partir-do-repositorio-oficial">Instalando a partir do repositório oficial</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">Tutorial</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorial.html#categorias-de-sintese">Categorias de Síntese</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial.html#argumentos-existentes">Argumentos Existentes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial.html#exemplo-de-uso">Exemplo de Uso</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/index.html">Exemplos</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../examples/plot_sintese_execucao.html">Síntese da Execução</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/plot_sintese_cenarios.html">Síntese dos Cenários</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/plot_sintese_operacao.html">Síntese da Operação</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Como contribuir?</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#o-modulo-inewave-e-dependencias-de-desenvolvimento">O módulo <code class="xref py py-obj docutils literal notranslate"><span class="pre">inewave</span></code> e dependências de desenvolvimento</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#convencoes-de-codigo">Convenções de código</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#gerenciamento-do-projeto-utilizando-o-pyproject-toml-e-uv">Gerenciamento do projeto utilizando o <code class="xref py py-obj docutils literal notranslate"><span class="pre">pyproject.toml</span></code> e <code class="xref py py-obj docutils literal notranslate"><span class="pre">uv</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#procedimentos-de-teste">Procedimentos de teste</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Referência</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../referencia/saidas.html">Saídas</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../referencia/saidas.html#arquivos-de-saida">Arquivos de Saída</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../referencia/saidas.html#formato-dos-metadados">Formato dos Metadados</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../referencia/saidas.html#formato-das-estatisticas">Formato das Estatísticas</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../referencia/saidas.html#formato-dos-dados-brutos">Formato dos Dados Brutos</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../referencia/modelo.html">Modelo Unificado de Dados</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../referencia/modelo.html#sistema">Sistema</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../referencia/modelo.html#execucao">Execução</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../referencia/modelo.html#cenarios">Cenários</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../referencia/modelo.html#variavel">Variável</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../referencia/modelo.html#agregacao-espacial">Agregação Espacial</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../referencia/modelo.html#etapa">Etapa</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../referencia/modelo.html#politica">Política</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../referencia/modelo.html#operacao">Operação</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../referencia/modelo.html#id1">Variável</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../referencia/modelo.html#id2">Agregação Espacial</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../referencia/modelo.html#estado-do-desenvolvimento">Estado do Desenvolvimento</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Menu de navegação móvel" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">sintetizador-newave</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Navegação da página">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Como contribuir?</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/geral/contribuicao.rst.txt" rel="nofollow"> Ver código-fonte da página</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="como-contribuir">
+<h1>Como contribuir?<a class="headerlink" href="#como-contribuir" title="Link para este cabeçalho"></a></h1>
+<section id="o-modulo-inewave-e-dependencias-de-desenvolvimento">
+<h2>O módulo <code class="xref py py-obj docutils literal notranslate"><span class="pre">inewave</span></code> e dependências de desenvolvimento<a class="headerlink" href="#o-modulo-inewave-e-dependencias-de-desenvolvimento" title="Link para este cabeçalho"></a></h2>
+<p>O módulo <em>inewave</em> é desenvolvido considerando o framework proposto no módulo <a class="reference external" href="https://github.com/rjmalves/cfi">cfinterface</a>. Este fornece para o desenvolvedor
+uma modelagem de cada arquivo de entrada e saída do modelo NEWAVE em uma classe específica.</p>
+<p>A leitura de arquivos de entrada utilizando o módulo <em>inewave</em> é sempre feita através do método <em>read</em>
+de cada classe, que atua como construtor.</p>
+<hr class="docutils" />
+<p>No <em>sintetizador-newave</em> a dependência do módulo <em>inewave</em> é concentrada na classe Deck, que fornece
+objetos nativos, DataFrames ou arrays para as demais partes da aplicação.</p>
+<p>Para instalar as dependências de desenvolvimento, incluindo as necessárias para a geração automática do site:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ git clone https://github.com/rjmalves/sintetizador-newave.git
+$ cd sintetizador-newave
+$ pip install .[dev]
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Aviso</p>
+<p>O conteúdo da documentação não deve ser movido para o repositório. Isto é feito
+automaticamente pelos scripts de CI no caso de qualquer modificação no branch <code class="xref py py-obj docutils literal notranslate"><span class="pre">main</span></code>.</p>
+</div>
+</section>
+<section id="convencoes-de-codigo">
+<h2>Convenções de código<a class="headerlink" href="#convencoes-de-codigo" title="Link para este cabeçalho"></a></h2>
+<p>O <em>sintetizador-newave</em> considera critérios de qualidade de código em seus scripts de Integração Contínua (CI), além de uma bateria de testes unitários.
+Desta forma, não é possível realizar uma <em>release</em> de uma versão que não passe em todos os testes estabelecidos ou não
+atenda aos critérios de qualidade de código impostos.</p>
+<p>A primeira convenção é que sejam seguidas as diretrizes de sintaxe <a class="reference external" href="https://peps.python.org/pep-0008/">PEP8</a>, provenientes do guia de estilo
+do autor da linguagem. Além disso, não é recomendado que existam funções muito complexas, com uma quantidade
+excessiva de <em>branches</em> e <em>loops</em>, o que piora e legibilidade do código. Isto pode ser garantido através de módulos
+específicos para análise de qualidade de código, como será mencionado a seguir. A única exceção é a regra <a class="reference external" href="https://www.flake8rules.com/rules/E203.html">E203</a>.</p>
+<p>Para garantir a formatação é recomendado utilizar o módulo <a class="reference external" href="https://docs.astral.sh/ruff/">ruff</a>, que realiza formatação automática e possui
+integração nativa com alguns editores de texto no formato de <em>plugins</em> ou extensões.</p>
+<p>A segunda convenção é que seja utilizada tipagem estática. Isto é, não deve ser uitilizada uma variável em código a qual possua
+tipo de dados que possa mudar durante a execução do mesmo. Além disso, não deve ser declarada uma variável cujo tipo não é possível de
+ser inferido em qualquer situação, permanencendo incerto para o leitor o tipo de dados da variável a menos que seja feita uma
+execução de teste do programa.</p>
+</section>
+<section id="gerenciamento-do-projeto-utilizando-o-pyproject-toml-e-uv">
+<h2>Gerenciamento do projeto utilizando o <code class="xref py py-obj docutils literal notranslate"><span class="pre">pyproject.toml</span></code> e <code class="xref py py-obj docutils literal notranslate"><span class="pre">uv</span></code><a class="headerlink" href="#gerenciamento-do-projeto-utilizando-o-pyproject-toml-e-uv" title="Link para este cabeçalho"></a></h2>
+<p>Como sugerido pela <a class="reference external" href="https://www.pypa.io/en/latest/">PyPA</a>, a definição de um projeto em Python, que antes era feita através do arquivo <code class="xref py py-obj docutils literal notranslate"><span class="pre">setup.py</span></code>, que utilizava o módulo <code class="xref py py-obj docutils literal notranslate"><span class="pre">setuptools</span></code> para definir dependências, requisitos e dados sobre o projeto, deve passar a ser feita através de um arquivo <code class="xref py py-obj docutils literal notranslate"><span class="pre">pyproject.toml</span></code>.</p>
+<p>Orientações sobre o conteúdo deste arquivo estão disponíveis <a class="reference external" href="https://packaging.python.org/en/latest/tutorials/packaging-projects/">aqui</a>, e ele é facilmente extendido conforme novas ferramentas são adicionadas ao projeto, criando um único arquivo para configurar todo o projeto.</p>
+<p>Para auxiliar a realizar tarefas como instalar localmente, adicionar uma nova dependência, executar um comando dentro de um ambiente específico, dentre outros, recomenda-se utilizar ferramentas específicas para isso, como o <a class="reference external" href="https://docs.astral.sh/uv/guides/projects/">uv</a>.</p>
+</section>
+<section id="procedimentos-de-teste">
+<h2>Procedimentos de teste<a class="headerlink" href="#procedimentos-de-teste" title="Link para este cabeçalho"></a></h2>
+<p>O <em>sintetizador-newave</em> realiza testes utilizando o pacote de testes de Python <a class="reference external" href="https://pytest.org">pytest</a>
+e controle da qualidade de código com <a class="reference external" href="https://docs.astral.sh/ruff/">ruff</a>.
+A tipagem estática é garantida através do uso de <a class="reference external" href="http://mypy-lang.org/">mypy</a>
+, que é sempre executado nos scripts de Integração Contínua (CI).</p>
+<p>Antes de realizar um <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">push</span></code> é recomendado que se realize estes três procedimentos
+descritos, que serão novamente executados pelo ambiente de CI. Por exemplo, através do <code class="xref py py-obj docutils literal notranslate"><span class="pre">uv</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ uv run pytest ./tests
+$ uv run mypy ./app
+$ uv run ruff check ./app
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Rodapé">
+        <a href="../examples/plot_sintese_operacao.html" class="btn btn-neutral float-left" title="Síntese da Operação" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Anterior</a>
+        <a href="../referencia/saidas.html" class="btn btn-neutral float-right" title="Saídas" accesskey="n" rel="next">Próximo <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Direitos autorais 2025, Rogerio Alves.</p>
+  </div>
+
+  Compilado com <a href="https://www.sphinx-doc.org/">Sphinx</a> usando um
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">tema</a>
+    fornecido por <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

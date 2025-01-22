@@ -1,0 +1,270 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="pt-BR" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tutorial &mdash; Documentação sintetizador-newave 2.2.0</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a069331e"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/translations.js?v=71a39b36"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Índice" href="../genindex.html" />
+    <link rel="search" title="Buscar" href="../search.html" />
+    <link rel="next" title="Exemplos" href="../examples/index.html" />
+    <link rel="prev" title="Instalação" href="instalacao.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            sintetizador-newave
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Pesquisar documentos" aria-label="Pesquisar documentos" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Menu de navegação">
+              <p class="caption" role="heading"><span class="caption-text">Apresentação</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../apresentacao/apresentacao.html">Aplicação CLI para síntese das saídas do modelo NEWAVE</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Geral</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="instalacao.html">Instalação</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="instalacao.html#instalando-a-partir-do-repositorio-oficial">Instalando a partir do repositório oficial</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Tutorial</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#categorias-de-sintese">Categorias de Síntese</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#argumentos-existentes">Argumentos Existentes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#exemplo-de-uso">Exemplo de Uso</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/index.html">Exemplos</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../examples/plot_sintese_execucao.html">Síntese da Execução</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/plot_sintese_cenarios.html">Síntese dos Cenários</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/plot_sintese_operacao.html">Síntese da Operação</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="contribuicao.html">Como contribuir?</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="contribuicao.html#o-modulo-inewave-e-dependencias-de-desenvolvimento">O módulo <code class="xref py py-obj docutils literal notranslate"><span class="pre">inewave</span></code> e dependências de desenvolvimento</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contribuicao.html#convencoes-de-codigo">Convenções de código</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contribuicao.html#gerenciamento-do-projeto-utilizando-o-pyproject-toml-e-uv">Gerenciamento do projeto utilizando o <code class="xref py py-obj docutils literal notranslate"><span class="pre">pyproject.toml</span></code> e <code class="xref py py-obj docutils literal notranslate"><span class="pre">uv</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="contribuicao.html#procedimentos-de-teste">Procedimentos de teste</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Referência</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../referencia/saidas.html">Saídas</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../referencia/saidas.html#arquivos-de-saida">Arquivos de Saída</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../referencia/saidas.html#formato-dos-metadados">Formato dos Metadados</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../referencia/saidas.html#formato-das-estatisticas">Formato das Estatísticas</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../referencia/saidas.html#formato-dos-dados-brutos">Formato dos Dados Brutos</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../referencia/modelo.html">Modelo Unificado de Dados</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../referencia/modelo.html#sistema">Sistema</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../referencia/modelo.html#execucao">Execução</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../referencia/modelo.html#cenarios">Cenários</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../referencia/modelo.html#variavel">Variável</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../referencia/modelo.html#agregacao-espacial">Agregação Espacial</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../referencia/modelo.html#etapa">Etapa</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../referencia/modelo.html#politica">Política</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../referencia/modelo.html#operacao">Operação</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../referencia/modelo.html#id1">Variável</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../referencia/modelo.html#id2">Agregação Espacial</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../referencia/modelo.html#estado-do-desenvolvimento">Estado do Desenvolvimento</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Menu de navegação móvel" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">sintetizador-newave</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Navegação da página">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Tutorial</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/geral/tutorial.rst.txt" rel="nofollow"> Ver código-fonte da página</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="tutorial">
+<h1>Tutorial<a class="headerlink" href="#tutorial" title="Link para este cabeçalho"></a></h1>
+<section id="categorias-de-sintese">
+<h2>Categorias de Síntese<a class="headerlink" href="#categorias-de-sintese" title="Link para este cabeçalho"></a></h2>
+<p>O <code class="xref py py-obj docutils literal notranslate"><span class="pre">sintetizador-newave</span></code> está disponível como uma ferramenta CLI. Para visualizar quais comandos este pode realizar,
+que estão associados aos tipos de sínteses, basta fazer:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ sintetizador-newave --help
+</pre></div>
+</div>
+<p>A saída observada deve ser:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Usage</span><span class="p">:</span> <span class="n">sintetizador</span><span class="o">-</span><span class="n">newave</span> <span class="p">[</span><span class="n">OPTIONS</span><span class="p">]</span> <span class="n">COMMAND</span> <span class="p">[</span><span class="n">ARGS</span><span class="p">]</span><span class="o">...</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span>  <span class="n">Aplicação</span> <span class="n">para</span> <span class="n">realizar</span> <span class="n">a</span> <span class="n">síntese</span> <span class="n">de</span> <span class="n">informações</span> <span class="n">em</span> <span class="n">um</span> <span class="n">modelo</span> <span class="n">unificado</span> <span class="n">de</span>
+<span class="gp">&gt;&gt;&gt; </span>  <span class="n">dados</span> <span class="n">para</span> <span class="n">o</span> <span class="n">NEWAVE</span><span class="o">.</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Options</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>  <span class="o">--</span><span class="n">help</span>  <span class="n">Show</span> <span class="n">this</span> <span class="n">message</span> <span class="ow">and</span> <span class="n">exit</span><span class="o">.</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Commands</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>  <span class="n">completa</span>  <span class="n">Realiza</span> <span class="n">a</span> <span class="n">síntese</span> <span class="n">completa</span> <span class="n">do</span> <span class="n">NEWAVE</span><span class="o">.</span>
+<span class="gp">&gt;&gt;&gt; </span>  <span class="n">cenarios</span>  <span class="n">Realiza</span> <span class="n">a</span> <span class="n">síntese</span> <span class="n">dos</span> <span class="n">dados</span> <span class="n">de</span> <span class="n">cenários</span> <span class="n">do</span> <span class="n">NEWAVE</span><span class="o">.</span>
+<span class="gp">&gt;&gt;&gt; </span>  <span class="n">execucao</span>  <span class="n">Realiza</span> <span class="n">a</span> <span class="n">síntese</span> <span class="n">dos</span> <span class="n">dados</span> <span class="n">da</span> <span class="n">execução</span> <span class="n">do</span> <span class="n">NEWAVE</span><span class="o">.</span>
+<span class="gp">&gt;&gt;&gt; </span>  <span class="n">politica</span>  <span class="n">Realiza</span> <span class="n">a</span> <span class="n">síntese</span> <span class="n">dos</span> <span class="n">dados</span> <span class="n">da</span> <span class="n">política</span> <span class="n">do</span> <span class="n">NEWAVE</span> <span class="p">(</span><span class="n">NWLISTCF</span><span class="p">)</span><span class="o">.</span>
+<span class="gp">&gt;&gt;&gt; </span>  <span class="n">operacao</span>  <span class="n">Realiza</span> <span class="n">a</span> <span class="n">síntese</span> <span class="n">dos</span> <span class="n">dados</span> <span class="n">da</span> <span class="n">operação</span> <span class="n">do</span> <span class="n">NEWAVE</span> <span class="p">(</span><span class="n">NWLISTOP</span><span class="p">)</span><span class="o">.</span>
+<span class="gp">&gt;&gt;&gt; </span>  <span class="n">sistema</span>   <span class="n">Realiza</span> <span class="n">a</span> <span class="n">síntese</span> <span class="n">dos</span> <span class="n">dados</span> <span class="n">do</span> <span class="n">sistema</span> <span class="n">do</span> <span class="n">NEWAVE</span><span class="o">.</span>
+<span class="gp">&gt;&gt;&gt; </span>  <span class="n">limpeza</span>   <span class="n">Realiza</span> <span class="n">a</span> <span class="n">limpeza</span> <span class="n">dos</span> <span class="n">dados</span> <span class="n">resultantes</span> <span class="n">de</span> <span class="n">uma</span> <span class="n">síntese</span><span class="o">.</span>
+</pre></div>
+</div>
+<p>Além disso, cada um dos comandos possui um menu específico, que pode ser visto com, por exemplo:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ sintetizador-newave operacao --help
+</pre></div>
+</div>
+<p>Que deve ter como saída:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Usage</span><span class="p">:</span> <span class="n">sintetizador</span><span class="o">-</span><span class="n">newave</span> <span class="n">operacao</span> <span class="p">[</span><span class="n">OPTIONS</span><span class="p">]</span> <span class="p">[</span><span class="n">VARIAVEIS</span><span class="p">]</span><span class="o">...</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span>  <span class="n">Realiza</span> <span class="n">a</span> <span class="n">síntese</span> <span class="n">dos</span> <span class="n">dados</span> <span class="n">da</span> <span class="n">operação</span> <span class="n">do</span> <span class="n">NEWAVE</span> <span class="p">(</span><span class="n">NWLISTOP</span><span class="p">)</span><span class="o">.</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Options</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>  <span class="o">--</span><span class="n">formato</span> <span class="n">TEXT</span>           <span class="n">formato</span> <span class="n">para</span> <span class="n">escrita</span> <span class="n">da</span> <span class="n">síntese</span>
+<span class="gp">&gt;&gt;&gt; </span>  <span class="o">--</span><span class="n">processadores</span> <span class="n">INTEGER</span>  <span class="n">numero</span> <span class="n">de</span> <span class="n">processadores</span> <span class="n">para</span> <span class="n">paralelizar</span>
+<span class="gp">&gt;&gt;&gt; </span>  <span class="o">--</span><span class="n">help</span>                   <span class="n">Show</span> <span class="n">this</span> <span class="n">message</span> <span class="ow">and</span> <span class="n">exit</span><span class="o">.</span>
+</pre></div>
+</div>
+</section>
+<section id="argumentos-existentes">
+<h2>Argumentos Existentes<a class="headerlink" href="#argumentos-existentes" title="Link para este cabeçalho"></a></h2>
+<p>Para realizar a síntese completa do caso, está disponível o comando <code class="xref py py-obj docutils literal notranslate"><span class="pre">completa</span></code>, que realizará toda a síntese possível:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ sintetizador-newave completa
+</pre></div>
+</div>
+<p>Se for desejado não realizar a síntese completa, mas apenas de alguns dos elementos, é possível chamar cada elemento a ser sintetizado:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ sintetizador-newave operacao CMO_SBM EARMF_SIN GTER_SBM
+</pre></div>
+</div>
+<p>O formato de escrita padrão das sínteses é <code class="xref py py-obj docutils literal notranslate"><span class="pre">PARQUET</span></code>, que é um formato eficiente
+de armazenamento de dados tabulares para aplicações de <em>big data</em>.</p>
+<p>Caso seja desejado, é possível forçar a saída das sínteses através do argumento opcional <code class="xref py py-obj docutils literal notranslate"><span class="pre">--formato</span></code>, para qualquer categoria de síntese:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ sintetizador-newave execucao --formato CSV
+</pre></div>
+</div>
+<p>No caso das sínteses da operação e de cenários, é possível paralelizar a leitura dos arquivos através do argumento opcional <code class="xref py py-obj docutils literal notranslate"><span class="pre">--processadores</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ sintetizador-newave operacao --processadores 8
+$ sintetizador-newave cenarios --processadores 8
+</pre></div>
+</div>
+<p>A síntese completa também aceita o paralelismo, aplicando-o a todas as categorias de síntese que são suportadas:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ sintetizador-newave completa --processadores 24
+</pre></div>
+</div>
+</section>
+<section id="exemplo-de-uso">
+<h2>Exemplo de Uso<a class="headerlink" href="#exemplo-de-uso" title="Link para este cabeçalho"></a></h2>
+<p>Um exemplo de chamada ao programa para realizar a síntese da operação de um caso do NEWAVE é o seguinte:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ sintetizador-newave operacao --processadores 4
+</pre></div>
+</div>
+<p>O log observado no terminal deve ser semelhante a:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="mi">2024</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">22</span> <span class="mi">09</span><span class="p">:</span><span class="mi">53</span><span class="p">:</span><span class="mi">56</span><span class="p">,</span><span class="mi">845</span> <span class="n">INFO</span><span class="p">:</span> <span class="c1"># Realizando síntese da OPERACAO #</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="mi">2024</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">22</span> <span class="mi">09</span><span class="p">:</span><span class="mi">53</span><span class="p">:</span><span class="mi">56</span><span class="p">,</span><span class="mi">868</span> <span class="n">INFO</span><span class="p">:</span> <span class="n">Sinteses</span><span class="p">:</span> <span class="p">[</span><span class="n">CMO_SBM</span><span class="p">,</span> <span class="n">VAGUA_REE</span><span class="p">,</span> <span class="n">VAGUA_UHE</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="mi">2024</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">22</span> <span class="mi">09</span><span class="p">:</span><span class="mi">53</span><span class="p">:</span><span class="mi">56</span><span class="p">,</span><span class="mi">870</span> <span class="n">INFO</span><span class="p">:</span> <span class="n">Realizando</span> <span class="n">sintese</span> <span class="n">de</span> <span class="n">CMO_SBM</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="mi">2024</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">22</span> <span class="mi">09</span><span class="p">:</span><span class="mi">53</span><span class="p">:</span><span class="mi">58</span><span class="p">,</span><span class="mi">734</span> <span class="n">INFO</span><span class="p">:</span> <span class="n">Tempo</span> <span class="n">para</span> <span class="n">obter</span> <span class="n">dados</span> <span class="n">de</span> <span class="n">SBM</span><span class="p">:</span> <span class="mf">1.85</span> <span class="n">s</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="mi">2024</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">22</span> <span class="mi">09</span><span class="p">:</span><span class="mi">53</span><span class="p">:</span><span class="mi">58</span><span class="p">,</span><span class="mi">743</span> <span class="n">INFO</span><span class="p">:</span> <span class="n">Tempo</span> <span class="n">para</span> <span class="n">compactacao</span> <span class="n">dos</span> <span class="n">dados</span><span class="p">:</span> <span class="mf">0.01</span> <span class="n">s</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="mi">2024</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">22</span> <span class="mi">09</span><span class="p">:</span><span class="mi">53</span><span class="p">:</span><span class="mi">58</span><span class="p">,</span><span class="mi">744</span> <span class="n">INFO</span><span class="p">:</span> <span class="n">Tempo</span> <span class="n">para</span> <span class="n">calculo</span> <span class="n">dos</span> <span class="n">limites</span><span class="p">:</span> <span class="mf">0.00</span> <span class="n">s</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="mi">2024</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">22</span> <span class="mi">09</span><span class="p">:</span><span class="mi">53</span><span class="p">:</span><span class="mi">58</span><span class="p">,</span><span class="mi">747</span> <span class="n">INFO</span><span class="p">:</span> <span class="n">Tempo</span> <span class="n">para</span> <span class="n">preparacao</span> <span class="n">para</span> <span class="n">exportacao</span><span class="p">:</span> <span class="mf">0.00</span> <span class="n">s</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="mi">2024</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">22</span> <span class="mi">09</span><span class="p">:</span><span class="mi">53</span><span class="p">:</span><span class="mi">58</span><span class="p">,</span><span class="mi">753</span> <span class="n">INFO</span><span class="p">:</span> <span class="n">Tempo</span> <span class="n">para</span> <span class="n">exportacao</span> <span class="n">dos</span> <span class="n">dados</span><span class="p">:</span> <span class="mf">0.01</span> <span class="n">s</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="mi">2024</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">22</span> <span class="mi">09</span><span class="p">:</span><span class="mi">53</span><span class="p">:</span><span class="mi">58</span><span class="p">,</span><span class="mi">754</span> <span class="n">INFO</span><span class="p">:</span> <span class="n">Tempo</span> <span class="n">para</span> <span class="n">sintese</span> <span class="n">de</span> <span class="n">CMO_SBM</span><span class="p">:</span> <span class="mf">1.88</span> <span class="n">s</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="o">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="mi">2024</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">22</span> <span class="mi">09</span><span class="p">:</span><span class="mi">51</span><span class="p">:</span><span class="mi">17</span><span class="p">,</span><span class="mi">293</span> <span class="n">INFO</span><span class="p">:</span> <span class="n">Realizando</span> <span class="n">sintese</span> <span class="n">de</span> <span class="n">VEVAP_SBM</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="mi">2024</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">22</span> <span class="mi">09</span><span class="p">:</span><span class="mi">51</span><span class="p">:</span><span class="mi">17</span><span class="p">,</span><span class="mi">295</span> <span class="n">INFO</span><span class="p">:</span> <span class="n">Tempo</span> <span class="n">para</span> <span class="n">compactacao</span> <span class="n">dos</span> <span class="n">dados</span><span class="p">:</span> <span class="mf">0.00</span> <span class="n">s</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="mi">2024</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">22</span> <span class="mi">09</span><span class="p">:</span><span class="mi">51</span><span class="p">:</span><span class="mi">17</span><span class="p">,</span><span class="mi">295</span> <span class="n">INFO</span><span class="p">:</span> <span class="n">Tempo</span> <span class="n">para</span> <span class="n">calculo</span> <span class="n">dos</span> <span class="n">limites</span><span class="p">:</span> <span class="mf">0.00</span> <span class="n">s</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="mi">2024</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">22</span> <span class="mi">09</span><span class="p">:</span><span class="mi">51</span><span class="p">:</span><span class="mi">17</span><span class="p">,</span><span class="mi">315</span> <span class="n">INFO</span><span class="p">:</span> <span class="n">Tempo</span> <span class="n">para</span> <span class="n">preparacao</span> <span class="n">para</span> <span class="n">exportacao</span><span class="p">:</span> <span class="mf">0.02</span> <span class="n">s</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="mi">2024</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">22</span> <span class="mi">09</span><span class="p">:</span><span class="mi">51</span><span class="p">:</span><span class="mi">17</span><span class="p">,</span><span class="mi">320</span> <span class="n">INFO</span><span class="p">:</span> <span class="n">Tempo</span> <span class="n">para</span> <span class="n">exportacao</span> <span class="n">dos</span> <span class="n">dados</span><span class="p">:</span> <span class="mf">0.00</span> <span class="n">s</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="mi">2024</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">22</span> <span class="mi">09</span><span class="p">:</span><span class="mi">51</span><span class="p">:</span><span class="mi">17</span><span class="p">,</span><span class="mi">320</span> <span class="n">INFO</span><span class="p">:</span> <span class="n">Tempo</span> <span class="n">para</span> <span class="n">sintese</span> <span class="n">de</span> <span class="n">VEVAP_SBM</span><span class="p">:</span> <span class="mf">0.03</span> <span class="n">s</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="mi">2024</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">22</span> <span class="mi">09</span><span class="p">:</span><span class="mi">51</span><span class="p">:</span><span class="mi">17</span><span class="p">,</span><span class="mi">320</span> <span class="n">INFO</span><span class="p">:</span> <span class="n">Realizando</span> <span class="n">sintese</span> <span class="n">de</span> <span class="n">VEVAP_SIN</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="mi">2024</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">22</span> <span class="mi">09</span><span class="p">:</span><span class="mi">51</span><span class="p">:</span><span class="mi">17</span><span class="p">,</span><span class="mi">322</span> <span class="n">INFO</span><span class="p">:</span> <span class="n">Tempo</span> <span class="n">para</span> <span class="n">compactacao</span> <span class="n">dos</span> <span class="n">dados</span><span class="p">:</span> <span class="mf">0.00</span> <span class="n">s</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="mi">2024</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">22</span> <span class="mi">09</span><span class="p">:</span><span class="mi">51</span><span class="p">:</span><span class="mi">17</span><span class="p">,</span><span class="mi">322</span> <span class="n">INFO</span><span class="p">:</span> <span class="n">Tempo</span> <span class="n">para</span> <span class="n">calculo</span> <span class="n">dos</span> <span class="n">limites</span><span class="p">:</span> <span class="mf">0.00</span> <span class="n">s</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="mi">2024</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">22</span> <span class="mi">09</span><span class="p">:</span><span class="mi">51</span><span class="p">:</span><span class="mi">17</span><span class="p">,</span><span class="mi">342</span> <span class="n">INFO</span><span class="p">:</span> <span class="n">Tempo</span> <span class="n">para</span> <span class="n">preparacao</span> <span class="n">para</span> <span class="n">exportacao</span><span class="p">:</span> <span class="mf">0.02</span> <span class="n">s</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="mi">2024</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">22</span> <span class="mi">09</span><span class="p">:</span><span class="mi">51</span><span class="p">:</span><span class="mi">17</span><span class="p">,</span><span class="mi">346</span> <span class="n">INFO</span><span class="p">:</span> <span class="n">Tempo</span> <span class="n">para</span> <span class="n">exportacao</span> <span class="n">dos</span> <span class="n">dados</span><span class="p">:</span> <span class="mf">0.00</span> <span class="n">s</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="mi">2024</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">22</span> <span class="mi">09</span><span class="p">:</span><span class="mi">51</span><span class="p">:</span><span class="mi">17</span><span class="p">,</span><span class="mi">346</span> <span class="n">INFO</span><span class="p">:</span> <span class="n">Tempo</span> <span class="n">para</span> <span class="n">sintese</span> <span class="n">de</span> <span class="n">VEVAP_SIN</span><span class="p">:</span> <span class="mf">0.03</span> <span class="n">s</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="mi">2024</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">22</span> <span class="mi">09</span><span class="p">:</span><span class="mi">51</span><span class="p">:</span><span class="mi">19</span><span class="p">,</span><span class="mi">529</span> <span class="n">INFO</span><span class="p">:</span> <span class="n">Tempo</span> <span class="n">para</span> <span class="n">sintese</span> <span class="n">da</span> <span class="n">operacao</span><span class="p">:</span> <span class="mf">33.33</span> <span class="n">s</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="mi">2024</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">22</span> <span class="mi">09</span><span class="p">:</span><span class="mi">51</span><span class="p">:</span><span class="mi">19</span><span class="p">,</span><span class="mi">529</span> <span class="n">INFO</span><span class="p">:</span> <span class="c1"># Fim da síntese #</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Rodapé">
+        <a href="instalacao.html" class="btn btn-neutral float-left" title="Instalação" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Anterior</a>
+        <a href="../examples/index.html" class="btn btn-neutral float-right" title="Exemplos" accesskey="n" rel="next">Próximo <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Direitos autorais 2025, Rogerio Alves.</p>
+  </div>
+
+  Compilado com <a href="https://www.sphinx-doc.org/">Sphinx</a> usando um
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">tema</a>
+    fornecido por <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

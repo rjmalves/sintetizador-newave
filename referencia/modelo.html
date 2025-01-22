@@ -1,0 +1,754 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="pt-BR" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Modelo Unificado de Dados &mdash; Documentação sintetizador-newave 2.2.0</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a069331e"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/translations.js?v=71a39b36"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Índice" href="../genindex.html" />
+    <link rel="search" title="Buscar" href="../search.html" />
+    <link rel="prev" title="Saídas" href="saidas.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            sintetizador-newave
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Pesquisar documentos" aria-label="Pesquisar documentos" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Menu de navegação">
+              <p class="caption" role="heading"><span class="caption-text">Apresentação</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../apresentacao/apresentacao.html">Aplicação CLI para síntese das saídas do modelo NEWAVE</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Geral</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../geral/instalacao.html">Instalação</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../geral/instalacao.html#instalando-a-partir-do-repositorio-oficial">Instalando a partir do repositório oficial</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../geral/tutorial.html">Tutorial</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../geral/tutorial.html#categorias-de-sintese">Categorias de Síntese</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../geral/tutorial.html#argumentos-existentes">Argumentos Existentes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../geral/tutorial.html#exemplo-de-uso">Exemplo de Uso</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/index.html">Exemplos</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../examples/plot_sintese_execucao.html">Síntese da Execução</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/plot_sintese_cenarios.html">Síntese dos Cenários</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/plot_sintese_operacao.html">Síntese da Operação</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../geral/contribuicao.html">Como contribuir?</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../geral/contribuicao.html#o-modulo-inewave-e-dependencias-de-desenvolvimento">O módulo <code class="xref py py-obj docutils literal notranslate"><span class="pre">inewave</span></code> e dependências de desenvolvimento</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../geral/contribuicao.html#convencoes-de-codigo">Convenções de código</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../geral/contribuicao.html#gerenciamento-do-projeto-utilizando-o-pyproject-toml-e-uv">Gerenciamento do projeto utilizando o <code class="xref py py-obj docutils literal notranslate"><span class="pre">pyproject.toml</span></code> e <code class="xref py py-obj docutils literal notranslate"><span class="pre">uv</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../geral/contribuicao.html#procedimentos-de-teste">Procedimentos de teste</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Referência</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="saidas.html">Saídas</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="saidas.html#arquivos-de-saida">Arquivos de Saída</a></li>
+<li class="toctree-l2"><a class="reference internal" href="saidas.html#formato-dos-metadados">Formato dos Metadados</a></li>
+<li class="toctree-l2"><a class="reference internal" href="saidas.html#formato-das-estatisticas">Formato das Estatísticas</a></li>
+<li class="toctree-l2"><a class="reference internal" href="saidas.html#formato-dos-dados-brutos">Formato dos Dados Brutos</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Modelo Unificado de Dados</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#sistema">Sistema</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#execucao">Execução</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cenarios">Cenários</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#variavel">Variável</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#agregacao-espacial">Agregação Espacial</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#etapa">Etapa</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#politica">Política</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#operacao">Operação</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id1">Variável</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id2">Agregação Espacial</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#estado-do-desenvolvimento">Estado do Desenvolvimento</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Menu de navegação móvel" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">sintetizador-newave</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Navegação da página">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Modelo Unificado de Dados</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/referencia/modelo.rst.txt" rel="nofollow"> Ver código-fonte da página</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="modelo-unificado-de-dados">
+<span id="modelo"></span><h1>Modelo Unificado de Dados<a class="headerlink" href="#modelo-unificado-de-dados" title="Link para este cabeçalho"></a></h1>
+<p>O <code class="xref py py-obj docutils literal notranslate"><span class="pre">sintetizador-newave</span></code> busca organizar as informações de entrada e saída do modelo NEWAVE em um modelo padronizado para lidar com os modelos do planejamento energético do SIN.</p>
+<p>Desta forma, foram criadas as categorias:</p>
+<section id="sistema">
+<h2>Sistema<a class="headerlink" href="#sistema" title="Link para este cabeçalho"></a></h2>
+<p>Informações da representação do sistema existente e alvo da otimização.</p>
+<table class="docutils align-default" id="id3">
+<caption><span class="caption-text">Dados do Sistema</span><a class="headerlink" href="#id3" title="Link para esta tabela"></a></caption>
+<colgroup>
+<col style="width: 83.3%" />
+<col style="width: 16.7%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>VARIÁVEL</p></th>
+<th class="head"><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">MNEMÔNICO</span></code></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Estágios</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EST</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Patamares</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">PAT</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Submercados</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SBM</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Reservatórios Equivalentes de Energia</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">REE</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Usina Termoelétrica</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">UTE</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Usina Hidroelétrica</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">UHE</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="execucao">
+<h2>Execução<a class="headerlink" href="#execucao" title="Link para este cabeçalho"></a></h2>
+<p>Informações da execução do modelo, como ambiente escolhido, recursos computacionais disponíveis, convergência, tempo gasto, etc.</p>
+<table class="docutils align-default" id="id4">
+<caption><span class="caption-text">Dados da Execução</span><a class="headerlink" href="#id4" title="Link para esta tabela"></a></caption>
+<colgroup>
+<col style="width: 83.3%" />
+<col style="width: 16.7%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>VARIÁVEL</p></th>
+<th class="head"><p>MNEMÔNICO</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Composição de Custos</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">CUSTOS</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Tempo de Execução</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">TEMPO</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Convergência</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">CONVERGENCIA</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="cenarios">
+<h2>Cenários<a class="headerlink" href="#cenarios" title="Link para este cabeçalho"></a></h2>
+<p>Informações sobre os cenários visitados (gerados, fornecidos, processados, etc.) durante o processo de otimização. Estas informações são formadas a partir de três especificações:</p>
+<section id="variavel">
+<h3>Variável<a class="headerlink" href="#variavel" title="Link para este cabeçalho"></a></h3>
+<p>A variável informa a grandeza do cenário que foi gerado, fornecido ou processado pelo modelo.</p>
+<table class="docutils align-default" id="id5">
+<caption><span class="caption-text">Variáveis dos Cenários</span><a class="headerlink" href="#id5" title="Link para esta tabela"></a></caption>
+<colgroup>
+<col style="width: 83.3%" />
+<col style="width: 16.7%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>VARIÁVEL</p></th>
+<th class="head"><p>MNEMÔNICO</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Energia Natural Afluente (MWmes)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">ENAA</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Vazão Incremental (m3/s)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">QINC</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="agregacao-espacial">
+<h3>Agregação Espacial<a class="headerlink" href="#agregacao-espacial" title="Link para este cabeçalho"></a></h3>
+<p>A agregação espacial informa o nível de agregação da variável em questão
+em relação ao conjunto de elementos do sistema.</p>
+<table class="docutils align-default" id="id6">
+<caption><span class="caption-text">Possíveis Agregações Espaciais</span><a class="headerlink" href="#id6" title="Link para esta tabela"></a></caption>
+<colgroup>
+<col style="width: 83.3%" />
+<col style="width: 16.7%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>AGREGAÇÂO</p></th>
+<th class="head"><p>MNEMÔNICO</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Sistema Interligado</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SIN</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Submercado</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SBM</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Reservatório Equivalente</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">REE</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Usina Hidroelétrica</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">UHE</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="etapa">
+<h3>Etapa<a class="headerlink" href="#etapa" title="Link para este cabeçalho"></a></h3>
+<p>A etapa diz o momento em que o valor de cenário foi utilizado.</p>
+<table class="docutils align-default" id="id7">
+<caption><span class="caption-text">Possíveis Etapas</span><a class="headerlink" href="#id7" title="Link para esta tabela"></a></caption>
+<colgroup>
+<col style="width: 83.3%" />
+<col style="width: 16.7%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>ETAPA</p></th>
+<th class="head"><p>MNEMÔNICO</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Forward</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">FOR</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Backward</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">BKW</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Simulação Final</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SF</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="politica">
+<h2>Política<a class="headerlink" href="#politica" title="Link para este cabeçalho"></a></h2>
+<p>Informações sobre a política operativa construída (ou lida) pelo modelo.</p>
+<table class="docutils align-default" id="id8">
+<caption><span class="caption-text">Variáveis da Política</span><a class="headerlink" href="#id8" title="Link para esta tabela"></a></caption>
+<colgroup>
+<col style="width: 83.3%" />
+<col style="width: 16.7%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>VARIÁVEL</p></th>
+<th class="head"><p>MNEMÔNICO</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Cortes de Benders Calculados</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">CORTES</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Estados Visitados na Construção dos Cortes</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">ESTADOS</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Cortes de Benders Recebidos</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">FCF</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="operacao">
+<h2>Operação<a class="headerlink" href="#operacao" title="Link para este cabeçalho"></a></h2>
+<p>Informações da operação fornecida como saída pelo modelo. Assim como os dados de cenários, estas informações são formadas a partir de duas especificações:</p>
+<section id="id1">
+<h3>Variável<a class="headerlink" href="#id1" title="Link para este cabeçalho"></a></h3>
+<p>A variável informa a grandeza que é modelada e fornecida como saída da operação pelo modelo.</p>
+<table class="docutils align-default" id="id9">
+<caption><span class="caption-text">Variáveis da Operação</span><a class="headerlink" href="#id9" title="Link para esta tabela"></a></caption>
+<colgroup>
+<col style="width: 83.3%" />
+<col style="width: 16.7%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>VARIÁVEL</p></th>
+<th class="head"><p>MNEMÔNICO</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Cota de Jusante (m)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">HJUS</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Cota de Montante (m)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">HMON</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Custo de Operação (Presente) (10^6 R$)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">COP</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Custo Futuro (10^6 R$)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">CFU</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Custo Marginal de Operação (R$/MWh)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">CMO</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Custo da Geração Térmica (10^6 R$)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">CTER</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Déficit (MWmes)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">DEF</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Energia Natural Afluente Absoluta (MWmes)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">ENAA</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Energia Natural Afluente Absoluta em Fio d’Água  (MWmes)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">ENAAF</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Energia Natural Afluente Absoluta em Reservatórios  (MWmes)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">ENAAR</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Energia Armazenada Inicial (MWmes)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EARMI</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Energia Armazenada Inicial (%)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EARPI</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Energia Armazenada Final (MWmes)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EARMF</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Energia Armazenada Final (%)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EARPF</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Energia Vertida (MWmes)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EVER</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Energia Vertida Turbinável (MWmes)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EVERT</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Energia Vertida Não-Turbinável (MWmes)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EVERNT</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Energia Vertida em Reservatórios (MWmes)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EVERR</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Energia Vertida Turbinável em Reservatórios (MWmes)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EVERRT</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Energia Vertida Não-Turbinável em Reservatórios (MWmes)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EVERRNT</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Energia Vertida em Fio d’Água (MWmes)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EVERF</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Energia Vertida Turbinável em Fio d’Água (MWmes)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EVERFT</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Energia Vertida Não-Turbinável em Fio d’Água (MWmes)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EVERFNT</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Energia Desviada em Fio d’Água (MWmes)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EDESF</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Energia Desviada em Reservatórios (MWmes)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EDESR</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Energia Evaporada (MWmes)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EEVAP</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Energia de Defluência Mínima (MWmes)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EVMIN</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Energia de Enchimento de Volume Morto (MWmes)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EVMOR</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Geração Hidráulica (MWmes)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">GHID</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Geração Hidráulica em Fio d’Água (MWmes)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">GHIDF</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Geração Hidráulica em Reservatórios (MWmes)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">GHIDR</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Geração Térmica (MWmes)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">GTER</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Geração Eólica (MWmes)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">GEOL</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Intercâmbio (MWmes)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">INT</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Mercado de Energia (MWmes)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">MER</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Mercado de Energia Líquido (MWmes)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">MERL</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Queda Líquida (m)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">HLIQ</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Valor da Água (R$/hm3 - UHE ou R$/MWmes - REE)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">VAGUA</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Vazão Afluente (m3/s)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">QAFL</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Vazão Defluente (m3/s)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">QDEF</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Vazão Desviada (m3/s)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">QDES</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Vazão Incremental (m3/s)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">QINC</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Vazão Retirada (m3/s)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">QRET</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Vazão Turbinada (m3/s)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">QTUR</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Vazão Vertida (m3/s)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">QVER</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Violação de FPHA (MWmes)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">VFPHA</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Volume Armazenado Inicial (hm3)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">VARMI</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Volume Armazenado Inicial (%)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">VARPI</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Volume Armazenado Final (hm3)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">VARMF</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Volume Armazenado Final (%)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">VARPF</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Volume Afluente (hm3)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">VAFL</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Volume Defluente (hm3)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">VDEF</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Volume Desviado (hm3)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">VDES</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Volume Incremental (hm3)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">VINC</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Volume Retirado (hm3)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">VRET</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Volume Turbinado (hm3)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">VTUR</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Volume Vertido (hm3)</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">VVER</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id2">
+<h3>Agregação Espacial<a class="headerlink" href="#id2" title="Link para este cabeçalho"></a></h3>
+<p>A agregação espacial informa o nível de agregação da variável em questão
+em relação ao conjunto de elementos do sistema.</p>
+<table class="docutils align-default" id="id10">
+<caption><span class="caption-text">Possíveis Agregações Espaciais</span><a class="headerlink" href="#id10" title="Link para esta tabela"></a></caption>
+<colgroup>
+<col style="width: 83.3%" />
+<col style="width: 16.7%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>AGREGAÇÂO</p></th>
+<th class="head"><p>MNEMÔNICO</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Sistema Interligado</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SIN</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Submercado</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SBM</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Reservatório Equivalente</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">REE</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Usina Hidroelétrica</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">UHE</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Usina Termelétrica</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">UTE</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Par de Submercados</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SBP</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="estado-do-desenvolvimento">
+<h2>Estado do Desenvolvimento<a class="headerlink" href="#estado-do-desenvolvimento" title="Link para este cabeçalho"></a></h2>
+<p>Todas as variáveis das categorias <code class="xref py py-obj docutils literal notranslate"><span class="pre">Sistema</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">Execução</span></code> e <code class="xref py py-obj docutils literal notranslate"><span class="pre">Política</span></code> que são listadas
+e estão presentes no modelo NEWAVE, estão disponíveis para uso no sintetizador.</p>
+<p>Já para as categorias de cenários e operação, nem todas as combinações de agregações espaciais, temporais e variáveis
+fazem sentido, ou especialmente são modeladas ou possíveis de se obter no NEWAVE. Desta forma,
+o estado do desenvolvimento é listado a seguir, onde se encontram as combinações de sínteses da operação
+que estão disponíveis no modelo.</p>
+<table class="docutils align-default" id="id11">
+<caption><span class="caption-text">Sínteses de Cenários Existentes</span><a class="headerlink" href="#id11" title="Link para esta tabela"></a></caption>
+<colgroup>
+<col style="width: 71.4%" />
+<col style="width: 14.3%" />
+<col style="width: 14.3%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>VARIÁVEL</p></th>
+<th class="head"><p>AGREGAÇÃO ESPACIAL</p></th>
+<th class="head"><p>ETAPA</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">ENAA</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">REE</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">SBM</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">SIN</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">FOR</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">BKW</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">SF</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">QINC</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">UHE</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">REE</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">SBM</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">SIN</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">FOR</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">BKW</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">SF</span></code></p></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils align-default" id="id12">
+<caption><span class="caption-text">Sínteses da Operação Existentes</span><a class="headerlink" href="#id12" title="Link para esta tabela"></a></caption>
+<colgroup>
+<col style="width: 83.3%" />
+<col style="width: 16.7%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>VARIÁVEL</p></th>
+<th class="head"><p>AGREGAÇÃO ESPACIAL</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">HJUS</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">UHE</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">HMON</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">UHE</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">COP</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SIN</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">CFU</span></code></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">CMO</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SBM</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">CTER</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SIN</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">SBM</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">DEF</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SIN</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">SBM</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">ENAA</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SIN</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">SBM</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">REE</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EARMI</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SIN</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">SBM</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">REE</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EARPI</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SIN</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">SBM</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">REE</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EARMF</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SIN</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">SBM</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">REE</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EARPF</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SIN</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">SBM</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">REE</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EVER</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SIN</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">SBM</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">REE</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EVERF</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SIN</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">SBM</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">REE</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EVERR</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SIN</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">SBM</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">REE</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EVERT</span></code></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EVERNT</span></code></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EVERFT</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SIN</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">SBM</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">REE</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">GHID</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SIN</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">SBM</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">REE</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">UHE</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">GTER</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SIN</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">SBM</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">GEOL</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SIN</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">SBM</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">PEE</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">INT</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SBP</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">MER</span></code></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">MERL</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SIN</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">SBM</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">HLIQ</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">UHE</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">VAGUA</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">REE</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">UHE</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">QAFL</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">UHE</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">QDEF</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">UHE</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">QDES</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">UHE</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">QINC</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">UHE</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">QRET</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">UHE</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">QTUR</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SIN</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">QVER</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SIN</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">VFPHA</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SIN</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">SBM</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">REE</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">UHE</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">VARMI</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SIN</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">SBM</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">REE</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">UHE</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">VARPI</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">UHE</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">VARMF</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SIN</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">SBM</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">REE</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">UHE</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">VARPF</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">UHE</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">VAFL</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">UHE</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">VDEF</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">UHE</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">VINC</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">UHE</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">VRET</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">UHE</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">VTUR</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">UHE</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">VVER</span></code></p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">UHE</span></code></p></td>
+</tr>
+</tbody>
+</table>
+<p>São exemplos de elementos de dados válidos para as sínteses da operação <code class="xref py py-obj docutils literal notranslate"><span class="pre">EARPF_SBM</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">VARPF_UHE</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">GHID_UHE</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">CMO_SBM</span></code>, dentre outras.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Rodapé">
+        <a href="saidas.html" class="btn btn-neutral float-left" title="Saídas" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Anterior</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Direitos autorais 2025, Rogerio Alves.</p>
+  </div>
+
+  Compilado com <a href="https://www.sphinx-doc.org/">Sphinx</a> usando um
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">tema</a>
+    fornecido por <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
