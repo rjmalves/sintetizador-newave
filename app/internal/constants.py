@@ -31,6 +31,7 @@ VALUE_COL = "valor"
 LOWER_BOUND_COL = "limite_inferior"
 UPPER_BOUND_COL = "limite_superior"
 VARIABLE_COL = "variavel"
+LOWER_BOUND_SCALING_TMP_COL = "limite_inferior_cadastral"
 
 GROUPING_TMP_COL = "group"
 SYSTEM_GROUPING_COL = "sin"
