@@ -15,6 +15,7 @@ from app.internal.constants import (
     HYDRO_CODE_COL,
     IDENTIFICATION_COLUMNS,
     LOWER_BOUND_COL,
+    LOWER_BOUND_SCALING_TMP_COL,
     SCENARIO_COL,
     STAGE_COL,
     STAGE_DURATION_HOURS,
@@ -1172,8 +1173,9 @@ class OperationVariableBounds:
         Armazenado Percentual (VARP) para cada UHE.
         """
 
-        def _get_group_and_cast_bounds() -> Tuple[np.ndarray, np.ndarray]:
-            volume_bounds_in_stages_df = Deck.hydro_volume_bounds_in_stages(uow)
+        def _get_group_and_cast_bounds(
+            volume_bounds_in_stages_df: pd.DataFrame,
+        ) -> Tuple[np.ndarray, np.ndarray]:
             synthesis_hydro_codes = df[HYDRO_CODE_COL].unique().tolist()
             volume_bounds_in_stages_df = volume_bounds_in_stages_df.loc[
                 volume_bounds_in_stages_df[HYDRO_CODE_COL].isin(
@@ -1217,6 +1219,7 @@ class OperationVariableBounds:
 
         def _repeat_bounds_by_scenario(
             df: pd.DataFrame,
+            lower_bounds_for_rescaling: np.ndarray,
             lower_bounds: np.ndarray,
             upper_bounds: np.ndarray,
         ) -> pd.DataFrame:
@@ -1227,6 +1230,13 @@ class OperationVariableBounds:
             num_scenarios = len(ordered_entities[SCENARIO_COL])
             num_blocks = len(ordered_entities[BLOCK_COL])
             df = df.sort_values(grouping_columns)
+            df[LOWER_BOUND_SCALING_TMP_COL] = cls._repeats_data_by_scenario(
+                lower_bounds_for_rescaling,
+                num_entities,
+                num_stages,
+                num_scenarios,
+                num_blocks,
+            )
             df[LOWER_BOUND_COL] = cls._repeats_data_by_scenario(
                 lower_bounds,
                 num_entities,
@@ -1249,14 +1259,15 @@ class OperationVariableBounds:
         ) -> pd.DataFrame:
             num_digits = 2
 
-            df[VALUE_COL] = np.round(df[VALUE_COL], num_digits)
             df[LOWER_BOUND_COL] = np.round(df[LOWER_BOUND_COL], num_digits)
             df[UPPER_BOUND_COL] = np.round(df[UPPER_BOUND_COL], num_digits)
             if (
                 synthesis_unit == Unit.hm3_modif.value
                 and not already_had_limits
             ):
-                df[VALUE_COL] += df[LOWER_BOUND_COL]
+                df[VALUE_COL] += df[LOWER_BOUND_SCALING_TMP_COL]
+            df[VALUE_COL] = np.round(df[VALUE_COL], num_digits)
+            df = df.drop(columns=[LOWER_BOUND_SCALING_TMP_COL])
             return df
 
         has_limits = (
@@ -1264,11 +1275,17 @@ class OperationVariableBounds:
         )
         entity_column_list = [entity_column] if entity_column else []
         grouping_columns = entity_column_list + [START_DATE_COL]
-        lower_bounds, upper_bounds = _get_group_and_cast_bounds()
+        lower_bounds_for_rescaling, _ = _get_group_and_cast_bounds(
+            Deck.hydro_volume_bounds_in_stages_for_rescaling(uow)
+        )
+        lower_bounds, upper_bounds = _get_group_and_cast_bounds(
+            Deck.hydro_volume_bounds_in_stages(uow)
+        )
         if entity_column != HYDRO_CODE_COL:
             df = cls._group_hydro_df(df, entity_column)
         df = _repeat_bounds_by_scenario(
             df,
+            lower_bounds_for_rescaling,
             lower_bounds,
             upper_bounds,
         )

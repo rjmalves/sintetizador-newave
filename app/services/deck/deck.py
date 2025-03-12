@@ -2448,8 +2448,8 @@ class Deck:
         return hydro_volume_bounds_with_changes.copy()
 
     @classmethod
-    def hydro_volume_bounds_in_stages(
-        cls, uow: AbstractUnitOfWork
+    def _hydro_volume_bounds_in_stages(
+        cls, uow: AbstractUnitOfWork, consider_lower_changes: bool = True
     ) -> pd.DataFrame:
         """
         Obtém um DataFrame com os limites de volume armazenado de cada usina
@@ -2471,11 +2471,14 @@ class Deck:
             )
 
         def _add_hydro_bounds_changes_to_stages(
-            df: pd.DataFrame, uow: AbstractUnitOfWork
+            df: pd.DataFrame,
+            uow: AbstractUnitOfWork,
+            consider_lower_changes: bool,
         ) -> pd.DataFrame:
-            df = cls._get_hydro_data_changes_from_modif_to_stages(
-                df, LOWER_BOUND_COL, LOWER_BOUND_UNIT_COL, VMINT, uow
-            )
+            if consider_lower_changes:
+                df = cls._get_hydro_data_changes_from_modif_to_stages(
+                    df, LOWER_BOUND_COL, LOWER_BOUND_UNIT_COL, VMINT, uow
+                )
             df = cls._get_hydro_data_changes_from_modif_to_stages(
                 df, UPPER_BOUND_COL, UPPER_BOUND_UNIT_COL, VMAXT, uow
             )
@@ -2519,20 +2522,60 @@ class Deck:
 
             return df
 
+        hm3_df = cls.hydro_volume_bounds_with_changes(uow)
+        hm3_df = _expand_to_stages(hm3_df, uow)
+        df = _add_hydro_bounds_changes_to_stages(
+            hm3_df.copy(), uow, consider_lower_changes
+        )
+        casted_df = _cast_bounds_to_hm3(df, hm3_df)
+        hydro_volume_bounds_in_stages = casted_df
+        return hydro_volume_bounds_in_stages.copy()
+
+    @classmethod
+    def hydro_volume_bounds_in_stages(
+        cls, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        """
+        Obtém um DataFrame com os limites de volume armazenado de cada usina
+        hidrelétrica para cada estágio do problema, considerando possíveis
+        modificações e convertendo para hm3.
+        """
+
         hydro_volume_bounds_in_stages = cls.DECK_DATA_CACHING.get(
             "hydro_volume_bounds_in_stages"
         )
         if hydro_volume_bounds_in_stages is None:
-            hm3_df = cls.hydro_volume_bounds_with_changes(uow)
-            hm3_df = _expand_to_stages(hm3_df, uow)
-            df = _add_hydro_bounds_changes_to_stages(hm3_df.copy(), uow)
-            casted_df = _cast_bounds_to_hm3(df, hm3_df)
-
-            hydro_volume_bounds_in_stages = casted_df
+            hydro_volume_bounds_in_stages = cls._hydro_volume_bounds_in_stages(
+                uow, consider_lower_changes=True
+            )
             cls.DECK_DATA_CACHING["hydro_volume_bounds_in_stages"] = (
                 hydro_volume_bounds_in_stages
             )
         return hydro_volume_bounds_in_stages.copy()
+
+    @classmethod
+    def hydro_volume_bounds_in_stages_for_rescaling(
+        cls, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        """
+        Obtém um DataFrame com os limites de volume armazenado de cada usina
+        hidrelétrica para cada estágio do problema, considerando possíveis
+        modificações e convertendo para hm3.
+        """
+
+        hydro_volume_bounds_in_stages_for_rescaling = cls.DECK_DATA_CACHING.get(
+            "hydro_volume_bounds_in_stages_for_rescaling"
+        )
+        if hydro_volume_bounds_in_stages_for_rescaling is None:
+            hydro_volume_bounds_in_stages_for_rescaling = (
+                cls._hydro_volume_bounds_in_stages(
+                    uow, consider_lower_changes=False
+                )
+            )
+            cls.DECK_DATA_CACHING[
+                "hydro_volume_bounds_in_stages_for_rescaling"
+            ] = hydro_volume_bounds_in_stages_for_rescaling
+        return hydro_volume_bounds_in_stages_for_rescaling.copy()
 
     @classmethod
     def hydro_turbined_flow_bounds(

@@ -1,3 +1,7 @@
+# v2.2.1
+
+- Correção na obtenção dos valores de volume armazenado em hm3 absolutos [#55](https://github.com/rjmalves/sintetizador-newave/issues/55)
+
 # v2.2.0
 
 - Pós-processamento das colunas nos arquivos de saída para eliminar informações desnecessárias [#50](https://github.com/rjmalves/sintetizador-newave/issues/50)
