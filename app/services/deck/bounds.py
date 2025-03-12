@@ -1259,7 +1259,6 @@ class OperationVariableBounds:
         ) -> pd.DataFrame:
             num_digits = 2
 
-            df[VALUE_COL] = np.round(df[VALUE_COL], num_digits)
             df[LOWER_BOUND_COL] = np.round(df[LOWER_BOUND_COL], num_digits)
             df[UPPER_BOUND_COL] = np.round(df[UPPER_BOUND_COL], num_digits)
             if (
@@ -1267,6 +1266,7 @@ class OperationVariableBounds:
                 and not already_had_limits
             ):
                 df[VALUE_COL] += df[LOWER_BOUND_SCALING_TMP_COL]
+            df[VALUE_COL] = np.round(df[VALUE_COL], num_digits)
             df = df.drop(columns=[LOWER_BOUND_SCALING_TMP_COL])
             return df
 
