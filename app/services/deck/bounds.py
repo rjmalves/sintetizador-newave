@@ -901,6 +901,18 @@ class OperationVariableBounds:
             ordered_entities=entities,
             entity_column=None,
         ),
+        OperationSynthesis(
+            Variable.GERACAO_USINAS_NAO_SIMULADAS,
+            SpatialResolution.SUBMERCADO,
+        ): lambda df, uow, _: OperationVariableBounds._lower_bounded_bounds(
+            df, uow
+        ),
+        OperationSynthesis(
+            Variable.GERACAO_USINAS_NAO_SIMULADAS,
+            SpatialResolution.SISTEMA_INTERLIGADO,
+        ): lambda df, uow, _: OperationVariableBounds._lower_bounded_bounds(
+            df, uow
+        ),
     }
 
     @classmethod

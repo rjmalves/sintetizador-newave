@@ -2265,6 +2265,119 @@ class Deck:
         return flow_diversion.copy()
 
     @classmethod
+    def non_simulated_generation(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        def _generate_MWmed_generation_by_block(
+            uow: AbstractUnitOfWork,
+        ) -> pd.DataFrame:
+            tmp_col = "unsi_block"
+            generation = cls._validate_data(
+                cls._get_sistema(uow).geracao_usinas_nao_simuladas,
+                pd.DataFrame,
+                "geração de UNSI (sistema.dat)",
+            )
+            generation = generation.rename(
+                columns={
+                    "data": START_DATE_COL,
+                    "codigo_submercado": SUBMARKET_CODE_COL,
+                    "indice_bloco": tmp_col,
+                    "valor": VALUE_COL,
+                }
+            )
+            generation = generation.sort_values([
+                SUBMARKET_CODE_COL,
+                tmp_col,
+                START_DATE_COL,
+            ]).reset_index(drop=True)
+            factors = cls._validate_data(
+                cls._get_patamar(uow).usinas_nao_simuladas,
+                pd.DataFrame,
+                "profundidades da geração de UNSI (patamar.dat)",
+            )
+            factors = factors.rename(
+                columns={
+                    "data": START_DATE_COL,
+                    "codigo_submercado": SUBMARKET_CODE_COL,
+                    "indice_bloco": tmp_col,
+                    "patamar": BLOCK_COL,
+                    "valor": VALUE_COL,
+                }
+            )
+            df = factors.sort_values([
+                SUBMARKET_CODE_COL,
+                tmp_col,
+                START_DATE_COL,
+                BLOCK_COL,
+            ]).reset_index(drop=True)
+            block_generations = generation.loc[
+                generation.index.repeat(cls.num_blocks(uow)), VALUE_COL
+            ].to_numpy()
+            df[VALUE_COL] = df[VALUE_COL].to_numpy() * block_generations
+            df = (
+                df.groupby([
+                    START_DATE_COL,
+                    SUBMARKET_CODE_COL,
+                    BLOCK_COL,
+                ])
+                .sum()
+                .reset_index()
+            )
+
+            return df.drop(columns=[tmp_col])
+
+        def _cast_generation_to_MWmes(
+            generation_df: pd.DataFrame,
+            block_length_df: pd.DataFrame,
+        ) -> pd.DataFrame:
+            block_length_df = block_length_df.sort_values([
+                START_DATE_COL,
+                BLOCK_COL,
+            ])
+            num_submarkets = generation_df.drop_duplicates([
+                SUBMARKET_CODE_COL,
+            ]).shape[0]
+            generation_df[VALUE_COL] *= np.tile(
+                block_length_df[VALUE_COL].to_numpy(), num_submarkets
+            )
+
+            return generation_df
+
+        def _eval_pat0(df: pd.DataFrame) -> pd.DataFrame:
+            df_block_0 = (
+                df.groupby([SUBMARKET_CODE_COL, START_DATE_COL])
+                .mean()
+                .reset_index()
+            )
+            df_block_0[BLOCK_COL] = 0
+            df = pd.concat([df, df_block_0], ignore_index=True)
+            df.sort_values(
+                [
+                    SUBMARKET_CODE_COL,
+                    START_DATE_COL,
+                    BLOCK_COL,
+                ],
+                inplace=True,
+            )
+            return df.reset_index(drop=True)
+
+        non_simulated_generation = cls.DECK_DATA_CACHING.get(
+            "non_simulated_generation"
+        )
+        if non_simulated_generation is None:
+            generation_df = _generate_MWmed_generation_by_block(uow)
+            generation_df = _eval_pat0(generation_df)
+            block_length_df = cls.block_lengths(uow)
+            generation_df = _cast_generation_to_MWmes(
+                generation_df, block_length_df
+            )
+            generation_df = cls._consider_post_study_years(generation_df, uow)
+
+            non_simulated_generation = generation_df
+            cls.DECK_DATA_CACHING["non_simulated_generation"] = (
+                non_simulated_generation
+            )
+        return non_simulated_generation.copy()
+
+    @classmethod
     def _get_value_and_unit_from_modif_entry(
         cls, r: Register
     ) -> Tuple[Optional[float], Optional[str]]:

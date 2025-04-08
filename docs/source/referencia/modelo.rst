@@ -133,6 +133,7 @@ Informações sobre a política operativa construída (ou lida) pelo modelo.
      - `FCF`
 
 
+
 Operação
 *********
 
@@ -149,120 +150,161 @@ A variável informa a grandeza que é modelada e fornecida como saída da opera�
 
    * - VARIÁVEL
      - MNEMÔNICO
-   * - Cota de Jusante (m)
+   * - Cota de Jusante
      - `HJUS`
-   * - Cota de Montante (m)
+   * - Cota de Montante
      - `HMON`
-   * - Custo de Operação (Presente) (10^6 R$)
-     - `COP`
-   * - Custo Futuro (10^6 R$)
-     - `CFU`
-   * - Custo Marginal de Operação (R$/MWh)
-     - `CMO`
-   * - Custo da Geração Térmica (10^6 R$)
+   * - Corte de Geração de Usinas Não Simuladas
+     - `CUNS`
+   * - Corte de Geração Eólica
+     - `VEOL`
+   * - Custo da Geração Térmica
      - `CTER`
-   * - Déficit (MWmes)
+   * - Custo de Déficit
+     - `CDEF`
+   * - Custo de Operação
+     - `COP`
+   * - Custo Futuro
+     - `CFU`
+   * - Custo Marginal de Operação
+     - `CMO`
+   * - Custo Total
+     - `CTO`
+   * - Déficit
      - `DEF`
-   * - Energia Natural Afluente Absoluta (MWmes)
-     - `ENAA`
-   * - Energia Natural Afluente Absoluta em Fio d'Água  (MWmes)
-     - `ENAAF`
-   * - Energia Natural Afluente Absoluta em Reservatórios  (MWmes)
-     - `ENAAR`
-   * - Energia Armazenada Inicial (MWmes)
-     - `EARMI`
-   * - Energia Armazenada Inicial (%)
-     - `EARPI`
-   * - Energia Armazenada Final (MWmes)
+   * - Energia Armazenada Absoluta Final
      - `EARMF`
-   * - Energia Armazenada Final (%)
+   * - Energia Armazenada Absoluta Inicial
+     - `EARMI`
+   * - Energia Armazenada Percentual Final
      - `EARPF`
-   * - Energia Vertida (MWmes)
-     - `EVER`
-   * - Energia Vertida Turbinável (MWmes)
-     - `EVERT`
-   * - Energia Vertida Não-Turbinável (MWmes)
-     - `EVERNT`
-   * - Energia Vertida em Reservatórios (MWmes)
-     - `EVERR`
-   * - Energia Vertida Turbinável em Reservatórios (MWmes)
-     - `EVERRT`
-   * - Energia Vertida Não-Turbinável em Reservatórios (MWmes)
-     - `EVERRNT`
-   * - Energia Vertida em Fio d'Água (MWmes)
-     - `EVERF`
-   * - Energia Vertida Turbinável em Fio d'Água (MWmes)
-     - `EVERFT`
-   * - Energia Vertida Não-Turbinável em Fio d'Água (MWmes)
-     - `EVERFNT`
-   * - Energia Desviada em Fio d'Água (MWmes)
-     - `EDESF`
-   * - Energia Desviada em Reservatórios (MWmes)
-     - `EDESR`
-   * - Energia Evaporada (MWmes)
-     - `EEVAP`
-   * - Energia de Defluência Mínima (MWmes)
+   * - Energia Armazenada Percentual Inicial
+     - `EARPI`
+   * - Energia de Defluência Mínima
      - `EVMIN`
-   * - Energia de Enchimento de Volume Morto (MWmes)
+   * - Energia de Enchimento de Volume Morto
      - `EVMOR`
-   * - Geração Hidráulica (MWmes)
-     - `GHID`
-   * - Geração Hidráulica em Fio d'Água (MWmes)
-     - `GHIDF`
-   * - Geração Hidráulica em Reservatórios (MWmes)
-     - `GHIDR`
-   * - Geração Térmica (MWmes)
-     - `GTER`
-   * - Geração Eólica (MWmes)
+   * - Energia Desviada em Fio d'Água
+     - `EDESF`
+   * - Energia Desviada em Reservatórios
+     - `EDESR`
+   * - Energia Evaporada
+     - `EEVAP`
+   * - Energia Natural Afluente Absoluta
+     - `ENAA`
+   * - Energia Natural Afluente Absoluta em Fio d'Água
+     - `ENAAF`
+   * - Energia Natural Afluente Absoluta em Reservatórios
+     - `ENAAR`
+   * - Energia Natural Afluente para Acoplamento
+     - `ENAC`
+   * - Energia Vertida
+     - `EVER`
+   * - Energia Vertida em Fio d'Água
+     - `EVERF`
+   * - Energia Vertida em Reservatórios
+     - `EVERR`
+   * - Energia Vertida Não-Turbinável
+     - `EVERNT`
+   * - Energia Vertida Não-Turbinável em Fio d'Água
+     - `EVERFNT`
+   * - Energia Vertida Não-Turbinável em Reservatórios
+     - `EVERRNT`
+   * - Energia Vertida Turbinável
+     - `EVERT`
+   * - Energia Vertida Turbinável em Fio d'Água
+     - `EVERFT`
+   * - Energia Vertida Turbinável em Reservatórios
+     - `EVERRT`
+   * - Excesso de Energia
+     - `EXC`
+   * - Geração Eólica
      - `GEOL`
-   * - Intercâmbio (MWmes)
+   * - Geração Hidráulica
+     - `GHID`
+   * - Geração Hidráulica em Fio d'Água
+     - `GHIDF`
+   * - Geração Hidráulica em Reservatórios
+     - `GHIDR`
+   * - Geração Térmica
+     - `GTER`
+   * - Geração de Usinas Não Simuladas
+     - `GUNS`
+   * - Geração de Usinas Não Simuladas Disponível
+     - `GUNSD`
+   * - Intercâmbio
      - `INT`
-   * - Mercado de Energia (MWmes)
+   * - Intercâmbio Líquido
+     - `INTL`
+   * - Mercado de Energia
      - `MER`
-   * - Mercado de Energia Líquido (MWmes)
+   * - Mercado de Energia Líquido
      - `MERL`
-   * - Queda Líquida (m)
+   * - Meta de Energia de Defluência Mínima
+     - `MEVMIN`
+   * - Queda Líquida
      - `HLIQ`
-   * - Valor da Água (R$/hm3 - UHE ou R$/MWmes - REE)
+   * - Valor da Água
      - `VAGUA`
-   * - Vazão Afluente (m3/s)
+   * - Valor da Água Incremental
+     - `VAGUAI`
+   * - Vazão Afluente
      - `QAFL`
-   * - Vazão Defluente (m3/s)
+   * - Vazão Defluente
      - `QDEF`
-   * - Vazão Desviada (m3/s)
+   * - Vazão Desviada
      - `QDES`
-   * - Vazão Incremental (m3/s)
+   * - Vazão Evaporada
+     - `QEVP`
+   * - Vazão Incremental
      - `QINC`
-   * - Vazão Retirada (m3/s)
+   * - Vazão Retirada
      - `QRET`
-   * - Vazão Turbinada (m3/s)
+   * - Vazão Turbinada
      - `QTUR`
-   * - Vazão Vertida (m3/s)
+   * - Vazão Vertida
      - `QVER`
-   * - Violação de FPHA (MWmes)
+   * - Velocidade do Vento
+     - `VENTO`
+   * - Violação de Energia de Defluência Mínima
+     - `VEVMIN`
+   * - Violação de Evaporação
+     - `VEVAP`
+   * - Violação de FPHA
      - `VFPHA`
-   * - Volume Armazenado Inicial (hm3)
-     - `VARMI`
-   * - Volume Armazenado Inicial (%)
-     - `VARPI`
-   * - Volume Armazenado Final (hm3)
+   * - Violação de Geração Hidráulica Mínima
+     - `VGHMIN`
+   * - Violação Negativa de Evaporação
+     - `VNEGEVAP`
+   * - Violação Positiva de Evaporação
+     - `VPOSEVAP`
+   * - Volume Armazenado Absoluto Final
      - `VARMF`
-   * - Volume Armazenado Final (%)
+   * - Volume Armazenado Absoluto Inicial
+     - `VARMI`
+   * - Volume Armazenado na Calha
+     - `VCALHA`
+   * - Volume Armazenado Percentual Final
      - `VARPF`
-   * - Volume Afluente (hm3)
+   * - Volume Armazenado Percentual Inicial
+     - `VARPI`
+   * - Volume Afluente
      - `VAFL`
-   * - Volume Defluente (hm3)
+   * - Volume Defluente
      - `VDEF`
-   * - Volume Desviado (hm3)
+   * - Volume Desviado
      - `VDES`
-   * - Volume Incremental (hm3)
+   * - Volume Evaporado
+     - `VEVP`
+   * - Volume Incremental
      - `VINC`
-   * - Volume Retirado (hm3)
+   * - Volume Retirado
      - `VRET`
-   * - Volume Turbinado (hm3)
+   * - Volume Turbinado
      - `VTUR`
-   * - Volume Vertido (hm3)
+   * - Volume Vertido
      - `VVER`
+
 
 Agregação Espacial
 ===================
@@ -326,45 +368,85 @@ que estão disponíveis no modelo.
      - `UHE`
    * - `HMON`
      - `UHE`
+   * - `VEOL`
+     - 
+   * - `CUNS`
+     - 
+   * - `CTER`
+     - `SIN`, `SBM`
+   * - `CDEF`
+     - `SIN`, `SBM`
    * - `COP`
      - `SIN`
    * - `CFU`
-     - 
+     - `SIN`
    * - `CMO`
      - `SBM`
-   * - `CTER`
-     - `SIN`, `SBM`
    * - `DEF`
      - `SIN`, `SBM`
-   * - `ENAA`
+   * - `EARMF`
      - `SIN`, `SBM`, `REE`
    * - `EARMI`
      - `SIN`, `SBM`, `REE`
-   * - `EARPI`
-     - `SIN`, `SBM`, `REE`
-   * - `EARMF`
-     - `SIN`, `SBM`, `REE`
    * - `EARPF`
      - `SIN`, `SBM`, `REE`
+   * - `EARPI`
+     - `SIN`, `SBM`, `REE`
+   * - `EVMIN`
+     - `SIN`, `SBM`, `REE`
+   * - `EVMOR`
+     - `SIN`, `SBM`, `REE`
+   * - `EDESF`
+     - `SIN`, `SBM`, `REE`
+   * - `EDESR`
+     - `SIN`, `SBM`, `REE`
+   * - `EEVAP`
+     - `SIN`, `SBM`, `REE`
+   * - `ENAA`
+     - `SIN`, `SBM`, `REE`
+   * - `ENAAF`
+     - `SIN`, `SBM`, `REE`
+   * - `ENAAR`
+     - `SIN`, `SBM`, `REE`
+   * - `ENAC`
+     - 
    * - `EVER`
      - `SIN`, `SBM`, `REE`
    * - `EVERF`
      - `SIN`, `SBM`, `REE`
    * - `EVERR`
      - `SIN`, `SBM`, `REE`
-   * - `EVERT`
-     - 
    * - `EVERNT`
+     - 
+   * - `EVERFNT`
+     - 
+   * - `EVERRNT`
+     - 
+   * - `EVERT`
      - 
    * - `EVERFT`
      - `SIN`, `SBM`, `REE`
-   * - `GHID`
-     - `SIN`, `SBM`, `REE`, `UHE`
-   * - `GTER`
+   * - `EVERRT`
+     - 
+   * - `EXC`
      - `SIN`, `SBM`
    * - `GEOL`
-     - `SIN`, `SBM`, `PEE`
+     - 
+   * - `GHID`
+     - `SIN`, `SBM`, `REE`, `UHE`
+   * - `GHIDF`
+     - `SIN`, `SBM`, `REE`
+   * - `GHIDR`
+     - `SIN`, `SBM`, `REE`
+   * - `GTER`
+     - `SIN`, `SBM`, `UTE`
+   * - `GUNS`
+     - `SIN`, `SBM`
+   * - `GUNSD`
+     -
    * - `INT`
+     - `SBP`
+   * - `INTL`
      - `SBP`
    * - `MER`
      - 
@@ -374,42 +456,64 @@ que estão disponíveis no modelo.
      - `UHE`
    * - `VAGUA`
      - `REE`, `UHE`
+   * - `VAGUAI`
+     - `UHE`
    * - `QAFL`
-     - `UHE`
+     - `SIN`, `SBM`, `REE`, `UHE`
    * - `QDEF`
-     - `UHE`
+     - `SIN`, `SBM`, `REE`, `UHE`
    * - `QDES`
-     - `UHE`
+     - `SIN`, `SBM`, `REE`, `UHE`
+   * - `QEVP`
+     - 
    * - `QINC`
-     - `UHE`
+     - `SIN`, `SBM`, `REE`, `UHE`
    * - `QRET`
-     - `UHE`
+     - `SIN`, `SBM`, `REE`, `UHE`
    * - `QTUR`
-     - `SIN`
+     - `SIN`, `SBM`, `REE`, `UHE`
    * - `QVER`
-     - `SIN`
+     - `SIN`, `SBM`, `REE`, `UHE`
+   * - `VENTO`
+     - 
+   * - `VEVMIN`
+     - 
+   * - `VEVAP`
+     - `SIN`, `SBM`, `REE`, `UHE`
    * - `VFPHA`
+     - `SIN`, `SBM`, `REE`, `UHE`
+   * - `VGHMIN`
+     - `SIN`, `SBM`, `REE`, `UHE`
+   * - `VNEGEVAP`
+     - `SIN`, `SBM`, `REE`, `UHE`
+   * - `VPOSEVAP`
+     - `SIN`, `SBM`, `REE`, `UHE`
+   * - `VARMF`
      - `SIN`, `SBM`, `REE`, `UHE`
    * - `VARMI`
      - `SIN`, `SBM`, `REE`, `UHE`
-   * - `VARPI`
-     - `UHE`
-   * - `VARMF`
-     - `SIN`, `SBM`, `REE`, `UHE`
+   * - `VCALHA`
+     - 
    * - `VARPF`
      - `UHE`
+   * - `VARPI`
+     - `UHE`
    * - `VAFL`
-     - `UHE`
+     - `SIN`, `SBM`, `REE`, `UHE`
    * - `VDEF`
-     - `UHE`
+     - `SIN`, `SBM`, `REE`, `UHE`
+   * - `VDES`
+     - `SIN`, `SBM`, `REE`, `UHE`
+   * - `VEVP`
+     - `SIN`, `SBM`, `REE`, `UHE`
    * - `VINC`
-     - `UHE`
+     - `SIN`, `SBM`, `REE`, `UHE`
    * - `VRET`
-     - `UHE`
+     - `SIN`, `SBM`, `REE`, `UHE`
    * - `VTUR`
-     - `UHE`
+     - `SIN`, `SBM`, `REE`, `UHE`
    * - `VVER`
-     - `UHE`
+     - `SIN`, `SBM`, `REE`, `UHE`
 
 
 São exemplos de elementos de dados válidos para as sínteses da operação `EARPF_SBM`, `VARPF_UHE`, `GHID_UHE`, `CMO_SBM`, dentre outras.

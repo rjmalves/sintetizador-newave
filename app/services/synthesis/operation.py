@@ -285,7 +285,6 @@ class OperationSynthetizer:
 
             for c in early_hooks:
                 df = c(s, df, uow)
-
             df = df.sort_values(
                 spatial_resolution.sorting_synthesis_df_columns
             ).reset_index(drop=True)
@@ -1459,6 +1458,7 @@ class OperationSynthetizer:
         num_entries = df.shape[0]
         df = pd.concat([df] * num_scenarios, ignore_index=True)
         df["serie"] = np.repeat(np.arange(1, num_scenarios + 1), num_entries)
+
         return df
 
     @classmethod
@@ -1562,6 +1562,68 @@ class OperationSynthetizer:
         RESOLUTION_FUNCTION_MAP: Dict[SpatialResolution, Callable] = {
             SpatialResolution.SISTEMA_INTERLIGADO: _resolve_SIN_MER_MERL,
             SpatialResolution.SUBMERCADO: _resolve_SBM_MER_MERL,
+        }
+        solver = RESOLUTION_FUNCTION_MAP[synthesis.spatial_resolution]
+        res = solver(synthesis, uow)
+        return res if res is not None else pd.DataFrame()
+
+    @classmethod
+    def __stub_GUNS(
+        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> pd.DataFrame:
+        """
+        Realiza o processamento da síntese de geração de usinas não
+        simuladas.
+        """
+
+        def _resolve_SIN(
+            synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+        ) -> Optional[pd.DataFrame]:
+            df = Deck.non_simulated_generation(uow)
+            df = cls._generate_scenarios(df, uow)
+            df = (
+                df.groupby([START_DATE_COL, BLOCK_COL, "serie"])
+                .sum()
+                .reset_index()
+                .drop(columns=[SUBMARKET_CODE_COL])
+            )
+
+            df = cls._post_resolve_entity(df, synthesis, {}, uow)
+            return cls._post_resolve({"SIN": df}, synthesis, uow)
+
+        def _resolve_SBM(
+            synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+        ) -> Optional[pd.DataFrame]:
+            df = Deck.non_simulated_generation(uow)
+            df = cls._generate_scenarios(df, uow)
+            df = df.sort_values([
+                SUBMARKET_CODE_COL,
+                START_DATE_COL,
+                "serie",
+                BLOCK_COL,
+            ])
+            dfs: dict[str, pd.DataFrame] = {}
+            for submarket_code in df[SUBMARKET_CODE_COL].unique().tolist():
+                submarket_df = df.loc[
+                    df[SUBMARKET_CODE_COL] == submarket_code
+                ].reset_index(drop=True)
+                submarket_df = cls._post_resolve_entity(
+                    submarket_df,
+                    synthesis,
+                    {SUBMARKET_CODE_COL: submarket_code},
+                    uow,
+                )
+                dfs[str(submarket_code)] = submarket_df
+            df = cls._post_resolve(
+                dfs,
+                synthesis,
+                uow,
+            )
+            return df
+
+        RESOLUTION_FUNCTION_MAP: Dict[SpatialResolution, Callable] = {
+            SpatialResolution.SISTEMA_INTERLIGADO: _resolve_SIN,
+            SpatialResolution.SUBMERCADO: _resolve_SBM,
         }
         solver = RESOLUTION_FUNCTION_MAP[synthesis.spatial_resolution]
         res = solver(synthesis, uow)
@@ -2151,6 +2213,8 @@ class OperationSynthetizer:
             f = cls.__stub_EARM_UHE
         elif s.variable in [Variable.MERCADO, Variable.MERCADO_LIQUIDO]:
             f = cls.__stub_MER_MERL
+        elif s.variable in [Variable.GERACAO_USINAS_NAO_SIMULADAS]:
+            f = cls.__stub_GUNS
         return f
 
     @classmethod
@@ -2164,6 +2228,7 @@ class OperationSynthetizer:
         da extração de dados do NWLISTOP.
         """
         f = cls._stub_mappings(s)
+
         if f:
             df, is_stub = f(s, uow), True
         else:
@@ -2429,6 +2494,7 @@ class OperationSynthetizer:
                     )
                 return None
             except Exception as e:
+                print_exc()
                 cls._log(str(e), ERROR)
                 cls._log(
                     f"Nao foi possível realizar a sintese de: {filename}",
