@@ -1,3 +1,10 @@
+# v2.3.0
+
+- Implementada síntese da operação da Geração de Usinas Não Simuladas (`GUNS_SBM.parquet` e `GUNS_SIN.parquet`)
+- Adicionados novos dados para a síntese da execução: `VERSAO` e `TITULO`
+- Adicionados novos dados para a síntese do sistema: `CVU`
+- Documentação de sínteses suportadas atualizada e padronizada com o [sintetizador-decomp](https://github.com/rjmalves/sintetizador-decomp) e o [sintetizador-dessem](https://github.com/rjmalves/sintetizador-dessem)
+
 # v2.2.1
 
 - Correção na obtenção dos valores de volume armazenado em hm3 absolutos [#55](https://github.com/rjmalves/sintetizador-newave/issues/55)
