@@ -991,6 +991,95 @@ class Deck:
         return thermal_maintenance_end_date
 
     @classmethod
+    def thermal_costs(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        def _build_base_costs_df(uow: AbstractUnitOfWork) -> pd.DataFrame:
+            clast_df = cls.clast(uow)
+            clast_df = clast_df.rename(
+                columns={"codigo_usina": THERMAL_CODE_COL, "valor": VALUE_COL}
+            )
+            starting_year = cls.study_period_starting_year(uow)
+            num_thermals = len(clast_df[THERMAL_CODE_COL].unique().tolist())
+            num_years = len(clast_df["indice_ano_estudo"].unique().tolist())
+            clast_df = clast_df.loc[clast_df.index.repeat(12)].reset_index(
+                drop=True
+            )
+            clast_df["mes"] = np.tile(
+                list(range(1, 13)), num_thermals * num_years
+            )
+            clast_df[START_DATE_COL] = clast_df.apply(
+                lambda line: datetime(
+                    starting_year + line["indice_ano_estudo"] - 1,
+                    line["mes"],
+                    1,
+                ),
+                axis=1,
+            )
+            clast_df = clast_df.drop(
+                columns=[
+                    "nome_usina",
+                    "tipo_combustivel",
+                    "indice_ano_estudo",
+                    "mes",
+                ]
+            )
+            return clast_df
+
+        def _apply_thermal_single_change(
+            df: pd.DataFrame,
+            thermal_code: int,
+            start_date: datetime,
+            end_date: datetime,
+            value: float,
+        ) -> None:
+            df_filter = (
+                (df[THERMAL_CODE_COL] == thermal_code)
+                & (df[START_DATE_COL] >= start_date)
+                & (df[START_DATE_COL] <= end_date)
+            )
+            df.loc[df_filter, VALUE_COL] = value
+
+        def _apply_thermal_changes(
+            df: pd.DataFrame, uow: AbstractUnitOfWork
+        ) -> pd.DataFrame:
+            clast_changes_df = cls._validate_data(
+                cls._get_clast(uow).modificacoes,
+                pd.DataFrame,
+                "modificações dos custos de térmicas (clast.dat)",
+            )
+            stage_dates = cls.stages_starting_dates_final_simulation(uow)
+            final_date = stage_dates[-1]
+            clast_changes_df["data_fim"] = clast_changes_df["data_fim"].fillna(
+                final_date
+            )
+            for _, line in clast_changes_df.iterrows():
+                _apply_thermal_single_change(
+                    df,
+                    line["codigo_usina"],
+                    line["data_inicio"],
+                    line["data_fim"],
+                    line["custo"],
+                )
+            return df
+
+        def _filter_stages(
+            df: pd.DataFrame, uow: AbstractUnitOfWork
+        ) -> pd.DataFrame:
+            return df.loc[
+                df[START_DATE_COL].isin(
+                    cls.stages_starting_dates_final_simulation(uow)
+                )
+            ].copy()
+
+        thermal_costs = cls.DECK_DATA_CACHING.get("thermal_costs")
+        if thermal_costs is None:
+            df = _build_base_costs_df(uow)
+            _apply_thermal_changes(df, uow)
+            df = _filter_stages(df, uow).reset_index(drop=True)
+            thermal_costs = df[[THERMAL_CODE_COL, START_DATE_COL, VALUE_COL]]
+            cls.DECK_DATA_CACHING["thermal_costs"] = thermal_costs
+        return thermal_costs
+
+    @classmethod
     def final_simulation_type(cls, uow: AbstractUnitOfWork) -> int:
         final_simulation_type = cls.DECK_DATA_CACHING.get(
             "final_simulation_type"

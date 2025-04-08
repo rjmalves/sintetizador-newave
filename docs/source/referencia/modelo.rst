@@ -29,6 +29,8 @@ Informações da representação do sistema existente e alvo da otimização.
      - `REE`
    * - Usina Termoelétrica
      - `UTE`
+   * - Custos das Usinas Termoelétricas
+     - `CVU`
    * - Usina Hidroelétrica
      - `UHE`
 

@@ -105,6 +105,7 @@ class SystemSynthetizer:
             Variable.PAT: cls.__resolve_PAT,
             Variable.SBM: cls.__resolve_SBM,
             Variable.REE: cls.__resolve_REE,
+            Variable.CVU: cls.__resolve_CVU,
             Variable.UTE: cls.__resolve_UTE,
             Variable.UHE: cls.__resolve_UHE,
         }
@@ -142,6 +143,11 @@ class SystemSynthetizer:
     def __resolve_UTE(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         df = Deck.thermal_submarket_map(uow)
         return df.reset_index()
+
+    @classmethod
+    def __resolve_CVU(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        df = Deck.thermal_costs(uow)
+        return df
 
     @classmethod
     def __resolve_UHE(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:

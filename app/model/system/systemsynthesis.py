@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Optional
+
 from app.model.system.variable import Variable
 
 
@@ -23,5 +24,6 @@ SUPPORTED_SYNTHESIS: list[str] = [
     "SBM",
     "REE",
     "UTE",
+    "CVU",
     "UHE",
 ]
