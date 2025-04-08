@@ -757,6 +757,32 @@ class Deck:
         return vazoes.copy()
 
     @classmethod
+    def study_title(cls, uow: AbstractUnitOfWork) -> str:
+        study_title = cls.DECK_DATA_CACHING.get("study_title")
+        if study_title is None:
+            dger = cls.dger(uow)
+            study_title = cls._validate_data(
+                dger.nome_caso,
+                str,
+                "nome do caso (dger.dat)",
+            )
+            cls.DECK_DATA_CACHING["study_title"] = study_title
+        return study_title
+
+    @classmethod
+    def version(cls, uow: AbstractUnitOfWork) -> str:
+        version = cls.DECK_DATA_CACHING.get("version")
+        if version is None:
+            pmo = cls.pmo(uow)
+            version = cls._validate_data(
+                pmo.versao_modelo,
+                str,
+                "versao do modelo (pmo.dat)",
+            )
+            cls.DECK_DATA_CACHING["version"] = version
+        return version
+
+    @classmethod
     def pre_study_period_starting_month(cls, uow: AbstractUnitOfWork) -> int:
         pre_study_period_starting_month = cls.DECK_DATA_CACHING.get(
             "pre_study_period_starting_month"

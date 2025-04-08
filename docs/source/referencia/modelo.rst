@@ -43,6 +43,12 @@ Informações da execução do modelo, como ambiente escolhido, recursos computa
 
    * - VARIÁVEL
      - MNEMÔNICO
+   * - Nome do Modelo Computacional
+     - `PROGRAMA`
+   * - Versão do Modelo
+     - `VERSAO`
+   * - Título do Estudo
+     - `TITULO`
    * - Composição de Custos
      - `CUSTOS`
    * - Tempo de Execução

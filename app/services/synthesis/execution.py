@@ -87,16 +87,25 @@ class ExecutionSynthetizer:
     ) -> pd.DataFrame:
         RULES: Dict[Variable, Callable] = {
             Variable.PROGRAMA: cls._resolve_program,
+            Variable.VERSAO: cls._resolve_version,
+            Variable.TITULO: cls._resolve_title,
             Variable.CONVERGENCIA: cls._resolve_convergence,
             Variable.COMPOSICAO_CUSTOS: cls._resolve_cost,
             Variable.TEMPO_EXECUCAO: cls._resolve_runtime,
         }
         return RULES[synthesis.variable](uow)
 
-    # TODO - adicionar versao
     @classmethod
     def _resolve_program(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         return pd.DataFrame(data={"programa": ["NEWAVE"]})
+
+    @classmethod
+    def _resolve_version(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        return pd.DataFrame(data={"versao": [Deck.version(uow)]})
+
+    @classmethod
+    def _resolve_title(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+        return pd.DataFrame(data={"titulo": [Deck.study_title(uow)]})
 
     @classmethod
     def _resolve_convergence(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
