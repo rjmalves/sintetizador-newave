@@ -15,6 +15,7 @@ permitindo análises mais rápidas.
 No caso de uma síntese do sistema, são esperados os arquivos::
 
     $ ls sintese
+    >>> CVU.parquet
     >>> EST.parquet
     >>> METADADOS_SISTEMA.parquet
     >>> PAT.parquet
