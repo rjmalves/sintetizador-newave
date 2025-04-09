@@ -2829,6 +2829,20 @@ def test_sintese_merl_sin(test_settings):
     __valida_metadata("MERL_SIN", df_meta, False)
 
 
+def test_sintese_guns_sbm(test_settings):
+    synthesis_str = "GUNS_SBM"
+    _, df_meta = __sintetiza_com_mock(synthesis_str)
+    # TODO - check the values in some way
+    __valida_metadata("GUNS_SBM", df_meta, True)
+
+
+def test_sintese_guns_sin(test_settings):
+    synthesis_str = "GUNS_SIN"
+    _, df_meta = __sintetiza_com_mock(synthesis_str)
+    # TODO - check the values in some way
+    __valida_metadata("GUNS_SIN", df_meta, True)
+
+
 def test_sintese_vfpha_uhe(test_settings):
     synthesis_str = "VFPHA_UHE"
     df, df_meta = __sintetiza_com_mock(synthesis_str)

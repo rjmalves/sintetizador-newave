@@ -4,11 +4,11 @@ from typing import Dict
 
 class Variable(Enum):
     PROGRAMA = "PROGRAMA"
+    VERSAO = "VERSAO"
+    TITULO = "TITULO"
     CONVERGENCIA = "CONVERGENCIA"
     TEMPO_EXECUCAO = "TEMPO"
     COMPOSICAO_CUSTOS = "CUSTOS"
-    RECURSOS_JOB = "RECURSOS_JOB"
-    RECURSOS_CLUSTER = "RECURSOS_CLUSTER"
 
     @classmethod
     def factory(cls, val: str) -> "Variable":
@@ -24,11 +24,11 @@ class Variable(Enum):
     def short_name(self) -> str | None:
         SHORT_NAMES: Dict[str, str] = {
             "PROGRAMA": "PROGRAMA",
+            "VERSAO": "VERSAO",
+            "TITULO": "TITULO",
             "CONVERGENCIA": "CONVERGENCIA",
             "TEMPO": "TEMPO",
             "CUSTOS": "CUSTOS",
-            "RECURSOS_JOB": "RECURSOS_JOB",
-            "RECURSOS_CLUSTER": "RECURSOS_CLUSTER",
         }
         return SHORT_NAMES.get(self.value)
 
@@ -36,10 +36,10 @@ class Variable(Enum):
     def long_name(self) -> str | None:
         LONG_NAMES: Dict[str, str] = {
             "PROGRAMA": "Modelo de Otimização",
+            "VERSAO": "Versão do Modelo",
+            "TITULO": "Título do Estudo",
             "CONVERGENCIA": "Convergência do Processo Iterativo",
             "TEMPO": "Tempo de Execução",
             "CUSTOS": "Composição de Custos da Solução",
-            "RECURSOS_JOB": "Recursos Computacionais do Job",
-            "RECURSOS_CLUSTER": "Recursos Computacionais do Cluster",
         }
         return LONG_NAMES.get(self.value)

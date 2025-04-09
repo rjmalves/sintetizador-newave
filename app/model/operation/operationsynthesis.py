@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 from typing import Optional
-from app.model.operation.variable import Variable
+
 from app.model.operation.spatialresolution import SpatialResolution
 from app.model.operation.unit import Unit
+from app.model.operation.variable import Variable
 
 
 @dataclass
@@ -11,12 +12,10 @@ class OperationSynthesis:
     spatial_resolution: SpatialResolution
 
     def __repr__(self) -> str:
-        return "_".join(
-            [
-                self.variable.value,
-                self.spatial_resolution.value,
-            ]
-        )
+        return "_".join([
+            self.variable.value,
+            self.spatial_resolution.value,
+        ])
 
     def __hash__(self) -> int:
         return hash(
@@ -27,12 +26,10 @@ class OperationSynthesis:
         if not isinstance(o, OperationSynthesis):
             return False
         else:
-            return all(
-                [
-                    self.variable == o.variable,
-                    self.spatial_resolution == o.spatial_resolution,
-                ]
-            )
+            return all([
+                self.variable == o.variable,
+                self.spatial_resolution == o.spatial_resolution,
+            ])
 
     @classmethod
     def factory(cls, synthesis: str) -> Optional["OperationSynthesis"]:
@@ -186,8 +183,6 @@ SUPPORTED_SYNTHESIS: list[str] = [
     "VARPI_UHE",
     "VARPF_UHE",
     "GHID_UHE",
-    "VENTO_PEE",
-    "GEOL_PEE",
     "GEOL_SBM",
     "GEOL_SIN",
     "INT_SBP",
@@ -199,6 +194,8 @@ SUPPORTED_SYNTHESIS: list[str] = [
     "CDEF_SIN",
     "MERL_SBM",
     "MERL_SIN",
+    "GUNS_SBM",
+    "GUNS_SIN",
     "VEOL_SBM",
     "VGHMIN_UHE",
     "VFPHA_UHE",
@@ -1146,6 +1143,13 @@ SYNTHESIS_DEPENDENCIES: dict[OperationSynthesis, list[OperationSynthesis]] = {
             SpatialResolution.USINA_HIDROELETRICA,
         )
     ],
+    OperationSynthesis(
+        Variable.GERACAO_USINAS_NAO_SIMULADAS, SpatialResolution.SUBMERCADO
+    ): [],
+    OperationSynthesis(
+        Variable.GERACAO_USINAS_NAO_SIMULADAS,
+        SpatialResolution.SISTEMA_INTERLIGADO,
+    ): [],
 }
 
 UNITS: dict[OperationSynthesis, Unit] = {

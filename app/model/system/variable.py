@@ -7,6 +7,7 @@ class Variable(Enum):
     SBM = "SBM"
     REE = "REE"
     UTE = "UTE"
+    CVU = "CVU"
     UHE = "UHE"
 
     @classmethod
@@ -27,6 +28,7 @@ class Variable(Enum):
             "SBM": "SBM",
             "REE": "REE",
             "UTE": "UTE",
+            "CVU": "CVU",
             "UHE": "UHE",
         }
         return SHORT_NAMES.get(self.value)
@@ -39,6 +41,7 @@ class Variable(Enum):
             "SBM": "Submercados",
             "REE": "Reservatórios Equivalentes",
             "UTE": "Usinas Termelétricas",
+            "CVU": "Custos das Usinas Termelétricas",
             "UHE": "Usinas Hidroelétricas",
         }
         return LONG_NAMES.get(self.value)
