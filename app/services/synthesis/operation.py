@@ -30,7 +30,6 @@ from app.internal.constants import (
     STAGE_COL,
     STAGE_DURATION_HOURS,
     START_DATE_COL,
-    STATS_OR_SCENARIO_COL,
     STRING_DF_TYPE,
     SUBMARKET_CODE_COL,
     SUBMARKET_NAME_COL,
@@ -49,6 +48,7 @@ from app.model.operation.spatialresolution import SpatialResolution
 from app.model.operation.variable import Variable
 from app.model.settings import Settings
 from app.services.deck.bounds import OperationVariableBounds
+from app.services.deck.context import DeckContext
 from app.services.deck.deck import Deck
 from app.services.unitofwork import AbstractUnitOfWork
 from app.utils.graph import Graph
@@ -167,11 +167,14 @@ class OperationSynthetizer:
                 and not has_hydro
             ):
                 continue
-            if all([
-                v.variable == Variable.VALOR_AGUA,
-                v.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
-                not has_hydro,
-            ]):
+            if all(
+                [
+                    v.variable == Variable.VALOR_AGUA,
+                    v.spatial_resolution
+                    == SpatialResolution.USINA_HIDROELETRICA,
+                    not has_hydro,
+                ]
+            ):
                 continue
             valid_variables.append(v)
         cls._log(f"Sinteses: {valid_variables}")
@@ -237,6 +240,7 @@ class OperationSynthetizer:
         entity_column_values: Dict[str, Any],
         uow: AbstractUnitOfWork,
         internal_stubs: Dict[Variable, Callable] = {},
+        deck_context: Optional[DeckContext] = None,
     ) -> Optional[pd.DataFrame]:
         """
         Realiza pós-processamento após a resolução da extração dados
@@ -244,17 +248,12 @@ class OperationSynthetizer:
         """
         if df is None:
             return df
-        df = cls._resolve_temporal_resolution(df, uow)
+        df = cls._resolve_temporal_resolution(df, uow, deck_context)
         for col, val in entity_column_values.items():
             df[col] = val
-        df = cls._resolve_starting_stage(df, uow)
+        df = cls._resolve_starting_stage(df, uow, deck_context)
         if s.variable in internal_stubs:
             df = internal_stubs[s.variable](df, uow)
-        df_stats = calc_statistics(df)
-        df[STATS_OR_SCENARIO_COL] = False
-        df_stats[STATS_OR_SCENARIO_COL] = True
-        df = pd.concat([df, df_stats], ignore_index=True)
-        df = df.astype({SCENARIO_COL: STRING_DF_TYPE})
         return df
 
     @classmethod
@@ -307,11 +306,17 @@ class OperationSynthetizer:
 
     @staticmethod
     def _resolve_temporal_resolution(
-        df: pd.DataFrame, uow: AbstractUnitOfWork
+        df: pd.DataFrame,
+        uow: AbstractUnitOfWork,
+        deck_context: Optional[DeckContext] = None,
     ) -> pd.DataFrame:
         """
         Adiciona informação temporal a um DataFrame de síntese, utilizando
         as informações de duração dos patamares e datas de início dos estágios.
+
+        When `deck_context` is provided (subprocess path), pre-computed data
+        from the context is used instead of calling Deck methods. When it is
+        None (main-process path), Deck methods are called directly.
         """
 
         def _replace_scenario_info(
@@ -359,12 +364,12 @@ class OperationSynthetizer:
             num_blocks: int,
             blocks: List[int],
             start_dates: List[datetime],
+            df_block_lengths: pd.DataFrame,
         ) -> pd.DataFrame:
             """
             Adiciona informações de duração de patamares a um DataFrame, utilizando
             as informações dos patamares e datas de início dos estágios.
             """
-            df_block_lengths = Deck.block_lengths(uow)
             df_block_lengths = df_block_lengths.loc[
                 df_block_lengths[BLOCK_COL].isin(blocks)
             ]
@@ -385,7 +390,9 @@ class OperationSynthetizer:
             return df
 
         def _add_temporal_info(
-            df: pd.DataFrame, uow: AbstractUnitOfWork
+            df: pd.DataFrame,
+            uow: AbstractUnitOfWork,
+            deck_context: Optional[DeckContext],
         ) -> pd.DataFrame:
             """
             Adiciona informação temporal a um DataFrame de síntese.
@@ -397,15 +404,24 @@ class OperationSynthetizer:
                 [START_DATE_COL, SCENARIO_COL, BLOCK_COL], inplace=True
             )
             num_stages = df[START_DATE_COL].unique().shape[0]
-            num_scenarios = Deck.num_scenarios_final_simulation(uow)
             blocks = df[BLOCK_COL].unique().tolist()
             num_blocks = len(blocks)
-            start_dates = Deck.internal_stages_starting_dates_final_simulation(
-                uow
-            )[:num_stages]
-            end_dates = Deck.internal_stages_ending_dates_final_simulation(uow)[
-                :num_stages
-            ]
+            if deck_context is not None:
+                num_scenarios = deck_context.num_scenarios
+                start_dates = deck_context.starting_dates[:num_stages]
+                end_dates = deck_context.ending_dates[:num_stages]
+                df_block_lengths = deck_context.block_lengths
+            else:
+                num_scenarios = Deck.num_scenarios_final_simulation(uow)
+                start_dates = (
+                    Deck.internal_stages_starting_dates_final_simulation(uow)[
+                        :num_stages
+                    ]
+                )
+                end_dates = Deck.internal_stages_ending_dates_final_simulation(
+                    uow
+                )[:num_stages]
+                df_block_lengths = Deck.block_lengths(uow)
             df = _replace_scenario_info(
                 df, num_stages, num_scenarios, num_blocks
             )
@@ -417,17 +433,26 @@ class OperationSynthetizer:
                 end_dates,
             )
             df = _add_block_duration_info(
-                df, num_stages, num_scenarios, num_blocks, blocks, start_dates
+                df,
+                num_stages,
+                num_scenarios,
+                num_blocks,
+                blocks,
+                start_dates,
+                df_block_lengths,
             )
             return df[OPERATION_SYNTHESIS_COMMON_COLUMNS]
 
         if df is None:
             return None
-        return _add_temporal_info(df, uow)
+        return _add_temporal_info(df, uow, deck_context)
 
     @classmethod
     def __resolve_SIN(
-        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+        cls,
+        synthesis: OperationSynthesis,
+        uow: AbstractUnitOfWork,
+        deck_context: Optional[DeckContext] = None,
     ) -> Optional[pd.DataFrame]:
         with time_and_log(
             message_root="Tempo para obter dados do SIN", logger=cls.logger
@@ -438,7 +463,9 @@ class OperationSynthetizer:
                     synthesis.spatial_resolution,
                     "",
                 )
-            df = cls._post_resolve_entity(df, synthesis, {}, uow)
+            df = cls._post_resolve_entity(
+                df, synthesis, {}, uow, deck_context=deck_context
+            )
         return cls._post_resolve({"SIN": df}, synthesis, uow)
 
     @classmethod
@@ -448,6 +475,7 @@ class OperationSynthetizer:
         synthesis: OperationSynthesis,
         sbm_index: int,
         sbm_name: str,
+        deck_context: Optional[DeckContext] = None,
     ) -> Optional[pd.DataFrame]:
         """
         Obtem os dados da síntese de operação para um submercado
@@ -472,11 +500,15 @@ class OperationSynthetizer:
                 SUBMARKET_CODE_COL: sbm_index,
             },
             uow,
+            deck_context=deck_context,
         )
 
     @classmethod
     def __resolve_SBM(
-        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+        cls,
+        synthesis: OperationSynthesis,
+        uow: AbstractUnitOfWork,
+        deck_context: Optional[DeckContext] = None,
     ) -> Optional[pd.DataFrame]:
         """
         Resolve a síntese de operação para uma variável operativa
@@ -502,7 +534,8 @@ class OperationSynthetizer:
             with Pool(processes=n_procs) as pool:
                 async_res = {
                     idx: pool.apply_async(
-                        cls._resolve_SBM_entity, (uow, synthesis, idx, name)
+                        cls._resolve_SBM_entity,
+                        (uow, synthesis, idx, name, deck_context),
                     )
                     for idx, name in zip(sbms_idx, sbms_name)
                 }
@@ -524,6 +557,7 @@ class OperationSynthetizer:
         sbm1_name: str,
         sbm2_index: int,
         sbm2_name: str,
+        deck_context: Optional[DeckContext] = None,
     ) -> Optional[pd.DataFrame]:
         """
         Obtém os dados da síntese de operação para um par de submercados
@@ -553,11 +587,15 @@ class OperationSynthetizer:
                 EXCHANGE_TARGET_CODE_COL: sbm2_index,
             },
             uow,
+            deck_context=deck_context,
         )
 
     @classmethod
     def __resolve_SBP(
-        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+        cls,
+        synthesis: OperationSynthesis,
+        uow: AbstractUnitOfWork,
+        deck_context: Optional[DeckContext] = None,
     ) -> Optional[pd.DataFrame]:
         """
         Resolve a síntese de operação para uma variável operativa
@@ -581,7 +619,15 @@ class OperationSynthetizer:
                 async_res = {
                     f"{idx1}-{idx2}": pool.apply_async(
                         cls._resolve_SBP_entity,
-                        (uow, synthesis, idx1, name1, idx2, name2),
+                        (
+                            uow,
+                            synthesis,
+                            idx1,
+                            name1,
+                            idx2,
+                            name2,
+                            deck_context,
+                        ),
                     )
                     for idx1, name1 in zip(sbms_idx, sbms_name)
                     for idx2, name2 in zip(sbms_idx, sbms_name)
@@ -602,6 +648,7 @@ class OperationSynthetizer:
         synthesis: OperationSynthesis,
         ree_index: int,
         ree_name: str,
+        deck_context: Optional[DeckContext] = None,
     ) -> Optional[pd.DataFrame]:
         """
         Obtem os dados da síntese de operação para um REE
@@ -620,7 +667,10 @@ class OperationSynthetizer:
                 ree=ree_index,
             )
 
-        aux_df = Deck.eer_submarket_map(uow)
+        if deck_context is not None:
+            aux_df = deck_context.eer_submarket_map
+        else:
+            aux_df = Deck.eer_submarket_map(uow)
 
         return cls._post_resolve_entity(
             df,
@@ -630,11 +680,15 @@ class OperationSynthetizer:
                 SUBMARKET_CODE_COL: aux_df.at[ree_index, SUBMARKET_CODE_COL],
             },
             uow,
+            deck_context=deck_context,
         )
 
     @classmethod
     def __resolve_REE(
-        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+        cls,
+        synthesis: OperationSynthesis,
+        uow: AbstractUnitOfWork,
+        deck_context: Optional[DeckContext] = None,
     ) -> Optional[pd.DataFrame]:
         """
         Resolve a síntese de operação para uma variável operativa
@@ -652,7 +706,8 @@ class OperationSynthetizer:
             with Pool(processes=n_procs) as pool:
                 async_res = {
                     idx: pool.apply_async(
-                        cls._resolve_REE_entity, (uow, synthesis, idx, name)
+                        cls._resolve_REE_entity,
+                        (uow, synthesis, idx, name, deck_context),
                     )
                     for idx, name in zip(eers_idx, eers_name)
                 }
@@ -672,6 +727,7 @@ class OperationSynthetizer:
         synthesis: OperationSynthesis,
         uhe_index: int,
         uhe_name: str,
+        deck_context: Optional[DeckContext] = None,
     ) -> Optional[pd.DataFrame]:
         """
         Obtem os dados da síntese de operação para uma UHE
@@ -686,7 +742,10 @@ class OperationSynthetizer:
             de valores fornecidos por patamar de alguma variável operativa
             de uma UHE.
             """
-            n_blocks = Deck.num_blocks(uow)
+            if deck_context is not None:
+                n_blocks = deck_context.num_blocks
+            else:
+                n_blocks = Deck.num_blocks(uow)
             unique_cols_for_block_0 = [HYDRO_CODE_COL, STAGE_COL, SCENARIO_COL]
             df_block_0 = df.copy()
             df_block_0[VALUE_COL] = (
@@ -728,7 +787,11 @@ class OperationSynthetizer:
             Variable.VAZAO_DESVIADA: _calc_block_0_weighted_mean,  # noqa
         }
 
-        aux_df = Deck.hydro_eer_submarket_map(uow)
+        if deck_context is not None:
+            aux_df = deck_context.hydro_eer_submarket_map
+        else:
+            aux_df = Deck.hydro_eer_submarket_map(uow)
+
         return cls._post_resolve_entity(
             df,
             synthesis,
@@ -739,11 +802,15 @@ class OperationSynthetizer:
             },
             uow,
             internal_stubs=internal_stubs,
+            deck_context=deck_context,
         )
 
     @classmethod
     def __resolve_UHE(
-        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+        cls,
+        synthesis: OperationSynthesis,
+        uow: AbstractUnitOfWork,
+        deck_context: Optional[DeckContext] = None,
     ) -> Optional[pd.DataFrame]:
         """
         Resolve a síntese de operação para uma variável operativa
@@ -753,12 +820,17 @@ class OperationSynthetizer:
         def _limit_stages_with_hydro(
             s: OperationSynthesis, df: pd.DataFrame, uow: AbstractUnitOfWork
         ) -> pd.DataFrame:
-            df = df.loc[
-                df[START_DATE_COL]
-                < Deck.hydro_simulation_stages_ending_date_final_simulation(
-                    uow
-                ),
-            ].reset_index(drop=True)
+            if deck_context is not None:
+                ending_date = deck_context.hydro_simulation_ending_date
+            else:
+                ending_date = (
+                    Deck.hydro_simulation_stages_ending_date_final_simulation(
+                        uow
+                    )
+                )
+            df = df.loc[df[START_DATE_COL] < ending_date,].reset_index(
+                drop=True
+            )
             return df
 
         hydros = Deck.hydros(uow).reset_index().sort_values(HYDRO_CODE_COL)
@@ -773,7 +845,8 @@ class OperationSynthetizer:
             with Pool(processes=n_procs) as pool:
                 async_res = {
                     name: pool.apply_async(
-                        cls._resolve_UHE_entity, (uow, synthesis, idx, name)
+                        cls._resolve_UHE_entity,
+                        (uow, synthesis, idx, name, deck_context),
                     )
                     for idx, name in zip(hydros_idx, hydros_name)
                 }
@@ -1134,7 +1207,9 @@ class OperationSynthetizer:
             ]
             num_scenarios = len(scenarios)
             initial_storage_df = df.copy()
-            initial_storage_values_df = initial_storage_df[VALUE_COL].to_numpy()
+            initial_storage_values_df = (
+                initial_storage_df[VALUE_COL].to_numpy().copy()
+            )
             initial_storage_values_df[num_scenarios:] = (
                 initial_storage_values_df[:-num_scenarios]
             )
@@ -1258,7 +1333,9 @@ class OperationSynthetizer:
             ]
             num_scenarios = len(scenarios)
             initial_storage_df = df.copy()
-            initial_storage_values_df = initial_storage_df[VALUE_COL].to_numpy()
+            initial_storage_values_df = (
+                initial_storage_df[VALUE_COL].to_numpy().copy()
+            )
             initial_storage_values_df[num_scenarios:] = (
                 initial_storage_values_df[:-num_scenarios]
             )
@@ -1387,16 +1464,20 @@ class OperationSynthetizer:
                 & net_drop_df[BLOCK_COL].isin(stored_volume_hydro_blocks)
             ].copy()
 
-            net_drop_df = net_drop_df.sort_values([
-                HYDRO_CODE_COL,
-                STAGE_COL,
-                BLOCK_COL,
-            ])
-            stored_volume_df = stored_volume_df.sort_values([
-                HYDRO_CODE_COL,
-                STAGE_COL,
-                BLOCK_COL,
-            ])
+            net_drop_df = net_drop_df.sort_values(
+                [
+                    HYDRO_CODE_COL,
+                    STAGE_COL,
+                    BLOCK_COL,
+                ]
+            )
+            stored_volume_df = stored_volume_df.sort_values(
+                [
+                    HYDRO_CODE_COL,
+                    STAGE_COL,
+                    BLOCK_COL,
+                ]
+            )
 
             stored_volume_df[VALUE_COL] = (
                 stored_volume_df[VALUE_COL] - stored_volume_df[LOWER_BOUND_COL]
@@ -1596,12 +1677,14 @@ class OperationSynthetizer:
         ) -> Optional[pd.DataFrame]:
             df = Deck.non_simulated_generation(uow)
             df = cls._generate_scenarios(df, uow)
-            df = df.sort_values([
-                SUBMARKET_CODE_COL,
-                START_DATE_COL,
-                "serie",
-                BLOCK_COL,
-            ])
+            df = df.sort_values(
+                [
+                    SUBMARKET_CODE_COL,
+                    START_DATE_COL,
+                    "serie",
+                    BLOCK_COL,
+                ]
+            )
             dfs: dict[str, pd.DataFrame] = {}
             for submarket_code in df[SUBMARKET_CODE_COL].unique().tolist():
                 submarket_df = df.loc[
@@ -1655,12 +1738,19 @@ class OperationSynthetizer:
 
     @classmethod
     def _resolve_temporal_resolution_GTER_UTE(
-        cls, df: Optional[pd.DataFrame], uow: AbstractUnitOfWork
+        cls,
+        df: Optional[pd.DataFrame],
+        uow: AbstractUnitOfWork,
+        deck_context: Optional[DeckContext] = None,
     ) -> Optional[pd.DataFrame]:
         """
         Adiciona informação temporal a um DataFrame de síntese para a variável
         de Geração Térmica por UTE, utilizando
         as informações de duração dos patamares e datas de início dos estágios.
+
+        When `deck_context` is provided (subprocess path), pre-computed data
+        from the context is used instead of calling Deck methods. When it is
+        None (main-process path), Deck methods are called directly.
         """
 
         def _replace_scenario_info(
@@ -1716,12 +1806,12 @@ class OperationSynthetizer:
             num_thermals: int,
             blocks: List[int],
             start_dates: List[datetime],
+            df_block_lengths: pd.DataFrame,
         ) -> pd.DataFrame:
             """
             Adiciona informações de duração de patamares a um DataFrame, utilizando
             as informações dos patamares e datas de início dos estágios.
             """
-            df_block_lengths = Deck.block_lengths(uow)
             df_block_lengths = df_block_lengths.loc[
                 df_block_lengths[BLOCK_COL].isin(blocks)
             ]
@@ -1743,7 +1833,9 @@ class OperationSynthetizer:
             return df
 
         def _add_temporal_info(
-            df: pd.DataFrame, uow: AbstractUnitOfWork
+            df: pd.DataFrame,
+            uow: AbstractUnitOfWork,
+            deck_context: Optional[DeckContext],
         ) -> pd.DataFrame:
             """
             Adiciona informação temporal a um DataFrame de síntese.
@@ -1759,19 +1851,28 @@ class OperationSynthetizer:
                 [THERMAL_CODE_COL, START_DATE_COL, SCENARIO_COL, BLOCK_COL],
             ).reset_index(drop=True)
             num_stages = df[START_DATE_COL].unique().shape[0]
-            num_scenarios = Deck.num_scenarios_final_simulation(uow)
             blocks = df[BLOCK_COL].unique().tolist()
             num_blocks = len(blocks)
             thermals = df[THERMAL_CODE_COL].unique().tolist()
             num_thermals = len(thermals)
-            start_dates = Deck.internal_stages_starting_dates_final_simulation(
-                uow
-            )[:num_stages]
-            end_dates = np.array(
-                Deck.internal_stages_ending_dates_final_simulation(uow)[
-                    :num_stages
-                ]
-            )
+            if deck_context is not None:
+                num_scenarios = deck_context.num_scenarios
+                start_dates = deck_context.starting_dates[:num_stages]
+                end_dates = np.array(deck_context.ending_dates[:num_stages])
+                df_block_lengths = deck_context.block_lengths
+            else:
+                num_scenarios = Deck.num_scenarios_final_simulation(uow)
+                start_dates = (
+                    Deck.internal_stages_starting_dates_final_simulation(uow)[
+                        :num_stages
+                    ]
+                )
+                end_dates = np.array(
+                    Deck.internal_stages_ending_dates_final_simulation(uow)[
+                        :num_stages
+                    ]
+                )
+                df_block_lengths = Deck.block_lengths(uow)
             df = _replace_scenario_info(
                 df, num_stages, num_scenarios, num_blocks, num_thermals
             )
@@ -1791,16 +1892,20 @@ class OperationSynthetizer:
                 num_thermals,
                 blocks,
                 start_dates,
+                df_block_lengths,
             )
             return df
 
         if df is None:
             return None
-        return _add_temporal_info(df, uow)
+        return _add_temporal_info(df, uow, deck_context)
 
     @classmethod
     def _post_resolve_GTER_UTE_entity(
-        cls, df: Optional[pd.DataFrame], uow: AbstractUnitOfWork
+        cls,
+        df: Optional[pd.DataFrame],
+        uow: AbstractUnitOfWork,
+        deck_context: Optional[DeckContext] = None,
     ) -> Optional[pd.DataFrame]:
         """
         Realiza pós-processamento após a resolução da extração dados
@@ -1808,13 +1913,8 @@ class OperationSynthetizer:
         """
         if df is None:
             return df
-        df = cls._resolve_temporal_resolution_GTER_UTE(df, uow)
-        df = cls._resolve_starting_stage(df, uow)
-        df_stats = calc_statistics(df)
-        df[STATS_OR_SCENARIO_COL] = False
-        df_stats[STATS_OR_SCENARIO_COL] = True
-        df = pd.concat([df, df_stats], ignore_index=True)
-        df = df.astype({SCENARIO_COL: STRING_DF_TYPE})
+        df = cls._resolve_temporal_resolution_GTER_UTE(df, uow, deck_context)
+        df = cls._resolve_starting_stage(df, uow, deck_context)
         return df
 
     @classmethod
@@ -1824,6 +1924,7 @@ class OperationSynthetizer:
         synthesis: OperationSynthesis,
         sbm_index: int,
         sbm_name: str,
+        deck_context: Optional[DeckContext] = None,
     ) -> Optional[pd.DataFrame]:
         """
         Obtém os dados da síntese de operação para todas as UTE
@@ -1843,11 +1944,14 @@ class OperationSynthetizer:
             )
         if df is not None:
             df[SUBMARKET_CODE_COL] = sbm_index
-        return cls._post_resolve_GTER_UTE_entity(df, uow)
+        return cls._post_resolve_GTER_UTE_entity(df, uow, deck_context)
 
     @classmethod
     def _resolve_GTER_UTE(
-        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+        cls,
+        synthesis: OperationSynthesis,
+        uow: AbstractUnitOfWork,
+        deck_context: Optional[DeckContext] = None,
     ) -> pd.DataFrame:
         """
         Obtem os dados da síntese de operação da geração térmica
@@ -1888,7 +1992,7 @@ class OperationSynthetizer:
                 async_res = {
                     idx: pool.apply_async(
                         cls._resolve_GTER_UTE_entity,
-                        (uow, synthesis, idx, name),
+                        (uow, synthesis, idx, name, deck_context),
                     )
                     for idx, name in zip(sbms_idx, sbms_name)
                 }
@@ -1904,20 +2008,26 @@ class OperationSynthetizer:
 
     @classmethod
     def __resolve_UTE(
-        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+        cls,
+        synthesis: OperationSynthesis,
+        uow: AbstractUnitOfWork,
+        deck_context: Optional[DeckContext] = None,
     ) -> Optional[pd.DataFrame]:
         """
         Resolve a síntese de operação para uma variável operativa
         de uma UTE a partir dos arquivos de saída do NWLISTOP.
         """
         if synthesis.variable == Variable.GERACAO_TERMICA:
-            return cls._resolve_GTER_UTE(synthesis, uow)
+            return cls._resolve_GTER_UTE(synthesis, uow, deck_context)
         else:
             raise RuntimeError("Variável não suportada para UTEs")
 
     @classmethod
     def __resolve_PEE(
-        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+        cls,
+        synthesis: OperationSynthesis,
+        uow: AbstractUnitOfWork,
+        deck_context: Optional[DeckContext] = None,
     ) -> pd.DataFrame:
         raise NotImplementedError()
         # with uow:
@@ -1975,7 +2085,10 @@ class OperationSynthetizer:
 
     @classmethod
     def _resolve_spatial_resolution(
-        cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
+        cls,
+        synthesis: OperationSynthesis,
+        uow: AbstractUnitOfWork,
+        deck_context: Optional[DeckContext] = None,
     ) -> pd.DataFrame:
         """
         Despacha a função de resolução espacial para ler os dados a partir
@@ -1992,12 +2105,14 @@ class OperationSynthetizer:
             SpatialResolution.PARQUE_EOLICO_EQUIVALENTE: cls.__resolve_PEE,
         }
         solver = RESOLUTION_FUNCTION_MAP[synthesis.spatial_resolution]
-        res = solver(synthesis, uow)
+        res = solver(synthesis, uow, deck_context)
         return res if res is not None else pd.DataFrame()
 
     @staticmethod
     def _resolve_starting_stage(
-        df: pd.DataFrame, uow: AbstractUnitOfWork
+        df: pd.DataFrame,
+        uow: AbstractUnitOfWork,
+        deck_context: Optional[DeckContext] = None,
     ) -> pd.DataFrame:
         """
         Adiciona a informação do estágio inicial do caso aos dados,
@@ -2007,7 +2122,11 @@ class OperationSynthetizer:
         Também elimina estágios incluídos como consequência do formato
         dos dados lidos, que pertencem ao período pré-estudo.
         """
-        df.loc[:, STAGE_COL] -= Deck.study_period_starting_month(uow) - 1
+        if deck_context is not None:
+            starting_month = deck_context.study_period_starting_month
+        else:
+            starting_month = Deck.study_period_starting_month(uow)
+        df.loc[:, STAGE_COL] -= starting_month - 1
         df = df.loc[df[STAGE_COL] > 0]
         return df
 
@@ -2097,119 +2216,141 @@ class OperationSynthetizer:
             f = cls.__stub_CTO
         elif s.variable == Variable.ENERGIA_VERTIDA:
             f = cls.__stub_EVER
-        elif all([
-            s.variable
-            in [
-                Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
-                Variable.ENERGIA_ARMAZENADA_PERCENTUAL_INICIAL,
-            ],
-            s.spatial_resolution
-            in [
-                SpatialResolution.RESERVATORIO_EQUIVALENTE,
-                SpatialResolution.SUBMERCADO,
-                SpatialResolution.SISTEMA_INTERLIGADO,
-            ],
-        ]):
+        elif all(
+            [
+                s.variable
+                in [
+                    Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
+                    Variable.ENERGIA_ARMAZENADA_PERCENTUAL_INICIAL,
+                ],
+                s.spatial_resolution
+                in [
+                    SpatialResolution.RESERVATORIO_EQUIVALENTE,
+                    SpatialResolution.SUBMERCADO,
+                    SpatialResolution.SISTEMA_INTERLIGADO,
+                ],
+            ]
+        ):
             f = cls._stub_resolve_initial_stored_energy
-        elif all([
-            s.variable
-            in [
-                Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
-                Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
-            ],
-            s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
-        ]):
+        elif all(
+            [
+                s.variable
+                in [
+                    Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
+                    Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
+                ],
+                s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+            ]
+        ):
             f = cls.__stub_resolve_initial_stored_volumes
-        elif all([
-            s.variable
-            in [
-                Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
-                Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
-                Variable.VOLUME_AFLUENTE,
-                Variable.VOLUME_INCREMENTAL,
-                Variable.VOLUME_DEFLUENTE,
-                Variable.VOLUME_VERTIDO,
-                Variable.VOLUME_TURBINADO,
-                Variable.VOLUME_RETIRADO,
-                Variable.VOLUME_DESVIADO,
-                Variable.VOLUME_EVAPORADO,
-                Variable.VIOLACAO_EVAPORACAO,
-                Variable.VIOLACAO_FPHA,
-                Variable.VIOLACAO_POSITIVA_EVAPORACAO,
-                Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
-            ],
-            s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
-        ]):
+        elif all(
+            [
+                s.variable
+                in [
+                    Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
+                    Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+                    Variable.VOLUME_AFLUENTE,
+                    Variable.VOLUME_INCREMENTAL,
+                    Variable.VOLUME_DEFLUENTE,
+                    Variable.VOLUME_VERTIDO,
+                    Variable.VOLUME_TURBINADO,
+                    Variable.VOLUME_RETIRADO,
+                    Variable.VOLUME_DESVIADO,
+                    Variable.VOLUME_EVAPORADO,
+                    Variable.VIOLACAO_EVAPORACAO,
+                    Variable.VIOLACAO_FPHA,
+                    Variable.VIOLACAO_POSITIVA_EVAPORACAO,
+                    Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
+                ],
+                s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
+            ]
+        ):
             f = cls._hydro_resolution_variable_map
-        elif all([
-            s.variable
-            in [
-                Variable.VAZAO_AFLUENTE,
-                Variable.VAZAO_INCREMENTAL,
-                Variable.VAZAO_DEFLUENTE,
-                Variable.VAZAO_VERTIDA,
-                Variable.VAZAO_TURBINADA,
-                Variable.VAZAO_RETIRADA,
-                Variable.VAZAO_DESVIADA,
-                Variable.VAZAO_EVAPORADA,
-            ],
-            s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
-        ]):
+        elif all(
+            [
+                s.variable
+                in [
+                    Variable.VAZAO_AFLUENTE,
+                    Variable.VAZAO_INCREMENTAL,
+                    Variable.VAZAO_DEFLUENTE,
+                    Variable.VAZAO_VERTIDA,
+                    Variable.VAZAO_TURBINADA,
+                    Variable.VAZAO_RETIRADA,
+                    Variable.VAZAO_DESVIADA,
+                    Variable.VAZAO_EVAPORADA,
+                ],
+                s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
+            ]
+        ):
             f = cls._flow_volume_hydro_variable_map
-        elif all([
-            s.variable
-            in [
-                Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
-                Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
-            ],
-            s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
-        ]):
+        elif all(
+            [
+                s.variable
+                in [
+                    Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
+                    Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
+                ],
+                s.spatial_resolution != SpatialResolution.USINA_HIDROELETRICA,
+            ]
+        ):
             f = cls._absolute_percent_volume_variable_map
         elif s.variable in [Variable.ENERGIA_DEFLUENCIA_MINIMA]:
             f = cls.__stub_EVMIN
-        elif all([
-            s.variable
-            in [
-                Variable.VAZAO_RETIRADA,
-            ],
-            s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
-        ]):
+        elif all(
+            [
+                s.variable
+                in [
+                    Variable.VAZAO_RETIRADA,
+                ],
+                s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+            ]
+        ):
             f = cls._convert_volume_to_flow
-        elif all([
-            s.variable
-            in [
-                Variable.VOLUME_AFLUENTE,
-                Variable.VOLUME_INCREMENTAL,
-                Variable.VOLUME_TURBINADO,
-                Variable.VOLUME_VERTIDO,
-                Variable.VOLUME_DESVIADO,
-            ],
-            s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
-        ]):
+        elif all(
+            [
+                s.variable
+                in [
+                    Variable.VOLUME_AFLUENTE,
+                    Variable.VOLUME_INCREMENTAL,
+                    Variable.VOLUME_TURBINADO,
+                    Variable.VOLUME_VERTIDO,
+                    Variable.VOLUME_DESVIADO,
+                ],
+                s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+            ]
+        ):
             f = cls._convert_flow_to_volume
-        elif all([
-            s.variable == Variable.VAZAO_DEFLUENTE,
-            s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
-        ]):
+        elif all(
+            [
+                s.variable == Variable.VAZAO_DEFLUENTE,
+                s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+            ]
+        ):
             f = cls.__stub_QDEF
-        elif all([
-            s.variable == Variable.VOLUME_DEFLUENTE,
-            s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
-        ]):
+        elif all(
+            [
+                s.variable == Variable.VOLUME_DEFLUENTE,
+                s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+            ]
+        ):
             f = cls.__stub_VDEF
-        elif all([
-            s.variable == Variable.VIOLACAO_EVAPORACAO,
-            s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
-        ]):
+        elif all(
+            [
+                s.variable == Variable.VIOLACAO_EVAPORACAO,
+                s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+            ]
+        ):
             f = cls.__stub_VEVAP
-        elif all([
-            s.variable
-            in [
-                Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
-                Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
-            ],
-            s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
-        ]):
+        elif all(
+            [
+                s.variable
+                in [
+                    Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
+                    Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
+                ],
+                s.spatial_resolution == SpatialResolution.USINA_HIDROELETRICA,
+            ]
+        ):
             f = cls.__stub_EARM_UHE
         elif s.variable in [Variable.MERCADO, Variable.MERCADO_LIQUIDO]:
             f = cls.__stub_MER_MERL
@@ -2287,13 +2428,16 @@ class OperationSynthetizer:
 
     @classmethod
     def _resolve_synthesis(
-        cls, s: OperationSynthesis, uow: AbstractUnitOfWork
+        cls,
+        s: OperationSynthesis,
+        uow: AbstractUnitOfWork,
+        deck_context: Optional[DeckContext] = None,
     ) -> pd.DataFrame:
         """
         Realiza a resolução de uma síntese, opcionalmente adicionando
         limites superiores e inferiores aos valores de cada linha.
         """
-        df = cls._resolve_spatial_resolution(s, uow)
+        df = cls._resolve_spatial_resolution(s, uow, deck_context)
         if df is not None:
             df = cls._resolve_bounds(s, df, uow)
         return df
@@ -2372,25 +2516,17 @@ class OperationSynthetizer:
             message_root="Tempo para preparacao para exportacao",
             logger=cls.logger,
         ):
-            scenarios_df = df.loc[~df[STATS_OR_SCENARIO_COL]]
-            stats_df = df.loc[df[STATS_OR_SCENARIO_COL]]
-            scenarios_df = scenarios_df.astype({SCENARIO_COL: int})
-            stats_df = stats_df.reset_index(drop=True)
+            scenarios_df = df.astype({SCENARIO_COL: int})
             scenarios_df = scenarios_df.sort_values(
                 s.spatial_resolution.sorting_synthesis_df_columns
             ).reset_index(drop=True)
-            if stats_df.empty:
-                stats_df = calc_statistics(scenarios_df)
-            stats_df = stats_df.drop(columns=[STATS_OR_SCENARIO_COL])
+            stats_df = calc_statistics(scenarios_df)
             cls._add_synthesis_stats(s, stats_df)
             cls.__store_in_cache_if_needed(s, scenarios_df)
         with time_and_log(
             message_root="Tempo para exportacao dos dados", logger=cls.logger
         ):
             with uow:
-                scenarios_df = scenarios_df.drop(
-                    columns=[STATS_OR_SCENARIO_COL]
-                )
                 scenarios_df = scenarios_df[
                     s.spatial_resolution.all_synthesis_df_columns
                 ]
@@ -2461,7 +2597,10 @@ class OperationSynthetizer:
 
     @classmethod
     def _synthetize_single_variable(
-        cls, s: OperationSynthesis, uow: AbstractUnitOfWork
+        cls,
+        s: OperationSynthesis,
+        uow: AbstractUnitOfWork,
+        deck_context: Optional[DeckContext] = None,
     ) -> Optional[OperationSynthesis]:
         """
         Realiza a síntese de operação para uma variável
@@ -2480,7 +2619,7 @@ class OperationSynthetizer:
                 if df.empty:
                     df, is_stub = cls._resolve_stub(s, uow)
                     if not is_stub:
-                        df = cls._resolve_synthesis(s, uow)
+                        df = cls._resolve_synthesis(s, uow, deck_context)
                 if df is not None:
                     if not df.empty:
                         found_synthesis = True
@@ -2525,12 +2664,13 @@ class OperationSynthetizer:
             logger=cls.logger,
         ):
             cls.enforce_version(uow)
+            deck_context = DeckContext.from_deck(uow)
             synthesis_with_dependencies = cls._preprocess_synthesis_variables(
                 variables, uow
             )
             success_synthesis: List[OperationSynthesis] = []
             for s in synthesis_with_dependencies:
-                r = cls._synthetize_single_variable(s, uow)
+                r = cls._synthetize_single_variable(s, uow, deck_context)
                 if r:
                     success_synthesis.append(r)
 

@@ -62,8 +62,6 @@ MONTH_COL = "mes"
 DATE_COL = "data"
 CONFIG_COL = "configuracao"
 
-STATS_OR_SCENARIO_COL = "estatistica_ou_cenario"
-
 CUT_INDEX_COL = "indice_corte"
 COEF_TYPE_COL = "tipo_coeficiente"
 ENTITY_INDEX_COL = "indice_entidade"
@@ -99,7 +97,6 @@ IDENTIFICATION_COLUMNS = [
     BLOCK_COL,
     BLOCK_DURATION_COL,
     SCENARIO_COL,
-    STATS_OR_SCENARIO_COL,
 ]
 
 OPERATION_SYNTHESIS_COMMON_COLUMNS = [

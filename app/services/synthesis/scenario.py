@@ -190,12 +190,14 @@ class ScenarioSynthetizer:
             ].tolist()
             upstream_hydro_codes = [u for u in upstream_hydro_codes if u != 0]
             upstream_inflow_stations = list(
-                set([
-                    hydros.loc[
-                        hydros["codigo_usina"] == uhe_montante, "posto"
-                    ].iloc[0]
-                    for uhe_montante in upstream_hydro_codes
-                ])
+                set(
+                    [
+                        hydros.loc[
+                            hydros["codigo_usina"] == uhe_montante, "posto"
+                        ].iloc[0]
+                        for uhe_montante in upstream_hydro_codes
+                    ]
+                )
             )
             for upstream_station in upstream_inflow_stations:
                 natural_inflow = (
@@ -336,10 +338,12 @@ class ScenarioSynthetizer:
                 )
                 lta_hydro_dfs.append(lta_hydro_df)
 
-            return pd.concat(lta_hydro_dfs, ignore_index=True).sort_values([
-                STAGE_COL,
-                HYDRO_CODE_COL,
-            ])
+            return pd.concat(lta_hydro_dfs, ignore_index=True).sort_values(
+                [
+                    STAGE_COL,
+                    HYDRO_CODE_COL,
+                ]
+            )
 
     @classmethod
     def _resolve_starting_stage(
@@ -443,10 +447,12 @@ class ScenarioSynthetizer:
                 .to_numpy()
                 .flatten()
             )
-            return np.concatenate([
-                additional_tendency_configurations,
-                configurations,
-            ])
+            return np.concatenate(
+                [
+                    additional_tendency_configurations,
+                    configurations,
+                ]
+            )
 
         months_column = cls._generate_model_dataframe_month_column(uow)
         stages_column = cls._generate_model_dataframe_stage_column(
@@ -920,9 +926,6 @@ class ScenarioSynthetizer:
             energy_df = cls._add_energy_eer_data(uow, energy_df, dates)
             if it is not None:
                 energy_df[ITERATION_COL] = it
-            df_stats = calc_statistics(energy_df)
-            energy_df = pd.concat([energy_df, df_stats], ignore_index=True)
-            energy_df = energy_df.astype({SCENARIO_COL: STRING_DF_TYPE})
         return energy_df
 
     @classmethod
@@ -940,9 +943,6 @@ class ScenarioSynthetizer:
             inflow_df = cls._add_inflow_hydro_data(uow, inflow_df)
             if it is not None:
                 inflow_df[ITERATION_COL] = it
-            df_stats = calc_statistics(inflow_df)
-            inflow_df = pd.concat([inflow_df, df_stats], ignore_index=True)
-            inflow_df = inflow_df.astype({SCENARIO_COL: STRING_DF_TYPE})
         return inflow_df
 
     @classmethod
@@ -1517,22 +1517,12 @@ class ScenarioSynthetizer:
         with time_and_log(
             message_root="Tempo para exportacao dos dados", logger=cls.logger
         ):
-            num_scenarios = Deck.num_scenarios_final_simulation(uow)
-            scenarios = pd.Series(
-                [str(i) for i in np.arange(1, num_scenarios + 1)],
-                dtype=STRING_DF_TYPE,
-            )
-            df = df.astype({SCENARIO_COL: STRING_DF_TYPE})
             # TODO - garantir tipo de dados das colunas iteracao e estagio como int
-            scenarios_df = df.loc[df[SCENARIO_COL].isin(scenarios)]
-            scenarios_df = scenarios_df.astype({SCENARIO_COL: int})
-            stats_df = df.drop(index=scenarios_df.index).reset_index(drop=True)
+            scenarios_df = df.astype({SCENARIO_COL: int})
             scenarios_df = scenarios_df.sort_values(
                 s.sorting_synthesis_df_columns
             ).reset_index(drop=True)
-
-            if stats_df.empty:
-                stats_df = calc_statistics(scenarios_df)
+            stats_df = calc_statistics(scenarios_df)
             cls._add_synthesis_stats(s, stats_df)
             with uow:
                 uow.export.synthetize_df(scenarios_df, filename)

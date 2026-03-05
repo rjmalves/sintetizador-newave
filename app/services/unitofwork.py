@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from multiprocessing import Queue
-from os import chdir, curdir
 from pathlib import Path
 from typing import Dict, Type
 
@@ -69,7 +68,6 @@ class AbstractUnitOfWork(ABC):
 class FSUnitOfWork(AbstractUnitOfWork):
     def __init__(self, directory: str, q: Queue):
         super().__init__(q)
-        self._current_path = str(Path(curdir).resolve())
         self._path = str(Path(directory).resolve())
         self._files = None
         self._exporter = None
@@ -91,12 +89,10 @@ class FSUnitOfWork(AbstractUnitOfWork):
             )
 
     def __enter__(self) -> "AbstractUnitOfWork":
-        chdir(self._path)
         self.__create_repository()
         return super().__enter__()
 
     def __exit__(self, *args):
-        chdir(self._current_path)
         self._files = None
         self._exporter = None
         super().__exit__(*args)
@@ -112,14 +108,6 @@ class FSUnitOfWork(AbstractUnitOfWork):
         if self._exporter is None:
             raise RuntimeError()
         return self._exporter
-
-    @property
-    def version(self) -> str:
-        return self._version
-
-    @version.setter
-    def version(self, s: str):
-        self._version = s
 
     def rollback(self):
         pass
