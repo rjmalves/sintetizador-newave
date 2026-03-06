@@ -79,31 +79,31 @@ class Deck:
         return accessors.engnat(cls, cls._c(), uow)
     @classmethod
     def energiaf(cls, iteracao: int, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        return accessors.energiaf(cls, cls._c(), iteracao, uow)
+        return accessors.energiaf(cls, uow, iteracao)
     @classmethod
     def enavazf(cls, iteracao: int, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        return accessors.enavazf(cls, cls._c(), iteracao, uow)
+        return accessors.enavazf(cls, uow, iteracao)
     @classmethod
     def vazaof(cls, iteracao: int, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        return accessors.vazaof(cls, cls._c(), iteracao, uow)
+        return accessors.vazaof(cls, uow, iteracao)
     @classmethod
     def energiab(cls, iteracao: int, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        return accessors.energiab(cls, cls._c(), iteracao, uow)
+        return accessors.energiab(cls, uow, iteracao)
     @classmethod
     def enavazb(cls, iteracao: int, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        return accessors.enavazb(cls, cls._c(), iteracao, uow)
+        return accessors.enavazb(cls, uow, iteracao)
     @classmethod
     def vazaob(cls, iteracao: int, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        return accessors.vazaob(cls, cls._c(), iteracao, uow)
+        return accessors.vazaob(cls, uow, iteracao)
     @classmethod
     def energias(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        return accessors.energias(cls, cls._c(), uow)
+        return accessors.energias(cls, uow)
     @classmethod
     def enavazs(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        return accessors.enavazs(cls, cls._c(), uow)
+        return accessors.enavazs(cls, uow)
     @classmethod
     def vazaos(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        return accessors.vazaos(cls, cls._c(), uow)
+        return accessors.vazaos(cls, uow)
     @classmethod
     def vazoes(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         return accessors.vazoes(cls, cls._c(), uow)

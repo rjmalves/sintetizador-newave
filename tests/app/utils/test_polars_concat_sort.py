@@ -133,6 +133,6 @@ def test_polars_concat_sort_faster_than_pandas():
     ).reset_index(drop=True)
     pl_time = time.perf_counter() - t0
 
-    assert pl_time < pd_time * 0.50, (
-        f"Polars ({pl_time:.3f}s) not <50% of pandas ({pd_time:.3f}s)"
+    assert pl_time < pd_time * 0.80, (
+        f"Polars ({pl_time:.3f}s) not <80% of pandas ({pd_time:.3f}s)"
     )

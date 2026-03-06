@@ -988,7 +988,9 @@ class ScenarioSynthetizer:
         """
         with time_and_log("Tempo para compactacao dos dados", cls.logger):
             valid_dfs = [
-                df for df in resolve_responses.values() if df is not None
+                df
+                for df in resolve_responses.values()
+                if df is not None and not df.empty
             ]
             if not valid_dfs:
                 return pd.DataFrame()
