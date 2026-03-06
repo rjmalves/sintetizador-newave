@@ -1,20 +1,23 @@
 from enum import Enum
 from typing import Optional
+
 from app.internal.constants import (
-    HYDRO_CODE_COL,
-    THERMAL_CODE_COL,
-    EER_CODE_COL,
+    BLOCK_DURATION_COL,
     EEP_COL,
-    SUBMARKET_CODE_COL,
+    EER_CODE_COL,
+    END_DATE_COL,
     EXCHANGE_SOURCE_CODE_COL,
     EXCHANGE_TARGET_CODE_COL,
-    START_DATE_COL,
-    END_DATE_COL,
-    BLOCK_DURATION_COL,
-    VALUE_COL,
-    OPERATION_SYNTHESIS_COMMON_COLUMNS as COLUMNS,
+    HYDRO_CODE_COL,
     LOWER_BOUND_COL,
+    START_DATE_COL,
+    SUBMARKET_CODE_COL,
+    THERMAL_CODE_COL,
     UPPER_BOUND_COL,
+    VALUE_COL,
+)
+from app.internal.constants import (
+    OPERATION_SYNTHESIS_COMMON_COLUMNS as COLUMNS,
 )
 
 

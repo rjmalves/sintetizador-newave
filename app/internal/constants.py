@@ -135,7 +135,7 @@ SYSTEM_SYNTHESIS_SUBDIR = ""
 
 QUANTILES_FOR_STATISTICS = [0.05 * i for i in range(21)]
 
-import pandas  # type: ignore # noqa: E402
+import pandas  # noqa: E402
 
 __has_numba = find_spec("numba") is not None
 if pandas.__version__ >= "2.2.0" and __has_numba:

@@ -3,7 +3,7 @@ from logging import ERROR, INFO
 from traceback import print_exc
 from typing import Callable, Dict, List, Optional, TypeVar
 
-import pandas as pd  # type: ignore
+import pandas as pd
 
 from app.internal.constants import (
     POLICY_SYNTHESIS_METADATA_OUTPUT,

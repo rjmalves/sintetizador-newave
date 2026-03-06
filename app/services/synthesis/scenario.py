@@ -1,12 +1,12 @@
 import logging
+from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
 from logging import ERROR, INFO
-from concurrent.futures import ProcessPoolExecutor
 from traceback import print_exc
 from typing import Callable, Dict, List, Optional, Tuple
 
-import numpy as np  # type: ignore
-import pandas as pd  # type: ignore
+import numpy as np
+import pandas as pd
 import polars as pl
 from dateutil.relativedelta import relativedelta  # type: ignore
 

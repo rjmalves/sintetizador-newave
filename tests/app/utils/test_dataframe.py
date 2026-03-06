@@ -3,7 +3,7 @@ import pandas as pd
 import polars as pl
 import pytest
 
-from app.utils.dataframe import pd_to_pl, pd_to_pl_lazy, pl_to_pd
+from app.utils.dataframe import pd_to_pl, pl_to_pd
 
 
 @pytest.fixture
@@ -41,13 +41,6 @@ def test_pl_to_pd_round_trip(sample_pd_df):
     np.testing.assert_array_equal(
         result["int_col"].values, sample_pd_df["int_col"].values
     )
-
-
-def test_pd_to_pl_lazy(sample_pd_df):
-    result = pd_to_pl_lazy(sample_pd_df)
-    assert isinstance(result, pl.LazyFrame)
-    collected = result.collect()
-    assert collected.shape == sample_pd_df.shape
 
 
 def test_empty_dataframe():

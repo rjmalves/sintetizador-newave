@@ -4,7 +4,7 @@ import pathlib
 from abc import ABC, abstractmethod
 from typing import Dict, Type
 
-import pandas as pd  # type: ignore
+import pandas as pd
 import polars as pl
 import pyarrow as pa  # type: ignore
 import pyarrow.parquet as pq  # type: ignore

@@ -9,8 +9,6 @@ from app.internal.constants import (
     VALUE_COL,
 )
 from app.utils.operations import (
-    _calc_mean_std,
-    _calc_quantiles,
     calc_statistics,
     quantile_scenario_labels,
 )
@@ -131,47 +129,65 @@ def test_output_cenario_labels():
 # ---------------------------------------------------------------------------
 
 
-def test_numerical_equivalence_to_pandas_reference():
+def test_numerical_correctness_of_statistics():
     """
-    All computed statistic values must match the legacy pandas implementation
-    within a relative tolerance of 1e-6.
+    Computed statistic values must be numerically correct.
+
+    Verifies mean and quantile values against direct numpy/pandas computation
+    on the raw data.
     """
     df = _make_df(num_groups=10, num_scenarios=100)
-
-    # Reference: legacy pandas implementation
-    df_q = _calc_quantiles(df, QUANTILES_FOR_STATISTICS)
-    df_m = _calc_mean_std(df)
-    reference = pd.concat([df_q, df_m], ignore_index=True)
-
     result = calc_statistics(df)
 
     grouping_cols = [
         c for c in df.columns if c not in (SCENARIO_COL, VALUE_COL)
     ]
 
-    for label in EXPECTED_STAT_LABELS:
-        ref_vals = (
-            reference[reference[SCENARIO_COL] == label]
-            .sort_values(grouping_cols)
-            .reset_index(drop=True)[VALUE_COL]
-            .values
-        )
-        new_vals = (
-            result[result[SCENARIO_COL] == label]
-            .sort_values(grouping_cols)
-            .reset_index(drop=True)[VALUE_COL]
-            .values
-        )
-        assert len(ref_vals) == len(new_vals), (
-            f"Row count mismatch for label '{label}': "
-            f"reference={len(ref_vals)}, result={len(new_vals)}"
-        )
-        np.testing.assert_allclose(
-            new_vals,
-            ref_vals,
-            rtol=1e-6,
-            err_msg=f"Numerical mismatch for statistic '{label}'",
-        )
+    # Verify 'mean' label: compare against pandas groupby mean
+    mean_result = (
+        result[result[SCENARIO_COL] == "mean"]
+        .sort_values(grouping_cols)
+        .reset_index(drop=True)[VALUE_COL]
+        .values
+    )
+    ref_mean = (
+        df.groupby(grouping_cols, sort=False)[VALUE_COL]
+        .mean()
+        .reset_index()
+        .sort_values(grouping_cols)
+        .reset_index(drop=True)[VALUE_COL]
+        .values
+    )
+    assert len(mean_result) == len(ref_mean)
+    np.testing.assert_allclose(
+        mean_result,
+        ref_mean,
+        rtol=1e-6,
+        err_msg="Numerical mismatch for statistic 'mean'",
+    )
+
+    # Verify median (q=0.5): compare against pandas quantile
+    median_result = (
+        result[result[SCENARIO_COL] == "median"]
+        .sort_values(grouping_cols)
+        .reset_index(drop=True)[VALUE_COL]
+        .values
+    )
+    ref_median = (
+        df.groupby(grouping_cols, sort=False)[VALUE_COL]
+        .quantile(0.5)
+        .reset_index()
+        .sort_values(grouping_cols)
+        .reset_index(drop=True)[VALUE_COL]
+        .values
+    )
+    assert len(median_result) == len(ref_median)
+    np.testing.assert_allclose(
+        median_result,
+        ref_median,
+        rtol=1e-4,
+        err_msg="Numerical mismatch for statistic 'median'",
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 {
   "plan": "performance-overhaul",
-  "last_updated": "2026-03-06T14:19:25Z",
+  "last_updated": "2026-03-06T17:29:44Z",
   "progressive": true,
   "tickets": {
     "ticket-001-eliminate-chdir-from-unitofwork.md": {
@@ -336,20 +336,100 @@
       "workflow_step": null
     },
     "ticket-015-decompose-operation.md": {
-      "status": "pending",
-      "detail_level": "outline"
+      "status": "completed",
+      "detail_level": "refined",
+      "scores": {
+        "readiness": 0.96,
+        "readiness_breakdown": {
+          "structure": 1.0,
+          "testability": 1.0,
+          "boundary": 1.0,
+          "dependency_clarity": 1.0,
+          "atomicity": 0.6
+        },
+        "quality": 0.625,
+        "quality_breakdown": {
+          "conformance": 1.0,
+          "scope_adherence": 0.5,
+          "lint_cleanliness": 1.0,
+          "type_safety": 0.0,
+          "test_delta": 0.0
+        }
+      },
+      "workflow_step": null,
+      "agent": "python-task-automation-developer"
     },
     "ticket-016-decompose-deck.md": {
-      "status": "pending",
-      "detail_level": "outline"
+      "status": "completed",
+      "detail_level": "refined",
+      "agent": "python-task-automation-developer",
+      "scores": {
+        "readiness": 0.96,
+        "readiness_breakdown": {
+          "structure": 1.0,
+          "testability": 1.0,
+          "boundary": 1.0,
+          "dependency_clarity": 1.0,
+          "atomicity": 0.6
+        },
+        "quality": 0.93,
+        "quality_breakdown": {
+          "conformance": 1.0,
+          "scope_adherence": 1.0,
+          "lint_cleanliness": 1.0,
+          "type_safety": 1.0,
+          "test_delta": 0.5
+        }
+      },
+      "workflow_step": null
     },
     "ticket-017-decompose-files.md": {
-      "status": "pending",
-      "detail_level": "outline"
+      "status": "completed",
+      "detail_level": "refined",
+      "agent": "python-task-automation-developer",
+      "scores": {
+        "readiness": 0.96,
+        "readiness_breakdown": {
+          "structure": 1.0,
+          "testability": 1.0,
+          "boundary": 1.0,
+          "dependency_clarity": 1.0,
+          "atomicity": 0.6
+        },
+        "quality": 0.825,
+        "quality_breakdown": {
+          "conformance": 1.0,
+          "scope_adherence": 1.0,
+          "lint_cleanliness": 1.0,
+          "type_safety": 0.5,
+          "test_delta": 0.0
+        }
+      },
+      "workflow_step": null
     },
     "ticket-018-add-types-remove-dead-code.md": {
-      "status": "pending",
-      "detail_level": "outline"
+      "status": "completed",
+      "agent": "python-task-automation-developer",
+      "detail_level": "refined",
+      "scores": {
+        "readiness": 0.94,
+        "readiness_breakdown": {
+          "structure": 1.0,
+          "testability": 1.0,
+          "boundary": 1.0,
+          "dependency_clarity": 1.0,
+          "atomicity": 0.4
+        },
+        "quality": 0.875,
+        "quality_breakdown": {
+          "conformance": 1.0,
+          "scope_adherence": 1.0,
+          "lint_cleanliness": 1.0,
+          "type_safety": 0.5,
+          "test_delta": 0.0
+        }
+      },
+      "workflow_step": null
     }
   },
   "epics": {
@@ -370,8 +450,8 @@
       "learning_extracted": true
     },
     "epic-05-code-decomposition": {
-      "phase": "outline",
-      "learning_extracted": false
+      "phase": "completed",
+      "learning_extracted": true
     }
   }
 }

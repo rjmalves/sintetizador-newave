@@ -16,13 +16,13 @@ Comprehensive performance and architecture overhaul for sintetizador-newave, tar
 
 ## Epics
 
-| Epic | Name                                    | Tickets      | Status              |
-| ---- | --------------------------------------- | ------------ | ------------------- |
-| 01   | Foundation Fixes                        | 3 (detailed) | Completed           |
-| 02   | Statistics & Data Pipeline Optimization | 4 (detailed) | Completed           |
-| 03   | Full Hot-Path Polars Migration          | 4 (refined)  | Completed           |
-| 04   | Parallelism Overhaul                    | 3 (refined)  | Executing           |
-| 05   | Code Decomposition & Cleanup            | 4 (outline)  | Requires refinement |
+| Epic | Name                                    | Tickets      | Status    |
+| ---- | --------------------------------------- | ------------ | --------- |
+| 01   | Foundation Fixes                        | 3 (detailed) | Completed |
+| 02   | Statistics & Data Pipeline Optimization | 4 (detailed) | Completed |
+| 03   | Full Hot-Path Polars Migration          | 4 (refined)  | Completed |
+| 04   | Parallelism Overhaul                    | 3 (refined)  | Completed |
+| 05   | Code Decomposition & Cleanup            | 4 (refined)  | Executing |
 
 ## Progress Tracking
 
@@ -42,10 +42,10 @@ Comprehensive performance and architecture overhaul for sintetizador-newave, tar
 | ticket-012 | Replace multiprocessing.Pool with concurrent.futures   | epic-04 | completed | Refined      | 0.98      | 0.90    | EXCELLENT  |
 | ticket-013 | Implement variable-group parallelism                   | epic-04 | completed | Refined      | 1.00      | 0.85    | ACCEPTABLE |
 | ticket-014 | Evaluate thread-based I/O parallelism                  | epic-04 | completed | Refined      | 1.00      | 0.85    | ACCEPTABLE |
-| ticket-015 | Decompose operation.py into resolution modules         | epic-05 | pending   | Outline      | --        | --      | --         |
-| ticket-016 | Decompose deck.py into domain modules                  | epic-05 | pending   | Outline      | --        | --      | --         |
-| ticket-017 | Decompose files.py into variable mapping modules       | epic-05 | pending   | Outline      | --        | --      | --         |
-| ticket-018 | Add type annotations and remove dead code              | epic-05 | pending   | Outline      | --        | --      | --         |
+| ticket-015 | Decompose operation.py into resolution modules         | epic-05 | completed | Refined      | 0.96      | 0.63    | BELOW GATE |
+| ticket-016 | Decompose deck.py into domain modules                  | epic-05 | completed | Refined      | 0.96      | 0.93    | EXCELLENT  |
+| ticket-017 | Decompose files.py into variable mapping modules       | epic-05 | completed | Refined      | 0.96      | 0.83    | ACCEPTABLE |
+| ticket-018 | Add type annotations and remove dead code              | epic-05 | completed | Refined      | 0.94      | 0.88    | ACCEPTABLE |
 
 ## Dependency Graph
 
@@ -63,7 +63,13 @@ ticket-003 (stats) ──> ticket-004 (polars dep) ──> ticket-005 (polars st
                                                                                               ticket-013 (groups)    ticket-014 (threads)
                                                                                                             \              /
                                                                                                               v            v
-                                                                                                  ticket-015 ... ticket-018 (Epic 05)
+                                                                                                    ticket-015 (decompose operation)
+                                                                                                              |
+                                                                                                    ticket-016 (decompose deck)
+                                                                                                              |
+                                                                                                    ticket-017 (decompose files)
+                                                                                                              |
+                                                                                                    ticket-018 (types & cleanup)
 ```
 
 ## Readiness Scores
@@ -84,5 +90,11 @@ ticket-003 (stats) ──> ticket-004 (polars dep) ──> ticket-005 (polars st
 | ticket-012 | 0.98      | 1.00      | 1.00        | 1.00     | 1.00        | 0.80      |
 | ticket-013 | 1.00      | 1.00      | 1.00        | 1.00     | 1.00        | 1.00      |
 | ticket-014 | 1.00      | 1.00      | 1.00        | 1.00     | 1.00        | 1.00      |
+| ticket-015 | 0.96      | 1.00      | 1.00        | 1.00     | 1.00        | 0.60      |
+| ticket-016 | 0.96      | 1.00      | 1.00        | 1.00     | 1.00        | 0.60      |
+| ticket-017 | 0.96      | 1.00      | 1.00        | 1.00     | 1.00        | 0.60      |
+| ticket-018 | 0.94      | 1.00      | 1.00        | 1.00     | 1.00        | 0.40      |
 
-Dimensions below 0.85: none
+Dimensions below 0.85: ticket-015:atomicity (0.60), ticket-016:atomicity (0.60), ticket-017:atomicity (0.60), ticket-018:atomicity (0.40)
+
+Note: Low atomicity scores for decomposition tickets are inherent to their nature -- splitting a monolithic file into a package necessarily touches many files. These tickets cannot be further decomposed without creating artificial intermediate states. All composite scores are above the 0.85 gate.

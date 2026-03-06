@@ -2,7 +2,7 @@ from logging import ERROR, INFO, Logger
 from typing import Callable, Dict, List, Optional, Tuple
 
 import numpy as np
-import pandas as pd  # type: ignore
+import pandas as pd
 import polars as pl
 from dateutil.relativedelta import relativedelta  # type: ignore
 
