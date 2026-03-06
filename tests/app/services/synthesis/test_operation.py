@@ -3100,3 +3100,71 @@ def test_sintese_wildcard_Nmatches(test_settings):
     __valida_metadata("GTER_SBM", df_meta, False)
     __valida_metadata("GTER_SIN", df_meta, False)
     assert df_meta.shape[0] == 3
+
+
+# -----------------------------------------------------------------------------
+# ticket-013: Variable-group parallelism — executor reuse across same-resolution
+# variables
+# -----------------------------------------------------------------------------
+
+
+def test_executor_criado_uma_vez_por_grupo_resolucao_uhe(test_settings):
+    """
+    Given synthetize() called with two UHE variables that have no
+    inter-dependencies, when the method completes, then
+    ProcessPoolExecutor.__init__ is called exactly once for the UHE
+    resolution group.
+
+    Strategy: patch ProcessPoolExecutor so that each construction is counted.
+    Patch _synthetize_single_variable to short-circuit real I/O while still
+    exercising the executor-selection logic in synthetize().
+    """
+    from concurrent.futures import Future
+    from unittest.mock import call
+
+    executor_init_calls: list = []
+
+    class _TrackedExecutor:
+        """Minimal ProcessPoolExecutor stand-in that tracks construction."""
+
+        def __init__(self, *args, **kwargs):
+            executor_init_calls.append(call(*args, **kwargs))
+            self._mock_future: Future = Future()
+            self._mock_future.set_result(None)
+
+        def submit(self, fn, *args, **kwargs):
+            return self._mock_future
+
+        def shutdown(self, wait=True):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            self.shutdown(wait=True)
+
+    # _synthetize_single_variable receives the group-level executor and
+    # returns None (no data found) — this avoids real file I/O while still
+    # letting synthetize() drive the executor-allocation logic.
+    def _noop_synthetize(s, uow, deck_context=None, executor=None):
+        return None
+
+    with patch(
+        "app.services.synthesis.operation.ProcessPoolExecutor",
+        new=_TrackedExecutor,
+    ):
+        with patch.object(
+            OperationSynthetizer,
+            "_synthetize_single_variable",
+            side_effect=_noop_synthetize,
+        ):
+            OperationSynthetizer.synthetize(["VAFL_UHE", "VTUR_UHE"], uow)
+            OperationSynthetizer.clear_cache()
+
+    # Both VAFL_UHE and VTUR_UHE are UHE variables with no inter-dependency,
+    # so synthetize() must reuse a single executor for the entire group.
+    assert len(executor_init_calls) == 1, (
+        f"Expected ProcessPoolExecutor to be constructed exactly once for the "
+        f"UHE group, but it was constructed {len(executor_init_calls)} time(s)."
+    )

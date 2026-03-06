@@ -1,6 +1,6 @@
 {
   "plan": "performance-overhaul",
-  "last_updated": "2026-03-06T12:33:34Z",
+  "last_updated": "2026-03-06T14:19:25Z",
   "progressive": true,
   "tickets": {
     "ticket-001-eliminate-chdir-from-unitofwork.md": {
@@ -264,16 +264,76 @@
       "workflow_step": null
     },
     "ticket-012-replace-multiprocessing-with-futures.md": {
-      "status": "pending",
-      "detail_level": "outline"
+      "status": "completed",
+      "detail_level": "refined",
+      "agent": "python-task-automation-developer",
+      "scores": {
+        "quality": 0.9,
+        "quality_breakdown": {
+          "conformance": 1.0,
+          "scope_adherence": 1.0,
+          "lint_cleanliness": 1.0,
+          "type_safety": 1.0,
+          "test_delta": 0.0
+        },
+        "readiness": 0.98,
+        "readiness_breakdown": {
+          "structure": 1.0,
+          "testability": 1.0,
+          "boundary": 1.0,
+          "dependency_clarity": 1.0,
+          "atomicity": 0.8
+        }
+      },
+      "workflow_step": null
     },
     "ticket-013-variable-group-parallelism.md": {
-      "status": "pending",
-      "detail_level": "outline"
+      "status": "completed",
+      "detail_level": "refined",
+      "agent": "python-task-automation-developer",
+      "scores": {
+        "readiness": 1.0,
+        "readiness_breakdown": {
+          "structure": 1.0,
+          "testability": 1.0,
+          "boundary": 1.0,
+          "dependency_clarity": 1.0,
+          "atomicity": 1.0
+        },
+        "quality": 0.85,
+        "quality_breakdown": {
+          "conformance": 0.8,
+          "scope_adherence": 0.8,
+          "lint_cleanliness": 1.0,
+          "type_safety": 1.0,
+          "test_delta": 0.5
+        }
+      },
+      "workflow_step": null
     },
     "ticket-014-evaluate-thread-io-parallelism.md": {
-      "status": "pending",
-      "detail_level": "outline"
+      "status": "completed",
+      "detail_level": "refined",
+      "agent": "python-task-automation-developer",
+      "scores": {
+        "readiness": 1.0,
+        "readiness_breakdown": {
+          "structure": 1.0,
+          "testability": 1.0,
+          "boundary": 1.0,
+          "dependency_clarity": 1.0,
+          "atomicity": 1.0
+        },
+        "quality": 0.85,
+        "quality_breakdown": {
+          "conformance": 0.8,
+          "scope_adherence": 1.0,
+          "lint_cleanliness": 1.0,
+          "type_safety": 1.0,
+          "test_delta": 0.5
+        }
+      },
+      "workflow_step": null
     },
     "ticket-015-decompose-operation.md": {
       "status": "pending",
@@ -306,8 +366,8 @@
       "learning_extracted": true
     },
     "epic-04-parallelism-overhaul": {
-      "phase": "outline",
-      "learning_extracted": false
+      "phase": "completed",
+      "learning_extracted": true
     },
     "epic-05-code-decomposition": {
       "phase": "outline",

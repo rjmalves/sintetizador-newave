@@ -21,7 +21,7 @@ Comprehensive performance and architecture overhaul for sintetizador-newave, tar
 | 01   | Foundation Fixes                        | 3 (detailed) | Completed           |
 | 02   | Statistics & Data Pipeline Optimization | 4 (detailed) | Completed           |
 | 03   | Full Hot-Path Polars Migration          | 4 (refined)  | Completed           |
-| 04   | Parallelism Overhaul                    | 3 (outline)  | Requires refinement |
+| 04   | Parallelism Overhaul                    | 3 (refined)  | Executing           |
 | 05   | Code Decomposition & Cleanup            | 4 (outline)  | Requires refinement |
 
 ## Progress Tracking
@@ -39,9 +39,9 @@ Comprehensive performance and architecture overhaul for sintetizador-newave, tar
 | ticket-009 | Migrate entity post-processing pipeline to Polars      | epic-03 | completed | Refined      | 1.00      | 0.88    | ACCEPTABLE |
 | ticket-010 | Migrate bounds computation to Polars                   | epic-03 | completed | Refined      | 1.00      | 0.90    | EXCELLENT  |
 | ticket-011 | Migrate Parquet export to Polars native writer         | epic-03 | completed | Refined      | 1.00      | 1.00    | EXCELLENT  |
-| ticket-012 | Replace multiprocessing.Pool with concurrent.futures   | epic-04 | pending   | Outline      | --        | --      | --         |
-| ticket-013 | Implement variable-group parallelism                   | epic-04 | pending   | Outline      | --        | --      | --         |
-| ticket-014 | Evaluate thread-based I/O parallelism                  | epic-04 | pending   | Outline      | --        | --      | --         |
+| ticket-012 | Replace multiprocessing.Pool with concurrent.futures   | epic-04 | completed | Refined      | 0.98      | 0.90    | EXCELLENT  |
+| ticket-013 | Implement variable-group parallelism                   | epic-04 | completed | Refined      | 1.00      | 0.85    | ACCEPTABLE |
+| ticket-014 | Evaluate thread-based I/O parallelism                  | epic-04 | completed | Refined      | 1.00      | 0.85    | ACCEPTABLE |
 | ticket-015 | Decompose operation.py into resolution modules         | epic-05 | pending   | Outline      | --        | --      | --         |
 | ticket-016 | Decompose deck.py into domain modules                  | epic-05 | pending   | Outline      | --        | --      | --         |
 | ticket-017 | Decompose files.py into variable mapping modules       | epic-05 | pending   | Outline      | --        | --      | --         |
@@ -56,10 +56,14 @@ ticket-003 (stats) ──> ticket-004 (polars dep) ──> ticket-005 (polars st
                                     |               ticket-006 (polars concat) ──/
                                     v
                           ticket-008 (temporal) ──> ticket-009 (entity pipeline) ──> ticket-010 (bounds) ──> ticket-011 (export)
-                                    v
-                          ticket-012 ... ticket-014 (Epic 04: parallelism)
-                                    v
-                          ticket-015 ... ticket-018 (Epic 05: decomposition)
+                                                                                                                     |
+                                                                                                                     v
+                                                                                                           ticket-012 (futures)
+                                                                                                            /              \
+                                                                                              ticket-013 (groups)    ticket-014 (threads)
+                                                                                                            \              /
+                                                                                                              v            v
+                                                                                                  ticket-015 ... ticket-018 (Epic 05)
 ```
 
 ## Readiness Scores
@@ -77,5 +81,8 @@ ticket-003 (stats) ──> ticket-004 (polars dep) ──> ticket-005 (polars st
 | ticket-009 | 1.00      | 1.00      | 1.00        | 1.00     | 1.00        | 1.00      |
 | ticket-010 | 1.00      | 1.00      | 1.00        | 1.00     | 1.00        | 1.00      |
 | ticket-011 | 1.00      | 1.00      | 1.00        | 1.00     | 1.00        | 1.00      |
+| ticket-012 | 0.98      | 1.00      | 1.00        | 1.00     | 1.00        | 0.80      |
+| ticket-013 | 1.00      | 1.00      | 1.00        | 1.00     | 1.00        | 1.00      |
+| ticket-014 | 1.00      | 1.00      | 1.00        | 1.00     | 1.00        | 1.00      |
 
 Dimensions below 0.85: none

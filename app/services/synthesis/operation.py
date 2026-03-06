@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 from logging import DEBUG, ERROR, INFO, WARNING
-from multiprocessing import Pool
+from concurrent.futures import ProcessPoolExecutor
 from traceback import print_exc
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -519,7 +519,6 @@ class OperationSynthetizer:
             )
             pl_df = pl_df.with_columns([stage_series, end_date_series])
 
-            # Add block duration: join block_lengths on (START_DATE_COL, BLOCK_COL)
             bl_pl = (
                 pd_to_pl(df_block_lengths)
                 .filter(pl.col(BLOCK_COL).is_in(blocks))
@@ -534,8 +533,7 @@ class OperationSynthetizer:
                 )
             )
 
-            result = pl_df.select(OPERATION_SYNTHESIS_COMMON_COLUMNS)
-            return result
+            return pl_df.select(OPERATION_SYNTHESIS_COMMON_COLUMNS)
 
         if df is None:
             return None
@@ -613,6 +611,7 @@ class OperationSynthetizer:
         synthesis: OperationSynthesis,
         uow: AbstractUnitOfWork,
         deck_context: Optional[DeckContext] = None,
+        executor: Optional[ProcessPoolExecutor] = None,
     ) -> Optional[pd.DataFrame]:
         """
         Resolve a síntese de operação para uma variável operativa
@@ -631,19 +630,25 @@ class OperationSynthetizer:
             for s in sbms_idx
         ]
 
-        n_procs = int(Settings().processors)
         with time_and_log(
             message_root="Tempo para obter dados de SBM", logger=cls.logger
         ):
-            with Pool(processes=n_procs) as pool:
-                async_res = {
-                    idx: pool.apply_async(
-                        cls._resolve_SBM_entity,
-                        (uow, synthesis, idx, name, deck_context),
-                    )
-                    for idx, name in zip(sbms_idx, sbms_name)
-                }
-                dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
+            assert executor is not None, (
+                "__resolve_SBM requires a ProcessPoolExecutor; "
+                "use synthetize() which creates the group-level executor"
+            )
+            futures = {
+                idx: executor.submit(
+                    cls._resolve_SBM_entity,
+                    uow,
+                    synthesis,
+                    idx,
+                    name,
+                    deck_context,
+                )
+                for idx, name in zip(sbms_idx, sbms_name)
+            }
+            dfs = {ir: f.result(timeout=3600) for ir, f in futures.items()}
 
         df = cls._post_resolve(
             dfs,
@@ -700,6 +705,7 @@ class OperationSynthetizer:
         synthesis: OperationSynthesis,
         uow: AbstractUnitOfWork,
         deck_context: Optional[DeckContext] = None,
+        executor: Optional[ProcessPoolExecutor] = None,
     ) -> Optional[pd.DataFrame]:
         """
         Resolve a síntese de operação para uma variável operativa
@@ -715,28 +721,28 @@ class OperationSynthetizer:
             for s in sbms_idx
         ]
 
-        n_procs = int(Settings().processors)
         with time_and_log(
             message_root="Tempo para obter dados de SBP", logger=cls.logger
         ):
-            with Pool(processes=n_procs) as pool:
-                async_res = {
-                    f"{idx1}-{idx2}": pool.apply_async(
-                        cls._resolve_SBP_entity,
-                        (
-                            uow,
-                            synthesis,
-                            idx1,
-                            name1,
-                            idx2,
-                            name2,
-                            deck_context,
-                        ),
-                    )
-                    for idx1, name1 in zip(sbms_idx, sbms_name)
-                    for idx2, name2 in zip(sbms_idx, sbms_name)
-                }
-                dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
+            assert executor is not None, (
+                "__resolve_SBP requires a ProcessPoolExecutor; "
+                "use synthetize() which creates the group-level executor"
+            )
+            futures = {
+                f"{idx1}-{idx2}": executor.submit(
+                    cls._resolve_SBP_entity,
+                    uow,
+                    synthesis,
+                    idx1,
+                    name1,
+                    idx2,
+                    name2,
+                    deck_context,
+                )
+                for idx1, name1 in zip(sbms_idx, sbms_name)
+                for idx2, name2 in zip(sbms_idx, sbms_name)
+            }
+            dfs = {ir: f.result(timeout=3600) for ir, f in futures.items()}
 
         df = cls._post_resolve(
             dfs,
@@ -793,6 +799,7 @@ class OperationSynthetizer:
         synthesis: OperationSynthesis,
         uow: AbstractUnitOfWork,
         deck_context: Optional[DeckContext] = None,
+        executor: Optional[ProcessPoolExecutor] = None,
     ) -> Optional[pd.DataFrame]:
         """
         Resolve a síntese de operação para uma variável operativa
@@ -803,19 +810,25 @@ class OperationSynthetizer:
         eers_idx = eers[EER_CODE_COL]
         eers_name = eers[EER_NAME_COL]
 
-        n_procs = int(Settings().processors)
         with time_and_log(
             message_root="Tempo para ler dados de REE", logger=cls.logger
         ):
-            with Pool(processes=n_procs) as pool:
-                async_res = {
-                    idx: pool.apply_async(
-                        cls._resolve_REE_entity,
-                        (uow, synthesis, idx, name, deck_context),
-                    )
-                    for idx, name in zip(eers_idx, eers_name)
-                }
-                dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
+            assert executor is not None, (
+                "__resolve_REE requires a ProcessPoolExecutor; "
+                "use synthetize() which creates the group-level executor"
+            )
+            futures = {
+                idx: executor.submit(
+                    cls._resolve_REE_entity,
+                    uow,
+                    synthesis,
+                    idx,
+                    name,
+                    deck_context,
+                )
+                for idx, name in zip(eers_idx, eers_name)
+            }
+            dfs = {ir: f.result(timeout=3600) for ir, f in futures.items()}
 
         df = cls._post_resolve(
             dfs,
@@ -973,6 +986,7 @@ class OperationSynthetizer:
         synthesis: OperationSynthesis,
         uow: AbstractUnitOfWork,
         deck_context: Optional[DeckContext] = None,
+        executor: Optional[ProcessPoolExecutor] = None,
     ) -> Optional[pd.DataFrame]:
         """
         Resolve a síntese de operação para uma variável operativa
@@ -999,20 +1013,26 @@ class OperationSynthetizer:
         hydros_idx = hydros[HYDRO_CODE_COL]
         hydros_name = hydros[HYDRO_NAME_COL]
 
-        n_procs = int(Settings().processors)
         with time_and_log(
             message_root="Tempo para ler dados de UHE",
             logger=cls.logger,
         ):
-            with Pool(processes=n_procs) as pool:
-                async_res = {
-                    name: pool.apply_async(
-                        cls._resolve_UHE_entity,
-                        (uow, synthesis, idx, name, deck_context),
-                    )
-                    for idx, name in zip(hydros_idx, hydros_name)
-                }
-                dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
+            assert executor is not None, (
+                "__resolve_UHE requires a ProcessPoolExecutor; "
+                "use synthetize() which creates the group-level executor"
+            )
+            futures = {
+                name: executor.submit(
+                    cls._resolve_UHE_entity,
+                    uow,
+                    synthesis,
+                    idx,
+                    name,
+                    deck_context,
+                )
+                for idx, name in zip(hydros_idx, hydros_name)
+            }
+            dfs = {ir: f.result(timeout=3600) for ir, f in futures.items()}
 
         df = cls._post_resolve(
             dfs,
@@ -1782,16 +1802,19 @@ class OperationSynthetizer:
             with time_and_log(
                 message_root="Tempo para obter dados de SBM", logger=cls.logger
             ):
-                with Pool(processes=n_procs) as pool:
-                    async_res = {
-                        idx: pool.apply_async(
+                with ProcessPoolExecutor(max_workers=n_procs) as executor:
+                    futures = {
+                        idx: executor.submit(
                             cls._resolve_SBM_entity_MER_MERL,
-                            (uow, synthesis, idx, name),
+                            uow,
+                            synthesis,
+                            idx,
+                            name,
                         )
                         for idx, name in zip(sbms_idx, sbms_name)
                     }
                     dfs = {
-                        ir: r.get(timeout=3600) for ir, r in async_res.items()
+                        ir: f.result(timeout=3600) for ir, f in futures.items()
                     }
 
             df = cls._post_resolve(
@@ -2115,6 +2138,7 @@ class OperationSynthetizer:
         synthesis: OperationSynthesis,
         uow: AbstractUnitOfWork,
         deck_context: Optional[DeckContext] = None,
+        executor: Optional[ProcessPoolExecutor] = None,
     ) -> pd.DataFrame:
         """
         Obtem os dados da síntese de operação da geração térmica
@@ -2142,24 +2166,31 @@ class OperationSynthetizer:
             for s in sbms_idx
         ]
 
-        n_procs = int(Settings().processors)
         synthesis = OperationSynthesis(
             variable=synthesis.variable,
             spatial_resolution=synthesis.spatial_resolution,
         )
+
         with time_and_log(
             message_root="Tempo para ler dados de UTE",
             logger=cls.logger,
         ):
-            with Pool(processes=n_procs) as pool:
-                async_res = {
-                    idx: pool.apply_async(
-                        cls._resolve_GTER_UTE_entity,
-                        (uow, synthesis, idx, name, deck_context),
-                    )
-                    for idx, name in zip(sbms_idx, sbms_name)
-                }
-                dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
+            assert executor is not None, (
+                "_resolve_GTER_UTE requires a ProcessPoolExecutor; "
+                "use synthetize() which creates the group-level executor"
+            )
+            futures = {
+                idx: executor.submit(
+                    cls._resolve_GTER_UTE_entity,
+                    uow,
+                    synthesis,
+                    idx,
+                    name,
+                    deck_context,
+                )
+                for idx, name in zip(sbms_idx, sbms_name)
+            }
+            dfs = {ir: f.result(timeout=3600) for ir, f in futures.items()}
 
         # _post_resolve_GTER_UTE_entity returns pd.DataFrame (out of scope for this ticket).
         # Convert to pl.DataFrame at the boundary before passing to _post_resolve.
@@ -2181,13 +2212,14 @@ class OperationSynthetizer:
         synthesis: OperationSynthesis,
         uow: AbstractUnitOfWork,
         deck_context: Optional[DeckContext] = None,
+        executor: Optional[ProcessPoolExecutor] = None,
     ) -> Optional[pd.DataFrame]:
         """
         Resolve a síntese de operação para uma variável operativa
         de uma UTE a partir dos arquivos de saída do NWLISTOP.
         """
         if synthesis.variable == Variable.GERACAO_TERMICA:
-            return cls._resolve_GTER_UTE(synthesis, uow, deck_context)
+            return cls._resolve_GTER_UTE(synthesis, uow, deck_context, executor)
         else:
             raise RuntimeError("Variável não suportada para UTEs")
 
@@ -2197,60 +2229,9 @@ class OperationSynthetizer:
         synthesis: OperationSynthesis,
         uow: AbstractUnitOfWork,
         deck_context: Optional[DeckContext] = None,
+        executor: Optional[ProcessPoolExecutor] = None,
     ) -> pd.DataFrame:
         raise NotImplementedError()
-        # with uow:
-        #     eolica = uow.files.get_eolica()
-        #     if eolica is None:
-        #         if cls.logger is not None:
-        #             cls.logger.error(
-        #                 "Erro no processamento do eolica-cadastro.csv para"
-        #                 + " síntese da operação"
-        #             )
-        #         raise RuntimeError()
-        #     uees_idx = []
-        #     uees_name = []
-        #     regs = eolica.pee_cad()
-        #     df = pd.DataFrame()
-        #     if regs is None:
-        #         return df
-        #     elif isinstance(regs, list):
-        #         for r in regs:
-        #             uees_idx.append(r.codigo_pee)
-        #             uees_name.append(r.nome_pee)
-        #     dfs_uees = []
-        #     for s, n in zip(uees_idx, uees_name):
-        #         if cls.logger is not None:
-        #             cls.logger.info(f"Processando arquivo da UEE: {s} - {n}")
-        #         df_uee = cls._resolve_temporal_resolution(
-        #             uow.files.get_nwlistop(
-        #                 synthesis.variable,
-        #                 synthesis.spatial_resolution,
-        #                 uee=s,
-        #             ),
-        #             uow,
-        #         )
-        #         if df_uee is None:
-        #             continue
-        #         cols = df_uee.columns.tolist()
-        #         df_uee["pee"] = n
-        #         dfs_uees.append(df_uee)
-        #     df = pd.concat(
-        #         dfs_uees,
-        #         ignore_index=True,
-        #     )
-        #     df = df[["pee"] + cols]
-        #     df = df.rename(columns={"serie": "cenario"})
-
-        #     # Otimização: ordena as entidades para facilitar a busca
-        #     usinas = cls._get_unique_column_values_in_order(df, ["pee"])
-        #     outras_cols = cls._get_unique_column_values_in_order(
-        #         df_uee[0],
-        #         ["estagio", "dataInicio", "dataFim", "patamar", "cenario"],
-        #     )
-        #     cls._set_ordered_entities(synthesis, {**usinas, **outras_cols})
-
-        #     return df
 
     @classmethod
     def _resolve_spatial_resolution(
@@ -2258,6 +2239,7 @@ class OperationSynthetizer:
         synthesis: OperationSynthesis,
         uow: AbstractUnitOfWork,
         deck_context: Optional[DeckContext] = None,
+        executor: Optional[ProcessPoolExecutor] = None,
     ) -> pd.DataFrame:
         """
         Despacha a função de resolução espacial para ler os dados a partir
@@ -2274,7 +2256,16 @@ class OperationSynthetizer:
             SpatialResolution.PARQUE_EOLICO_EQUIVALENTE: cls.__resolve_PEE,
         }
         solver = RESOLUTION_FUNCTION_MAP[synthesis.spatial_resolution]
-        res = solver(synthesis, uow, deck_context)
+        # __resolve_SIN does not use a pool; for all other resolvers we pass
+        # the optional shared executor so that the caller can reuse a pool
+        # across multiple variables at the same spatial resolution.
+        if (
+            synthesis.spatial_resolution
+            == SpatialResolution.SISTEMA_INTERLIGADO
+        ):
+            res = solver(synthesis, uow, deck_context)
+        else:
+            res = solver(synthesis, uow, deck_context, executor)
         return res if res is not None else pd.DataFrame()
 
     @staticmethod
@@ -2650,12 +2641,13 @@ class OperationSynthetizer:
         s: OperationSynthesis,
         uow: AbstractUnitOfWork,
         deck_context: Optional[DeckContext] = None,
+        executor: Optional[ProcessPoolExecutor] = None,
     ) -> pd.DataFrame:
         """
         Realiza a resolução de uma síntese, opcionalmente adicionando
         limites superiores e inferiores aos valores de cada linha.
         """
-        df = cls._resolve_spatial_resolution(s, uow, deck_context)
+        df = cls._resolve_spatial_resolution(s, uow, deck_context, executor)
         if df is not None:
             df = cls._resolve_bounds(s, df, uow)
         return df
@@ -2822,6 +2814,7 @@ class OperationSynthetizer:
         s: OperationSynthesis,
         uow: AbstractUnitOfWork,
         deck_context: Optional[DeckContext] = None,
+        executor: Optional[ProcessPoolExecutor] = None,
     ) -> Optional[OperationSynthesis]:
         """
         Realiza a síntese de operação para uma variável
@@ -2840,7 +2833,9 @@ class OperationSynthetizer:
                 if df.empty:
                     df, is_stub = cls._resolve_stub(s, uow)
                     if not is_stub:
-                        df = cls._resolve_synthesis(s, uow, deck_context)
+                        df = cls._resolve_synthesis(
+                            s, uow, deck_context, executor
+                        )
                 if df is not None:
                     if not df.empty:
                         found_synthesis = True
@@ -2889,11 +2884,35 @@ class OperationSynthetizer:
             synthesis_with_dependencies = cls._preprocess_synthesis_variables(
                 variables, uow
             )
+            n_procs = int(Settings().processors)
             success_synthesis: List[OperationSynthesis] = []
+            current_resolution: Optional[SpatialResolution] = None
+            current_executor: Optional[ProcessPoolExecutor] = None
             for s in synthesis_with_dependencies:
-                r = cls._synthetize_single_variable(s, uow, deck_context)
+                if s.spatial_resolution != current_resolution:
+                    # Resolution boundary: shut down the old executor (if any)
+                    # and open a new one for the incoming resolution group.
+                    if current_executor is not None:
+                        current_executor.shutdown(wait=True)
+                    current_resolution = s.spatial_resolution
+                    # SIN variables do not use a pool; skip executor creation.
+                    if (
+                        current_resolution
+                        != SpatialResolution.SISTEMA_INTERLIGADO
+                    ):
+                        current_executor = ProcessPoolExecutor(
+                            max_workers=n_procs
+                        )
+                    else:
+                        current_executor = None
+                r = cls._synthetize_single_variable(
+                    s, uow, deck_context, current_executor
+                )
                 if r:
                     success_synthesis.append(r)
+            # Shut down the final group's executor after the loop completes.
+            if current_executor is not None:
+                current_executor.shutdown(wait=True)
 
             cls._export_stats(uow)
             cls._export_metadata(success_synthesis, uow)

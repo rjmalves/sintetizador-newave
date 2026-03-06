@@ -1,9 +1,9 @@
 import logging
 from datetime import datetime
 from logging import ERROR, INFO
-from multiprocessing import Pool
+from concurrent.futures import ProcessPoolExecutor
 from traceback import print_exc
-from typing import Callable, Dict, List, Optional, Tuple, TypeVar
+from typing import Callable, Dict, List, Optional, Tuple
 
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
@@ -72,8 +72,6 @@ class ScenarioSynthetizer:
         Tuple[Variable, SpatialResolution], pd.DataFrame
     ] = {}
 
-    T = TypeVar("T")
-
     logger: Optional[logging.Logger] = None
 
     SYNTHESIS_STATS: Dict[
@@ -107,7 +105,6 @@ class ScenarioSynthetizer:
         args = [
             ScenarioSynthesis.factory(a)
             for a in cls.DEFAULT_OPERATION_SYNTHESIS_ARGS
-            # if "_BKW" not in a
         ]
         return [arg for arg in args if arg is not None]
 
@@ -1012,14 +1009,14 @@ class ScenarioSynthetizer:
             message_root="Tempo para obter energias forward",
             logger=cls.logger,
         ):
-            with Pool(processes=num_procs) as pool:
-                async_res = {
-                    it: pool.apply_async(
-                        cls._resolve_forward_energy_iteration, (uow, it)
+            with ProcessPoolExecutor(max_workers=num_procs) as executor:
+                futures = {
+                    it: executor.submit(
+                        cls._resolve_forward_energy_iteration, uow, it
                     )
                     for it in range(1, num_iterations + 1)
                 }
-                dfs = {it: r.get(timeout=3600) for it, r in async_res.items()}
+                dfs = {it: f.result(timeout=3600) for it, f in futures.items()}
 
         return cls._post_resolve(dfs)
 
@@ -1058,14 +1055,14 @@ class ScenarioSynthetizer:
             message_root="Tempo para obter vazoes forward",
             logger=cls.logger,
         ):
-            with Pool(processes=num_procs) as pool:
-                async_res = {
-                    it: pool.apply_async(
-                        cls._resolve_forward_inflow_iteration, (uow, it)
+            with ProcessPoolExecutor(max_workers=num_procs) as executor:
+                futures = {
+                    it: executor.submit(
+                        cls._resolve_forward_inflow_iteration, uow, it
                     )
                     for it in range(1, num_iterations + 1)
                 }
-                dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
+                dfs = {ir: f.result(timeout=3600) for ir, f in futures.items()}
         return cls._post_resolve(dfs)
 
     @classmethod
@@ -1115,14 +1112,14 @@ class ScenarioSynthetizer:
             message_root="Tempo para obter energias backward",
             logger=cls.logger,
         ):
-            with Pool(processes=num_procs) as pool:
-                async_res = {
-                    it: pool.apply_async(
-                        cls._resolve_backward_energy_iteration, (uow, it)
+            with ProcessPoolExecutor(max_workers=num_procs) as executor:
+                futures = {
+                    it: executor.submit(
+                        cls._resolve_backward_energy_iteration, uow, it
                     )
                     for it in range(1, num_iterations + 1)
                 }
-                dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
+                dfs = {ir: f.result(timeout=3600) for ir, f in futures.items()}
 
         return cls._post_resolve(dfs)
 
@@ -1162,14 +1159,14 @@ class ScenarioSynthetizer:
             message_root="Tempo para obter vazoes backward",
             logger=cls.logger,
         ):
-            with Pool(processes=num_procs) as pool:
-                async_res = {
-                    it: pool.apply_async(
-                        cls._resolve_backward_inflow_iteration, (uow, it)
+            with ProcessPoolExecutor(max_workers=num_procs) as executor:
+                futures = {
+                    it: executor.submit(
+                        cls._resolve_backward_inflow_iteration, uow, it
                     )
                     for it in range(1, num_iterations + 1)
                 }
-                dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
+                dfs = {ir: f.result(timeout=3600) for ir, f in futures.items()}
         return cls._post_resolve(dfs)
 
     @classmethod
