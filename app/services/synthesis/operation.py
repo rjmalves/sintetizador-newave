@@ -7,6 +7,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar
 
 import numpy as np
 import pandas as pd  # type: ignore
+import polars as pl
 
 from app.internal.constants import (
     BLOCK_COL,
@@ -51,6 +52,7 @@ from app.services.deck.bounds import OperationVariableBounds
 from app.services.deck.context import DeckContext
 from app.services.deck.deck import Deck
 from app.services.unitofwork import AbstractUnitOfWork
+from app.utils.dataframe import pd_to_pl, pl_to_pd
 from app.utils.graph import Graph
 from app.utils.log import Log
 from app.utils.operations import calc_statistics
@@ -275,26 +277,26 @@ class OperationSynthetizer:
             valid_dfs = [
                 df for df in resolve_responses.values() if df is not None
             ]
-            if len(valid_dfs) > 0:
-                df = pd.concat(valid_dfs, ignore_index=True)
-            else:
+            if not valid_dfs:
                 return None
 
-            spatial_resolution = s.spatial_resolution
+            df = pl_to_pd(
+                pl.concat([pd_to_pl(df) for df in valid_dfs]).sort(
+                    s.spatial_resolution.sorting_synthesis_df_columns,
+                    maintain_order=True,
+                )
+            ).reset_index(drop=True)
 
             for c in early_hooks:
                 df = c(s, df, uow)
-            df = df.sort_values(
-                spatial_resolution.sorting_synthesis_df_columns
-            ).reset_index(drop=True)
 
             entity_columns_order = cls._get_unique_column_values_in_order(
                 df,
-                spatial_resolution.sorting_synthesis_df_columns,
+                s.spatial_resolution.sorting_synthesis_df_columns,
             )
             other_columns_order = cls._get_unique_column_values_in_order(
                 valid_dfs[0],
-                spatial_resolution.non_entity_sorting_synthesis_df_columns,
+                s.spatial_resolution.non_entity_sorting_synthesis_df_columns,
             )
             cls._set_ordered_entities(
                 s, {**entity_columns_order, **other_columns_order}
@@ -875,14 +877,14 @@ class OperationSynthetizer:
             synthesis.spatial_resolution,
         )
         df = cls._get_from_cache(volume_synthesis)
-        df.loc[:, VALUE_COL] = (
-            df[VALUE_COL]
-            * HM3_M3S_MONTHLY_FACTOR
-            * STAGE_DURATION_HOURS
-            / df[BLOCK_DURATION_COL]
+        return df.assign(
+            **{
+                VALUE_COL: df[VALUE_COL]
+                * HM3_M3S_MONTHLY_FACTOR
+                * STAGE_DURATION_HOURS
+                / df[BLOCK_DURATION_COL]
+            }
         )
-
-        return df
 
     @classmethod
     def _convert_flow_to_volume(
@@ -903,136 +905,133 @@ class OperationSynthetizer:
             synthesis.spatial_resolution,
         )
         df = cls._get_from_cache(flow_synthesis)
-        df.loc[:, VALUE_COL] = (
-            df[VALUE_COL]
-            * df[BLOCK_DURATION_COL]
-            / (HM3_M3S_MONTHLY_FACTOR * STAGE_DURATION_HOURS)
+        return df.assign(
+            **{
+                VALUE_COL: df[VALUE_COL]
+                * df[BLOCK_DURATION_COL]
+                / (HM3_M3S_MONTHLY_FACTOR * STAGE_DURATION_HOURS)
+            }
         )
-        return df
 
     @classmethod
     def __stub_QDEF(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-        """
-        Realiza o cálculo da vazão defluente a partir dos valores
-        das vazões turbinada e vertida.
-        """
-        turbined_synthesis = OperationSynthesis(
-            Variable.VAZAO_TURBINADA,
-            synthesis.spatial_resolution,
+        """Calculates discharge flow from turbined and spilled flow values."""
+        turbined_df = cls._get_from_cache(
+            OperationSynthesis(
+                Variable.VAZAO_TURBINADA,
+                synthesis.spatial_resolution,
+            )
         )
-        spilled_synthesis = OperationSynthesis(
-            Variable.VAZAO_VERTIDA,
-            synthesis.spatial_resolution,
+        spilled_df = cls._get_from_cache(
+            OperationSynthesis(
+                Variable.VAZAO_VERTIDA,
+                synthesis.spatial_resolution,
+            )
         )
-        turbined_df = cls._get_from_cache(turbined_synthesis)
-        spilled_df = cls._get_from_cache(spilled_synthesis)
-
-        spilled_df.loc[:, VALUE_COL] = (
-            turbined_df[VALUE_COL].to_numpy() + spilled_df[VALUE_COL].to_numpy()
+        return spilled_df.assign(
+            **{
+                VALUE_COL: turbined_df[VALUE_COL].to_numpy()
+                + spilled_df[VALUE_COL].to_numpy()
+            }
         )
-        return spilled_df
 
     @classmethod
     def __stub_VDEF(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-        """
-        Realiza o cálculo do volume defluente a partir dos valores
-        dos volumes turbinado e vertido.
-        """
-        turbined_synthesis = OperationSynthesis(
-            Variable.VOLUME_TURBINADO,
-            synthesis.spatial_resolution,
+        """Calculates discharge volume from turbined and spilled volume values."""
+        turbined_df = cls._get_from_cache(
+            OperationSynthesis(
+                Variable.VOLUME_TURBINADO,
+                synthesis.spatial_resolution,
+            )
         )
-        spilled_synthesis = OperationSynthesis(
-            Variable.VOLUME_VERTIDO,
-            synthesis.spatial_resolution,
+        spilled_df = cls._get_from_cache(
+            OperationSynthesis(
+                Variable.VOLUME_VERTIDO,
+                synthesis.spatial_resolution,
+            )
         )
-        turbined_df = cls._get_from_cache(turbined_synthesis)
-        spilled_df = cls._get_from_cache(spilled_synthesis)
-
-        spilled_df.loc[:, VALUE_COL] = (
-            turbined_df[VALUE_COL].to_numpy() + spilled_df[VALUE_COL].to_numpy()
+        return spilled_df.assign(
+            **{
+                VALUE_COL: turbined_df[VALUE_COL].to_numpy()
+                + spilled_df[VALUE_COL].to_numpy()
+            }
         )
-        return spilled_df
 
     @classmethod
     def __stub_VEVAP(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-        """
-        Realiza o cálculo da violação da evaporação a partir dos valores
-        das violações positiva e negativa da evaporação.
-        """
-        positive_synthesis = OperationSynthesis(
-            Variable.VIOLACAO_POSITIVA_EVAPORACAO,
-            synthesis.spatial_resolution,
+        """Calculates evaporation violation from positive and negative violations."""
+        positive_df = cls._get_from_cache(
+            OperationSynthesis(
+                Variable.VIOLACAO_POSITIVA_EVAPORACAO,
+                synthesis.spatial_resolution,
+            )
         )
-        negative_synthesis = OperationSynthesis(
-            Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
-            synthesis.spatial_resolution,
+        negative_df = cls._get_from_cache(
+            OperationSynthesis(
+                Variable.VIOLACAO_NEGATIVA_EVAPORACAO,
+                synthesis.spatial_resolution,
+            )
         )
-        positive_df = cls._get_from_cache(positive_synthesis)
-        negative_df = cls._get_from_cache(negative_synthesis)
-
-        positive_df.loc[:, VALUE_COL] = (
-            negative_df[VALUE_COL].to_numpy()
-            + positive_df[VALUE_COL].to_numpy()
+        return positive_df.assign(
+            **{
+                VALUE_COL: negative_df[VALUE_COL].to_numpy()
+                + positive_df[VALUE_COL].to_numpy()
+            }
         )
-        return positive_df
 
     @classmethod
     def __stub_CTO(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-        """
-        Realiza o cálculo do custo total a partir dos valores
-        das parcelas de custo presente e futuro.
-        """
-        operation_cost_synthesis = OperationSynthesis(
-            Variable.CUSTO_OPERACAO,
-            synthesis.spatial_resolution,
+        """Calculates total cost from operation and future cost components."""
+        operation_df = cls._get_from_cache(
+            OperationSynthesis(
+                Variable.CUSTO_OPERACAO,
+                synthesis.spatial_resolution,
+            )
         )
-        future_cost_synthesis = OperationSynthesis(
-            Variable.CUSTO_FUTURO,
-            synthesis.spatial_resolution,
+        future_df = cls._get_from_cache(
+            OperationSynthesis(
+                Variable.CUSTO_FUTURO,
+                synthesis.spatial_resolution,
+            )
         )
-        operation_df = cls._get_from_cache(operation_cost_synthesis)
-        future_df = cls._get_from_cache(future_cost_synthesis)
-
-        operation_df.loc[:, VALUE_COL] = (
-            future_df[VALUE_COL].to_numpy() + operation_df[VALUE_COL].to_numpy()
+        return operation_df.assign(
+            **{
+                VALUE_COL: future_df[VALUE_COL].to_numpy()
+                + operation_df[VALUE_COL].to_numpy()
+            }
         )
-
-        return operation_df
 
     @classmethod
     def __stub_EVER(
         cls, synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-        """
-        Realiza o cálculo da energia vertida a partir dos valores
-        das energias vertidas em reservatório e fio d'água.
-        """
-        reservoir_synthesis = OperationSynthesis(
-            Variable.ENERGIA_VERTIDA_RESERV,
-            synthesis.spatial_resolution,
+        """Calculates spilled energy from reservoir and run-of-river components."""
+        reservoir_df = cls._get_from_cache(
+            OperationSynthesis(
+                Variable.ENERGIA_VERTIDA_RESERV,
+                synthesis.spatial_resolution,
+            )
         )
-        run_of_river_synthesis = OperationSynthesis(
-            Variable.ENERGIA_VERTIDA_FIO,
-            synthesis.spatial_resolution,
+        run_of_river_df = cls._get_from_cache(
+            OperationSynthesis(
+                Variable.ENERGIA_VERTIDA_FIO,
+                synthesis.spatial_resolution,
+            )
         )
-        reservoir_df = cls._get_from_cache(reservoir_synthesis)
-        run_of_river_df = cls._get_from_cache(run_of_river_synthesis)
-
-        reservoir_df.loc[:, VALUE_COL] = (
-            run_of_river_df[VALUE_COL].to_numpy()
-            + reservoir_df[VALUE_COL].to_numpy()
+        return reservoir_df.assign(
+            **{
+                VALUE_COL: run_of_river_df[VALUE_COL].to_numpy()
+                + reservoir_df[VALUE_COL].to_numpy()
+            }
         )
-
-        return reservoir_df
 
     @classmethod
     def _hydro_resolution_variable_map(
@@ -1515,9 +1514,11 @@ class OperationSynthetizer:
             stored_volume_df, stored_volume_entities = _get_synthesis_data(
                 stored_volume_synthesis
             )
+            stored_volume_df = stored_volume_df.copy()
             net_drop_df, net_drop_entities = _get_synthesis_data(
                 net_drop_synthesis
             )
+            net_drop_df = net_drop_df.copy()
 
             net_drop_df = _add_productivity(net_drop_df, net_drop_entities)
             net_drop_df = cls._calc_accumulated_productivity(
@@ -1731,10 +1732,12 @@ class OperationSynthetizer:
         goal_df = cls._get_from_cache(goal_synthesis)
         violation_df = cls._get_from_cache(violation_synthesis)
 
-        goal_df.loc[:, VALUE_COL] = (
-            goal_df[VALUE_COL].to_numpy() - violation_df[VALUE_COL].to_numpy()
+        return goal_df.assign(
+            **{
+                VALUE_COL: goal_df[VALUE_COL].to_numpy()
+                - violation_df[VALUE_COL].to_numpy()
+            }
         )
-        return goal_df
 
     @classmethod
     def _resolve_temporal_resolution_GTER_UTE(
@@ -2191,16 +2194,15 @@ class OperationSynthetizer:
         Extrai o resultado de uma síntese da cache caso exista, lançando
         um erro caso contrário.
         """
-        if s in cls.CACHED_SYNTHESIS.keys():
-            cls._log(f"Lendo do cache - {str(s)}", DEBUG)
-            res = cls.CACHED_SYNTHESIS.get(s)
-            if res is None:
-                cls._log(f"Erro na leitura do cache - {str(s)}", ERROR)
-                raise RuntimeError()
-            return res.copy()
-        else:
+        if s not in cls.CACHED_SYNTHESIS:
             cls._log(f"Erro na leitura do cache - {str(s)}", ERROR)
             raise RuntimeError()
+        cls._log(f"Lendo do cache - {str(s)}", DEBUG)
+        res = cls.CACHED_SYNTHESIS[s]
+        if res is None:
+            cls._log(f"Erro na leitura do cache - {str(s)}", ERROR)
+            raise RuntimeError()
+        return res
 
     @classmethod
     def _stub_mappings(  # noqa
@@ -2403,7 +2405,7 @@ class OperationSynthetizer:
                 message_root="Tempo para armazenamento na cache",
                 logger=cls.logger,
             ):
-                cls.CACHED_SYNTHESIS[s] = df.copy()
+                cls.CACHED_SYNTHESIS[s] = df
 
     @classmethod
     def _resolve_bounds(
@@ -2511,14 +2513,16 @@ class OperationSynthetizer:
         em cache para uso futuro e as estatísticas são adicionadas
         ao DataFrame de estatísticas da agregação espacial em questão.
         """
-        filename = str(s)
         with time_and_log(
             message_root="Tempo para preparacao para exportacao",
             logger=cls.logger,
         ):
             scenarios_df = df.astype({SCENARIO_COL: int})
-            scenarios_df = scenarios_df.sort_values(
-                s.spatial_resolution.sorting_synthesis_df_columns
+            scenarios_df = pl_to_pd(
+                pd_to_pl(scenarios_df).sort(
+                    s.spatial_resolution.sorting_synthesis_df_columns,
+                    maintain_order=True,
+                )
             ).reset_index(drop=True)
             stats_df = calc_statistics(scenarios_df)
             cls._add_synthesis_stats(s, stats_df)
@@ -2527,10 +2531,10 @@ class OperationSynthetizer:
             message_root="Tempo para exportacao dos dados", logger=cls.logger
         ):
             with uow:
-                scenarios_df = scenarios_df[
-                    s.spatial_resolution.all_synthesis_df_columns
-                ]
-                uow.export.synthetize_df(scenarios_df, filename)
+                uow.export.synthetize_df(
+                    scenarios_df[s.spatial_resolution.all_synthesis_df_columns],
+                    str(s),
+                )
 
     @classmethod
     def _export_stats(

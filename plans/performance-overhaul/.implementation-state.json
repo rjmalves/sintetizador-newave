@@ -1,6 +1,6 @@
 {
   "plan": "performance-overhaul",
-  "last_updated": "2026-03-05T23:54:52Z",
+  "last_updated": "2026-03-06T00:58:28Z",
   "progressive": true,
   "tickets": {
     "ticket-001-eliminate-chdir-from-unitofwork.md": {
@@ -9,11 +9,11 @@
       "scores": {
         "quality": 0.855,
         "quality_breakdown": {
-          "conformance": 0.80,
-          "scope_adherence": 1.00,
-          "lint_cleanliness": 1.00,
-          "type_safety": 0.50,
-          "test_delta": 1.00
+          "conformance": 0.8,
+          "scope_adherence": 1.0,
+          "lint_cleanliness": 1.0,
+          "type_safety": 0.5,
+          "test_delta": 1.0
         },
         "readiness": 1.0,
         "readiness_breakdown": {
@@ -30,13 +30,13 @@
       "status": "completed",
       "detail_level": "detailed",
       "scores": {
-        "quality": 0.800,
+        "quality": 0.8,
         "quality_breakdown": {
-          "conformance": 1.00,
-          "scope_adherence": 1.00,
-          "lint_cleanliness": 1.00,
-          "type_safety": 0.00,
-          "test_delta": 0.50
+          "conformance": 1.0,
+          "scope_adherence": 1.0,
+          "lint_cleanliness": 1.0,
+          "type_safety": 0.0,
+          "test_delta": 0.5
         },
         "readiness": 1.0,
         "readiness_breakdown": {
@@ -73,9 +73,17 @@
       "workflow_step": null
     },
     "ticket-004-add-polars-dependency.md": {
-      "status": "pending",
+      "status": "completed",
       "detail_level": "detailed",
       "scores": {
+        "quality": 0.95,
+        "quality_breakdown": {
+          "conformance": 1.0,
+          "scope_adherence": 1.0,
+          "lint_cleanliness": 1.0,
+          "type_safety": 1.0,
+          "test_delta": 1.0
+        },
         "readiness": 1.0,
         "readiness_breakdown": {
           "structure": 1.0,
@@ -84,12 +92,21 @@
           "dependency_clarity": 1.0,
           "atomicity": 1.0
         }
-      }
+      },
+      "workflow_step": null
     },
     "ticket-005-rewrite-calc-statistics-polars.md": {
-      "status": "pending",
+      "status": "completed",
       "detail_level": "detailed",
       "scores": {
+        "quality": 0.8625,
+        "quality_breakdown": {
+          "conformance": 1.0,
+          "scope_adherence": 1.0,
+          "lint_cleanliness": 0.5,
+          "type_safety": 1.0,
+          "test_delta": 1.0
+        },
         "readiness": 0.97,
         "readiness_breakdown": {
           "structure": 1.0,
@@ -98,12 +115,22 @@
           "dependency_clarity": 1.0,
           "atomicity": 1.0
         }
-      }
+      },
+      "agent": "python-task-automation-developer",
+      "workflow_step": null
     },
     "ticket-006-optimize-concat-with-polars.md": {
-      "status": "pending",
+      "status": "completed",
       "detail_level": "detailed",
       "scores": {
+        "quality": 1.0,
+        "quality_breakdown": {
+          "conformance": 1.0,
+          "scope_adherence": 1.0,
+          "lint_cleanliness": 1.0,
+          "type_safety": 1.0,
+          "test_delta": 1.0
+        },
         "readiness": 0.96,
         "readiness_breakdown": {
           "structure": 1.0,
@@ -112,12 +139,22 @@
           "dependency_clarity": 1.0,
           "atomicity": 1.0
         }
-      }
+      },
+      "workflow_step": null,
+      "agent": "python-task-automation-developer"
     },
     "ticket-007-eliminate-unnecessary-copies.md": {
-      "status": "pending",
+      "status": "completed",
       "detail_level": "detailed",
       "scores": {
+        "quality": 0.9,
+        "quality_breakdown": {
+          "conformance": 1.0,
+          "scope_adherence": 1.0,
+          "lint_cleanliness": 1.0,
+          "type_safety": 1.0,
+          "test_delta": 0.5
+        },
         "readiness": 1.0,
         "readiness_breakdown": {
           "structure": 1.0,
@@ -126,7 +163,9 @@
           "dependency_clarity": 1.0,
           "atomicity": 1.0
         }
-      }
+      },
+      "workflow_step": null,
+      "agent": "python-task-automation-developer"
     },
     "ticket-008-migrate-temporal-resolution-polars.md": {
       "status": "pending",
@@ -179,8 +218,8 @@
       "learning_extracted": true
     },
     "epic-02-statistics-and-data-pipeline": {
-      "phase": "executing",
-      "learning_extracted": false
+      "phase": "completed",
+      "learning_extracted": true
     },
     "epic-03-polars-migration": {
       "phase": "outline",

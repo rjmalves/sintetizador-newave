@@ -7,6 +7,7 @@ from typing import Callable, Dict, List, Optional, Tuple, TypeVar
 
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
+import polars as pl
 from dateutil.relativedelta import relativedelta  # type: ignore
 
 from app.internal.constants import (
@@ -45,6 +46,7 @@ from app.model.scenario.variable import Variable
 from app.model.settings import Settings
 from app.services.deck.deck import Deck
 from app.services.unitofwork import AbstractUnitOfWork
+from app.utils.dataframe import pd_to_pl, pl_to_pd
 from app.utils.log import Log
 from app.utils.operations import calc_statistics
 from app.utils.regex import match_variables_with_wildcards
@@ -991,11 +993,9 @@ class ScenarioSynthetizer:
             valid_dfs = [
                 df for df in resolve_responses.values() if df is not None
             ]
-            if len(valid_dfs) > 0:
-                df = pd.concat(valid_dfs, ignore_index=True)
-            else:
-                df = pd.DataFrame()
-            return df
+            if not valid_dfs:
+                return pd.DataFrame()
+            return pl_to_pd(pl.concat([pd_to_pl(df) for df in valid_dfs]))
 
     @classmethod
     def _resolve_forward_energy(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
@@ -1513,19 +1513,20 @@ class ScenarioSynthetizer:
         em cache para uso futuro e as estatísticas são adicionadas
         ao DataFrame de estatísticas da agregação espacial e etapa em questão.
         """
-        filename = str(s)
         with time_and_log(
             message_root="Tempo para exportacao dos dados", logger=cls.logger
         ):
-            # TODO - garantir tipo de dados das colunas iteracao e estagio como int
             scenarios_df = df.astype({SCENARIO_COL: int})
-            scenarios_df = scenarios_df.sort_values(
-                s.sorting_synthesis_df_columns
+            scenarios_df = pl_to_pd(
+                pd_to_pl(scenarios_df).sort(
+                    s.sorting_synthesis_df_columns,
+                    maintain_order=True,
+                )
             ).reset_index(drop=True)
             stats_df = calc_statistics(scenarios_df)
             cls._add_synthesis_stats(s, stats_df)
             with uow:
-                uow.export.synthetize_df(scenarios_df, filename)
+                uow.export.synthetize_df(scenarios_df, str(s))
 
     @classmethod
     def _export_stats(

@@ -31,10 +31,10 @@ Comprehensive performance and architecture overhaul for sintetizador-newave, tar
 | ticket-001 | Eliminate chdir() from FSUnitOfWork                    | epic-01 | completed | Detailed     | 1.00      | 0.86    | ACCEPTABLE |
 | ticket-002 | Pre-compute deck data and pass to subprocesses         | epic-01 | completed | Detailed     | 1.00      | 0.80    | ACCEPTABLE |
 | ticket-003 | Move statistics computation after entity concatenation | epic-01 | completed | Detailed     | 1.00      | 0.83    | ACCEPTABLE |
-| ticket-004 | Add Polars dependency and conversion utilities         | epic-02 | pending   | Detailed     | 1.00      | --      | --         |
-| ticket-005 | Rewrite calc_statistics using Polars                   | epic-02 | pending   | Detailed     | 0.97      | --      | --         |
-| ticket-006 | Optimize DataFrame concatenation with Polars           | epic-02 | pending   | Detailed     | 0.96      | --      | --         |
-| ticket-007 | Eliminate unnecessary DataFrame copies in cache        | epic-02 | pending   | Detailed     | 1.00      | --      | --         |
+| ticket-004 | Add Polars dependency and conversion utilities         | epic-02 | completed | Detailed     | 1.00      | 0.95    | EXCELLENT  |
+| ticket-005 | Rewrite calc_statistics using Polars                   | epic-02 | completed | Detailed     | 0.97      | 0.86    | ACCEPTABLE |
+| ticket-006 | Optimize DataFrame concatenation with Polars           | epic-02 | completed | Detailed     | 0.96      | 1.00    | EXCELLENT  |
+| ticket-007 | Eliminate unnecessary DataFrame copies in cache        | epic-02 | completed | Detailed     | 1.00      | 0.90    | EXCELLENT  |
 | ticket-008 | Migrate temporal resolution to Polars                  | epic-03 | pending   | Outline      | --        | --      | --         |
 | ticket-009 | Migrate entity post-processing pipeline to Polars      | epic-03 | pending   | Outline      | --        | --      | --         |
 | ticket-010 | Migrate bounds computation to Polars                   | epic-03 | pending   | Outline      | --        | --      | --         |
