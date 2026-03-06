@@ -3,7 +3,7 @@ from datetime import datetime
 from logging import DEBUG, ERROR, INFO, WARNING
 from multiprocessing import Pool
 from traceback import print_exc
-from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd  # type: ignore
@@ -61,7 +61,6 @@ from app.utils.timing import time_and_log
 
 
 class OperationSynthetizer:
-    T = TypeVar("T")
     logger: Optional[logging.Logger] = None
 
     # Por padrão, todas as sínteses suportadas são consideradas
@@ -243,25 +242,36 @@ class OperationSynthetizer:
         uow: AbstractUnitOfWork,
         internal_stubs: Dict[Variable, Callable] = {},
         deck_context: Optional[DeckContext] = None,
-    ) -> Optional[pd.DataFrame]:
+    ) -> Optional[pl.DataFrame]:
         """
         Realiza pós-processamento após a resolução da extração dados
         em um DataFrame de síntese extraído do NWLISTOP.
+
+        Returns a pl.DataFrame. The conversion from pandas to Polars happens
+        inside `_resolve_temporal_resolution`, so this method works entirely
+        in Polars after that point.
         """
         if df is None:
             return df
-        df = cls._resolve_temporal_resolution(df, uow, deck_context)
-        for col, val in entity_column_values.items():
-            df[col] = val
-        df = cls._resolve_starting_stage(df, uow, deck_context)
+        df_pl = cls._resolve_temporal_resolution(df, uow, deck_context)
+        if df_pl is None:
+            return None
+        if entity_column_values:
+            df_pl = df_pl.with_columns(
+                [
+                    pl.lit(val).alias(col)
+                    for col, val in entity_column_values.items()
+                ]
+            )
+        df_pl = cls._resolve_starting_stage_polars(df_pl, deck_context, uow)
         if s.variable in internal_stubs:
-            df = internal_stubs[s.variable](df, uow)
-        return df
+            df_pl = internal_stubs[s.variable](df_pl, uow)
+        return df_pl
 
     @classmethod
     def _post_resolve(
         cls,
-        resolve_responses: Dict[str, Optional[pd.DataFrame]],
+        resolve_responses: Dict[str, Optional[pl.DataFrame]],
         s: OperationSynthesis,
         uow: AbstractUnitOfWork,
         early_hooks: List[Callable] = [],
@@ -270,6 +280,10 @@ class OperationSynthetizer:
         """
         Realiza pós-processamento após a resolução da extração
         de todos os dados de síntese extraídos do NWLISTOP para uma síntese.
+
+        Receives pl.DataFrame objects from entity resolvers (no pd_to_pl
+        conversion needed per entity). Concatenates and sorts using Polars,
+        then converts to pandas once at the end for downstream consumers.
         """
         with time_and_log(
             message_root="Tempo para compactacao dos dados", logger=cls.logger
@@ -281,7 +295,7 @@ class OperationSynthetizer:
                 return None
 
             df = pl_to_pd(
-                pl.concat([pd_to_pl(df) for df in valid_dfs]).sort(
+                pl.concat(valid_dfs).sort(
                     s.spatial_resolution.sorting_synthesis_df_columns,
                     maintain_order=True,
                 )
@@ -295,7 +309,7 @@ class OperationSynthetizer:
                 s.spatial_resolution.sorting_synthesis_df_columns,
             )
             other_columns_order = cls._get_unique_column_values_in_order(
-                valid_dfs[0],
+                pl_to_pd(valid_dfs[0]),
                 s.spatial_resolution.non_entity_sorting_synthesis_df_columns,
             )
             cls._set_ordered_entities(
@@ -308,10 +322,10 @@ class OperationSynthetizer:
 
     @staticmethod
     def _resolve_temporal_resolution(
-        df: pd.DataFrame,
+        df: Optional[pd.DataFrame],
         uow: AbstractUnitOfWork,
         deck_context: Optional[DeckContext] = None,
-    ) -> pd.DataFrame:
+    ) -> Optional[pl.DataFrame]:
         """
         Adiciona informação temporal a um DataFrame de síntese, utilizando
         as informações de duração dos patamares e datas de início dos estágios.
@@ -445,9 +459,97 @@ class OperationSynthetizer:
             )
             return df[OPERATION_SYNTHESIS_COMMON_COLUMNS]
 
+        def _add_temporal_info_polars(
+            df: pd.DataFrame,
+            uow: AbstractUnitOfWork,
+            deck_context: Optional[DeckContext],
+        ) -> pd.DataFrame:
+            """
+            Adds temporal information to a synthesis DataFrame using Polars for
+            performance. Operates entirely on pl.DataFrame internally and returns
+            a pd.DataFrame with OPERATION_SYNTHESIS_COMMON_COLUMNS.
+            """
+            pl_df = pd_to_pl(
+                df.rename(
+                    columns={"data": START_DATE_COL, "serie": SCENARIO_COL}
+                )
+            )
+            pl_df = pl_df.sort(
+                [START_DATE_COL, SCENARIO_COL, BLOCK_COL], maintain_order=True
+            )
+
+            num_stages = pl_df[START_DATE_COL].n_unique()
+            blocks = pl_df[BLOCK_COL].unique(maintain_order=True).to_list()
+            num_blocks = len(blocks)
+
+            if deck_context is not None:
+                num_scenarios = deck_context.num_scenarios
+                end_dates = deck_context.ending_dates[:num_stages]
+                df_block_lengths = deck_context.block_lengths
+            else:
+                num_scenarios = Deck.num_scenarios_final_simulation(uow)
+                end_dates = Deck.internal_stages_ending_dates_final_simulation(
+                    uow
+                )[:num_stages]
+                df_block_lengths = Deck.block_lengths(uow)
+
+            # Replace scenario info: tile repeat(arange(1..num_scenarios), num_blocks) across num_stages
+            scenario_series = pl.Series(
+                SCENARIO_COL,
+                np.tile(
+                    np.repeat(np.arange(1, num_scenarios + 1), num_blocks),
+                    num_stages,
+                ),
+            )
+            pl_df = pl_df.with_columns(scenario_series)
+
+            # Add stage info: repeat each stage num_scenarios*num_blocks times
+            stage_series = pl.Series(
+                STAGE_COL,
+                np.repeat(
+                    np.arange(1, num_stages + 1), num_scenarios * num_blocks
+                ),
+            )
+            end_date_series = pl.Series(
+                END_DATE_COL,
+                np.repeat(
+                    np.array(end_dates, dtype="datetime64[ms]"),
+                    num_scenarios * num_blocks,
+                ),
+            )
+            pl_df = pl_df.with_columns([stage_series, end_date_series])
+
+            # Add block duration: join block_lengths on (START_DATE_COL, BLOCK_COL)
+            bl_pl = (
+                pd_to_pl(df_block_lengths)
+                .filter(pl.col(BLOCK_COL).is_in(blocks))
+                .rename({VALUE_COL: BLOCK_DURATION_COL})
+            )
+            pl_df = pl_df.join(
+                bl_pl, on=[START_DATE_COL, BLOCK_COL], how="left"
+            )
+            pl_df = pl_df.with_columns(
+                (pl.col(BLOCK_DURATION_COL) * STAGE_DURATION_HOURS).alias(
+                    BLOCK_DURATION_COL
+                )
+            )
+
+            result = pl_df.select(OPERATION_SYNTHESIS_COMMON_COLUMNS)
+            return result
+
         if df is None:
             return None
-        return _add_temporal_info(df, uow, deck_context)
+        try:
+            return _add_temporal_info_polars(df, uow, deck_context)
+        except Exception as exc:
+            OperationSynthetizer._log(
+                f"_resolve_temporal_resolution: Polars path failed ({exc}), "
+                "falling back to pandas",
+                WARNING,
+            )
+            # Use pl.from_pandas directly so that tests patching pd_to_pl
+            # can still verify the fallback path works independently.
+            return pl.from_pandas(_add_temporal_info(df, uow, deck_context))
 
     @classmethod
     def __resolve_SIN(
@@ -478,7 +580,7 @@ class OperationSynthetizer:
         sbm_index: int,
         sbm_name: str,
         deck_context: Optional[DeckContext] = None,
-    ) -> Optional[pd.DataFrame]:
+    ) -> Optional[pl.DataFrame]:
         """
         Obtem os dados da síntese de operação para um submercado
         a partir do arquivo de saída do NWLISTOP.
@@ -560,7 +662,7 @@ class OperationSynthetizer:
         sbm2_index: int,
         sbm2_name: str,
         deck_context: Optional[DeckContext] = None,
-    ) -> Optional[pd.DataFrame]:
+    ) -> Optional[pl.DataFrame]:
         """
         Obtém os dados da síntese de operação para um par de submercados
         a partir do arquivo de saída do NWLISTOP.
@@ -651,7 +753,7 @@ class OperationSynthetizer:
         ree_index: int,
         ree_name: str,
         deck_context: Optional[DeckContext] = None,
-    ) -> Optional[pd.DataFrame]:
+    ) -> Optional[pl.DataFrame]:
         """
         Obtem os dados da síntese de operação para um REE
         a partir do arquivo de saída do NWLISTOP.
@@ -730,43 +832,101 @@ class OperationSynthetizer:
         uhe_index: int,
         uhe_name: str,
         deck_context: Optional[DeckContext] = None,
-    ) -> Optional[pd.DataFrame]:
+    ) -> Optional[pl.DataFrame]:
         """
         Obtem os dados da síntese de operação para uma UHE
         a partir do arquivo de saída do NWLISTOP.
         """
 
         def _calc_block_0_weighted_mean(
-            df: pd.DataFrame, uow: AbstractUnitOfWork
-        ) -> pd.DataFrame:
+            df: pl.DataFrame, uow: AbstractUnitOfWork
+        ) -> pl.DataFrame:
             """
             Calcula um valor médio ponderado para o estágio a partir
             de valores fornecidos por patamar de alguma variável operativa
-            de uma UHE.
+            de uma UHE. Accepts and returns pl.DataFrame.
             """
-            if deck_context is not None:
-                n_blocks = deck_context.num_blocks
-            else:
-                n_blocks = Deck.num_blocks(uow)
-            unique_cols_for_block_0 = [HYDRO_CODE_COL, STAGE_COL, SCENARIO_COL]
-            df_block_0 = df.copy()
-            df_block_0[VALUE_COL] = (
-                df_block_0[VALUE_COL] * df_block_0[BLOCK_DURATION_COL]
-            ) / STAGE_DURATION_HOURS
-            df_base = df.iloc[::n_blocks].reset_index(drop=True).copy()
-            df_base[BLOCK_COL] = 0
-            df_base[BLOCK_DURATION_COL] = STAGE_DURATION_HOURS
-            arr = df_block_0[VALUE_COL].to_numpy()
-            n_linhas = arr.shape[0]
-            n_elementos_distintos = n_linhas // n_blocks
-            df_base[VALUE_COL] = arr.reshape((n_elementos_distintos, -1)).sum(
-                axis=1
-            )
-            df_block_0 = pd.concat([df_base, df], ignore_index=True, copy=True)
-            df_block_0 = df_block_0.sort_values(
-                unique_cols_for_block_0 + [BLOCK_COL]
-            )
-            return df_block_0
+            try:
+                unique_cols_for_block_0 = [
+                    HYDRO_CODE_COL,
+                    STAGE_COL,
+                    SCENARIO_COL,
+                ]
+                # Compute weighted value: value * block_duration / STAGE_DURATION_HOURS
+                weighted = df.with_columns(
+                    (
+                        pl.col(VALUE_COL)
+                        * pl.col(BLOCK_DURATION_COL)
+                        / STAGE_DURATION_HOURS
+                    ).alias(VALUE_COL)
+                )
+                # Sum weighted values per (hydro, stage, scenario) -> block-0 row
+                block_0 = weighted.group_by(
+                    unique_cols_for_block_0, maintain_order=True
+                ).agg(pl.col(VALUE_COL).sum())
+                # Take one representative row per group to carry the other columns,
+                # then overwrite BLOCK_COL and BLOCK_DURATION_COL
+                non_group_cols = [
+                    c
+                    for c in df.columns
+                    if c not in unique_cols_for_block_0
+                    and c not in (VALUE_COL, BLOCK_COL, BLOCK_DURATION_COL)
+                ]
+                representative = df.group_by(
+                    unique_cols_for_block_0, maintain_order=True
+                ).agg([pl.first(c) for c in non_group_cols])
+                block_col_dtype = df[BLOCK_COL].dtype
+                block_0 = block_0.join(
+                    representative, on=unique_cols_for_block_0, how="left"
+                ).with_columns(
+                    [
+                        pl.lit(0).cast(block_col_dtype).alias(BLOCK_COL),
+                        pl.lit(float(STAGE_DURATION_HOURS)).alias(
+                            BLOCK_DURATION_COL
+                        ),
+                    ]
+                )
+                # Reorder columns to match original schema, then concatenate
+                block_0 = block_0.select(df.columns)
+                return pl.concat([block_0, df]).sort(
+                    unique_cols_for_block_0 + [BLOCK_COL], maintain_order=True
+                )
+            except Exception as exc:
+                OperationSynthetizer._log(
+                    f"_calc_block_0_weighted_mean: Polars path failed ({exc}), "
+                    "falling back to pandas",
+                    WARNING,
+                )
+                pd_df = pl_to_pd(df)
+                if deck_context is not None:
+                    n_blocks = deck_context.num_blocks
+                else:
+                    n_blocks = Deck.num_blocks(uow)
+                unique_cols_for_block_0 = [
+                    HYDRO_CODE_COL,
+                    STAGE_COL,
+                    SCENARIO_COL,
+                ]
+                df_block_0 = pd_df.copy()
+                df_block_0[VALUE_COL] = (
+                    df_block_0[VALUE_COL] * df_block_0[BLOCK_DURATION_COL]
+                ) / STAGE_DURATION_HOURS
+                df_base = pd_df.iloc[::n_blocks].reset_index(drop=True).copy()
+                df_base[BLOCK_COL] = 0
+                df_base[BLOCK_DURATION_COL] = STAGE_DURATION_HOURS
+                arr = df_block_0[VALUE_COL].to_numpy()
+                n_linhas = arr.shape[0]
+                n_elementos_distintos = n_linhas // n_blocks
+                df_base[VALUE_COL] = arr.reshape(
+                    (n_elementos_distintos, -1)
+                ).sum(axis=1)
+                df_block_0 = pd.concat(
+                    [df_base, pd_df], ignore_index=True, copy=True
+                )
+                df_block_0 = df_block_0.sort_values(
+                    unique_cols_for_block_0 + [BLOCK_COL]
+                )
+                return pd_to_pl(df_block_0)
 
         logger_name = f"{synthesis.variable.value}_{uhe_name}"
         logger = Log.configure_process_logger(uow.queue, logger_name, uhe_index)
@@ -1550,7 +1710,7 @@ class OperationSynthetizer:
         synthesis: OperationSynthesis,
         sbm_index: int,
         sbm_name: str,
-    ) -> Optional[pd.DataFrame]:
+    ) -> Optional[pl.DataFrame]:
         """
         Obtem os dados da síntese de operação para um submercado
         a partir do arquivo de saída do NWLISTOP, especificamente
@@ -2001,8 +2161,14 @@ class OperationSynthetizer:
                 }
                 dfs = {ir: r.get(timeout=3600) for ir, r in async_res.items()}
 
+        # _post_resolve_GTER_UTE_entity returns pd.DataFrame (out of scope for this ticket).
+        # Convert to pl.DataFrame at the boundary before passing to _post_resolve.
+        dfs_pl = {
+            k: pd_to_pl(v) if isinstance(v, pd.DataFrame) else v
+            for k, v in dfs.items()
+        }
         df = cls._post_resolve(
-            dfs,
+            dfs_pl,
             synthesis,
             uow,
             early_hooks=[_sort_thermals],
@@ -2132,6 +2298,41 @@ class OperationSynthetizer:
         df.loc[:, STAGE_COL] -= starting_month - 1
         df = df.loc[df[STAGE_COL] > 0]
         return df
+
+    @staticmethod
+    def _resolve_starting_stage_polars(
+        df: pl.DataFrame,
+        deck_context: Optional[DeckContext],
+        uow: AbstractUnitOfWork,
+    ) -> pl.DataFrame:
+        """
+        Polars variant of `_resolve_starting_stage`. Subtracts (starting_month - 1)
+        from STAGE_COL and filters rows where STAGE_COL > 0.
+
+        Falls back to the pandas implementation on error.
+        """
+        try:
+            if deck_context is not None:
+                starting_month = deck_context.study_period_starting_month
+            else:
+                starting_month = Deck.study_period_starting_month(uow)
+            return df.with_columns(
+                (pl.col(STAGE_COL) - (starting_month - 1)).alias(STAGE_COL)
+            ).filter(pl.col(STAGE_COL) > 0)
+        except Exception as exc:
+            OperationSynthetizer._log(
+                f"_resolve_starting_stage_polars: Polars path failed ({exc}), "
+                "falling back to pandas",
+                WARNING,
+            )
+            pd_df = pl_to_pd(df)
+            if deck_context is not None:
+                starting_month = deck_context.study_period_starting_month
+            else:
+                starting_month = Deck.study_period_starting_month(uow)
+            pd_df.loc[:, STAGE_COL] -= starting_month - 1
+            pd_df = pd_df.loc[pd_df[STAGE_COL] > 0]
+            return pd_to_pl(pd_df)
 
     @classmethod
     def _initial_stored_energy_df(
@@ -2377,7 +2578,12 @@ class OperationSynthetizer:
         else:
             df, is_stub = pd.DataFrame(), False
         if is_stub:
-            df = cls._post_resolve({"": df}, s, uow)
+            # Stub functions return pd.DataFrame (from cache). Convert at the
+            # boundary so _post_resolve receives pl.DataFrame as required.
+            df_pl: Optional[pl.DataFrame] = (
+                pd_to_pl(df) if isinstance(df, pd.DataFrame) else df
+            )
+            df = cls._post_resolve({"": df_pl}, s, uow)
             df = cls._resolve_bounds(s, df, uow)
         return df, is_stub
 
@@ -2414,17 +2620,27 @@ class OperationSynthetizer:
         """
         Realiza o cálculo dos limites superiores e inferiores para
         a síntese caso esta seja uma variável limitada.
+
+        Converts the incoming ``pd.DataFrame`` to ``pl.DataFrame`` at the
+        boundary so that ``resolve_bounds`` can operate in Polars and
+        converts the result back to ``pd.DataFrame`` for downstream
+        consumers. The conversion pair lives here rather than inside
+        ``resolve_bounds`` so that callers which already hold a
+        ``pl.DataFrame`` (e.g. ``_resolve_stub``) can pass through without
+        a double conversion.
         """
         with time_and_log(
             message_root="Tempo para calculo dos limites",
             logger=cls.logger,
         ):
-            df = OperationVariableBounds.resolve_bounds(
+            df_pl = pd_to_pl(df)
+            df_pl = OperationVariableBounds.resolve_bounds(
                 s,
-                df,
+                df_pl,
                 cls._get_ordered_entities(s),
                 uow,
             )
+            df = pl_to_pd(df_pl)
 
         return df
 
@@ -2517,13 +2733,11 @@ class OperationSynthetizer:
             message_root="Tempo para preparacao para exportacao",
             logger=cls.logger,
         ):
-            scenarios_df = df.astype({SCENARIO_COL: int})
-            scenarios_df = pl_to_pd(
-                pd_to_pl(scenarios_df).sort(
-                    s.spatial_resolution.sorting_synthesis_df_columns,
-                    maintain_order=True,
-                )
-            ).reset_index(drop=True)
+            scenarios_pl = pd_to_pl(df.astype({SCENARIO_COL: int})).sort(
+                s.spatial_resolution.sorting_synthesis_df_columns,
+                maintain_order=True,
+            )
+            scenarios_df = pl_to_pd(scenarios_pl).reset_index(drop=True)
             stats_df = calc_statistics(scenarios_df)
             cls._add_synthesis_stats(s, stats_df)
             cls.__store_in_cache_if_needed(s, scenarios_df)
@@ -2531,8 +2745,10 @@ class OperationSynthetizer:
             message_root="Tempo para exportacao dos dados", logger=cls.logger
         ):
             with uow:
-                uow.export.synthetize_df(
-                    scenarios_df[s.spatial_resolution.all_synthesis_df_columns],
+                uow.export.synthetize_pl(
+                    scenarios_pl.select(
+                        s.spatial_resolution.all_synthesis_df_columns
+                    ),
                     str(s),
                 )
 
@@ -2567,7 +2783,8 @@ class OperationSynthetizer:
                     if existing_df is not None:
                         df = pd.concat([existing_df, df], ignore_index=True)
                         df = df.drop_duplicates()
-                    uow.export.synthetize_df(df, stats_filename)
+                    df_pl = pd_to_pl(df)
+                    uow.export.synthetize_pl(df_pl, stats_filename)
 
     @classmethod
     def _preprocess_synthesis_variables(

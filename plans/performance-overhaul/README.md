@@ -18,9 +18,9 @@ Comprehensive performance and architecture overhaul for sintetizador-newave, tar
 
 | Epic | Name                                    | Tickets      | Status              |
 | ---- | --------------------------------------- | ------------ | ------------------- |
-| 01   | Foundation Fixes                        | 3 (detailed) | Ready for execution |
-| 02   | Statistics & Data Pipeline Optimization | 4 (detailed) | Ready for execution |
-| 03   | Full Hot-Path Polars Migration          | 4 (outline)  | Requires refinement |
+| 01   | Foundation Fixes                        | 3 (detailed) | Completed           |
+| 02   | Statistics & Data Pipeline Optimization | 4 (detailed) | Completed           |
+| 03   | Full Hot-Path Polars Migration          | 4 (refined)  | Completed           |
 | 04   | Parallelism Overhaul                    | 3 (outline)  | Requires refinement |
 | 05   | Code Decomposition & Cleanup            | 4 (outline)  | Requires refinement |
 
@@ -35,10 +35,10 @@ Comprehensive performance and architecture overhaul for sintetizador-newave, tar
 | ticket-005 | Rewrite calc_statistics using Polars                   | epic-02 | completed | Detailed     | 0.97      | 0.86    | ACCEPTABLE |
 | ticket-006 | Optimize DataFrame concatenation with Polars           | epic-02 | completed | Detailed     | 0.96      | 1.00    | EXCELLENT  |
 | ticket-007 | Eliminate unnecessary DataFrame copies in cache        | epic-02 | completed | Detailed     | 1.00      | 0.90    | EXCELLENT  |
-| ticket-008 | Migrate temporal resolution to Polars                  | epic-03 | pending   | Outline      | --        | --      | --         |
-| ticket-009 | Migrate entity post-processing pipeline to Polars      | epic-03 | pending   | Outline      | --        | --      | --         |
-| ticket-010 | Migrate bounds computation to Polars                   | epic-03 | pending   | Outline      | --        | --      | --         |
-| ticket-011 | Migrate Parquet export to Polars native writer         | epic-03 | pending   | Outline      | --        | --      | --         |
+| ticket-008 | Migrate temporal resolution to Polars                  | epic-03 | completed | Refined      | 1.00      | 1.00    | EXCELLENT  |
+| ticket-009 | Migrate entity post-processing pipeline to Polars      | epic-03 | completed | Refined      | 1.00      | 0.88    | ACCEPTABLE |
+| ticket-010 | Migrate bounds computation to Polars                   | epic-03 | completed | Refined      | 1.00      | 0.90    | EXCELLENT  |
+| ticket-011 | Migrate Parquet export to Polars native writer         | epic-03 | completed | Refined      | 1.00      | 1.00    | EXCELLENT  |
 | ticket-012 | Replace multiprocessing.Pool with concurrent.futures   | epic-04 | pending   | Outline      | --        | --      | --         |
 | ticket-013 | Implement variable-group parallelism                   | epic-04 | pending   | Outline      | --        | --      | --         |
 | ticket-014 | Evaluate thread-based I/O parallelism                  | epic-04 | pending   | Outline      | --        | --      | --         |
@@ -55,7 +55,7 @@ ticket-001 (chdir) ──> ticket-002 (deck context)
 ticket-003 (stats) ──> ticket-004 (polars dep) ──> ticket-005 (polars stats)  ──> ticket-007 (copies)
                                     |               ticket-006 (polars concat) ──/
                                     v
-                          ticket-008 ... ticket-011 (Epic 03: full Polars)
+                          ticket-008 (temporal) ──> ticket-009 (entity pipeline) ──> ticket-010 (bounds) ──> ticket-011 (export)
                                     v
                           ticket-012 ... ticket-014 (Epic 04: parallelism)
                                     v
@@ -73,5 +73,9 @@ ticket-003 (stats) ──> ticket-004 (polars dep) ──> ticket-005 (polars st
 | ticket-005 | 0.97      | 1.00      | 0.90        | 1.00     | 1.00        | 1.00      |
 | ticket-006 | 0.96      | 1.00      | 0.88        | 1.00     | 1.00        | 1.00      |
 | ticket-007 | 1.00      | 1.00      | 1.00        | 1.00     | 1.00        | 1.00      |
+| ticket-008 | 1.00      | 1.00      | 1.00        | 1.00     | 1.00        | 1.00      |
+| ticket-009 | 1.00      | 1.00      | 1.00        | 1.00     | 1.00        | 1.00      |
+| ticket-010 | 1.00      | 1.00      | 1.00        | 1.00     | 1.00        | 1.00      |
+| ticket-011 | 1.00      | 1.00      | 1.00        | 1.00     | 1.00        | 1.00      |
 
 Dimensions below 0.85: none
