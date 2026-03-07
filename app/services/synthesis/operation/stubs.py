@@ -55,8 +55,6 @@ if TYPE_CHECKING:
         OperationSynthetizer,
     )
 
-# Re-export resolve_SBM_entity_MER_MERL so orchestrator can reference it
-# without importing from _stubs_market directly.
 __all__ = [
     "calc_accumulated_productivity",
     "resolve_SBM_entity_MER_MERL",
@@ -65,17 +63,11 @@ __all__ = [
 ]
 
 
-# ---------------------------------------------------------------------------
-# Simple stub functions (cache arithmetic)
-# ---------------------------------------------------------------------------
-
-
 def stub_QDEF(
     cls: "type[OperationSynthetizer]",
     synthesis: OperationSynthesis,
     uow: AbstractUnitOfWork,
 ) -> pd.DataFrame:
-    """Discharge flow = turbined + spilled."""
     return two_cache_op(
         cls, synthesis, Variable.VAZAO_TURBINADA, Variable.VAZAO_VERTIDA
     )
@@ -86,7 +78,6 @@ def stub_VDEF(
     synthesis: OperationSynthesis,
     uow: AbstractUnitOfWork,
 ) -> pd.DataFrame:
-    """Discharge volume = turbined + spilled."""
     return two_cache_op(
         cls, synthesis, Variable.VOLUME_TURBINADO, Variable.VOLUME_VERTIDO
     )
@@ -97,7 +88,6 @@ def stub_VEVAP(
     synthesis: OperationSynthesis,
     uow: AbstractUnitOfWork,
 ) -> pd.DataFrame:
-    """Evaporation violation = positive + negative."""
     return two_cache_op(
         cls,
         synthesis,
@@ -111,7 +101,6 @@ def stub_CTO(
     synthesis: OperationSynthesis,
     uow: AbstractUnitOfWork,
 ) -> pd.DataFrame:
-    """Total cost = operation + future cost."""
     return two_cache_op(
         cls, synthesis, Variable.CUSTO_OPERACAO, Variable.CUSTO_FUTURO
     )
@@ -122,7 +111,6 @@ def stub_EVER(
     synthesis: OperationSynthesis,
     uow: AbstractUnitOfWork,
 ) -> pd.DataFrame:
-    """Spilled energy = reservoir + run-of-river."""
     return two_cache_op(
         cls,
         synthesis,
@@ -136,7 +124,6 @@ def stub_EVMIN(
     synthesis: OperationSynthesis,
     uow: AbstractUnitOfWork,
 ) -> pd.DataFrame:
-    """Min outflow energy = target - violation."""
     return two_cache_op(
         cls,
         synthesis,
@@ -146,17 +133,11 @@ def stub_EVMIN(
     )
 
 
-# ---------------------------------------------------------------------------
-# Variable-mapping stubs
-# ---------------------------------------------------------------------------
-
-
 def hydro_resolution_variable_map(
     cls: "type[OperationSynthetizer]",
     synthesis: OperationSynthesis,
     uow: AbstractUnitOfWork,
 ) -> pd.DataFrame:
-    """Map synthesis to UHE aggregation."""
     return cls._get_from_cache(
         OperationSynthesis(
             variable=synthesis.variable,
@@ -170,7 +151,6 @@ def flow_volume_hydro_variable_map(
     synthesis: OperationSynthesis,
     uow: AbstractUnitOfWork,
 ) -> pd.DataFrame:
-    """Map flow variable to volume equivalent at UHE level."""
     variable_map = {
         Variable.VAZAO_AFLUENTE: Variable.VOLUME_AFLUENTE,
         Variable.VAZAO_INCREMENTAL: Variable.VOLUME_INCREMENTAL,
@@ -193,7 +173,6 @@ def absolute_percent_volume_variable_map(
     synthesis: OperationSynthesis,
     uow: AbstractUnitOfWork,
 ) -> pd.DataFrame:
-    """Map percent volume to absolute volume at UHE level."""
     variable_map = {
         Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL: Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
         Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL: Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
@@ -211,7 +190,6 @@ def convert_volume_to_flow(
     synthesis: OperationSynthesis,
     uow: AbstractUnitOfWork,
 ) -> pd.DataFrame:
-    """Convert synthesis from volume to flow."""
     df = cls._get_from_cache(
         OperationSynthesis(
             Variable.VOLUME_RETIRADO, synthesis.spatial_resolution
@@ -232,7 +210,6 @@ def convert_flow_to_volume(
     synthesis: OperationSynthesis,
     uow: AbstractUnitOfWork,
 ) -> pd.DataFrame:
-    """Convert synthesis from flow to volume."""
     variable_map = {
         Variable.VOLUME_AFLUENTE: Variable.VAZAO_AFLUENTE,
         Variable.VOLUME_INCREMENTAL: Variable.VAZAO_INCREMENTAL,
@@ -254,17 +231,11 @@ def convert_flow_to_volume(
     )
 
 
-# ---------------------------------------------------------------------------
-# Initial stored energy / volume stubs
-# ---------------------------------------------------------------------------
-
-
 def stub_resolve_initial_stored_energy(
     cls: "type[OperationSynthetizer]",
     synthesis: OperationSynthesis,
     uow: AbstractUnitOfWork,
 ) -> pd.DataFrame:
-    """Resolve initial stored energy synthesis for REE/SBM/SIN."""
     earmi = Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL
     earmf = Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL
     earpi = Variable.ENERGIA_ARMAZENADA_PERCENTUAL_INICIAL
@@ -302,7 +273,6 @@ def stub_resolve_initial_stored_volumes(
     synthesis: OperationSynthesis,
     uow: AbstractUnitOfWork,
 ) -> pd.DataFrame:
-    """Resolve initial stored volume synthesis for UHE."""
     varmi = Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL
     varmf = Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL
     varpi = Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL
@@ -321,7 +291,9 @@ def stub_resolve_initial_stored_volumes(
         "valor_hm3" if synthesis.variable == varmi else "valor_percentual"
     )
     if synthesis.variable == varmi:
-        hidr = Deck.hidr(uow)
+        hidr = (
+            Deck.hidr(uow).to_pandas().set_index("codigo_usina")
+        )  # SHIM: remove after polars migration of this module
         initial_data[value_column] += hidr.loc[
             initial_data[HYDRO_CODE_COL].to_numpy(), "volume_minimo"
         ].to_numpy()
@@ -335,17 +307,11 @@ def stub_resolve_initial_stored_volumes(
     return fill_initial_storage_df(final_df, indices, init_values, entities)
 
 
-# ---------------------------------------------------------------------------
-# EARM UHE stub
-# ---------------------------------------------------------------------------
-
-
 def stub_EARM_UHE(
     cls: "type[OperationSynthetizer]",
     synthesis: OperationSynthesis,
     uow: AbstractUnitOfWork,
 ) -> pd.DataFrame:
-    """Compute stored energy per UHE from volumes and drops."""
     with time_and_log(
         message_root="Tempo para conversao do VARM em EARM", logger=cls.logger
     ):
@@ -364,7 +330,9 @@ def stub_EARM_UHE(
         vol_entities = cls._get_ordered_entities(vol_synthesis)
         net_df = cls._get_from_cache(net_drop_synthesis).copy()
         net_entities = cls._get_ordered_entities(net_drop_synthesis)
-        hidr = Deck.hidr(uow)
+        hidr = (
+            Deck.hidr(uow).to_pandas().set_index("codigo_usina")
+        )  # SHIM: remove after polars migration of this module
         hydro_codes = net_entities[HYDRO_CODE_COL]
         n_entries = net_df.loc[net_df[HYDRO_CODE_COL] == hydro_codes[0]].shape[
             0
@@ -395,15 +363,9 @@ def stub_EARM_UHE(
     return vol_df
 
 
-# ---------------------------------------------------------------------------
-# Stub dispatcher
-# ---------------------------------------------------------------------------
-
-
 def stub_mappings(
     cls: "type[OperationSynthetizer]", s: OperationSynthesis
 ) -> Optional[Callable]:
-    """Get stub resolver for non-standard synthesis variables."""
     p = functools.partial
     v, sr = s.variable, s.spatial_resolution
     uhe = SpatialResolution.USINA_HIDROELETRICA
@@ -448,7 +410,6 @@ def resolve_stub(
     s: OperationSynthesis,
     uow: AbstractUnitOfWork,
 ) -> Tuple[pd.DataFrame, bool]:
-    """Resolve synthesis via stub if not from NWLISTOP."""
     f = stub_mappings(cls, s)
     if f:
         df, is_stub = f(s, uow), True

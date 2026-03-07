@@ -3,6 +3,7 @@ from logging import INFO, Logger
 from typing import Any, Dict, List, Optional, TypeVar
 
 import pandas as pd
+import polars as pl
 from inewave.newave import (
     Curva,
     Dger,
@@ -25,8 +26,6 @@ from app.services.unitofwork import AbstractUnitOfWork
 
 # fmt: off
 class Deck:
-    """Thin facade over deck domain modules."""
-
     T = TypeVar("T")
     logger: Optional[Logger] = None
     DECK_DATA_CACHING: Dict[str, Any] = {}
@@ -40,7 +39,6 @@ class Deck:
     def _c(cls) -> Dict[str, Any]:
         return cls.DECK_DATA_CACHING
 
-    # Accessors
     @classmethod
     def dger(cls, uow: AbstractUnitOfWork) -> Dger:
         return accessors.dger(cls, cls._c(), uow)
@@ -54,58 +52,58 @@ class Deck:
     def modif(cls, uow: AbstractUnitOfWork) -> Modif:
         return accessors.modif(cls, cls._c(), uow)
     @classmethod
-    def confhd(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def confhd(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         return accessors.confhd(cls, cls._c(), uow)
     @classmethod
-    def clast(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def clast(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         return accessors.clast(cls, cls._c(), uow)
     @classmethod
-    def term(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def term(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         return accessors.term(cls, cls._c(), uow)
     @classmethod
-    def manutt(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def manutt(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         return accessors.manutt(cls, cls._c(), uow)
     @classmethod
-    def expt(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def expt(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         return accessors.expt(cls, cls._c(), uow)
     @classmethod
-    def hidr(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def hidr(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         return accessors.hidr(cls, cls._c(), uow)
     @classmethod
     def newavetim(cls, uow: AbstractUnitOfWork) -> Newavetim:
         return accessors.newavetim(cls, cls._c(), uow)
     @classmethod
-    def engnat(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def engnat(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         return accessors.engnat(cls, cls._c(), uow)
     @classmethod
-    def energiaf(cls, iteracao: int, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def energiaf(cls, iteracao: int, uow: AbstractUnitOfWork) -> pl.DataFrame:
         return accessors.energiaf(cls, uow, iteracao)
     @classmethod
-    def enavazf(cls, iteracao: int, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def enavazf(cls, iteracao: int, uow: AbstractUnitOfWork) -> pl.DataFrame:
         return accessors.enavazf(cls, uow, iteracao)
     @classmethod
-    def vazaof(cls, iteracao: int, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def vazaof(cls, iteracao: int, uow: AbstractUnitOfWork) -> pl.DataFrame:
         return accessors.vazaof(cls, uow, iteracao)
     @classmethod
-    def energiab(cls, iteracao: int, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def energiab(cls, iteracao: int, uow: AbstractUnitOfWork) -> pl.DataFrame:
         return accessors.energiab(cls, uow, iteracao)
     @classmethod
-    def enavazb(cls, iteracao: int, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def enavazb(cls, iteracao: int, uow: AbstractUnitOfWork) -> pl.DataFrame:
         return accessors.enavazb(cls, uow, iteracao)
     @classmethod
-    def vazaob(cls, iteracao: int, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def vazaob(cls, iteracao: int, uow: AbstractUnitOfWork) -> pl.DataFrame:
         return accessors.vazaob(cls, uow, iteracao)
     @classmethod
-    def energias(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def energias(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         return accessors.energias(cls, uow)
     @classmethod
-    def enavazs(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def enavazs(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         return accessors.enavazs(cls, uow)
     @classmethod
-    def vazaos(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def vazaos(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         return accessors.vazaos(cls, uow)
     @classmethod
-    def vazoes(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def vazoes(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         return accessors.vazoes(cls, cls._c(), uow)
     @classmethod
     def study_title(cls, uow: AbstractUnitOfWork) -> str:
@@ -114,7 +112,6 @@ class Deck:
     def version(cls, uow: AbstractUnitOfWork) -> str:
         return accessors.version(cls, cls._c(), uow)
 
-    # Temporal
     @classmethod
     def pre_study_period_starting_month(cls, uow: AbstractUnitOfWork) -> int:
         return _tmp.pre_study_period_starting_month(cls, cls._c(), uow)
@@ -197,7 +194,6 @@ class Deck:
     def configurations(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         return _tmp.configurations(cls, cls._c(), uow)
 
-    # Entities
     @classmethod
     def submarkets(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         return entities.submarkets(cls, cls._c(), uow)
@@ -235,7 +231,6 @@ class Deck:
     def non_simulated_generation(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         return entities.non_simulated_generation(cls, cls._c(), uow)
 
-    # Misc
     @classmethod
     def costs(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         return _ms.costs(cls, cls._c(), uow)
@@ -281,7 +276,6 @@ class Deck:
     def eer_stored_energy_lower_bounds(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         return _e.eer_stored_energy_lower_bounds(cls, cls._c(), uow)
 
-    # Hydro
     @classmethod
     def hydro_volume_bounds(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         return _hy.hydro_volume_bounds(cls, cls._c(), uow)
@@ -319,7 +313,6 @@ class Deck:
     def hydro_drops_in_stages(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         return _hy.hydro_drops_in_stages(cls, cls._c(), uow)
 
-    # Thermal
     @classmethod
     def _thermal_generation_bounds_term_manutt_expt(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         return _th._thermal_generation_bounds_term_manutt_expt(cls, cls._c(), uow)
@@ -333,7 +326,6 @@ class Deck:
     def thermal_costs(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         return _th.thermal_costs(cls, cls._c(), uow)
 
-    # Exchange
     @classmethod
     def exchange_bounds(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         return _ex.exchange_bounds(cls, cls._c(), uow)
@@ -341,7 +333,6 @@ class Deck:
     def exchange_block_limits(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         return _ex.exchange_block_limits(cls, cls._c(), uow)
 
-    # Storage
     @classmethod
     def _initial_stored_energy_from_pmo(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         return _st._initial_stored_energy_from_pmo(cls, cls._c(), uow)
@@ -361,7 +352,6 @@ class Deck:
     def initial_stored_volume(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         return _st.initial_stored_volume(cls, cls._c(), uow)
 
-    # Policy
     @classmethod
     def common_policy_df(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         return _pol.common_policy_df(cls, cls._c(), uow)

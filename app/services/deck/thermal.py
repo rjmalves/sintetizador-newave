@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import numpy as np
 import pandas as pd
@@ -38,7 +38,9 @@ def _apply_thermal_bounds_maintenance_and_changes(
     deck_cls, cache: Dict[str, Any], df: pd.DataFrame, uow: AbstractUnitOfWork
 ) -> pd.DataFrame:
     def _apply_thermal_changes(df: pd.DataFrame) -> pd.DataFrame:
-        expt = accessors.expt(deck_cls, cache, uow)
+        expt = accessors.expt(
+            deck_cls, cache, uow
+        ).to_pandas()  # SHIM: remove after polars migration of this module
         stage_dates = temporal.stages_starting_dates_final_simulation(
             deck_cls, cache, uow
         )
@@ -63,7 +65,9 @@ def _apply_thermal_bounds_maintenance_and_changes(
         return df
 
     def _apply_maintenance(df: pd.DataFrame) -> pd.DataFrame:
-        manutt = accessors.manutt(deck_cls, cache, uow)
+        manutt = accessors.manutt(
+            deck_cls, cache, uow
+        ).to_pandas()  # SHIM: remove after polars migration of this module
         thermal_codes = manutt[THERMAL_CODE_COL].unique()
         maintenance_end_date = temporal.thermal_maintenance_end_date(
             deck_cls, cache, uow
@@ -155,7 +159,9 @@ def _thermal_generation_bounds_term_manutt_expt(
         return df
 
     def _enforce_null_lower_bounds_on_changes(df: pd.DataFrame) -> pd.DataFrame:
-        expt = accessors.expt(deck_cls, cache, uow)
+        expt = accessors.expt(
+            deck_cls, cache, uow
+        ).to_pandas()  # SHIM: remove after polars migration of this module
         thermals_to_nullify = expt.loc[
             expt["tipo"] == "GTMIN", "codigo_usina"
         ].unique()
@@ -171,7 +177,9 @@ def _thermal_generation_bounds_term_manutt_expt(
         return df
 
     def _enforce_null_upper_bounds_on_changes(df: pd.DataFrame) -> pd.DataFrame:
-        expt = accessors.expt(deck_cls, cache, uow)
+        expt = accessors.expt(
+            deck_cls, cache, uow
+        ).to_pandas()  # SHIM: remove after polars migration of this module
         thermals_to_nullify = expt.loc[
             expt["tipo"] == "POTEF", "codigo_usina"
         ].unique()
@@ -197,7 +205,9 @@ def _thermal_generation_bounds_term_manutt_expt(
         )
         return df
 
-    term = accessors.term(deck_cls, cache, uow)
+    term = accessors.term(
+        deck_cls, cache, uow
+    ).to_pandas()  # SHIM: remove after polars migration of this module
     bounds_df = (
         term.drop_duplicates(subset=["codigo_usina", "nome_usina"])
         .copy()
@@ -224,18 +234,17 @@ def _thermal_generation_bounds_term_manutt_expt(
 
 def _thermal_generation_bounds_pmo(
     deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
-) -> pd.DataFrame | None:
+) -> Optional[pd.DataFrame]:
     pmo = accessors.pmo(deck_cls, cache, uow)
     bounds_df = pmo.geracao_minima_usinas_termicas
-    if bounds_df is None:
-        return None
-    if isinstance(bounds_df, pd.DataFrame):
-        bounds_df = bounds_df.rename(
-            columns={"data": START_DATE_COL, "valor_MWmed": LOWER_BOUND_COL}
-        )
-        upper_bounds = pmo.geracao_maxima_usinas_termicas
-        if isinstance(upper_bounds, pd.DataFrame):
-            bounds_df[UPPER_BOUND_COL] = upper_bounds["valor_MWmed"].to_numpy()
+    if bounds_df is None or not isinstance(bounds_df, pd.DataFrame):
+        return bounds_df
+    bounds_df = bounds_df.rename(
+        columns={"data": START_DATE_COL, "valor_MWmed": LOWER_BOUND_COL}
+    )
+    upper_bounds = pmo.geracao_maxima_usinas_termicas
+    if isinstance(upper_bounds, pd.DataFrame):
+        bounds_df[UPPER_BOUND_COL] = upper_bounds["valor_MWmed"].to_numpy()
     start_date = temporal.stages_starting_dates_final_simulation(
         deck_cls, cache, uow
     )[0]
@@ -280,7 +289,9 @@ def thermal_costs(
     deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pd.DataFrame:
     def _build_base_costs_df() -> pd.DataFrame:
-        clast_df = accessors.clast(deck_cls, cache, uow)
+        clast_df = accessors.clast(
+            deck_cls, cache, uow
+        ).to_pandas()  # SHIM: remove after polars migration of this module
         clast_df = clast_df.rename(
             columns={"codigo_usina": THERMAL_CODE_COL, "valor": VALUE_COL}
         )

@@ -54,7 +54,6 @@ from app.utils.timing import time_and_log
 
 
 class ScenarioSynthetizer:
-    # Por padrão, todas as sínteses suportadas são consideradas
     DEFAULT_OPERATION_SYNTHESIS_ARGS: List[str] = SUPPORTED_SYNTHESIS
 
     COMMON_COLUMNS: List[str] = [
@@ -80,9 +79,6 @@ class ScenarioSynthetizer:
 
     @classmethod
     def clear_cache(cls):
-        """
-        Limpa o cache de síntese de cenários.
-        """
         cls.CACHED_SYNTHESIS.clear()
         cls.CACHED_MLT_VALUES.clear()
         cls.SYNTHESIS_STATS.clear()
@@ -94,14 +90,6 @@ class ScenarioSynthetizer:
 
     @classmethod
     def _default_args(cls) -> List[ScenarioSynthesis]:
-        """
-        Uma lista com os argumentos padrão para a
-        síntese de cenários, utilizados caso não seja
-        especificada nenhuma lista de sínteses desejadas.
-
-        :return: A lista de objetos de síntese de cenários
-        :rtype: List[ScenarioSynthesis]
-        """
         args = [
             ScenarioSynthesis.factory(a)
             for a in cls.DEFAULT_OPERATION_SYNTHESIS_ARGS
@@ -110,14 +98,6 @@ class ScenarioSynthetizer:
 
     @classmethod
     def _match_wildcards(cls, variables: List[str]) -> List[str]:
-        """
-        Busca dentre as sínteses suportadas aquelas que
-        atendem às especificadas, utilizando
-        wildcards para se referir a mais de uma síntese.
-
-        :return: A lista de strings associadas às sínteses
-        :rtype: List[str]
-        """
         return match_variables_with_wildcards(
             variables, cls.DEFAULT_OPERATION_SYNTHESIS_ARGS
         )
@@ -127,34 +107,17 @@ class ScenarioSynthetizer:
         cls,
         args: List[str],
     ) -> List[ScenarioSynthesis]:
-        """
-        Processa as strings fornecidas para construir os objetos
-        de sínteses de cenários correspondentes.
-
-        :return: A lista de objetos de síntese de cenários
-        :rtype: List[ScenarioSynthesis]
-        """
         args_data = [ScenarioSynthesis.factory(c) for c in args]
-        valid_args = [arg for arg in args_data if arg is not None]
-        return valid_args
+        return [arg for arg in args_data if arg is not None]
 
     @classmethod
     def filter_valid_variables(
         cls, variables: List[ScenarioSynthesis], uow: AbstractUnitOfWork
     ) -> List[ScenarioSynthesis]:
-        """
-        Filtra as variáveis de síntese de cenários para que sejam somente
-        sintetizadas as válidas para o caso em questão. Para esta tarefa,
-        são lidos campos de configuração do caso, como o uso de períodos
-        individualizados e a consideração de geração eólica.
-
-        :return: A lista de objetos de síntese válidos
-        :rtype: List[ScenarioSynthesis]
-        """
         valid_variables: List[ScenarioSynthesis] = []
-        simulation_with_hydro = Deck.final_simulation_aggregation(uow)
-        policy_with_hydro = Deck.hybrid_policy(uow)
-        has_hydro = simulation_with_hydro or policy_with_hydro
+        has_hydro = Deck.final_simulation_aggregation(
+            uow
+        ) or Deck.hybrid_policy(uow)
         for v in variables:
             if v.variable == Variable.VAZAO_INCREMENTAL and not has_hydro:
                 continue
@@ -166,28 +129,24 @@ class ScenarioSynthetizer:
     def _generate_hydro_incremental_inflow_dataframe(
         cls, hydro_code: int, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-        """
-        Obtém a série histórica de vazões incrementais para uma UHE,
-        considerando os códigos e postos cadastrados no arquivo `confhd.dat`.
-
-        - data (`datetime`)
-        - vazao (`float`)
-
-        :return: A tabela como um DataFrame
-        :rtype: pd.DataFrame | None
-        """
         hydros = Deck.hydros(uow).reset_index()
-        vazoes = Deck.vazoes(uow)
+        vazoes = Deck.vazoes(uow).to_pandas()
+        vazoes.columns = [
+            int(c) for c in vazoes.columns
+        ]  # SHIM: remove after polars migration of this module (polars converts int col names to str)
         inflow_station = hydros.loc[
             hydros["codigo_usina"] == hydro_code, "posto"
         ].iloc[0]
         natural_inflow = vazoes[inflow_station].to_numpy()
         null_station = inflow_station == NULL_INFLOW_STATION
         if not null_station:
-            upstream_hydro_codes = hydros.loc[
-                hydros["codigo_usina_jusante"] == hydro_code, "codigo_usina"
-            ].tolist()
-            upstream_hydro_codes = [u for u in upstream_hydro_codes if u != 0]
+            upstream_hydro_codes = [
+                u
+                for u in hydros.loc[
+                    hydros["codigo_usina_jusante"] == hydro_code, "codigo_usina"
+                ].tolist()
+                if u != 0
+            ]
             upstream_inflow_stations = list(
                 set(
                     [
@@ -303,7 +262,6 @@ class ScenarioSynthetizer:
         def _calc_hydro_lta_df(
             hydro_code: int, lta_model_df: pd.DataFrame, map_line: pd.Series
         ) -> pd.DataFrame:
-            # TODO - substituir pelo uso do bfs com grafo
             inflow = cls._generate_hydro_incremental_inflow_dataframe(
                 hydro_code, uow
             )
@@ -490,8 +448,9 @@ class ScenarioSynthetizer:
         """
 
         def _energy_history_df(uow: AbstractUnitOfWork) -> pd.DataFrame:
-            energy_history = Deck.engnat(uow)
-            # Para cada REE, obtem a série de MLT para os estágios do modelo
+            energy_history = Deck.engnat(
+                uow
+            ).to_pandas()  # SHIM: remove after polars migration of this module
             starting_year = Deck.study_period_starting_year(uow)
             history_final_year = starting_year - 1
             energy_history = energy_history.loc[
@@ -506,7 +465,6 @@ class ScenarioSynthetizer:
             map_line: pd.Series,
         ) -> pd.DataFrame:
             eer_lta = np.zeros((lta_model_df.shape[0],))
-            # TODO - substituir por ordenacao e repeticao posicional
             for eer_idx, lta_line in lta_model_df.iterrows():
                 eer_lta[eer_idx] = energy_history_df.loc[
                     (energy_history_df["configuracao"] == lta_line[CONFIG_COL])
@@ -761,7 +719,6 @@ class ScenarioSynthetizer:
             energy_df[END_DATE_COL] = sorted_end_dates
             return energy_df
 
-        # Extrai dimensões para repetir vetores
         energy_df = energy_df.copy()
         num_scenarios = len(energy_df[SCENARIO_COL].unique())
         num_eers = len(energy_df[EER_CODE_COL].unique())
@@ -770,7 +727,6 @@ class ScenarioSynthetizer:
             len(energy_df[SPAN_COL].unique()) if SPAN_COL in energy_df else 1
         )
 
-        # Edita o DF e retorna
         energy_df = _add_entities(
             energy_df, num_scenarios * num_spans, num_stages, uow
         )
@@ -862,7 +818,6 @@ class ScenarioSynthetizer:
             inflow_df[END_DATE_COL] = sorted_end_dates
             return inflow_df
 
-        # Extrai dimensões para repetir vetores
         inflow_df = inflow_df.copy()
         num_scenarios = len(inflow_df[SCENARIO_COL].unique())
         num_hydros = len(inflow_df[HYDRO_CODE_COL].unique())
@@ -871,7 +826,6 @@ class ScenarioSynthetizer:
             len(inflow_df[SPAN_COL].unique()) if SPAN_COL in inflow_df else 1
         )
 
-        # Edita o DF e retorna
         inflow_df = _add_entities(
             inflow_df, num_scenarios * num_spans, num_stages, uow
         )
@@ -962,8 +916,12 @@ class ScenarioSynthetizer:
             uow._queue, Variable.ENA_ABSOLUTA.value, it
         )
         logger.info(f"Obtendo energias forward da it. {it}")
-        generated_energy_df = Deck.energiaf(it, uow)
-        converted_energy_df = Deck.enavazf(it, uow)
+        generated_energy_df = Deck.energiaf(
+            it, uow
+        ).to_pandas()  # SHIM: remove after polars migration of this module
+        converted_energy_df = Deck.enavazf(
+            it, uow
+        ).to_pandas()  # SHIM: remove after polars migration of this module
         hydro_simulation_stages = Deck.num_hydro_simulation_stages_policy(uow)
         dates = Deck.internal_stages_starting_dates_policy_with_past_tendency(
             uow
@@ -1039,7 +997,9 @@ class ScenarioSynthetizer:
             uow.queue, Variable.VAZAO_INCREMENTAL.value, it
         )
         logger.info(f"Obtendo vazões forward da it. {it}")
-        inflow_df = Deck.vazaof(it, uow)
+        inflow_df = Deck.vazaof(
+            it, uow
+        ).to_pandas()  # SHIM: remove after polars migration of this module
         return cls._post_resolve_inflow_iteration(inflow_df, uow, it)
 
     @classmethod
@@ -1085,8 +1045,12 @@ class ScenarioSynthetizer:
             uow._queue, Variable.ENA_ABSOLUTA.value, it
         )
         logger.info(f"Obtendo energias backward da it. {it}")
-        generated_energy_df = Deck.energiab(it, uow)
-        converted_energy_df = Deck.enavazb(it, uow)
+        generated_energy_df = Deck.energiab(
+            it, uow
+        ).to_pandas()  # SHIM: remove after polars migration of this module
+        converted_energy_df = Deck.enavazb(
+            it, uow
+        ).to_pandas()  # SHIM: remove after polars migration of this module
         hydro_simulation_stages = Deck.num_hydro_simulation_stages_policy(uow)
         dates = Deck.internal_stages_starting_dates_policy(uow)
 
@@ -1142,7 +1106,9 @@ class ScenarioSynthetizer:
             uow.queue, Variable.VAZAO_INCREMENTAL.value, it
         )
         logger.info(f"Obtendo vazões backward da it. {it}")
-        inflow_df = Deck.vazaob(it, uow)
+        inflow_df = Deck.vazaob(
+            it, uow
+        ).to_pandas()  # SHIM: remove after polars migration of this module
 
         return cls._post_resolve_inflow_iteration(inflow_df, uow, it)
 
@@ -1186,8 +1152,12 @@ class ScenarioSynthetizer:
             message_root="Tempo para obter energias da simulacao final",
             logger=cls.logger,
         ):
-            generated_energy_df = Deck.energias(uow)
-            converted_energy_df = Deck.enavazs(uow)
+            generated_energy_df = Deck.energias(
+                uow
+            ).to_pandas()  # SHIM: remove after polars migration of this module
+            converted_energy_df = Deck.enavazs(
+                uow
+            ).to_pandas()  # SHIM: remove after polars migration of this module
         hydro_simulation_stages = (
             Deck.num_hydro_simulation_stages_final_simulation(uow)
         )
@@ -1220,7 +1190,9 @@ class ScenarioSynthetizer:
             message_root="Tempo para obter vazoes da simulacao final",
             logger=cls.logger,
         ):
-            inflow_df = Deck.vazaos(uow)
+            inflow_df = Deck.vazaos(
+                uow
+            ).to_pandas()  # SHIM: remove after polars migration of this module
 
         df = cls._post_resolve_inflow_iteration(
             inflow_df,
@@ -1363,20 +1335,6 @@ class ScenarioSynthetizer:
         df: pd.DataFrame,
         uow: AbstractUnitOfWork,
     ) -> pd.DataFrame:
-        """
-        Adiciona uma informação da MLT (Média de Longo
-        Termo) para cada cenário sintetizado na forma das colunas:
-
-        - mlt (`float`)
-        - valorMlt (`float`)
-
-        Para este processamento, é considerada a resolução espacial
-        e também a etapa a qual pertencem os cenários da síntese.
-
-        :return: Os dados com MLT como um DataFrame.
-        :rtype: pd.DataFrame
-        """
-        # Descobre o valor em MLT
         df = df.copy()
         lta_df = cls._get_lta_df(
             synthesis.variable,
@@ -1397,22 +1355,6 @@ class ScenarioSynthetizer:
     def _resolve_spatial_resolution(
         cls, synthesis: ScenarioSynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-        """
-        Realiza a resolução da agregação espacial dos dados,
-        considerando a síntese desejada e os dados disponíveis.
-
-        Caso a variável não exista diretamente como uma saída do modelo,
-        é realizada uma agregação na resolução espacial desejada.
-
-        Adicionalmente, é adicionada uma informação da MLT (Média de Longo
-        Termo) para cada cenário sintetizado na forma das colunas:
-
-        - mlt (`float`)
-        - valorMlt (`float`)
-
-        :return: Os dados como um DataFrame.
-        :rtype: pd.DataFrame
-        """
         RESOLUTION_MAP: Dict[SpatialResolution, List[str]] = {
             SpatialResolution.SISTEMA_INTERLIGADO: [],
             SpatialResolution.SUBMERCADO: [SUBMARKET_CODE_COL],

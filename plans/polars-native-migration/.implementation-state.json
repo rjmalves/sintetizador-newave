@@ -1,12 +1,20 @@
 {
   "plan": "polars-native-migration",
-  "last_updated": "2026-03-06T00:00:00Z",
+  "last_updated": "2026-03-07T00:18:58Z",
   "progressive": true,
   "tickets": {
     "ticket-001-convert-cached-accessors-polars.md": {
-      "status": "pending",
+      "status": "completed",
       "detail_level": "detailed",
       "scores": {
+        "quality": 0.88,
+        "quality_breakdown": {
+          "conformance": 1.0,
+          "scope_adherence": 1.0,
+          "lint_cleanliness": 1.0,
+          "type_safety": 0.5,
+          "test_delta": 0.5
+        },
         "readiness": 1.0,
         "readiness_breakdown": {
           "structure": 1.0,
@@ -15,12 +23,22 @@
           "dependency_clarity": 1.0,
           "atomicity": 1.0
         }
-      }
+      },
+      "workflow_step": null,
+      "agent": "python-task-automation-developer"
     },
     "ticket-002-convert-uncached-accessors-deckcontext-polars.md": {
-      "status": "pending",
+      "status": "completed",
       "detail_level": "detailed",
       "scores": {
+        "quality": 0.83,
+        "quality_breakdown": {
+          "conformance": 1.0,
+          "scope_adherence": 1.0,
+          "lint_cleanliness": 1.0,
+          "type_safety": 0.5,
+          "test_delta": 0.0
+        },
         "readiness": 1.0,
         "readiness_breakdown": {
           "structure": 1.0,
@@ -29,12 +47,22 @@
           "dependency_clarity": 1.0,
           "atomicity": 1.0
         }
-      }
+      },
+      "workflow_step": null,
+      "agent": "python-task-automation-developer"
     },
     "ticket-003-add-polars-compatibility-shims.md": {
-      "status": "pending",
+      "status": "completed",
       "detail_level": "detailed",
       "scores": {
+        "quality": 0.85,
+        "quality_breakdown": {
+          "conformance": 0.8,
+          "scope_adherence": 1.0,
+          "lint_cleanliness": 1.0,
+          "type_safety": 0.5,
+          "test_delta": 0.5
+        },
         "readiness": 0.91,
         "readiness_breakdown": {
           "structure": 1.0,
@@ -43,7 +71,9 @@
           "dependency_clarity": 1.0,
           "atomicity": 0.6
         }
-      }
+      },
+      "workflow_step": null,
+      "agent": "python-task-automation-developer"
     },
     "ticket-004-port-entities-polars.md": {
       "status": "pending",
@@ -152,8 +182,8 @@
   },
   "epics": {
     "epic-01-conversion-boundary": {
-      "phase": "executing",
-      "learning_extracted": false
+      "phase": "completed",
+      "learning_extracted": true
     },
     "epic-02-deck-domain-modules": {
       "phase": "executing",

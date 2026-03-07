@@ -1,6 +1,7 @@
 from typing import Any, Dict
 
 import pandas as pd
+import polars as pl
 from inewave.newave import (
     Curva,
     Dger,
@@ -90,7 +91,7 @@ def confhd(
     deck_cls,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     val = cache.get("confhd")
     if val is None:
         val = readers.validate_data(
@@ -99,15 +100,16 @@ def confhd(
             pd.DataFrame,
             "processamento do confhd.dat",
         )
+        val = pl.from_pandas(val)
         cache["confhd"] = val
-    return val.copy()
+    return val
 
 
 def clast(
     deck_cls,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     val = cache.get("clast")
     if val is None:
         val = readers.validate_data(
@@ -116,15 +118,16 @@ def clast(
             pd.DataFrame,
             "processamento do clast.dat",
         )
+        val = pl.from_pandas(val)
         cache["clast"] = val
-    return val.copy()
+    return val
 
 
 def term(
     deck_cls,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     val = cache.get("term")
     if val is None:
         val = readers.validate_data(
@@ -133,46 +136,49 @@ def term(
             pd.DataFrame,
             "processamento do term.dat",
         )
+        val = pl.from_pandas(val)
         cache["term"] = val
-    return val.copy()
+    return val
 
 
 def manutt(
     deck_cls,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     val = cache.get("manutt")
     if val is None:
         df_manutt = readers.get_manutt(deck_cls, uow).manutencoes
         if df_manutt is None:
-            df_manutt = pd.DataFrame(
-                columns=[
-                    "codigo_empresa",
-                    "nome_empresa",
-                    "codigo_usina",
-                    "nome_usina",
-                    "codigo_unidade",
-                    "data_inicio",
-                    "duracao",
-                    "potencia",
-                ]
+            val = pl.DataFrame(
+                schema={
+                    "codigo_empresa": pl.Int64,
+                    "nome_empresa": pl.Utf8,
+                    "codigo_usina": pl.Int64,
+                    "nome_usina": pl.Utf8,
+                    "codigo_unidade": pl.Int64,
+                    "data_inicio": pl.Datetime,
+                    "duracao": pl.Int64,
+                    "potencia": pl.Float64,
+                }
             )
-        val = readers.validate_data(
-            deck_cls,
-            df_manutt,
-            pd.DataFrame,
-            "processamento do manutt.dat",
-        )
+        else:
+            val = readers.validate_data(
+                deck_cls,
+                df_manutt,
+                pd.DataFrame,
+                "processamento do manutt.dat",
+            )
+            val = pl.from_pandas(val)
         cache["manutt"] = val
-    return val.copy()
+    return val
 
 
 def expt(
     deck_cls,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     val = cache.get("expt")
     if val is None:
         val = readers.validate_data(
@@ -181,15 +187,16 @@ def expt(
             pd.DataFrame,
             "processamento do expt.dat",
         )
+        val = pl.from_pandas(val)
         cache["expt"] = val
-    return val.copy()
+    return val
 
 
 def hidr(
     deck_cls,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     val = cache.get("hidr")
     if val is None:
         val = readers.validate_data(
@@ -198,8 +205,9 @@ def hidr(
             pd.DataFrame,
             "processamento do hidr.dat",
         )
+        val = pl.from_pandas(val, include_index=True)
         cache["hidr"] = val
-    return val.copy()
+    return val
 
 
 def newavetim(
@@ -223,7 +231,7 @@ def engnat(
     deck_cls,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     val = cache.get("engnat")
     if val is None:
         val = readers.validate_data(
@@ -232,6 +240,7 @@ def engnat(
             pd.DataFrame,
             "processamento do engnat.dat",
         )
+        val = pl.from_pandas(val)
         cache["engnat"] = val
     return val
 
@@ -240,166 +249,126 @@ def energiaf(
     deck_cls,
     uow: AbstractUnitOfWork,
     iteracao: int,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     arq = readers.get_energiaf(deck_cls, iteracao, uow)
-    if arq is not None:
-        df = arq.series
-        if df is None:
-            return pd.DataFrame()
-        else:
-            return df.rename(
-                columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL}
-            )
-    else:
-        return pd.DataFrame()
+    if arq is None or arq.series is None:
+        return pl.DataFrame()
+    return pl.from_pandas(arq.series).rename(
+        {"ree": EER_CODE_COL, "serie": SCENARIO_COL}
+    )
 
 
 def enavazf(
     deck_cls,
     uow: AbstractUnitOfWork,
     iteracao: int,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     arq = readers.get_enavazf(deck_cls, iteracao, uow)
-    if arq is not None:
-        df = arq.series
-        if df is None:
-            return pd.DataFrame()
-        else:
-            return df.rename(
-                columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL}
-            )
-    else:
-        return pd.DataFrame()
+    if arq is None or arq.series is None:
+        return pl.DataFrame()
+    return pl.from_pandas(arq.series).rename(
+        {"ree": EER_CODE_COL, "serie": SCENARIO_COL}
+    )
 
 
 def vazaof(
     deck_cls,
     uow: AbstractUnitOfWork,
     iteracao: int,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     arq = readers.get_vazaof(deck_cls, iteracao, uow)
-    if arq is not None:
-        df = arq.series
-        if df is None:
-            return pd.DataFrame()
-        else:
-            return df.rename(
-                columns={"uhe": HYDRO_CODE_COL, "serie": SCENARIO_COL}
-            )
-    else:
-        return pd.DataFrame()
+    if arq is None or arq.series is None:
+        return pl.DataFrame()
+    return pl.from_pandas(arq.series).rename(
+        {"uhe": HYDRO_CODE_COL, "serie": SCENARIO_COL}
+    )
 
 
 def energiab(
     deck_cls,
     uow: AbstractUnitOfWork,
     iteracao: int,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     arq = readers.get_energiab(deck_cls, iteracao, uow)
-    if arq is not None:
-        df = arq.series
-        if df is None:
-            return pd.DataFrame()
-        else:
-            return df.rename(
-                columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL}
-            )
-    else:
-        return pd.DataFrame()
+    if arq is None or arq.series is None:
+        return pl.DataFrame()
+    return pl.from_pandas(arq.series).rename(
+        {"ree": EER_CODE_COL, "serie": SCENARIO_COL}
+    )
 
 
 def enavazb(
     deck_cls,
     uow: AbstractUnitOfWork,
     iteracao: int,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     arq = readers.get_enavazb(deck_cls, iteracao, uow)
-    if arq is not None:
-        df = arq.series
-        if df is None:
-            return pd.DataFrame()
-        else:
-            return df.rename(
-                columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL}
-            )
-    else:
-        return pd.DataFrame()
+    if arq is None or arq.series is None:
+        return pl.DataFrame()
+    return pl.from_pandas(arq.series).rename(
+        {"ree": EER_CODE_COL, "serie": SCENARIO_COL}
+    )
 
 
 def vazaob(
     deck_cls,
     uow: AbstractUnitOfWork,
     iteracao: int,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     arq = readers.get_vazaob(deck_cls, iteracao, uow)
     if arq is not None:
         df = arq.series
         if df is None:
-            return pd.DataFrame()
+            return pl.DataFrame()
         else:
-            return df.rename(
-                columns={"uhe": HYDRO_CODE_COL, "serie": SCENARIO_COL}
+            return pl.from_pandas(df).rename(
+                {"uhe": HYDRO_CODE_COL, "serie": SCENARIO_COL}
             )
     else:
-        return pd.DataFrame()
+        return pl.DataFrame()
 
 
 def energias(
     deck_cls,
     uow: AbstractUnitOfWork,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     arq = readers.get_energias(deck_cls, uow)
-    if arq is not None:
-        df = arq.series
-        if df is None:
-            return pd.DataFrame()
-        else:
-            return df.rename(
-                columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL}
-            )
-    else:
-        return pd.DataFrame()
+    if arq is None or arq.series is None:
+        return pl.DataFrame()
+    return pl.from_pandas(arq.series).rename(
+        {"ree": EER_CODE_COL, "serie": SCENARIO_COL}
+    )
 
 
 def enavazs(
     deck_cls,
     uow: AbstractUnitOfWork,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     arq = readers.get_enavazs(deck_cls, uow)
-    if arq is not None:
-        df = arq.series
-        if df is None:
-            return pd.DataFrame()
-        else:
-            return df.rename(
-                columns={"ree": EER_CODE_COL, "serie": SCENARIO_COL}
-            )
-    else:
-        return pd.DataFrame()
+    if arq is None or arq.series is None:
+        return pl.DataFrame()
+    return pl.from_pandas(arq.series).rename(
+        {"ree": EER_CODE_COL, "serie": SCENARIO_COL}
+    )
 
 
 def vazaos(
     deck_cls,
     uow: AbstractUnitOfWork,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     arq = readers.get_vazaos(deck_cls, uow)
-    if arq is not None:
-        df = arq.series
-        if df is None:
-            return pd.DataFrame()
-        else:
-            return df.rename(
-                columns={"uhe": HYDRO_CODE_COL, "serie": SCENARIO_COL}
-            )
-    else:
-        return pd.DataFrame()
+    if arq is None or arq.series is None:
+        return pl.DataFrame()
+    return pl.from_pandas(arq.series).rename(
+        {"uhe": HYDRO_CODE_COL, "serie": SCENARIO_COL}
+    )
 
 
 def vazoes(
     deck_cls,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     val = cache.get("vazoes")
     if val is None:
         val = readers.validate_data(
@@ -408,8 +377,9 @@ def vazoes(
             pd.DataFrame,
             "processamento do vazoes.dat",
         )
+        val = pl.from_pandas(val)
         cache["vazoes"] = val
-    return val.copy()
+    return val
 
 
 def study_title(

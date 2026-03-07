@@ -35,8 +35,6 @@ def evaluate_productivity(
     df: pd.DataFrame,
     volume_col: str = VOLUME_FOR_PRODUCTIVITY_TMP_COL,
 ) -> pd.DataFrame:
-    """Compute turbine productivity for each hydro in df."""
-
     def _upper_drop_at_volume(line: pd.Series) -> float:
         coefs = [line[c] for c in HEIGHT_POLY_COLS]
         if line[VOLUME_REGULATION_COL] == "M":
@@ -81,7 +79,6 @@ def evaluate_productivity(
 
 
 def accumulate_productivity(df: pd.DataFrame) -> pd.DataFrame:
-    """Propagate productivity downstream through the cascade."""
     np_edges = list(
         df.reset_index()[[FOLLOWING_HYDRO_COL, HYDRO_CODE_COL]].to_numpy()
     )
@@ -106,7 +103,11 @@ def _hydro_accumulated_productivity_at_volume(
 ) -> pd.DataFrame:
     from app.services.deck import hydro as hydro_mod
 
-    hidr = accessors.hidr(deck_cls, cache, uow)
+    hidr = (
+        accessors.hidr(deck_cls, cache, uow)
+        .to_pandas()
+        .set_index(HYDRO_CODE_COL)
+    )  # SHIM: remove after polars migration of this module
     hidr_cols = [
         RUN_OF_RIVER_REFERENCE_VOLUME_COL,
         LOSS_COL,
@@ -300,11 +301,14 @@ def _initial_stored_volume_from_pmo(
     deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> Optional[pd.DataFrame]:
     df = accessors.pmo(deck_cls, cache, uow).volume_armazenado_inicial
-    if df is None:
-        return df
-    return df.rename(
-        columns={"codigo_usina": HYDRO_CODE_COL, "nome_usina": HYDRO_NAME_COL}
-    )
+    if df is not None:
+        df = df.rename(
+            columns={
+                "codigo_usina": HYDRO_CODE_COL,
+                "nome_usina": HYDRO_NAME_COL,
+            }
+        )
+    return df
 
 
 def _initial_stored_volume_from_confhd_hidr(
@@ -322,7 +326,11 @@ def _initial_stored_volume_from_confhd_hidr(
             "volume_inicial_percentual": "valor_percentual",
         }
     )
-    hidr = accessors.hidr(deck_cls, cache, uow)
+    hidr = (
+        accessors.hidr(deck_cls, cache, uow)
+        .to_pandas()
+        .set_index(HYDRO_CODE_COL)
+    )  # SHIM: remove after polars migration of this module
     volume_bounds = hydro_mod.hydro_volume_bounds_with_changes(
         deck_cls, cache, uow
     )[[LOWER_BOUND_COL, UPPER_BOUND_COL]]

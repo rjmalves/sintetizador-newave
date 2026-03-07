@@ -2,20 +2,18 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import List
 
-import pandas as pd
+import polars as pl
 
 
 @dataclass
 class DeckContext:
-    """Pre-computed deck data for subprocess entity resolution in operation synthesizer."""
-
-    block_lengths: pd.DataFrame
+    block_lengths: pl.DataFrame
     num_scenarios: int
     num_blocks: int
     starting_dates: List[datetime]
     ending_dates: List[datetime]
-    eer_submarket_map: pd.DataFrame
-    hydro_eer_submarket_map: pd.DataFrame
+    eer_submarket_map: pl.DataFrame
+    hydro_eer_submarket_map: pl.DataFrame
     study_period_starting_month: int
     hydro_simulation_ending_date: datetime
 

@@ -39,7 +39,6 @@ from app.services.unitofwork import AbstractUnitOfWork
 
 
 def _calc_turbined_flow(line: pd.Series) -> float:
-    """Compute total turbined flow from conjunto/maquina data."""
     n = line["numero_conjuntos_maquinas"]
     nums = line[[f"maquinas_conjunto_{i}" for i in range(1, n + 1)]].to_numpy()
     flows = line[
@@ -51,13 +50,11 @@ def _calc_turbined_flow(line: pd.Series) -> float:
 def hydro_volume_bounds(
     deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pd.DataFrame:
-    """
-    Obtém um DataFrame com os limites cadastrais de volume armazenado
-    de cada usina hidrelétrica.
-    """
     val = cache.get("hydro_volume_bounds")
     if val is None:
-        df = accessors.hidr(deck_cls, cache, uow).reset_index()
+        df = (
+            accessors.hidr(deck_cls, cache, uow).to_pandas().reset_index()
+        )  # SHIM: remove after polars migration of this module
         hydro_codes = entities.hydro_code_order(deck_cls, cache, uow)
         df = df.loc[
             df[HYDRO_CODE_COL].isin(hydro_codes),
@@ -71,8 +68,7 @@ def hydro_volume_bounds(
         )
         df[LOWER_BOUND_UNIT_COL] = Unit.hm3_modif.value
         df[UPPER_BOUND_UNIT_COL] = Unit.hm3_modif.value
-        ents = entities.hydro_eer_submarket_map(deck_cls, cache, uow)
-        val = df.join(ents)
+        val = df.join(entities.hydro_eer_submarket_map(deck_cls, cache, uow))
         cache["hydro_volume_bounds"] = val
     return val.copy()
 
@@ -135,7 +131,6 @@ def _hydro_volume_bounds_in_stages(
     consider_lower_changes: bool = True,
 ) -> pd.DataFrame:
     hm3_df = hydro_volume_bounds_with_changes(deck_cls, cache, uow)
-    # expand to stages
     base = hm3_df.reset_index()
     num_hydros = base.shape[0]
     dates = np.array(
@@ -162,7 +157,6 @@ def _hydro_volume_bounds_in_stages(
     df = readers.apply_modif_changes_to_hydros_in_stages(
         deck_cls, cache, df, UPPER_BOUND_COL, UPPER_BOUND_UNIT_COL, VMAXT, uow
     )
-    # cast percentage bounds to hm3 using expanded reference
     for col, unit_col in zip(
         [LOWER_BOUND_COL, UPPER_BOUND_COL],
         [LOWER_BOUND_UNIT_COL, UPPER_BOUND_UNIT_COL],
@@ -211,7 +205,9 @@ def hydro_turbined_flow_bounds(
 ) -> pd.DataFrame:
     val = cache.get("hydro_turbined_flow_bounds")
     if val is None:
-        df = accessors.hidr(deck_cls, cache, uow).reset_index()
+        df = (
+            accessors.hidr(deck_cls, cache, uow).to_pandas().reset_index()
+        )  # SHIM: remove after polars migration of this module
         hydro_codes = entities.hydro_code_order(deck_cls, cache, uow)
         df[UPPER_BOUND_COL] = df.apply(_calc_turbined_flow, axis=1)
         df[LOWER_BOUND_COL] = 0.0
@@ -248,7 +244,9 @@ def hydro_turbined_flow_bounds_with_changes(
 ) -> pd.DataFrame:
     val = cache.get("hydro_turbined_flow_bounds_with_changes")
     if val is None:
-        df = accessors.hidr(deck_cls, cache, uow).reset_index()
+        df = (
+            accessors.hidr(deck_cls, cache, uow).to_pandas().reset_index()
+        )  # SHIM: remove after polars migration of this module
         hydro_codes = entities.hydro_code_order(deck_cls, cache, uow)
         df = _apply_turbined_flow_changes(df, deck_cls, cache, uow)
         df[UPPER_BOUND_COL] = df.apply(_calc_turbined_flow, axis=1)
@@ -267,7 +265,6 @@ def hydro_turbined_flow_bounds_with_changes(
 def hydro_turbined_flow_bounds_in_stages(
     deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pd.DataFrame:
-    # TODO - analisar exph.dat
     val = cache.get("hydro_turbined_flow_bounds_in_stages")
     if val is None:
         from app.services.deck import misc as misc_mod
@@ -303,7 +300,9 @@ def hydro_outflow_bounds(
 ) -> pd.DataFrame:
     val = cache.get("hydro_outflow_bounds")
     if val is None:
-        df = accessors.hidr(deck_cls, cache, uow).reset_index()
+        df = (
+            accessors.hidr(deck_cls, cache, uow).to_pandas().reset_index()
+        )  # SHIM: remove after polars migration of this module
         hydro_codes = entities.hydro_code_order(deck_cls, cache, uow)
         df = df.loc[
             df[HYDRO_CODE_COL].isin(hydro_codes),
@@ -358,8 +357,6 @@ def hydro_outflow_bounds_in_stages(
             VAZMINT,
             uow,
         )
-        # Note: reset_index() (not drop=True) preserves index column for
-        # compatibility with test expectations (13 columns total)
         m3s_df = m3s_df.reset_index()
         dates = np.array(
             temporal.stages_starting_dates_final_simulation(
@@ -387,7 +384,9 @@ def hydro_drops(
 ) -> pd.DataFrame:
     val = cache.get("hydro_drops")
     if val is None:
-        df = accessors.hidr(deck_cls, cache, uow).reset_index()
+        df = (
+            accessors.hidr(deck_cls, cache, uow).to_pandas().reset_index()
+        )  # SHIM: remove after polars migration of this module
         hydro_codes = entities.hydro_code_order(deck_cls, cache, uow)
         cols = HEIGHT_POLY_COLS + [
             HYDRO_CODE_COL,
@@ -434,11 +433,6 @@ def hydro_drops_in_stages(
         val = df
         cache["hydro_drops_in_stages"] = val
     return val.copy()
-
-
-# ---------------------------------------------------------------------------
-# Private helpers
-# ---------------------------------------------------------------------------
 
 
 def _expand_hydro_to_stages(
