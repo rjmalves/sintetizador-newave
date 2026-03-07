@@ -14,12 +14,12 @@ Migrate sintetizador-newave from a hybrid pandas/polars architecture to a polars
 
 ## Epics
 
-| Epic | Name                | Tickets      | Status  |
-| ---- | ------------------- | ------------ | ------- |
-| 01   | Conversion Boundary | 3 (detailed) | Pending |
-| 02   | Deck Domain Modules | 6 (detailed) | Pending |
-| 03   | Synthesis Pipeline  | 3 (outline)  | Pending |
-| 04   | Scenario & Cleanup  | 2 (outline)  | Pending |
+| Epic | Name                | Tickets      | Status    |
+| ---- | ------------------- | ------------ | --------- |
+| 01   | Conversion Boundary | 3 (detailed) | Completed |
+| 02   | Deck Domain Modules | 6 (detailed) | Completed |
+| 03   | Synthesis Pipeline  | 3 (outline)  | Pending   |
+| 04   | Scenario & Cleanup  | 2 (outline)  | Pending   |
 
 ## Progress Tracking
 
@@ -28,12 +28,12 @@ Migrate sintetizador-newave from a hybrid pandas/polars architecture to a polars
 | ticket-001 | Convert cached accessors to return polars DataFrames        | epic-01 | completed | Detailed     | 1.00      | 0.88    | ACCEPTABLE |
 | ticket-002 | Convert uncached series accessors and DeckContext to polars | epic-01 | completed | Detailed     | 1.00      | 0.83    | ACCEPTABLE |
 | ticket-003 | Add polars compatibility shims to downstream consumers      | epic-01 | completed | Detailed     | 0.91      | 0.85    | ACCEPTABLE |
-| ticket-004 | Port entities.py to polars                                  | epic-02 | pending   | Detailed     | 0.95      | --      | --         |
-| ticket-005 | Port temporal.py and misc.py to polars                      | epic-02 | pending   | Detailed     | 1.00      | --      | --         |
-| ticket-006 | Port exchange.py and energy.py to polars                    | epic-02 | pending   | Detailed     | 1.00      | --      | --         |
-| ticket-007 | Port hydro.py to polars                                     | epic-02 | pending   | Detailed     | 0.97      | --      | --         |
-| ticket-008 | Port storage.py and thermal.py to polars                    | epic-02 | pending   | Detailed     | 0.97      | --      | --         |
-| ticket-009 | Port policy.py to polars                                    | epic-02 | pending   | Detailed     | 1.00      | --      | --         |
+| ticket-004 | Port entities.py to polars                                  | epic-02 | completed | Detailed     | 0.95      | 0.87    | ACCEPTABLE |
+| ticket-005 | Port temporal.py and misc.py to polars                      | epic-02 | completed | Detailed     | 1.00      | 0.90    | EXCELLENT  |
+| ticket-006 | Port exchange.py and energy.py to polars                    | epic-02 | completed | Detailed     | 1.00      | 0.78    | ACCEPTABLE |
+| ticket-007 | Port hydro.py to polars                                     | epic-02 | completed | Detailed     | 0.97      | 0.65    | BELOW GATE |
+| ticket-008 | Port storage.py and thermal.py to polars                    | epic-02 | completed | Detailed     | 0.97      | 0.78    | ACCEPTABLE |
+| ticket-009 | Port policy.py to polars                                    | epic-02 | completed | Detailed     | 1.00      | 0.88    | ACCEPTABLE |
 | ticket-010 | Port pipeline.py to native polars                           | epic-03 | pending   | Outline      | --        | --      | --         |
 | ticket-011 | Port synthesis bounds, cache, and export to polars          | epic-03 | pending   | Outline      | --        | --      | --         |
 | ticket-012 | Port resolution modules and spatial dispatch to polars      | epic-03 | pending   | Outline      | --        | --      | --         |

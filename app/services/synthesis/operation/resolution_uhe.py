@@ -181,9 +181,15 @@ def resolve_UHE_entity(
     }
 
     if deck_context is not None:
-        aux_df = deck_context.hydro_eer_submarket_map
+        aux_df = deck_context.hydro_eer_submarket_map.to_pandas().set_index(
+            HYDRO_CODE_COL
+        )  # SHIM: remove after polars migration of this module
     else:
-        aux_df = Deck.hydro_eer_submarket_map(uow)
+        aux_df = (
+            Deck.hydro_eer_submarket_map(uow)
+            .to_pandas()
+            .set_index(HYDRO_CODE_COL)
+        )  # SHIM: remove after polars migration of this module
 
     return post_resolve_entity(
         cls,
@@ -217,7 +223,12 @@ def resolve_UHE(
     ) -> pd.DataFrame:
         return _limit_stages_with_hydro(deck_context, s, df, uow)
 
-    hydros = Deck.hydros(uow).reset_index().sort_values(HYDRO_CODE_COL)
+    hydros = (
+        Deck.hydros(uow)
+        .to_pandas()
+        .reset_index(drop=True)
+        .sort_values(HYDRO_CODE_COL)
+    )  # SHIM: remove after polars migration of this module
     hydros_idx = hydros[HYDRO_CODE_COL]
     hydros_name = hydros[HYDRO_NAME_COL]
 

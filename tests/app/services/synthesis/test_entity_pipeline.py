@@ -56,14 +56,14 @@ def _make_block_lengths(
     start_dates: List[datetime],
     blocks: List[int],
     duration_fraction: float = 0.5,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     rows = []
     for d in start_dates:
         for b in blocks:
             rows.append(
                 {START_DATE_COL: d, BLOCK_COL: b, VALUE_COL: duration_fraction}
             )
-    return pd.DataFrame(rows)
+    return pl.from_pandas(pd.DataFrame(rows))
 
 
 def _make_deck_context(
@@ -81,10 +81,10 @@ def _make_deck_context(
         num_blocks=len(blocks),
         starting_dates=start_dates,
         ending_dates=end_dates,
-        eer_submarket_map=pd.DataFrame(
+        eer_submarket_map=pl.DataFrame(
             {"codigo_ree": [1], "codigo_submercado": [1]}
         ),
-        hydro_eer_submarket_map=pd.DataFrame(
+        hydro_eer_submarket_map=pl.DataFrame(
             {"codigo_usina": [1], "codigo_ree": [1], "codigo_submercado": [1]}
         ),
         study_period_starting_month=starting_month,

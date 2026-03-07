@@ -2,6 +2,7 @@ import pickle
 from datetime import datetime
 
 import pandas as pd
+import polars as pl
 import pytest
 
 from app.services.deck.context import DeckContext
@@ -14,7 +15,7 @@ uow = factory("FS", DECK_TEST_DIR, q)
 def _make_minimal_context() -> DeckContext:
     """Build a DeckContext with minimal synthetic data for unit tests."""
     return DeckContext(
-        block_lengths=pd.DataFrame(
+        block_lengths=pl.DataFrame(
             {
                 "data_inicio": [datetime(2023, 10, 1)],
                 "patamar": [1],
@@ -25,9 +26,11 @@ def _make_minimal_context() -> DeckContext:
         num_blocks=1,
         starting_dates=[datetime(2023, 10, 1)],
         ending_dates=[datetime(2023, 11, 1)],
-        eer_submarket_map=pd.DataFrame({"codigo_submercado": [1]}, index=[1]),
-        hydro_eer_submarket_map=pd.DataFrame(
-            {"codigo_ree": [1], "codigo_submercado": [1]}, index=[10]
+        eer_submarket_map=pl.DataFrame(
+            {"codigo_ree": [1], "codigo_submercado": [1]}
+        ),
+        hydro_eer_submarket_map=pl.DataFrame(
+            {"codigo_usina": [10], "codigo_ree": [1], "codigo_submercado": [1]}
         ),
         study_period_starting_month=10,
         hydro_simulation_ending_date=datetime(2028, 12, 1),
@@ -37,13 +40,13 @@ def _make_minimal_context() -> DeckContext:
 def test_deck_context_from_deck(test_settings):
     """DeckContext.from_deck() must create a valid context from a real UoW."""
     ctx = DeckContext.from_deck(uow)
-    assert isinstance(ctx.block_lengths, pd.DataFrame)
+    assert isinstance(ctx.block_lengths, pl.DataFrame)
     assert isinstance(ctx.num_scenarios, int)
     assert isinstance(ctx.num_blocks, int)
     assert isinstance(ctx.starting_dates, list)
     assert isinstance(ctx.ending_dates, list)
-    assert isinstance(ctx.eer_submarket_map, pd.DataFrame)
-    assert isinstance(ctx.hydro_eer_submarket_map, pd.DataFrame)
+    assert isinstance(ctx.eer_submarket_map, pl.DataFrame)
+    assert isinstance(ctx.hydro_eer_submarket_map, pl.DataFrame)
     assert isinstance(ctx.study_period_starting_month, int)
     assert isinstance(ctx.hydro_simulation_ending_date, datetime)
     assert ctx.num_scenarios > 0
@@ -70,12 +73,10 @@ def test_deck_context_pickle_round_trip(test_settings):
     )
     assert deserialized.starting_dates == ctx.starting_dates
     assert deserialized.ending_dates == ctx.ending_dates
-    pd.testing.assert_frame_equal(deserialized.block_lengths, ctx.block_lengths)
-    pd.testing.assert_frame_equal(
-        deserialized.eer_submarket_map, ctx.eer_submarket_map
-    )
-    pd.testing.assert_frame_equal(
-        deserialized.hydro_eer_submarket_map, ctx.hydro_eer_submarket_map
+    assert deserialized.block_lengths.equals(ctx.block_lengths)
+    assert deserialized.eer_submarket_map.equals(ctx.eer_submarket_map)
+    assert deserialized.hydro_eer_submarket_map.equals(
+        ctx.hydro_eer_submarket_map
     )
 
 
@@ -88,8 +89,8 @@ def test_deck_context_none_field_raises():
             num_blocks=1,
             starting_dates=[datetime(2023, 10, 1)],
             ending_dates=[datetime(2023, 11, 1)],
-            eer_submarket_map=pd.DataFrame(),
-            hydro_eer_submarket_map=pd.DataFrame(),
+            eer_submarket_map=pl.DataFrame(),
+            hydro_eer_submarket_map=pl.DataFrame(),
             study_period_starting_month=10,
             hydro_simulation_ending_date=datetime(2028, 12, 1),
         )

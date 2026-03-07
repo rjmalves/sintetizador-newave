@@ -211,11 +211,10 @@ def resolve_temporal_resolution(
                 ),
             ]
         )
-        bl_pl = (
-            _pkg()
-            .pd_to_pl(df_block_lengths)
-            .filter(pl.col(BLOCK_COL).is_in(blocks))
-            .rename({VALUE_COL: BLOCK_DURATION_COL})
+        # block_lengths now returns pl.DataFrame directly; pd_to_pl() removed
+        # SHIM: this comment replaces the old pd_to_pl shim (epic-01 learnings item)
+        bl_pl = df_block_lengths.filter(pl.col(BLOCK_COL).is_in(blocks)).rename(
+            {VALUE_COL: BLOCK_DURATION_COL}
         )
         pl_df = pl_df.join(bl_pl, on=[START_DATE_COL, BLOCK_COL], how="left")
         pl_df = pl_df.with_columns(
@@ -251,8 +250,16 @@ def resolve_temporal_resolution(
         pd_df = _add_stage_info(
             pd_df, num_stages, num_sc, num_blocks, np.asarray(end_dates)
         )
+        # block_lengths now returns pl.DataFrame; convert for pandas fallback path
+        # SHIM: remove after polars migration of this module
         pd_df = _add_block_duration_info(
-            pd_df, num_stages, num_sc, num_blocks, blocks, start_dates, df_bl
+            pd_df,
+            num_stages,
+            num_sc,
+            num_blocks,
+            blocks,
+            start_dates,
+            df_bl.to_pandas(),
         )
         return pl.from_pandas(pd_df[OPERATION_SYNTHESIS_COMMON_COLUMNS])
 
@@ -319,7 +326,9 @@ def initial_stored_energy_df(
 
     df[max_column] = 100 * df["valor_MWmes"] / df["valor_percentual"]
     if s.spatial_resolution == SpatialResolution.SUBMERCADO:
-        eers_sbm_map = _Deck.eer_submarket_map(uow)
+        eers_sbm_map = (
+            _Deck.eer_submarket_map(uow).to_pandas().set_index(EER_CODE_COL)
+        )  # SHIM: remove after polars migration of this module
         df.dropna(inplace=True)
         df[GROUPING_TMP_COL] = df.apply(
             lambda line: eers_sbm_map.at[
@@ -385,6 +394,8 @@ def resolve_temporal_resolution_GTER_UTE(
     df = _add_stage_info(
         df, num_stages, num_sc, num_blocks, end_dates_arr, num_thermals
     )
+    # block_lengths now returns pl.DataFrame; convert for pandas-based function
+    # SHIM: remove after polars migration of this module
     df = _add_block_duration_info(
         df,
         num_stages,
@@ -392,7 +403,7 @@ def resolve_temporal_resolution_GTER_UTE(
         num_blocks,
         blocks,
         start_dates,
-        df_bl,
+        df_bl.to_pandas(),
         num_thermals,
     )
     return df

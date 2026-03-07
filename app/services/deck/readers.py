@@ -410,7 +410,12 @@ def apply_modif_changes_to_hydros_in_stages(
 
     modif = accessors.modif(deck_cls, cache, uow)
     num_stages = temporal.num_hydro_simulation_stages_final_simulation(
-        deck_cls, cache, uow, entities.eers(deck_cls, cache, uow)
+        deck_cls,
+        cache,
+        uow,
+        entities.eers(
+            deck_cls, cache, uow
+        ).to_pandas(),  # SHIM: remove after polars migration of temporal.py
     )
     dates = temporal.stages_starting_dates_final_simulation(
         deck_cls, cache, uow

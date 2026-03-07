@@ -1,8 +1,13 @@
+from __future__ import annotations
+
 from datetime import datetime, timedelta
-from typing import Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List
 
 import numpy as np
-import pandas as pd
+import polars as pl
+
+if TYPE_CHECKING:
+    import pandas as pd
 from dateutil.relativedelta import relativedelta  # type: ignore
 
 from app.internal.constants import (
@@ -343,7 +348,13 @@ def num_hydro_simulation_stages_final_simulation(
 
 
 def _month_range(start: datetime, end: datetime) -> List[datetime]:
-    return pd.date_range(start, end, freq="MS").tolist()
+    dates: List[datetime] = []
+    current = datetime(start.year, start.month, 1)
+    stop = datetime(end.year, end.month, 1)
+    while current <= stop:
+        dates.append(current)
+        current = current + relativedelta(months=1)
+    return dates
 
 
 def _npost(deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork) -> int:
@@ -356,11 +367,12 @@ def internal_stages_starting_dates_policy(
 ) -> List[datetime]:
     key = "internal_stages_starting_dates_policy"
     val = cache.get(key)
-    if val is None:
-        y = study_period_starting_year(deck_cls, cache, uow)
-        n = num_study_period_years(deck_cls, cache, uow)
-        val = _month_range(datetime(y, 1, 1), datetime(y + n - 1, 12, 1))
-        cache[key] = val
+    if val is not None:
+        return val
+    y = study_period_starting_year(deck_cls, cache, uow)
+    n = num_study_period_years(deck_cls, cache, uow)
+    val = _month_range(datetime(y, 1, 1), datetime(y + n - 1, 12, 1))
+    cache[key] = val
     return val
 
 
@@ -369,11 +381,12 @@ def internal_stages_starting_dates_policy_with_past_tendency(
 ) -> List[datetime]:
     key = "internal_stages_starting_dates_policy_with_past_tendency"
     val = cache.get(key)
-    if val is None:
-        y = study_period_starting_year(deck_cls, cache, uow)
-        n = num_study_period_years(deck_cls, cache, uow)
-        val = _month_range(datetime(y - 1, 1, 1), datetime(y + n - 1, 12, 1))
-        cache[key] = val
+    if val is not None:
+        return val
+    y = study_period_starting_year(deck_cls, cache, uow)
+    n = num_study_period_years(deck_cls, cache, uow)
+    val = _month_range(datetime(y - 1, 1, 1), datetime(y + n - 1, 12, 1))
+    cache[key] = val
     return val
 
 
@@ -382,13 +395,14 @@ def stages_starting_dates_final_simulation(
 ) -> List[datetime]:
     key = "stages_starting_dates_final_simulation"
     val = cache.get(key)
-    if val is None:
-        y = study_period_starting_year(deck_cls, cache, uow)
-        m = study_period_starting_month(deck_cls, cache, uow)
-        n = num_study_period_years(deck_cls, cache, uow)
-        p = num_post_study_period_years_final_simulation(deck_cls, cache, uow)
-        val = _month_range(datetime(y, m, 1), datetime(y + n + p - 1, 12, 1))
-        cache[key] = val
+    if val is not None:
+        return val
+    y = study_period_starting_year(deck_cls, cache, uow)
+    m = study_period_starting_month(deck_cls, cache, uow)
+    n = num_study_period_years(deck_cls, cache, uow)
+    p = num_post_study_period_years_final_simulation(deck_cls, cache, uow)
+    val = _month_range(datetime(y, m, 1), datetime(y + n + p - 1, 12, 1))
+    cache[key] = val
     return val
 
 
@@ -397,12 +411,13 @@ def internal_stages_starting_dates_final_simulation(
 ) -> List[datetime]:
     key = "internal_stages_starting_dates_final_simulation"
     val = cache.get(key)
-    if val is None:
-        y = study_period_starting_year(deck_cls, cache, uow)
-        n = num_study_period_years(deck_cls, cache, uow)
-        p = num_post_study_period_years_final_simulation(deck_cls, cache, uow)
-        val = _month_range(datetime(y, 1, 1), datetime(y + n + p - 1, 12, 1))
-        cache[key] = val
+    if val is not None:
+        return val
+    y = study_period_starting_year(deck_cls, cache, uow)
+    n = num_study_period_years(deck_cls, cache, uow)
+    p = num_post_study_period_years_final_simulation(deck_cls, cache, uow)
+    val = _month_range(datetime(y, 1, 1), datetime(y + n + p - 1, 12, 1))
+    cache[key] = val
     return val
 
 
@@ -411,12 +426,15 @@ def internal_stages_ending_dates_final_simulation(
 ) -> List[datetime]:
     key = "internal_stages_ending_dates_final_simulation"
     val = cache.get(key)
-    if val is None:
-        _starts = internal_stages_starting_dates_final_simulation
-        val = [
-            d + relativedelta(months=1) for d in _starts(deck_cls, cache, uow)
-        ]
-        cache[key] = val
+    if val is not None:
+        return val
+    val = [
+        d + relativedelta(months=1)
+        for d in internal_stages_starting_dates_final_simulation(
+            deck_cls, cache, uow
+        )
+    ]
+    cache[key] = val
     return val
 
 
@@ -452,48 +470,54 @@ def hydro_simulation_stages_ending_date_final_simulation(
 
 def configurations_pmo(
     deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
-) -> "pd.DataFrame":
+) -> "pl.DataFrame | None":
     pmo = accessors.pmo(deck_cls, cache, uow)
     configurations = pmo.configuracoes_qualquer_modificacao
-    if isinstance(configurations, pd.DataFrame):
-        configurations = configurations.rename(columns={"data": START_DATE_COL})
-    return configurations
+    if configurations is not None:
+        configurations = pl.from_pandas(configurations).rename(
+            {"data": START_DATE_COL}
+        )
+        return configurations
+    return None
 
 
 def configurations_dger(
     deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
-) -> "pd.DataFrame":
+) -> "pl.DataFrame":
     dates = stages_starting_dates_final_simulation(deck_cls, cache, uow)
     configurations = list(range(1, len(dates) + 1))
-    return pd.DataFrame(data={START_DATE_COL: dates, VALUE_COL: configurations})
+    return pl.DataFrame({START_DATE_COL: dates, VALUE_COL: configurations})
 
 
 def configurations(
     deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
-) -> "pd.DataFrame":
+) -> "pl.DataFrame":
     val = cache.get("configurations")
     if val is None:
         val = configurations_pmo(deck_cls, cache, uow)
         if val is None:
             val = configurations_dger(deck_cls, cache, uow)
         cache["configurations"] = val
-    return val.copy()
+    return val
 
 
 def consider_post_study_years(
     deck_cls,
     cache: Dict[str, Any],
-    df: "pd.DataFrame",
+    df: "pl.DataFrame",
     uow: AbstractUnitOfWork,
-) -> "pd.DataFrame":
+) -> "pl.DataFrame":
     num_years_to_add = _npost(deck_cls, cache, uow)
     if num_years_to_add == 0:
         return df
-    last_year = max(df[START_DATE_COL].dt.year)
-    df_last_year = df.loc[df[START_DATE_COL].dt.year == last_year]
+    last_year = df[START_DATE_COL].dt.year().max()
+    df_last_year = df.filter(pl.col(START_DATE_COL).dt.year() == last_year)
     dfs_post = []
     for post_year in range(1, num_years_to_add + 1):
-        df_post = df_last_year.copy()
-        df_post[START_DATE_COL] += pd.DateOffset(years=post_year)
+        df_post = df_last_year.with_columns(
+            pl.col(START_DATE_COL)
+            .dt.offset_by(f"{post_year}y")
+            .alias(START_DATE_COL)
+        )
         dfs_post.append(df_post)
-    return pd.concat([df] + dfs_post, ignore_index=True)
+    return pl.concat([df] + dfs_post)

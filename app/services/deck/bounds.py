@@ -1520,7 +1520,9 @@ class OperationVariableBounds:
         """
 
         def _get_group_for_bounds() -> Tuple[np.ndarray, np.ndarray]:
-            flow_diversion_bounds = Deck.flow_diversion(uow)
+            flow_diversion_bounds = Deck.flow_diversion(
+                uow
+            ).to_pandas()  # SHIM: remove after polars migration of this module
             synthesis_hydro_codes = df[HYDRO_CODE_COL].unique().tolist()
             flow_diversion_bounds = flow_diversion_bounds.loc[
                 flow_diversion_bounds[HYDRO_CODE_COL].isin(

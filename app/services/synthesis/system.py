@@ -125,24 +125,32 @@ class SystemSynthetizer:
 
     @classmethod
     def __resolve_PAT(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        df = Deck.block_lengths(uow)
+        # block_lengths now returns pl.DataFrame; convert to pandas
+        # SHIM: remove after polars migration of this module
+        df = Deck.block_lengths(uow).to_pandas()
         df[VALUE_COL] *= STAGE_DURATION_HOURS
         return df
 
     @classmethod
     def __resolve_SBM(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        df = Deck.submarkets(uow).reset_index()
+        df = (
+            Deck.submarkets(uow).to_pandas().reset_index(drop=True)
+        )  # SHIM: remove after polars migration of this module
         return df[[SUBMARKET_CODE_COL, SUBMARKET_NAME_COL]]
 
     @classmethod
     def __resolve_REE(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        df = Deck.eer_submarket_map(uow)
-        return df.reset_index()
+        df = (
+            Deck.eer_submarket_map(uow).to_pandas().reset_index(drop=True)
+        )  # SHIM: remove after polars migration of this module
+        return df
 
     @classmethod
     def __resolve_UTE(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        df = Deck.thermal_submarket_map(uow)
-        return df.reset_index()
+        df = (
+            Deck.thermal_submarket_map(uow).to_pandas().reset_index(drop=True)
+        )  # SHIM: remove after polars migration of this module
+        return df
 
     @classmethod
     def __resolve_CVU(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
@@ -151,8 +159,10 @@ class SystemSynthetizer:
 
     @classmethod
     def __resolve_UHE(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        df = Deck.hydro_eer_submarket_map(uow)
-        return df.reset_index()
+        df = (
+            Deck.hydro_eer_submarket_map(uow).to_pandas().reset_index(drop=True)
+        )  # SHIM: remove after polars migration of this module
+        return df
 
     @classmethod
     def _export_metadata(

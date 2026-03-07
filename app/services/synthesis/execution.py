@@ -124,12 +124,16 @@ class ExecutionSynthetizer:
 
     @classmethod
     def _resolve_cost(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        df = Deck.costs(uow)
+        # costs() now returns pl.DataFrame; convert to pandas
+        # SHIM: remove after polars migration of this module
+        df = Deck.costs(uow).to_pandas()
         return df[["parcela", "valor_esperado", "desvio_padrao"]]
 
     @classmethod
     def _resolve_runtime(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        df = Deck.runtimes(uow)
+        # runtimes() now returns pl.DataFrame; convert to pandas
+        # SHIM: remove after polars migration of this module
+        df = Deck.runtimes(uow).to_pandas()
         df["tempo"] = df["tempo"].dt.total_seconds()
         df = df.loc[df["etapa"] != "Tempo Total"]
         return df

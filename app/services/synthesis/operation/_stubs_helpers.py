@@ -105,7 +105,9 @@ def calc_accumulated_productivity(
     entities: dict,
     uow,
 ) -> pd.DataFrame:
-    hydro_df = Deck.hydros(uow).reset_index()
+    hydro_df = (
+        Deck.hydros(uow).to_pandas().reset_index(drop=True)
+    )  # SHIM: remove after polars migration of this module
     hydro_codes = entities[HYDRO_CODE_COL]
     np_edges = list(
         hydro_df.loc[

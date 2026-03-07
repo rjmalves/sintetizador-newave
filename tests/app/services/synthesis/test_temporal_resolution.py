@@ -61,7 +61,7 @@ def _make_block_lengths(
     start_dates: List[datetime],
     blocks: List[int],
     duration_per_block: float = 0.5,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """
     Build a block_lengths DataFrame with columns [START_DATE_COL, BLOCK_COL, VALUE_COL].
     Each block in each stage gets the same `duration_per_block` value.
@@ -72,7 +72,7 @@ def _make_block_lengths(
             rows.append(
                 {START_DATE_COL: d, BLOCK_COL: b, VALUE_COL: duration_per_block}
             )
-    return pd.DataFrame(rows)
+    return pl.from_pandas(pd.DataFrame(rows))
 
 
 def _make_input_df(
@@ -108,17 +108,16 @@ def _make_deck_context(
     duration_per_block: float = 0.5,
 ) -> DeckContext:
     block_lengths = _make_block_lengths(start_dates, blocks, duration_per_block)
-    uow_mock = MagicMock()
     ctx = DeckContext(
         block_lengths=block_lengths,
         num_scenarios=num_scenarios,
         num_blocks=len(blocks),
         starting_dates=start_dates,
         ending_dates=end_dates,
-        eer_submarket_map=pd.DataFrame(
+        eer_submarket_map=pl.DataFrame(
             {"codigo_ree": [1], "codigo_submercado": [1]}
         ),
-        hydro_eer_submarket_map=pd.DataFrame(
+        hydro_eer_submarket_map=pl.DataFrame(
             {"codigo_usina": [1], "codigo_ree": [1], "codigo_submercado": [1]}
         ),
         study_period_starting_month=1,

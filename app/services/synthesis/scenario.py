@@ -129,7 +129,9 @@ class ScenarioSynthetizer:
     def _generate_hydro_incremental_inflow_dataframe(
         cls, hydro_code: int, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-        hydros = Deck.hydros(uow).reset_index()
+        hydros = (
+            Deck.hydros(uow).to_pandas().reset_index(drop=True)
+        )  # SHIM: remove after polars migration of this module
         vazoes = Deck.vazoes(uow).to_pandas()
         vazoes.columns = [
             int(c) for c in vazoes.columns
@@ -286,7 +288,11 @@ class ScenarioSynthetizer:
         with time_and_log(
             "Tempo para calculo da MLT por UHE", logger=cls.logger
         ):
-            hydro_eer_submarket_map = Deck.hydro_eer_submarket_map(uow)
+            hydro_eer_submarket_map = (
+                Deck.hydro_eer_submarket_map(uow)
+                .to_pandas()
+                .set_index(HYDRO_CODE_COL)
+            )  # SHIM: remove after polars migration of this module
             lta_model_df = cls._model_dataframe_for_hydro_lta(uow)
             lta_hydro_dfs: List[pd.DataFrame] = []
             for hydro_code, map_line in hydro_eer_submarket_map.iterrows():
@@ -380,7 +386,9 @@ class ScenarioSynthetizer:
         def __generate_configuration_column(
             uow: AbstractUnitOfWork,
         ) -> np.ndarray:
-            configurations_df = Deck.configurations(uow)
+            # configurations() now returns pl.DataFrame; convert to pandas
+            # SHIM: remove after polars migration of this module
+            configurations_df = Deck.configurations(uow).to_pandas()
             starting_date_with_tendency = (
                 Deck.starting_date_with_past_tendency_period(uow)
             )
@@ -488,7 +496,9 @@ class ScenarioSynthetizer:
             "Tempo para calculo da MLT por REE", logger=cls.logger
         ):
             energy_history = _energy_history_df(uow)
-            eer_submarket_map = Deck.eer_submarket_map(uow)
+            eer_submarket_map = (
+                Deck.eer_submarket_map(uow).to_pandas().set_index(EER_CODE_COL)
+            )  # SHIM: remove after polars migration of this module
             eer_order = Deck.eer_code_order(uow)
             eer_submarket_map = eer_submarket_map.loc[eer_order].reset_index()
             lta_model_df = cls._model_dataframe_for_eer_lta(uow)
@@ -688,7 +698,9 @@ class ScenarioSynthetizer:
             num_stages: int,
             uow: AbstractUnitOfWork,
         ) -> pd.DataFrame:
-            eer_submarket_map = Deck.eer_submarket_map(uow)
+            eer_submarket_map = (
+                Deck.eer_submarket_map(uow).to_pandas().set_index(EER_CODE_COL)
+            )  # SHIM: remove after polars migration of this module
             eer_order = Deck.eer_code_order(uow)
             eer_submarket_map = eer_submarket_map.loc[eer_order].reset_index()
             for col in [
@@ -780,7 +792,11 @@ class ScenarioSynthetizer:
             num_stages: int,
             uow: AbstractUnitOfWork,
         ) -> pd.DataFrame:
-            hydro_eer_submarket_map = Deck.hydro_eer_submarket_map(uow)
+            hydro_eer_submarket_map = (
+                Deck.hydro_eer_submarket_map(uow)
+                .to_pandas()
+                .set_index(HYDRO_CODE_COL)
+            )  # SHIM: remove after polars migration of this module
             hydro_order = Deck.hydro_code_order(uow)
             hydro_eer_submarket_map = hydro_eer_submarket_map.loc[
                 hydro_order

@@ -82,7 +82,9 @@ def resolve_SBP(
     de um par de submercados a partir dos arquivos de saída do NWLISTOP.
     """
 
-    submarkets = Deck.submarkets(uow).reset_index()
+    submarkets = (
+        Deck.submarkets(uow).to_pandas().reset_index(drop=True)
+    )  # SHIM: remove after polars migration of this module
     sbms_idx = submarkets[SUBMARKET_CODE_COL].unique()
     sbms_name = [
         submarkets.loc[

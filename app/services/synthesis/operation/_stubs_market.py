@@ -71,7 +71,9 @@ def _resolve_SBM_MER_MERL(
     ProcessPoolExecutor. Extracted from the former nested closure inside
     stub_MER_MERL to eliminate the architectural anomaly of a nested executor.
     """
-    submarkets = Deck.submarkets(uow).reset_index()
+    submarkets = (
+        Deck.submarkets(uow).to_pandas().reset_index(drop=True)
+    )  # SHIM: remove after polars migration of this module
     real_submarkets = submarkets.loc[
         submarkets["ficticio"] == 0, :
     ].sort_values(SUBMARKET_CODE_COL)
@@ -138,7 +140,9 @@ def stub_GUNS(
     def _resolve_SIN(
         synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> Optional[pd.DataFrame]:
-        df = Deck.non_simulated_generation(uow)
+        df = Deck.non_simulated_generation(
+            uow
+        ).to_pandas()  # SHIM: remove after polars migration of this module
         df = generate_scenarios(cls, df, uow)
         df = (
             df.groupby([START_DATE_COL, BLOCK_COL, "serie"])
@@ -152,7 +156,9 @@ def stub_GUNS(
     def _resolve_SBM(
         synthesis: OperationSynthesis, uow: AbstractUnitOfWork
     ) -> Optional[pd.DataFrame]:
-        df = Deck.non_simulated_generation(uow)
+        df = Deck.non_simulated_generation(
+            uow
+        ).to_pandas()  # SHIM: remove after polars migration of this module
         df = generate_scenarios(cls, df, uow)
         df = df.sort_values(
             [SUBMARKET_CODE_COL, START_DATE_COL, "serie", BLOCK_COL]

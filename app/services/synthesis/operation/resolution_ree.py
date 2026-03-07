@@ -50,9 +50,13 @@ def resolve_REE_entity(
         )
 
     if deck_context is not None:
-        aux_df = deck_context.eer_submarket_map
+        aux_df = deck_context.eer_submarket_map.to_pandas().set_index(
+            EER_CODE_COL
+        )  # SHIM: remove after polars migration of this module
     else:
-        aux_df = Deck.eer_submarket_map(uow)
+        aux_df = (
+            Deck.eer_submarket_map(uow).to_pandas().set_index(EER_CODE_COL)
+        )  # SHIM: remove after polars migration of this module
 
     return post_resolve_entity(
         cls,
@@ -79,7 +83,12 @@ def resolve_REE(
     de um REE a partir dos arquivos de saída do NWLISTOP.
     """
 
-    eers = Deck.eers(uow).reset_index().sort_values(EER_CODE_COL)
+    eers = (
+        Deck.eers(uow)
+        .to_pandas()
+        .reset_index(drop=True)
+        .sort_values(EER_CODE_COL)
+    )  # SHIM: remove after polars migration of this module
     eers_idx = eers[EER_CODE_COL]
     eers_name = eers[EER_NAME_COL]
 

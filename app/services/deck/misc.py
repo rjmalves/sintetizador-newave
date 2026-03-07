@@ -1,10 +1,11 @@
 from typing import Any, Dict
 
-import pandas as pd
+import polars as pl
 
 from app.internal.constants import (
     BLOCK_COL,
     START_DATE_COL,
+    VALUE_COL,
 )
 from app.services.deck import accessors, readers, temporal
 from app.services.unitofwork import AbstractUnitOfWork
@@ -12,18 +13,19 @@ from app.services.unitofwork import AbstractUnitOfWork
 
 def costs(
     deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     val = cache.get("costs")
     if val is None:
         pmo = accessors.pmo(deck_cls, cache, uow)
-        val = readers.validate_data(
+        raw = readers.validate_data(
             deck_cls,
             pmo.custo_operacao_series_simuladas,
-            pd.DataFrame,
+            object,
             "custo de operacao das series simuladas (pmo.dat)",
         )
+        val = pl.from_pandas(raw)
         cache["costs"] = val
-    return val.copy()
+    return val
 
 
 def num_iterations(
@@ -31,7 +33,6 @@ def num_iterations(
 ) -> int:
     val = cache.get("num_iterations")
     if val is None:
-        # convergence is in energy module but we avoid circular by importing here
         from app.services.deck import energy as energy_mod
 
         df = energy_mod.convergence(deck_cls, cache, uow)
@@ -47,16 +48,17 @@ def num_iterations(
 
 def runtimes(
     deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     val = cache.get("runtimes")
     if val is None:
         arq = accessors.newavetim(deck_cls, cache, uow)
-        val = readers.validate_data(
+        raw = readers.validate_data(
             deck_cls,
             arq.tempos_etapas,
-            pd.DataFrame,
+            object,
             "tempos por etapa da execucao (newave.tim)",
         )
+        val = pl.from_pandas(raw)
         cache["runtimes"] = val
     return val
 
@@ -76,29 +78,34 @@ def num_blocks(deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork) -> int:
 
 def block_lengths(
     deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
-) -> pd.DataFrame:
-    def __eval_pat0(df_pat: pd.DataFrame) -> pd.DataFrame:
-        df_pat_0 = df_pat.groupby(START_DATE_COL, as_index=False).sum(
-            numeric_only=True
+) -> pl.DataFrame:
+    def _eval_pat0(df_pat: pl.DataFrame) -> pl.DataFrame:
+        df_pat_0 = (
+            df_pat.group_by(START_DATE_COL)
+            .agg(pl.col(VALUE_COL).sum())
+            .with_columns(
+                pl.lit(0).cast(df_pat.schema[BLOCK_COL]).alias(BLOCK_COL)
+            )
+            .select(df_pat.columns)
         )
-        df_pat_0[BLOCK_COL] = 0
-        df_pat = pd.concat([df_pat, df_pat_0], ignore_index=True)
-        df_pat.sort_values([START_DATE_COL, BLOCK_COL], inplace=True)
+        df_pat = pl.concat([df_pat, df_pat_0]).sort([START_DATE_COL, BLOCK_COL])
         return df_pat
 
     val = cache.get("block_lengths")
     if val is None:
-        val = readers.validate_data(
+        raw = readers.validate_data(
             deck_cls,
             readers.get_patamar(deck_cls, uow).duracao_mensal_patamares,
-            pd.DataFrame,
+            object,
             "duracao mensal em P.U. dos patamares (patamar.dat)",
         )
-        val = val.rename(columns={"data": START_DATE_COL, "patamar": BLOCK_COL})
+        val = pl.from_pandas(raw).rename(
+            {"data": START_DATE_COL, "patamar": BLOCK_COL}
+        )
         val = temporal.consider_post_study_years(deck_cls, cache, val, uow)
-        val = __eval_pat0(val)
+        val = _eval_pat0(val)
         cache["block_lengths"] = val
-    return val.copy()
+    return val
 
 
 def models_wind_generation(

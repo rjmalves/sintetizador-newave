@@ -73,7 +73,9 @@ def resolve_SBM(
     de um submercado a partir dos arquivos de saída do NWLISTOP.
     """
 
-    submarkets = Deck.submarkets(uow).reset_index()
+    submarkets = (
+        Deck.submarkets(uow).to_pandas().reset_index(drop=True)
+    )  # SHIM: remove after polars migration of this module
     real_submarkets = submarkets.loc[
         submarkets["ficticio"] == 0, :
     ].sort_values(SUBMARKET_CODE_COL)

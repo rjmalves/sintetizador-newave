@@ -1,8 +1,9 @@
-from functools import partial
+from __future__ import annotations
+
 from typing import Any, Dict, Optional
 
 import numpy as np
-import pandas as pd
+import polars as pl
 
 from app.internal.constants import (
     EER_CODE_COL,
@@ -32,123 +33,148 @@ from app.utils.graph import Graph
 
 
 def evaluate_productivity(
-    df: pd.DataFrame,
+    df: pl.DataFrame,
     volume_col: str = VOLUME_FOR_PRODUCTIVITY_TMP_COL,
-) -> pd.DataFrame:
-    def _upper_drop_at_volume(line: pd.Series) -> float:
-        coefs = [line[c] for c in HEIGHT_POLY_COLS]
-        if line[VOLUME_REGULATION_COL] == "M":
-            coefs_integral = [0] + [c / (i + 1) for i, c in enumerate(coefs)]
-            min_v = line[LOWER_BOUND_COL]
-            max_v = line[UPPER_BOUND_COL]
+) -> pl.DataFrame:
+    """Evaluate hydraulic productivity for each plant row."""
+    n = df.shape[0]
+
+    coefs = [df[c].to_numpy() for c in HEIGHT_POLY_COLS]
+    vol_array = df[volume_col].fill_null(0.0).to_numpy()
+    reg_array = df[VOLUME_REGULATION_COL].to_numpy()
+    lower_array = df[LOWER_BOUND_COL].to_numpy()
+    upper_array = df[UPPER_BOUND_COL].to_numpy()
+    ror_ref_array = df[RUN_OF_RIVER_REFERENCE_VOLUME_COL].to_numpy()
+
+    upper_drop = np.empty(n, dtype=np.float64)
+    for i in range(n):
+        row_coefs = [coefs[j][i] for j in range(len(HEIGHT_POLY_COLS))]
+        if reg_array[i] == "M":
+            # Regulated plant: integrate polynomial over [min_v, vol] and divide
+            coefs_integral = [0.0] + [
+                c / (k + 1) for k, c in enumerate(row_coefs)
+            ]
+            min_v = lower_array[i]
+            max_v = upper_array[i]
             net_v = max_v - min_v
-            pct_v = line[volume_col] / net_v if net_v > 0 else 0
+            pct_v = vol_array[i] / net_v if net_v > 0 else 0.0
             rev_int = list(reversed(coefs_integral))
-            min_int = np.polyval(rev_int, min_v)
-            max_int = np.polyval(rev_int, pct_v * net_v + min_v)
-            return (
-                (max_int - min_int) / (pct_v * net_v)
-                if pct_v * net_v > 0
-                else 0.0
-            )
+            min_int = float(np.polyval(rev_int, min_v))
+            max_int = float(np.polyval(rev_int, pct_v * net_v + min_v))
+            denom = pct_v * net_v
+            upper_drop[i] = (max_int - min_int) / denom if denom > 0 else 0.0
         else:
-            return float(
-                np.polyval(
-                    list(reversed(coefs)),
-                    line[RUN_OF_RIVER_REFERENCE_VOLUME_COL],
-                )
+            upper_drop[i] = float(
+                np.polyval(list(reversed(row_coefs)), ror_ref_array[i])
             )
 
-    def _fill_run_of_river(line: pd.Series) -> float:
-        return 0.0 if pd.isna(line[volume_col]) else line[volume_col]
-
-    def _apply_losses(line: pd.Series, col: str):
-        if line[LOSS_KIND_COL] == 1:
-            return line[col] * (1 - line[LOSS_COL])
-        elif line[LOSS_KIND_COL] == 2:
-            return line[col] - line[LOSS_COL]
-
-    df[UPPER_DROP_COL] = df.apply(_upper_drop_at_volume, axis=1)
-    df[NET_DROP_COL] = df[UPPER_DROP_COL] - df[LOWER_DROP_COL]
-    df[volume_col] = df.apply(_fill_run_of_river, axis=1)
-    df[PRODUCTIVITY_TMP_COL] = df[SPEC_PRODUCTIVITY_COL] * df.apply(
-        partial(_apply_losses, col=NET_DROP_COL), axis=1
+    df = df.with_columns(pl.Series(UPPER_DROP_COL, upper_drop))
+    df = df.with_columns(
+        (pl.col(UPPER_DROP_COL) - pl.col(LOWER_DROP_COL)).alias(NET_DROP_COL)
     )
-    df[PRODUCTIVITY_TMP_COL] *= HM3_M3S_MONTHLY_FACTOR
+    df = df.with_columns(pl.col(volume_col).fill_null(0.0).alias(volume_col))
+    loss_kind_array = df[LOSS_KIND_COL].to_numpy()
+    loss_array = df[LOSS_COL].to_numpy()
+    net_drop_array = df[NET_DROP_COL].to_numpy()
+    spec_prod_array = df[SPEC_PRODUCTIVITY_COL].to_numpy()
+
+    productivity = np.empty(n, dtype=np.float64)
+    for i in range(n):
+        if loss_kind_array[i] == 1:
+            adjusted_drop = net_drop_array[i] * (1.0 - loss_array[i])
+        elif loss_kind_array[i] == 2:
+            adjusted_drop = net_drop_array[i] - loss_array[i]
+        else:
+            adjusted_drop = net_drop_array[i]
+        productivity[i] = spec_prod_array[i] * adjusted_drop
+
+    productivity *= HM3_M3S_MONTHLY_FACTOR
+    df = df.with_columns(pl.Series(PRODUCTIVITY_TMP_COL, productivity))
     return df
 
 
-def accumulate_productivity(df: pd.DataFrame) -> pd.DataFrame:
-    np_edges = list(
-        df.reset_index()[[FOLLOWING_HYDRO_COL, HYDRO_CODE_COL]].to_numpy()
-    )
-    edges = [tuple(e) for e in np_edges]
+def accumulate_productivity(df: pl.DataFrame) -> pl.DataFrame:
+    """BFS-based cascade accumulation of productivity values."""
+    codes: list[int] = df[HYDRO_CODE_COL].to_list()
+    following: list[int] = df[FOLLOWING_HYDRO_COL].to_list()
+    prod: list[float] = df[PRODUCTIVITY_TMP_COL].to_list()
+    code_to_idx: dict[int, int] = {c: i for i, c in enumerate(codes)}
+
+    edges = list(zip(following, codes))
     bfs = Graph(edges, directed=True).bfs(0)[1:]
     for hydro_code in bfs:
-        downstream = df.at[hydro_code, FOLLOWING_HYDRO_COL]
+        idx = code_to_idx.get(hydro_code)
+        if idx is None:
+            continue
+        downstream = following[idx]
         if downstream == 0:
             continue
-        df.at[hydro_code, PRODUCTIVITY_TMP_COL] += df.at[
-            downstream, PRODUCTIVITY_TMP_COL
-        ]
-    return df
+        d_idx = code_to_idx.get(downstream)
+        if d_idx is None:
+            continue
+        prod[idx] += prod[d_idx]
+
+    return df.with_columns(pl.Series(PRODUCTIVITY_TMP_COL, prod))
 
 
 def _hydro_accumulated_productivity_at_volume(
     deck_cls,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
-    df: pd.DataFrame,
+    df: pl.DataFrame,
     volume_col: str = VOLUME_FOR_PRODUCTIVITY_TMP_COL,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     from app.services.deck import hydro as hydro_mod
 
-    hidr = (
-        accessors.hidr(deck_cls, cache, uow)
-        .to_pandas()
-        .set_index(HYDRO_CODE_COL)
-    )  # SHIM: remove after polars migration of this module
+    hidr = accessors.hidr(deck_cls, cache, uow)
     hidr_cols = [
+        HYDRO_CODE_COL,
         RUN_OF_RIVER_REFERENCE_VOLUME_COL,
         LOSS_COL,
         LOSS_KIND_COL,
         LOWER_DROP_COL,
         SPEC_PRODUCTIVITY_COL,
         VOLUME_REGULATION_COL,
-    ]
-    df = df.copy()
-    df_cols = df.columns.tolist()
-    df = df.join(hidr[hidr_cols + HEIGHT_POLY_COLS], how="inner")
-    df = df.join(
-        hydro_mod.hydro_volume_bounds_with_changes(deck_cls, cache, uow),
-        how="inner",
+    ] + HEIGHT_POLY_COLS
+    hidr_sel = hidr.select(hidr_cols)
+
+    volume_bounds = hydro_mod.hydro_volume_bounds_with_changes(
+        deck_cls, cache, uow
+    ).select([HYDRO_CODE_COL, LOWER_BOUND_COL, UPPER_BOUND_COL])
+
+    hydros_following = entities.hydros(deck_cls, cache, uow).select(
+        [HYDRO_CODE_COL, FOLLOWING_HYDRO_COL]
     )
-    df = df.join(
-        entities.hydros(deck_cls, cache, uow)[[FOLLOWING_HYDRO_COL]],
-        how="inner",
-    )
-    df = evaluate_productivity(df, volume_col=volume_col)
-    df = accumulate_productivity(df)
-    return df[df_cols + [PRODUCTIVITY_TMP_COL]]
+
+    df_cols = df.columns
+    work = df.join(hidr_sel, on=HYDRO_CODE_COL, how="inner")
+    work = work.join(volume_bounds, on=HYDRO_CODE_COL, how="inner")
+    work = work.join(hydros_following, on=HYDRO_CODE_COL, how="inner")
+    work = evaluate_productivity(work, volume_col=volume_col)
+    work = accumulate_productivity(work)
+    return work.select(df_cols + [PRODUCTIVITY_TMP_COL])
 
 
 def _initial_stored_energy_from_pmo(
     deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
-) -> Optional[pd.DataFrame]:
-    df_pmo = accessors.pmo(deck_cls, cache, uow).energia_armazenada_inicial
-    if isinstance(df_pmo, pd.DataFrame):
-        eers = entities.eers(deck_cls, cache, uow).reset_index()
-        df_pmo[EER_CODE_COL] = df_pmo["nome_ree"].apply(
-            lambda x: eers.loc[eers[EER_NAME_COL] == x, EER_CODE_COL].iloc[0]
-        )
-        df_pmo = df_pmo.rename(columns={"nome_ree": EER_NAME_COL})
-        df_pmo = df_pmo.set_index([EER_CODE_COL]).sort_index()
-    return df_pmo
+) -> Optional[pl.DataFrame]:
+    df_pmo_pd = accessors.pmo(deck_cls, cache, uow).energia_armazenada_inicial
+    if not hasattr(df_pmo_pd, "rename"):
+        return None
+    eers = entities.eers(deck_cls, cache, uow)
+    df_pmo = pl.from_pandas(df_pmo_pd).rename({"nome_ree": EER_NAME_COL})
+    df_pmo = df_pmo.join(
+        eers.select([EER_CODE_COL, EER_NAME_COL]),
+        on=EER_NAME_COL,
+        how="left",
+    )
+    df_pmo = df_pmo.sort(EER_CODE_COL)
+    return df_pmo.select([EER_NAME_COL, "valor_MWmes", "valor_percentual"])
 
 
 def _initial_stored_energy_from_confhd_hidr(
     deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
-) -> Optional[pd.DataFrame]:
+) -> Optional[pl.DataFrame]:
     from app.services.deck import hydro as hydro_mod
 
     ABSOLUTE_VALUE_COL = "valor_hm3"
@@ -158,130 +184,172 @@ def _initial_stored_energy_from_confhd_hidr(
     MAX_STORED_VOLUME_COL = "varmax"
     MAXIMUM_STORED_ENERGY_COL = "earmax"
 
-    def _join_drop_data(df: pd.DataFrame) -> pd.DataFrame:
-        drops_df = hydro_mod.hydro_drops_in_stages(deck_cls, cache, uow)
+    def _join_drop_data(df: pl.DataFrame) -> pl.DataFrame:
+        drops_pl = hydro_mod.hydro_drops_in_stages(deck_cls, cache, uow)
         stage_date = temporal.stages_starting_dates_final_simulation(
             deck_cls, cache, uow
         )[0]
-        drops_df = drops_df.loc[
-            drops_df[START_DATE_COL] == stage_date
-        ].set_index(HYDRO_CODE_COL)
-        return df.drop(columns=["usina"]).join(drops_df, how="inner")
+        drops_df = drops_pl.filter(pl.col(START_DATE_COL) == stage_date)
+        return df.join(drops_df.drop("usina"), on=HYDRO_CODE_COL, how="inner")
 
-    def _join_bounds_data(df: pd.DataFrame) -> pd.DataFrame:
+    def _join_bounds_data(df: pl.DataFrame) -> pl.DataFrame:
         bounds_df = hydro_mod.hydro_volume_bounds_with_changes(
             deck_cls, cache, uow
-        )
-        return df.join(
-            bounds_df[[LOWER_BOUND_COL, UPPER_BOUND_COL]], how="inner"
-        )
+        ).select([HYDRO_CODE_COL, LOWER_BOUND_COL, UPPER_BOUND_COL])
+        return df.join(bounds_df, on=HYDRO_CODE_COL, how="inner")
 
-    def _volume_to_energy(df: pd.DataFrame) -> pd.DataFrame:
-        df.loc[df[VOLUME_REGULATION_COL] != "M", ABSOLUTE_VALUE_COL] = 0.0
-        df[ABSOLUTE_VALUE_COL] *= df[PRODUCTIVITY_TMP_COL]
-        df.loc[df[VOLUME_REGULATION_COL] != "M", MAX_STORED_VOLUME_COL] = 0.0
-        df[MAXIMUM_STORED_ENERGY_COL] = (
-            df[MAX_STORED_VOLUME_COL] * df[MAX_PRODUCTIVITY_COL]
+    def _volume_to_energy(df: pl.DataFrame) -> pl.DataFrame:
+        df = (
+            df.with_columns(
+                pl.when(pl.col(VOLUME_REGULATION_COL) != "M")
+                .then(pl.lit(0.0))
+                .otherwise(pl.col(ABSOLUTE_VALUE_COL))
+                .alias(ABSOLUTE_VALUE_COL)
+            )
+            .with_columns(
+                (
+                    pl.col(ABSOLUTE_VALUE_COL) * pl.col(PRODUCTIVITY_TMP_COL)
+                ).alias(ABSOLUTE_VALUE_COL)
+            )
+            .with_columns(
+                pl.when(pl.col(VOLUME_REGULATION_COL) != "M")
+                .then(pl.lit(0.0))
+                .otherwise(pl.col(MAX_STORED_VOLUME_COL))
+                .alias(MAX_STORED_VOLUME_COL)
+            )
+            .with_columns(
+                (
+                    pl.col(MAX_STORED_VOLUME_COL) * pl.col(MAX_PRODUCTIVITY_COL)
+                ).alias(MAXIMUM_STORED_ENERGY_COL)
+            )
         )
         return df
 
-    def _cast_to_eers(df: pd.DataFrame) -> pd.DataFrame:
-        df = df.join(
-            entities.hydro_eer_submarket_map(deck_cls, cache, uow).drop(
-                columns=["usina"]
-            ),
-            how="inner",
+    def _cast_to_eers(df: pl.DataFrame) -> pl.DataFrame:
+        map_df = entities.hydro_eer_submarket_map(deck_cls, cache, uow).select(
+            [HYDRO_CODE_COL, EER_CODE_COL, EER_NAME_COL]
         )
-        df = (
-            df[
+        df = df.join(map_df, on=HYDRO_CODE_COL, how="inner")
+        aggregated = (
+            df.select(
                 [
                     EER_CODE_COL,
                     EER_NAME_COL,
                     ABSOLUTE_VALUE_COL,
                     MAXIMUM_STORED_ENERGY_COL,
                 ]
-            ]
-            .groupby([EER_CODE_COL, EER_NAME_COL])
-            .sum()
-        ).reset_index()
-        eer_codes = entities.eer_code_order(deck_cls, cache, uow)
-        eers = entities.eers(deck_cls, cache, uow)
-        missing_eers = [
-            e for e in eer_codes if e not in df[EER_CODE_COL].tolist()
-        ]
-        missing_df = pd.DataFrame(
-            {
-                EER_CODE_COL: missing_eers,
-                EER_NAME_COL: eers.loc[missing_eers, EER_NAME_COL].tolist(),
-                ABSOLUTE_VALUE_COL: [np.nan] * len(missing_eers),
-                PERCENT_VALUE_COL: [100.0] * len(missing_eers),
-            }
+            )
+            .group_by([EER_CODE_COL, EER_NAME_COL])
+            .agg(
+                pl.col(ABSOLUTE_VALUE_COL).sum(),
+                pl.col(MAXIMUM_STORED_ENERGY_COL).sum(),
+            )
         )
-        if not missing_df.empty:
-            df = pd.concat([df, missing_df], ignore_index=True)
-        df[EER_CODE_COL] = df[EER_CODE_COL].astype(int)
-        return df.set_index(EER_CODE_COL)
+        eer_codes = entities.eer_code_order(deck_cls, cache, uow)
+        present_codes = aggregated[EER_CODE_COL].to_list()
+        missing_codes = [e for e in eer_codes if e not in present_codes]
+
+        if missing_codes:
+            eers_df = entities.eers(deck_cls, cache, uow)
+            missing_names = eers_df.filter(
+                pl.col(EER_CODE_COL).is_in(missing_codes)
+            ).select([EER_CODE_COL, EER_NAME_COL])
+            nan_col = pl.lit(None).cast(pl.Float64)
+            missing_df = missing_names.with_columns(
+                nan_col.alias(ABSOLUTE_VALUE_COL),
+                pl.lit(100.0).alias(PERCENT_VALUE_COL),
+                nan_col.alias(MAXIMUM_STORED_ENERGY_COL),
+            )
+            aggregated = pl.concat(
+                [aggregated, missing_df.drop(PERCENT_VALUE_COL)],
+                how="diagonal",
+            )
+
+        return aggregated.sort(EER_CODE_COL)
 
     hydros_df = entities.hydros(deck_cls, cache, uow)
-    df = initial_stored_volume(deck_cls, cache, uow).set_index(HYDRO_CODE_COL)
+    # initial_stored_volume returns pl.DataFrame (hydro_code, name, valor_hm3, valor_percentual)
+    stored_vol = initial_stored_volume(deck_cls, cache, uow)
 
-    absolute_df = df.copy()
+    absolute_df = stored_vol
     absolute_df = _join_drop_data(absolute_df)
     absolute_df = _join_bounds_data(absolute_df)
     absolute_df = absolute_df.join(
-        hydros_df[[FOLLOWING_HYDRO_COL]], how="inner"
+        hydros_df.select([HYDRO_CODE_COL, FOLLOWING_HYDRO_COL]),
+        on=HYDRO_CODE_COL,
+        how="inner",
     )
     absolute_df = evaluate_productivity(
         absolute_df, volume_col=ABSOLUTE_VALUE_COL
     )
     absolute_df = accumulate_productivity(absolute_df)
 
-    df_cols = df.columns
-    percent_df = _join_bounds_data(df.copy())
-    percent_df[ABSOLUTE_VALUE_COL] = (
-        percent_df[UPPER_BOUND_COL] - percent_df[LOWER_BOUND_COL]
-    )
-    percent_df = percent_df[df_cols]
+    sv_cols = stored_vol.columns
+    percent_df = _join_bounds_data(stored_vol)
+    percent_df = percent_df.with_columns(
+        (pl.col(UPPER_BOUND_COL) - pl.col(LOWER_BOUND_COL)).alias(
+            ABSOLUTE_VALUE_COL
+        )
+    ).select(sv_cols)
     percent_df = _join_drop_data(percent_df)
     percent_df = _join_bounds_data(percent_df)
-    percent_df = percent_df.join(hydros_df[[FOLLOWING_HYDRO_COL]], how="inner")
-    percent_df[ABSOLUTE_VALUE_COL] = (
-        percent_df[UPPER_BOUND_COL] - percent_df[LOWER_BOUND_COL]
+    percent_df = percent_df.join(
+        hydros_df.select([HYDRO_CODE_COL, FOLLOWING_HYDRO_COL]),
+        on=HYDRO_CODE_COL,
+        how="inner",
+    )
+    percent_df = percent_df.with_columns(
+        (pl.col(UPPER_BOUND_COL) - pl.col(LOWER_BOUND_COL)).alias(
+            ABSOLUTE_VALUE_COL
+        )
     )
     percent_df = evaluate_productivity(
         percent_df, volume_col=ABSOLUTE_VALUE_COL
     )
     percent_df = accumulate_productivity(percent_df)
     percent_df = percent_df.rename(
-        columns={
+        {
             ABSOLUTE_VALUE_COL: MAX_STORED_VOLUME_COL,
             PRODUCTIVITY_TMP_COL: MAX_PRODUCTIVITY_COL,
         }
     )
 
-    df = absolute_df.join(
-        percent_df[[MAX_STORED_VOLUME_COL, MAX_PRODUCTIVITY_COL]], how="inner"
+    return (
+        absolute_df.join(
+            percent_df.select(
+                [HYDRO_CODE_COL, MAX_STORED_VOLUME_COL, MAX_PRODUCTIVITY_COL]
+            ),
+            on=HYDRO_CODE_COL,
+            how="inner",
+        )
+        .pipe(lambda df: _volume_to_energy(df))
+        .pipe(
+            lambda df: _cast_to_eers(
+                df.select(
+                    [
+                        HYDRO_CODE_COL,
+                        ABSOLUTE_VALUE_COL,
+                        MAX_STORED_VOLUME_COL,
+                        MAXIMUM_STORED_ENERGY_COL,
+                    ]
+                )
+            )
+        )
+        .with_columns(
+            (
+                pl.col(ABSOLUTE_VALUE_COL)
+                / pl.col(MAXIMUM_STORED_ENERGY_COL)
+                * 100.0
+            ).alias(PERCENT_VALUE_COL)
+        )
+        .rename({ABSOLUTE_VALUE_COL: ABSOLUTE_VALUE_FINAL_COL})
+        .select([EER_NAME_COL, ABSOLUTE_VALUE_FINAL_COL, PERCENT_VALUE_COL])
     )
-    df = _volume_to_energy(df)
-    df = _cast_to_eers(
-        df[
-            [
-                ABSOLUTE_VALUE_COL,
-                MAX_STORED_VOLUME_COL,
-                MAXIMUM_STORED_ENERGY_COL,
-            ]
-        ]
-    )
-    df[PERCENT_VALUE_COL] = (
-        df[ABSOLUTE_VALUE_COL] / df[MAXIMUM_STORED_ENERGY_COL] * 100.0
-    )
-    df = df.rename(columns={ABSOLUTE_VALUE_COL: ABSOLUTE_VALUE_FINAL_COL})
-    return df[[EER_NAME_COL, ABSOLUTE_VALUE_FINAL_COL, PERCENT_VALUE_COL]]
 
 
 def initial_stored_energy(
     deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     val = cache.get("initial_stored_energy")
     if val is None:
         val = _initial_stored_energy_from_pmo(deck_cls, cache, uow)
@@ -290,76 +358,97 @@ def initial_stored_energy(
         val = readers.validate_data(
             deck_cls,
             val,
-            pd.DataFrame,
+            pl.DataFrame,
             "energia armazenada inicial por REE (pmo.dat ou calculada)",
         )
+        assert isinstance(val, pl.DataFrame)
         cache["initial_stored_energy"] = val
-    return val.copy()
+    return val
 
 
 def _initial_stored_volume_from_pmo(
     deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
-) -> Optional[pd.DataFrame]:
-    df = accessors.pmo(deck_cls, cache, uow).volume_armazenado_inicial
-    if df is not None:
-        df = df.rename(
-            columns={
-                "codigo_usina": HYDRO_CODE_COL,
-                "nome_usina": HYDRO_NAME_COL,
-            }
-        )
+) -> Optional[pl.DataFrame]:
+    df_pd = accessors.pmo(deck_cls, cache, uow).volume_armazenado_inicial
+    if df_pd is None:
+        return None
+    df = pl.from_pandas(df_pd).rename(
+        {
+            "codigo_usina": HYDRO_CODE_COL,
+            "nome_usina": HYDRO_NAME_COL,
+        }
+    )
     return df
 
 
 def _initial_stored_volume_from_confhd_hidr(
     deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
-) -> Optional[pd.DataFrame]:
+) -> Optional[pl.DataFrame]:
     from app.services.deck import hydro as hydro_mod
 
     confhd = readers.get_confhd(deck_cls, uow)
-    df = confhd.usinas[
-        [HYDRO_CODE_COL, "nome_usina", "volume_inicial_percentual"]
-    ].set_index(HYDRO_CODE_COL)
-    df = df.rename(
-        columns={
+    usinas = confhd.usinas
+    assert usinas is not None
+    confhd_df = pl.from_pandas(
+        usinas[[HYDRO_CODE_COL, "nome_usina", "volume_inicial_percentual"]]
+    ).rename(
+        {
             "nome_usina": HYDRO_NAME_COL,
             "volume_inicial_percentual": "valor_percentual",
         }
     )
-    hidr = (
-        accessors.hidr(deck_cls, cache, uow)
-        .to_pandas()
-        .set_index(HYDRO_CODE_COL)
-    )  # SHIM: remove after polars migration of this module
+
+    hidr = accessors.hidr(deck_cls, cache, uow)
     volume_bounds = hydro_mod.hydro_volume_bounds_with_changes(
         deck_cls, cache, uow
-    )[[LOWER_BOUND_COL, UPPER_BOUND_COL]]
-    df = df.join(hidr, how="inner")
-    df = df.join(volume_bounds, how="inner")
-    df["valor_hm3"] = df.apply(
-        lambda line: (
-            line["valor_percentual"]
-            / 100.0
-            * (line[UPPER_BOUND_COL] - line[LOWER_BOUND_COL])
-        ),
-        axis=1,
+    ).select([HYDRO_CODE_COL, LOWER_BOUND_COL, UPPER_BOUND_COL])
+
+    df = confhd_df.join(hidr, on=HYDRO_CODE_COL, how="inner").join(
+        volume_bounds, on=HYDRO_CODE_COL, how="inner"
     )
-    df.loc[df["tipo_regulacao"] != "M", "valor_hm3"] = np.nan
-    df.loc[df["tipo_regulacao"] != "M", "valor_percentual"] = 0.0
-    return df[[HYDRO_NAME_COL, "valor_hm3", "valor_percentual"]].reset_index()
+
+    return (
+        df.with_columns(
+            (
+                pl.col("valor_percentual")
+                / 100.0
+                * (pl.col(UPPER_BOUND_COL) - pl.col(LOWER_BOUND_COL))
+            ).alias("valor_hm3")
+        )
+        .with_columns(
+            pl.when(pl.col("tipo_regulacao") != "M")
+            .then(pl.lit(None).cast(pl.Float64))
+            .otherwise(pl.col("valor_hm3"))
+            .alias("valor_hm3")
+        )
+        .with_columns(
+            pl.when(pl.col("tipo_regulacao") != "M")
+            .then(pl.lit(0.0))
+            .otherwise(pl.col("valor_percentual"))
+            .alias("valor_percentual")
+        )
+        .select(
+            [HYDRO_CODE_COL, HYDRO_NAME_COL, "valor_hm3", "valor_percentual"]
+        )
+    )
 
 
 def _initial_stored_volume_pre_study_condition(
-    deck_cls, cache: Dict[str, Any], df: pd.DataFrame, uow: AbstractUnitOfWork
-) -> pd.DataFrame:
+    deck_cls, cache: Dict[str, Any], df: pl.DataFrame, uow: AbstractUnitOfWork
+) -> pl.DataFrame:
     if temporal.num_pre_study_period_years(deck_cls, cache, uow) > 0:
-        df.loc[~df["valor_hm3"].isna(), "valor_percentual"] = 100.0
+        df = df.with_columns(
+            pl.when(pl.col("valor_hm3").is_not_null())
+            .then(pl.lit(100.0))
+            .otherwise(pl.col("valor_percentual"))
+            .alias("valor_percentual")
+        )
     return df
 
 
 def initial_stored_volume(
     deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     val = cache.get("initial_stored_volume")
     if val is None:
         val = _initial_stored_volume_from_pmo(deck_cls, cache, uow)
@@ -368,11 +457,12 @@ def initial_stored_volume(
         val = readers.validate_data(
             deck_cls,
             val,
-            pd.DataFrame,
+            pl.DataFrame,
             "volume armazenado inicial por UHE (pmo.dat ou calculado)",
         )
+        assert isinstance(val, pl.DataFrame)
         val = _initial_stored_volume_pre_study_condition(
             deck_cls, cache, val, uow
         )
         cache["initial_stored_volume"] = val
-    return val.copy()
+    return val
