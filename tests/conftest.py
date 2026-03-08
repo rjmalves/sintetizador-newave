@@ -1,14 +1,24 @@
+import multiprocessing
 import os
 import pathlib
-from multiprocessing import Manager
 
 import pytest
 
+# Force "spawn" start method on all Python versions to avoid fork+coverage
+# deadlocks. Python 3.14+ already defaults to forkserver/spawn on Linux;
+# this ensures 3.10-3.13 behave consistently.
+try:
+    multiprocessing.set_start_method("spawn")
+except RuntimeError:
+    pass  # already set
+
+from multiprocessing import Manager  # noqa: E402
+
 DECK_TEST_DIR = "./tests/mocks/arquivos"
 
-# Set env vars at module level so they are inherited by forkserver workers
-# (Python 3.14+ defaults to forkserver on Linux, which forks early before
-# fixtures run, so env vars set only in fixtures are invisible to workers).
+# Set env vars at module level so they are inherited by spawn/forkserver
+# workers (spawn starts fresh processes that don't inherit the parent's
+# runtime state, so env vars must be set before Manager() is created).
 _BASEDIR = str(pathlib.Path().resolve())
 os.environ.setdefault("APP_INSTALLDIR", _BASEDIR)
 os.environ.setdefault("APP_BASEDIR", _BASEDIR)
