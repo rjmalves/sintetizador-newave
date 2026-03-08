@@ -123,13 +123,15 @@ def export_stats(
             logger=cls.logger,
         ):
             with uow:
-                df = pl.concat(dfs)
+                df = pl.concat(dfs, how="diagonal")
                 df = df.select([VARIABLE_COL] + res.all_synthesis_df_columns)
                 df = df.cast({VARIABLE_COL: pl.Utf8})
                 df = df.sort([VARIABLE_COL] + res.sorting_synthesis_df_columns)
                 stats_filename = f"{OPERATION_SYNTHESIS_STATS_ROOT}_{res.value}"
                 existing_df = uow.export.read_df(stats_filename)
                 if existing_df is not None:
-                    df = pl.concat([pl.from_pandas(existing_df), df])
+                    df = pl.concat(
+                        [pl.from_pandas(existing_df), df], how="diagonal"
+                    )
                     df = df.unique()
                 uow.export.synthetize_pl(df, stats_filename)
