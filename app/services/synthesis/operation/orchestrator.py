@@ -5,7 +5,6 @@ from logging import ERROR, INFO, WARNING
 from traceback import print_exc
 from typing import Dict, List, Optional
 
-import pandas as pd
 import polars as pl
 
 from app.internal.constants import OPERATION_SYNTHESIS_SUBDIR

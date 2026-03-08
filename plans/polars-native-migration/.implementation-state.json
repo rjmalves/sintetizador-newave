@@ -1,6 +1,6 @@
 {
   "plan": "polars-native-migration",
-  "last_updated": "2026-03-08T01:05:47Z",
+  "last_updated": "2026-03-08T02:07:06Z",
   "progressive": true,
   "tickets": {
     "ticket-001-convert-cached-accessors-polars.md": {
@@ -292,12 +292,36 @@
       "agent": "python-task-automation-developer"
     },
     "ticket-013-port-scenario-polars.md": {
-      "status": "pending",
-      "detail_level": "outline"
+      "status": "completed",
+      "detail_level": "refined",
+      "workflow_step": null,
+      "agent": "python-task-automation-developer",
+      "scores": {
+        "quality": 0.6625,
+        "quality_breakdown": {
+          "conformance": 1.0,
+          "scope_adherence": 0.5,
+          "lint_cleanliness": 0.0,
+          "type_safety": 0.0,
+          "test_delta": 0.0
+        }
+      }
     },
     "ticket-014-remove-conversion-utilities-dead-imports.md": {
-      "status": "pending",
-      "detail_level": "outline"
+      "status": "completed",
+      "detail_level": "refined",
+      "workflow_step": null,
+      "agent": "python-task-automation-developer",
+      "scores": {
+        "quality": 0.875,
+        "quality_breakdown": {
+          "conformance": 1.0,
+          "scope_adherence": 0.5,
+          "lint_cleanliness": 1.0,
+          "type_safety": 1.0,
+          "test_delta": 1.0
+        }
+      }
     }
   },
   "epics": {
@@ -311,10 +335,10 @@
     },
     "epic-03-synthesis-pipeline": {
       "phase": "completed",
-      "learning_extracted": false
+      "learning_extracted": true
     },
     "epic-04-scenario-and-cleanup": {
-      "phase": "outline",
+      "phase": "completed",
       "learning_extracted": false
     }
   }

@@ -19,7 +19,7 @@ Migrate sintetizador-newave from a hybrid pandas/polars architecture to a polars
 | 01   | Conversion Boundary | 3 (detailed) | Completed |
 | 02   | Deck Domain Modules | 6 (detailed) | Completed |
 | 03   | Synthesis Pipeline  | 3 (refined)  | completed |
-| 04   | Scenario & Cleanup  | 2 (outline)  | Pending   |
+| 04   | Scenario & Cleanup  | 2 (outline)  | Completed |
 
 ## Progress Tracking
 
@@ -37,8 +37,8 @@ Migrate sintetizador-newave from a hybrid pandas/polars architecture to a polars
 | ticket-010 | Port pipeline.py to native polars                           | epic-03 | completed | Refined      | 1.00      | 0.55    | BELOW GATE |
 | ticket-011 | Port synthesis bounds, cache, and export to polars          | epic-03 | completed | Refined      | 0.98      | 0.73    | BELOW GATE |
 | ticket-012 | Port resolution modules and spatial dispatch to polars      | epic-03 | completed | Refined      | 0.96      | 0.58    | BELOW GATE |
-| ticket-013 | Port scenario.py to polars                                  | epic-04 | pending   | Outline      | --        | --      | --         |
-| ticket-014 | Remove conversion utilities and dead pandas imports         | epic-04 | pending   | Outline      | --        | --      | --         |
+| ticket-013 | Port scenario.py, execution.py, system.py to polars         | epic-04 | completed | Refined      | --        | 0.66    | BELOW GATE |
+| ticket-014 | Remove conversion utilities and dead pandas imports         | epic-04 | completed | Refined      | --        | 0.88    | ACCEPTABLE |
 
 ## Dependency Graph
 
