@@ -18,8 +18,8 @@ Modernizacao da infraestrutura de empacotamento, CI/CD e documentacao do `sintet
 | ---- | ---------------------------------- | ------- | ------------ | --------- |
 | 01   | Packaging & CI Modernization       | 5       | Detailed     | Completed |
 | 02   | Sphinx Documentation Modernization | 3       | Detailed     | Completed |
-| 03   | Documentation Content Expansion    | 6       | Refined      | Executing |
-| 04   | Repository Polish                  | 4       | Outline      | Outline   |
+| 03   | Documentation Content Expansion    | 6       | Refined      | Completed |
+| 04   | Repository Polish                  | 4       | Refined      | Completed |
 
 ## Progress
 
@@ -39,10 +39,10 @@ Modernizacao da infraestrutura de empacotamento, CI/CD e documentacao do `sintet
 | ticket-012 | Create API reference with autodoc                        | epic-03 | completed | Refined      | 0.94      | 0.96    | EXCELLENT  |
 | ticket-013 | Create v1.x to v2.x migration guide                      | epic-03 | completed | Refined      | 0.94      | 1.00    | EXCELLENT  |
 | ticket-014 | Update index.rst with new documentation structure        | epic-03 | completed | Refined      | 0.97      | 1.00    | EXCELLENT  |
-| ticket-015 | Expand README with badges and quickstart                 | epic-04 | pending   | Outline      | --        | --      | --         |
-| ticket-016 | Create CONTRIBUTING.md at repository root                | epic-04 | pending   | Outline      | --        | --      | --         |
-| ticket-017 | Reformat CHANGELOG to Keep a Changelog standard          | epic-04 | pending   | Outline      | --        | --      | --         |
-| ticket-018 | Update installation docs for PyPI and uv                 | epic-04 | pending   | Outline      | --        | --      | --         |
+| ticket-015 | Expand README with badges and quickstart                 | epic-04 | completed | Refined      | 0.96      | 1.00    | EXCELLENT  |
+| ticket-016 | Create CONTRIBUTING.md at repository root                | epic-04 | completed | Refined      | 0.98      | 1.00    | EXCELLENT  |
+| ticket-017 | Reformat CHANGELOG to Keep a Changelog standard          | epic-04 | completed | Refined      | 0.98      | 0.96    | EXCELLENT  |
+| ticket-018 | Update installation docs for PyPI and uv                 | epic-04 | completed | Refined      | 1.00      | 1.00    | EXCELLENT  |
 
 ## Dependency Graph
 
@@ -59,5 +59,6 @@ ticket-001 (pyproject.toml)
               |-> ticket-014 (index.rst update)
 
 ticket-004 -> ticket-015 (README badges)
+ticket-004 -> ticket-018 (installation docs)
 ticket-005 -> ticket-016 (CONTRIBUTING.md)
 ```

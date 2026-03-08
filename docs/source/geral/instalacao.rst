@@ -1,12 +1,28 @@
 Instalação
 ============
 
-O *sintetizador-newave* é compatível com versões de Python >= 3.10. 
+.. note::
+
+    O *sintetizador-newave* é compatível com versões de Python >= 3.10.
+
+Instalando via PyPI
+--------------------
+
+A forma mais simples de instalar o *sintetizador-newave* é diretamente do `PyPI <https://pypi.org/project/sintetizador-newave/>`_::
+
+    $ pip install sintetizador-newave
+
+Instalando com uv
+------------------
+
+O `uv <https://docs.astral.sh/uv/>`_ é um gerenciador de pacotes moderno e mais rápido que o pip. Para instalar o *sintetizador-newave* com uv::
+
+    $ uv pip install sintetizador-newave
 
 Instalando a partir do repositório oficial
 -------------------------------------------
 
-É possível realizar a instalação desta versão fazendo o uso do `Git <https://git-scm.com/>`_. Para instalar a partir do repositório, é necessário
+Para instalar a versão de desenvolvimento mais recente diretamente do repositório, é necessário
 primeiramente desinstalar a versão instalada (se houver), com::
 
     $ pip uninstall sintetizador-newave
