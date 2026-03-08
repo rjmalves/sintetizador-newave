@@ -1,7 +1,6 @@
 from concurrent.futures import ProcessPoolExecutor
 from typing import TYPE_CHECKING, Optional
 
-import pandas as pd
 import polars as pl
 
 from app.internal.constants import (
@@ -33,11 +32,6 @@ def resolve_SBM_entity(
     sbm_name: str,
     deck_context: Optional[DeckContext] = None,
 ) -> Optional[pl.DataFrame]:
-    """
-    Obtem os dados da síntese de operação para um submercado
-    a partir do arquivo de saída do NWLISTOP.
-    """
-
     logger_name = f"{synthesis.variable.value}_{sbm_name}"
     logger = Log.configure_process_logger(uow.queue, logger_name, sbm_index)
     with uow:
@@ -67,25 +61,17 @@ def resolve_SBM(
     uow: AbstractUnitOfWork,
     deck_context: Optional[DeckContext] = None,
     executor: Optional[ProcessPoolExecutor] = None,
-) -> Optional[pd.DataFrame]:
-    """
-    Resolve a síntese de operação para uma variável operativa
-    de um submercado a partir dos arquivos de saída do NWLISTOP.
-    """
-
-    submarkets = (
-        Deck.submarkets(uow).to_pandas().reset_index(drop=True)
-    )  # SHIM: remove after polars migration of this module
-    real_submarkets = submarkets.loc[
-        submarkets["ficticio"] == 0, :
-    ].sort_values(SUBMARKET_CODE_COL)
-    sbms_idx = real_submarkets[SUBMARKET_CODE_COL].unique()
-    sbms_name = [
-        real_submarkets.loc[
-            real_submarkets[SUBMARKET_CODE_COL] == s, SUBMARKET_NAME_COL
-        ].iloc[0]
-        for s in sbms_idx
-    ]
+) -> Optional[pl.DataFrame]:
+    submarkets = Deck.submarkets(uow).sort(SUBMARKET_CODE_COL)
+    real_submarkets = submarkets.filter(pl.col("ficticio") == 0)
+    sbms_idx = real_submarkets[SUBMARKET_CODE_COL].to_list()
+    name_map = dict(
+        zip(
+            real_submarkets[SUBMARKET_CODE_COL].to_list(),
+            real_submarkets[SUBMARKET_NAME_COL].to_list(),
+        )
+    )
+    sbms_name = [name_map[s] for s in sbms_idx]
 
     with time_and_log(
         message_root="Tempo para obter dados de SBM", logger=cls.logger

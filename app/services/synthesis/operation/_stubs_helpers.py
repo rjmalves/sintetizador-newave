@@ -9,7 +9,7 @@ all moved out of stubs.py to keep that module within the 500-line limit.
 from typing import TYPE_CHECKING
 
 import numpy as np
-import pandas as pd
+import polars as pl
 
 from app.internal.constants import (
     HYDRO_CODE_COL,
@@ -29,26 +29,20 @@ if TYPE_CHECKING:
     )
 
 
-# ---------------------------------------------------------------------------
-# Array helpers for initial storage stubs
-# ---------------------------------------------------------------------------
-
-
 def fill_initial_storage_df(
-    df: pd.DataFrame,
+    df: pl.DataFrame,
     indices: np.ndarray,
     values: np.ndarray,
     entities: dict,
-) -> pd.DataFrame:
-    """Fills first-stage rows of a storage DataFrame with initial values."""
+) -> pl.DataFrame:
     scenarios = [s for s in entities[SCENARIO_COL] if str(s).isnumeric()]
     num_scenarios = len(scenarios)
-    result = df.copy()
+    result = df.clone()
     arr = result[VALUE_COL].to_numpy().copy()
     arr[num_scenarios:] = arr[:-num_scenarios]
     arr[indices] = np.repeat(values, num_scenarios)
-    result[VALUE_COL] = arr
-    result[VALUE_COL] = result[VALUE_COL].fillna(0.0)
+    result = result.with_columns(pl.Series(VALUE_COL, arr).alias(VALUE_COL))
+    result = result.with_columns(pl.col(VALUE_COL).fill_null(0.0))
     return result
 
 
@@ -56,7 +50,6 @@ def build_initial_stage_indices(
     entities: dict,
     num_groups: int,
 ) -> np.ndarray:
-    """Builds the row-indices for the initial stage in a storage DataFrame."""
     scenarios = [s for s in entities[SCENARIO_COL] if str(s).isnumeric()]
     num_scenarios = len(scenarios)
     num_stages = len(entities[STAGE_COL])
@@ -66,19 +59,13 @@ def build_initial_stage_indices(
     return indices
 
 
-# ---------------------------------------------------------------------------
-# Two-cache arithmetic helper
-# ---------------------------------------------------------------------------
-
-
 def two_cache_op(
     cls: "type[OperationSynthetizer]",
     synthesis,
     var1: Variable,
     var2: Variable,
     op: str = "add",
-) -> pd.DataFrame:
-    """Return a DataFrame whose VALUE_COL is var1 op var2 from cache."""
+) -> pl.DataFrame:
     from app.model.operation.operationsynthesis import OperationSynthesis
 
     a = cls._get_from_cache(
@@ -91,57 +78,70 @@ def two_cache_op(
         result = a[VALUE_COL].to_numpy() - b[VALUE_COL].to_numpy()
     else:
         result = a[VALUE_COL].to_numpy() + b[VALUE_COL].to_numpy()
-    return a.assign(**{VALUE_COL: result})
-
-
-# ---------------------------------------------------------------------------
-# Productivity accumulation
-# ---------------------------------------------------------------------------
+    return a.with_columns(pl.Series(VALUE_COL, result).alias(VALUE_COL))
 
 
 def calc_accumulated_productivity(
     cls: "type[OperationSynthetizer]",
-    df: pd.DataFrame,
+    df: pl.DataFrame,
     entities: dict,
     uow,
-) -> pd.DataFrame:
-    hydro_df = (
-        Deck.hydros(uow).to_pandas().reset_index(drop=True)
-    )  # SHIM: remove after polars migration of this module
+) -> pl.DataFrame:
+    hydro_df = Deck.hydros(uow)
     hydro_codes = entities[HYDRO_CODE_COL]
+    filtered = hydro_df.filter(
+        pl.col(HYDRO_CODE_COL).is_in(hydro_codes)
+    ).select([HYDRO_CODE_COL, "codigo_usina_jusante"])
     np_edges = list(
-        hydro_df.loc[
-            hydro_df[HYDRO_CODE_COL].isin(hydro_codes),
-            ["codigo_usina_jusante", HYDRO_CODE_COL],
-        ].to_numpy()
+        filtered.select(["codigo_usina_jusante", HYDRO_CODE_COL]).to_numpy()
     )
     edges = [tuple(e) for e in np_edges]
     hydro_nodes_bfs = Graph(edges, directed=True).bfs(0)[1:]
+
+    # Build a lookup: hydro_code -> downstream_code
+    downstream_map = dict(
+        zip(
+            filtered[HYDRO_CODE_COL].to_list(),
+            filtered["codigo_usina_jusante"].to_list(),
+        )
+    )
+
+    # Extract productivity arrays into a mutable dict keyed by hydro code
+    # df is sorted by HYDRO_CODE_COL (guaranteed by stub_EARM_UHE)
+    hydro_codes_in_df = df[HYDRO_CODE_COL].to_list()
+    prod_array = df[PRODUCTIVITY_TMP_COL].to_numpy().copy()
+
+    # Build mapping from hydro_code to row-slice in prod_array
+    # Each hydro occupies a contiguous block of rows
+    unique_codes, first_indices, counts = np.unique(
+        hydro_codes_in_df, return_index=True, return_counts=True
+    )
+    code_to_slice: dict = {}
+    for code, start, count in zip(unique_codes, first_indices, counts):
+        code_to_slice[int(code)] = (int(start), int(start + count))
+
     for hydro_code in hydro_nodes_bfs:
-        hydro_name = hydro_df.loc[
-            hydro_df[HYDRO_CODE_COL] == hydro_code, HYDRO_CODE_COL
-        ].iloc[0]
-        cls._log(f"Calculando prodt. acumulada para {hydro_name}...")
-        downstream_code = hydro_df.loc[
-            hydro_df[HYDRO_CODE_COL] == hydro_code, "codigo_usina_jusante"
-        ].iloc[0]
-        if downstream_code == 0:
+        hydro_code_int = int(hydro_code)
+        cls._log(f"Calculando prodt. acumulada para {hydro_code_int}...")
+        downstream_code = downstream_map.get(hydro_code_int)
+        if downstream_code is None or downstream_code == 0:
             continue
-        downstream_name = hydro_df.loc[
-            hydro_df[HYDRO_CODE_COL] == downstream_code, HYDRO_CODE_COL
-        ].iloc[0]
-        hp = df.loc[df[HYDRO_CODE_COL] == hydro_name, PRODUCTIVITY_TMP_COL]
-        dp = df.loc[
-            df[HYDRO_CODE_COL] == downstream_name, PRODUCTIVITY_TMP_COL
-        ].to_numpy()
-        if not hp.empty and len(dp) > 0:
-            hp += dp
-    return df
+        downstream_code_int = int(downstream_code)
+        if hydro_code_int not in code_to_slice:
+            continue
+        if downstream_code_int not in code_to_slice:
+            continue
+        hp_start, hp_end = code_to_slice[hydro_code_int]
+        dp_start, dp_end = code_to_slice[downstream_code_int]
+        hp_arr = prod_array[hp_start:hp_end]
+        dp_arr = prod_array[dp_start:dp_end]
+        if hp_arr.size > 0 and dp_arr.size > 0:
+            prod_array[hp_start:hp_end] = hp_arr + dp_arr
 
+    return df.with_columns(
+        pl.Series(PRODUCTIVITY_TMP_COL, prod_array).alias(PRODUCTIVITY_TMP_COL)
+    )
 
-# ---------------------------------------------------------------------------
-# Variable-set constants used by stub_mappings()
-# ---------------------------------------------------------------------------
 
 # Variables that aggregate from UHE resolution (non-UHE spatial resolutions)
 HYDRO_RESOLUTION_VARS = frozenset(

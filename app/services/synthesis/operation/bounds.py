@@ -1,11 +1,12 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
-import pandas as pd
+import polars as pl
 
 from app.model.operation.operationsynthesis import OperationSynthesis
 from app.services.deck.bounds import OperationVariableBounds
 from app.services.unitofwork import AbstractUnitOfWork
-from app.utils.dataframe import pd_to_pl, pl_to_pd
 from app.utils.timing import time_and_log
 
 if TYPE_CHECKING:
@@ -17,32 +18,18 @@ if TYPE_CHECKING:
 def resolve_bounds(
     cls: "type[OperationSynthetizer]",
     s: OperationSynthesis,
-    df: pd.DataFrame,
+    df: pl.DataFrame,
     uow: AbstractUnitOfWork,
-) -> pd.DataFrame:
-    """
-    Realiza o cálculo dos limites superiores e inferiores para
-    a síntese caso esta seja uma variável limitada.
-
-    Converts the incoming ``pd.DataFrame`` to ``pl.DataFrame`` at the
-    boundary so that ``resolve_bounds`` can operate in Polars and
-    converts the result back to ``pd.DataFrame`` for downstream
-    consumers. The conversion pair lives here rather than inside
-    ``resolve_bounds`` so that callers which already hold a
-    ``pl.DataFrame`` (e.g. ``_resolve_stub``) can pass through without
-    a double conversion.
-    """
+) -> pl.DataFrame:
     with time_and_log(
         message_root="Tempo para calculo dos limites",
         logger=cls.logger,
     ):
-        df_pl = pd_to_pl(df)
-        df_pl = OperationVariableBounds.resolve_bounds(
+        df = OperationVariableBounds.resolve_bounds(
             s,
-            df_pl,
+            df,
             cls._get_ordered_entities(s),
             uow,
         )
-        df = pl_to_pd(df_pl)
 
     return df

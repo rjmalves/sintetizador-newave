@@ -18,7 +18,7 @@ Migrate sintetizador-newave from a hybrid pandas/polars architecture to a polars
 | ---- | ------------------- | ------------ | --------- |
 | 01   | Conversion Boundary | 3 (detailed) | Completed |
 | 02   | Deck Domain Modules | 6 (detailed) | Completed |
-| 03   | Synthesis Pipeline  | 3 (outline)  | Pending   |
+| 03   | Synthesis Pipeline  | 3 (refined)  | completed |
 | 04   | Scenario & Cleanup  | 2 (outline)  | Pending   |
 
 ## Progress Tracking
@@ -34,9 +34,9 @@ Migrate sintetizador-newave from a hybrid pandas/polars architecture to a polars
 | ticket-007 | Port hydro.py to polars                                     | epic-02 | completed | Detailed     | 0.97      | 0.65    | BELOW GATE |
 | ticket-008 | Port storage.py and thermal.py to polars                    | epic-02 | completed | Detailed     | 0.97      | 0.78    | ACCEPTABLE |
 | ticket-009 | Port policy.py to polars                                    | epic-02 | completed | Detailed     | 1.00      | 0.88    | ACCEPTABLE |
-| ticket-010 | Port pipeline.py to native polars                           | epic-03 | pending   | Outline      | --        | --      | --         |
-| ticket-011 | Port synthesis bounds, cache, and export to polars          | epic-03 | pending   | Outline      | --        | --      | --         |
-| ticket-012 | Port resolution modules and spatial dispatch to polars      | epic-03 | pending   | Outline      | --        | --      | --         |
+| ticket-010 | Port pipeline.py to native polars                           | epic-03 | completed | Refined      | 1.00      | 0.55    | BELOW GATE |
+| ticket-011 | Port synthesis bounds, cache, and export to polars          | epic-03 | completed | Refined      | 0.98      | 0.73    | BELOW GATE |
+| ticket-012 | Port resolution modules and spatial dispatch to polars      | epic-03 | completed | Refined      | 0.96      | 0.58    | BELOW GATE |
 | ticket-013 | Port scenario.py to polars                                  | epic-04 | pending   | Outline      | --        | --      | --         |
 | ticket-014 | Remove conversion utilities and dead pandas imports         | epic-04 | pending   | Outline      | --        | --      | --         |
 
@@ -59,13 +59,13 @@ ticket-001 (cached accessors) --> ticket-002 (uncached + DeckContext)
                                   ticket-009 (policy)
                                         |
                                         v
-                                  ticket-010 (pipeline) [OUTLINE]
+                                  ticket-010 (pipeline)
                                         |
                                         v
-                                  ticket-011 (bounds+cache+export) [OUTLINE]
+                                  ticket-011 (bounds+cache+export)
                                         |
                                         v
-                                  ticket-012 (resolution modules) [OUTLINE]
+                                  ticket-012 (resolution modules)
                                         |
                                         v
                                   ticket-013 (scenario) [OUTLINE]
@@ -87,7 +87,10 @@ ticket-001 (cached accessors) --> ticket-002 (uncached + DeckContext)
 | ticket-007 | 0.97      | 1.00      | 0.90        | 1.00     | 1.00        | 1.00      |
 | ticket-008 | 0.97      | 1.00      | 0.90        | 1.00     | 1.00        | 1.00      |
 | ticket-009 | 1.00      | 1.00      | 1.00        | 1.00     | 1.00        | 1.00      |
+| ticket-010 | 1.00      | 1.00      | 1.00        | 1.00     | 1.00        | 1.00      |
+| ticket-011 | 0.98      | 1.00      | 1.00        | 1.00     | 1.00        | 0.80      |
+| ticket-012 | 0.96      | 1.00      | 1.00        | 1.00     | 1.00        | 0.60      |
 
-Dimensions below 0.85: ticket-003:atomicity (0.60)
+Dimensions below 0.85: ticket-003:atomicity (0.60), ticket-012:atomicity (0.60)
 
-Note: ticket-003 (compatibility shims) inherently touches many files (~18) because it must add shims to every downstream consumer of Deck. This cannot be decomposed further without creating intermediate broken states. The composite score (0.91) is above the 0.85 gate.
+Note: ticket-003 (compatibility shims) and ticket-012 (resolution modules) inherently touch many files because they must apply the same pattern across every downstream consumer/resolution module. These cannot be decomposed further without creating intermediate broken states. Both composite scores (0.91 and 0.96) are well above the 0.85 gate.

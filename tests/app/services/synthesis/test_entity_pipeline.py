@@ -15,14 +15,12 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pandas as pd
 import polars as pl
-import pytest
 
 from app.internal.constants import (
     BLOCK_COL,
     BLOCK_DURATION_COL,
     END_DATE_COL,
     HYDRO_CODE_COL,
-    OPERATION_SYNTHESIS_COMMON_COLUMNS,
     SCENARIO_COL,
     STAGE_COL,
     STAGE_DURATION_HOURS,
@@ -31,7 +29,6 @@ from app.internal.constants import (
 )
 from app.services.deck.context import DeckContext
 from app.services.synthesis.operation import OperationSynthetizer
-
 
 # ---------------------------------------------------------------------------
 # Helpers shared across tests
@@ -449,10 +446,10 @@ class TestPostResolveEntityReturnType:
                     )
         input_pd = pd.DataFrame(rows)
 
+        from app.internal.constants import SUBMARKET_CODE_COL
         from app.model.operation.operationsynthesis import OperationSynthesis
         from app.model.operation.spatialresolution import SpatialResolution
         from app.model.operation.variable import Variable
-        from app.internal.constants import SUBMARKET_CODE_COL
 
         synthesis = OperationSynthesis(
             variable=Variable.GERACAO_HIDRAULICA,
@@ -561,17 +558,13 @@ class TestPostResolveNoPdToPl:
                 dfs, synthesis, uow_mock
             )
 
-        # pd_to_pl should only be called once for valid_dfs[0] in
-        # _get_unique_column_values_in_order (pl_to_pd(valid_dfs[0])), not once per entity.
-        # The concat step must NOT call pd_to_pl.
-        # Since _post_resolve now uses pl_to_pd(valid_dfs[0]) inside it, pd_to_pl call
-        # count within this function scope is 0 (pl_to_pd is the reverse direction).
+        # pd_to_pl must never be called inside _post_resolve — no pandas conversions.
         assert call_count["n"] == 0, (
             f"pd_to_pl was called {call_count['n']} times inside _post_resolve; "
             "expected 0 (no per-entity conversion)"
         )
-        assert isinstance(result, pd.DataFrame), (
-            f"_post_resolve must return pd.DataFrame, got {type(result)}"
+        assert isinstance(result, pl.DataFrame), (
+            f"_post_resolve must return pl.DataFrame, got {type(result)}"
         )
         assert result.shape[0] == 4, (
             f"Expected 4 rows (2 entities × 2 rows), got {result.shape[0]}"

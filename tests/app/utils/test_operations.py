@@ -1,7 +1,7 @@
-"""Unit tests for app.utils.operations.calc_statistics (Polars rewrite)."""
+"""Unit tests for app.utils.operations.calc_statistics (Polars native)."""
 
 import numpy as np
-import pandas as pd
+import polars as pl
 
 from app.internal.constants import (
     QUANTILES_FOR_STATISTICS,
@@ -29,7 +29,7 @@ def _make_df(
     *,
     seed: int = 42,
     extra_grouping_cols: bool = False,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """
     Build a representative input DataFrame for calc_statistics.
 
@@ -54,15 +54,15 @@ def _make_df(
     valor = rng.random(total_rows)
 
     data: dict = {
-        "codigo_usina": usina_ids,
-        "estagio": estagio,
-        SCENARIO_COL: cenario,
-        VALUE_COL: valor,
+        "codigo_usina": usina_ids.tolist(),
+        "estagio": estagio.tolist(),
+        SCENARIO_COL: cenario.tolist(),
+        VALUE_COL: valor.tolist(),
     }
     if extra_grouping_cols:
-        data["patamar"] = np.ones(total_rows, dtype=np.int64)
+        data["patamar"] = [1] * total_rows
 
-    return pd.DataFrame(data)
+    return pl.DataFrame(data)
 
 
 # ---------------------------------------------------------------------------
@@ -120,7 +120,7 @@ def test_output_cenario_labels():
     """The cenario column must contain exactly the 23 expected string labels."""
     df = _make_df(num_groups=2, num_scenarios=50)
     result = calc_statistics(df)
-    observed_labels = set(result[SCENARIO_COL].unique())
+    observed_labels = set(result[SCENARIO_COL].unique().to_list())
     assert observed_labels == set(EXPECTED_STAT_LABELS)
 
 
@@ -143,15 +143,17 @@ def test_numerical_correctness_of_statistics():
         c for c in df.columns if c not in (SCENARIO_COL, VALUE_COL)
     ]
 
+    # Convert to pandas for reference comparison
+    df_pd = df.to_pandas()
+
     # Verify 'mean' label: compare against pandas groupby mean
     mean_result = (
-        result[result[SCENARIO_COL] == "mean"]
-        .sort_values(grouping_cols)
-        .reset_index(drop=True)[VALUE_COL]
-        .values
+        result.filter(pl.col(SCENARIO_COL) == "mean")
+        .sort(grouping_cols)[VALUE_COL]
+        .to_numpy()
     )
     ref_mean = (
-        df.groupby(grouping_cols, sort=False)[VALUE_COL]
+        df_pd.groupby(grouping_cols, sort=False)[VALUE_COL]
         .mean()
         .reset_index()
         .sort_values(grouping_cols)
@@ -168,13 +170,12 @@ def test_numerical_correctness_of_statistics():
 
     # Verify median (q=0.5): compare against pandas quantile
     median_result = (
-        result[result[SCENARIO_COL] == "median"]
-        .sort_values(grouping_cols)
-        .reset_index(drop=True)[VALUE_COL]
-        .values
+        result.filter(pl.col(SCENARIO_COL) == "median")
+        .sort(grouping_cols)[VALUE_COL]
+        .to_numpy()
     )
     ref_median = (
-        df.groupby(grouping_cols, sort=False)[VALUE_COL]
+        df_pd.groupby(grouping_cols, sort=False)[VALUE_COL]
         .quantile(0.5)
         .reset_index()
         .sort_values(grouping_cols)
@@ -200,7 +201,7 @@ def test_empty_dataframe_returns_empty_with_same_columns():
     df = _make_df(num_groups=3, num_scenarios=20)
     empty_df = df.head(0)
     result = calc_statistics(empty_df)
-    assert result.empty
+    assert result.is_empty()
     assert list(result.columns) == list(df.columns)
 
 

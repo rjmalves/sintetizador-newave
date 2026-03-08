@@ -1,7 +1,7 @@
 from concurrent.futures import ProcessPoolExecutor
 from typing import TYPE_CHECKING, Optional
 
-import pandas as pd
+import polars as pl
 
 from app.model.operation.operationsynthesis import OperationSynthesis
 from app.services.deck.context import DeckContext
@@ -19,5 +19,5 @@ def resolve_PEE(
     uow: AbstractUnitOfWork,
     deck_context: Optional[DeckContext] = None,
     executor: Optional[ProcessPoolExecutor] = None,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     raise NotImplementedError()

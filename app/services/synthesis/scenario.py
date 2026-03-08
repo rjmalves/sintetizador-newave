@@ -1474,13 +1474,12 @@ class ScenarioSynthetizer:
             message_root="Tempo para exportacao dos dados", logger=cls.logger
         ):
             scenarios_df = df.astype({SCENARIO_COL: int})
-            scenarios_df = pl_to_pd(
-                pd_to_pl(scenarios_df).sort(
-                    s.sorting_synthesis_df_columns,
-                    maintain_order=True,
-                )
-            ).reset_index(drop=True)
-            stats_df = calc_statistics(scenarios_df)
+            scenarios_pl = pd_to_pl(scenarios_df).sort(
+                s.sorting_synthesis_df_columns,
+                maintain_order=True,
+            )
+            scenarios_df = pl_to_pd(scenarios_pl).reset_index(drop=True)
+            stats_df = pl_to_pd(calc_statistics(scenarios_pl))
             cls._add_synthesis_stats(s, stats_df)
             with uow:
                 uow.export.synthetize_df(scenarios_df, str(s))

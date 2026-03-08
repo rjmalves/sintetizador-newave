@@ -1,7 +1,7 @@
 from concurrent.futures import ProcessPoolExecutor
 from typing import TYPE_CHECKING, Optional
 
-import pandas as pd
+import polars as pl
 
 from app.model.operation.operationsynthesis import OperationSynthesis
 from app.model.operation.spatialresolution import SpatialResolution
@@ -28,12 +28,7 @@ def resolve_spatial_resolution(
     uow: AbstractUnitOfWork,
     deck_context: Optional[DeckContext] = None,
     executor: Optional[ProcessPoolExecutor] = None,
-) -> pd.DataFrame:
-    """
-    Despacha a função de resolução espacial para ler os dados a partir
-    da saída do NWLISTOP, pós-processar e organizar em um DataFrame
-    de acordo com a agregação desejada.
-    """
+) -> pl.DataFrame:
     RESOLUTION_FUNCTION_MAP = {
         SpatialResolution.SISTEMA_INTERLIGADO: resolve_SIN,
         SpatialResolution.SUBMERCADO: resolve_SBM,
@@ -51,7 +46,7 @@ def resolve_spatial_resolution(
         res = solver(cls, synthesis, uow, deck_context)
     else:
         res = solver(cls, synthesis, uow, deck_context, executor)
-    return res if res is not None else pd.DataFrame()
+    return res if res is not None else pl.DataFrame()
 
 
 def resolve_synthesis(
@@ -60,11 +55,7 @@ def resolve_synthesis(
     uow: AbstractUnitOfWork,
     deck_context: Optional[DeckContext] = None,
     executor: Optional[ProcessPoolExecutor] = None,
-) -> pd.DataFrame:
-    """
-    Realiza a resolução de uma síntese, opcionalmente adicionando
-    limites superiores e inferiores aos valores de cada linha.
-    """
+) -> pl.DataFrame:
     df = resolve_spatial_resolution(cls, s, uow, deck_context, executor)
     if df is not None:
         df = resolve_bounds(cls, s, df, uow)

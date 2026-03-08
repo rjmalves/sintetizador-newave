@@ -2,7 +2,7 @@ import functools
 from typing import TYPE_CHECKING, Callable, Optional, Tuple
 
 import numpy as np
-import pandas as pd
+import polars as pl
 
 from app.internal.constants import (
     BLOCK_COL,
@@ -47,7 +47,6 @@ from app.services.synthesis.operation.pipeline import (
     post_resolve,
 )
 from app.services.unitofwork import AbstractUnitOfWork
-from app.utils.dataframe import pd_to_pl
 from app.utils.timing import time_and_log
 
 if TYPE_CHECKING:
@@ -67,7 +66,7 @@ def stub_QDEF(
     cls: "type[OperationSynthetizer]",
     synthesis: OperationSynthesis,
     uow: AbstractUnitOfWork,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     return two_cache_op(
         cls, synthesis, Variable.VAZAO_TURBINADA, Variable.VAZAO_VERTIDA
     )
@@ -77,7 +76,7 @@ def stub_VDEF(
     cls: "type[OperationSynthetizer]",
     synthesis: OperationSynthesis,
     uow: AbstractUnitOfWork,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     return two_cache_op(
         cls, synthesis, Variable.VOLUME_TURBINADO, Variable.VOLUME_VERTIDO
     )
@@ -87,7 +86,7 @@ def stub_VEVAP(
     cls: "type[OperationSynthetizer]",
     synthesis: OperationSynthesis,
     uow: AbstractUnitOfWork,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     return two_cache_op(
         cls,
         synthesis,
@@ -100,7 +99,7 @@ def stub_CTO(
     cls: "type[OperationSynthetizer]",
     synthesis: OperationSynthesis,
     uow: AbstractUnitOfWork,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     return two_cache_op(
         cls, synthesis, Variable.CUSTO_OPERACAO, Variable.CUSTO_FUTURO
     )
@@ -110,7 +109,7 @@ def stub_EVER(
     cls: "type[OperationSynthetizer]",
     synthesis: OperationSynthesis,
     uow: AbstractUnitOfWork,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     return two_cache_op(
         cls,
         synthesis,
@@ -123,7 +122,7 @@ def stub_EVMIN(
     cls: "type[OperationSynthetizer]",
     synthesis: OperationSynthesis,
     uow: AbstractUnitOfWork,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     return two_cache_op(
         cls,
         synthesis,
@@ -137,7 +136,7 @@ def hydro_resolution_variable_map(
     cls: "type[OperationSynthetizer]",
     synthesis: OperationSynthesis,
     uow: AbstractUnitOfWork,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     return cls._get_from_cache(
         OperationSynthesis(
             variable=synthesis.variable,
@@ -150,7 +149,7 @@ def flow_volume_hydro_variable_map(
     cls: "type[OperationSynthetizer]",
     synthesis: OperationSynthesis,
     uow: AbstractUnitOfWork,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     variable_map = {
         Variable.VAZAO_AFLUENTE: Variable.VOLUME_AFLUENTE,
         Variable.VAZAO_INCREMENTAL: Variable.VOLUME_INCREMENTAL,
@@ -172,7 +171,7 @@ def absolute_percent_volume_variable_map(
     cls: "type[OperationSynthetizer]",
     synthesis: OperationSynthesis,
     uow: AbstractUnitOfWork,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     variable_map = {
         Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL: Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
         Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL: Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
@@ -189,19 +188,19 @@ def convert_volume_to_flow(
     cls: "type[OperationSynthetizer]",
     synthesis: OperationSynthesis,
     uow: AbstractUnitOfWork,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     df = cls._get_from_cache(
         OperationSynthesis(
             Variable.VOLUME_RETIRADO, synthesis.spatial_resolution
         )
     )
-    return df.assign(
-        **{
-            VALUE_COL: df[VALUE_COL]
+    return df.with_columns(
+        (
+            pl.col(VALUE_COL)
             * HM3_M3S_MONTHLY_FACTOR
             * STAGE_DURATION_HOURS
-            / df[BLOCK_DURATION_COL]
-        }
+            / pl.col(BLOCK_DURATION_COL)
+        ).alias(VALUE_COL)
     )
 
 
@@ -209,7 +208,7 @@ def convert_flow_to_volume(
     cls: "type[OperationSynthetizer]",
     synthesis: OperationSynthesis,
     uow: AbstractUnitOfWork,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     variable_map = {
         Variable.VOLUME_AFLUENTE: Variable.VAZAO_AFLUENTE,
         Variable.VOLUME_INCREMENTAL: Variable.VAZAO_INCREMENTAL,
@@ -222,12 +221,12 @@ def convert_flow_to_volume(
             variable_map[synthesis.variable], synthesis.spatial_resolution
         )
     )
-    return df.assign(
-        **{
-            VALUE_COL: df[VALUE_COL]
-            * df[BLOCK_DURATION_COL]
+    return df.with_columns(
+        (
+            pl.col(VALUE_COL)
+            * pl.col(BLOCK_DURATION_COL)
             / (HM3_M3S_MONTHLY_FACTOR * STAGE_DURATION_HOURS)
-        }
+        ).alias(VALUE_COL)
     )
 
 
@@ -235,7 +234,7 @@ def stub_resolve_initial_stored_energy(
     cls: "type[OperationSynthetizer]",
     synthesis: OperationSynthesis,
     uow: AbstractUnitOfWork,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     earmi = Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL
     earmf = Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL
     earpi = Variable.ENERGIA_ARMAZENADA_PERCENTUAL_INICIAL
@@ -256,14 +255,21 @@ def stub_resolve_initial_stored_energy(
     value_column = (
         "valor_MWmes" if synthesis.variable == earmi else "valor_percentual"
     )
-    groups = entities.get(grouping_col_map[synthesis.spatial_resolution]) or [1]
+    grouping_col = grouping_col_map[synthesis.spatial_resolution]
+    groups = (
+        entities.get(grouping_col) if grouping_col is not None else None
+    ) or [1]
     if synthesis.spatial_resolution != SpatialResolution.SISTEMA_INTERLIGADO:
-        groups = [g for g in groups if g in init_data[GROUPING_TMP_COL]]
-    init_values = (
-        init_data.set_index(GROUPING_TMP_COL)
-        .loc[groups, value_column]
-        .to_numpy()
+        groups_in_data = init_data[GROUPING_TMP_COL].to_list()
+        groups = [g for g in groups if g in groups_in_data]
+    # Build ordered values array in the order of `groups`
+    init_lookup = dict(
+        zip(
+            init_data[GROUPING_TMP_COL].to_list(),
+            init_data[value_column].to_list(),
+        )
     )
+    init_values = np.array([init_lookup[g] for g in groups])
     indices = build_initial_stage_indices(entities, len(groups))
     return fill_initial_storage_df(final_df, indices, init_values, entities)
 
@@ -272,7 +278,7 @@ def stub_resolve_initial_stored_volumes(
     cls: "type[OperationSynthetizer]",
     synthesis: OperationSynthesis,
     uow: AbstractUnitOfWork,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     varmi = Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL
     varmf = Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL
     varpi = Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL
@@ -286,23 +292,41 @@ def stub_resolve_initial_stored_volumes(
     entities = cls._get_ordered_entities(final_synthesis)
     hydros = entities[HYDRO_CODE_COL]
     num_hydros = len(hydros)
-    initial_data = Deck.initial_stored_volume(uow)
+    # Deck.initial_stored_volume returns pd.DataFrame from the facade;
+    # convert to polars immediately for uniform processing.
+    initial_data = pl.from_pandas(Deck.initial_stored_volume(uow))
     value_column = (
         "valor_hm3" if synthesis.variable == varmi else "valor_percentual"
     )
     if synthesis.variable == varmi:
-        hidr = (
-            Deck.hidr(uow).to_pandas().set_index("codigo_usina")
-        )  # SHIM: remove after polars migration of this module
-        initial_data[value_column] += hidr.loc[
-            initial_data[HYDRO_CODE_COL].to_numpy(), "volume_minimo"
-        ].to_numpy()
-    initial_data = initial_data.loc[initial_data[HYDRO_CODE_COL].isin(hydros)]
-    init_values = (
-        initial_data.set_index(HYDRO_CODE_COL)
-        .loc[hydros, value_column]
-        .to_numpy()
+        hidr = Deck.hidr(uow)
+        # Build lookup: hydro_code -> volume_minimo
+        vol_min_map = dict(
+            zip(
+                hidr["codigo_usina"].to_list(),
+                hidr["volume_minimo"].to_list(),
+            )
+        )
+        vol_min_arr = np.array(
+            [
+                vol_min_map.get(c, 0.0)
+                for c in initial_data[HYDRO_CODE_COL].to_list()
+            ]
+        )
+        initial_data = initial_data.with_columns(
+            (pl.col(value_column) + pl.Series("_vm", vol_min_arr)).alias(
+                value_column
+            )
+        )
+    initial_data = initial_data.filter(pl.col(HYDRO_CODE_COL).is_in(hydros))
+    # Build ordered init_values in the order of `hydros`
+    init_lookup = dict(
+        zip(
+            initial_data[HYDRO_CODE_COL].to_list(),
+            initial_data[value_column].to_list(),
+        )
     )
+    init_values = np.array([init_lookup[h] for h in hydros])
     indices = build_initial_stage_indices(entities, num_hydros)
     return fill_initial_storage_df(final_df, indices, init_values, entities)
 
@@ -311,7 +335,7 @@ def stub_EARM_UHE(
     cls: "type[OperationSynthetizer]",
     synthesis: OperationSynthesis,
     uow: AbstractUnitOfWork,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     with time_and_log(
         message_root="Tempo para conversao do VARM em EARM", logger=cls.logger
     ):
@@ -326,41 +350,65 @@ def stub_EARM_UHE(
         vol_synthesis = OperationSynthesis(
             energy_volume_map[synthesis.variable], synthesis.spatial_resolution
         )
-        vol_df = cls._get_from_cache(vol_synthesis).copy()
+        vol_df = cls._get_from_cache(vol_synthesis)
         vol_entities = cls._get_ordered_entities(vol_synthesis)
-        net_df = cls._get_from_cache(net_drop_synthesis).copy()
+        net_df = cls._get_from_cache(net_drop_synthesis)
         net_entities = cls._get_ordered_entities(net_drop_synthesis)
-        hidr = (
-            Deck.hidr(uow).to_pandas().set_index("codigo_usina")
-        )  # SHIM: remove after polars migration of this module
+        hidr = Deck.hidr(uow)
         hydro_codes = net_entities[HYDRO_CODE_COL]
-        n_entries = net_df.loc[net_df[HYDRO_CODE_COL] == hydro_codes[0]].shape[
-            0
-        ]
+        # Count entries per hydro in net_df
+        n_entries = net_df.filter(
+            pl.col(HYDRO_CODE_COL) == hydro_codes[0]
+        ).shape[0]
+        # Build specific productivity lookup: hydro_code -> produtibilidade_especifica
+        spec_prod_map = dict(
+            zip(
+                hidr["codigo_usina"].to_list(),
+                hidr["produtibilidade_especifica"].to_list(),
+            )
+        )
         specific_prod = (
             np.repeat(
-                hidr.loc[hydro_codes, "produtibilidade_especifica"].to_numpy(),
+                np.array([spec_prod_map[c] for c in hydro_codes]),
                 n_entries,
             )
             * HM3_M3S_MONTHLY_FACTOR
         )
-        net_df[PRODUCTIVITY_TMP_COL] = specific_prod * net_df[VALUE_COL]
+        # Add PRODUCTIVITY_TMP_COL to net_df
+        prod_values = specific_prod * net_df[VALUE_COL].to_numpy()
+        net_df = net_df.with_columns(
+            pl.Series(PRODUCTIVITY_TMP_COL, prod_values).alias(
+                PRODUCTIVITY_TMP_COL
+            )
+        )
         net_df = calc_accumulated_productivity(cls, net_df, net_entities, uow)
+
+    # Filter net_df to match vol_df hydro codes and blocks
     hydro_blocks = vol_entities[BLOCK_COL]
-    net_df = net_df.loc[
-        net_df[HYDRO_CODE_COL].isin(vol_entities[HYDRO_CODE_COL])
-        & net_df[BLOCK_COL].isin(hydro_blocks)
-    ].copy()
-    net_df = net_df.sort_values([HYDRO_CODE_COL, STAGE_COL, BLOCK_COL])
-    vol_df = vol_df.sort_values([HYDRO_CODE_COL, STAGE_COL, BLOCK_COL])
-    vol_df[VALUE_COL] = (vol_df[VALUE_COL] - vol_df[LOWER_BOUND_COL]) * net_df[
-        PRODUCTIVITY_TMP_COL
-    ].to_numpy()
-    vol_df[LOWER_BOUND_COL] = 0.0
-    vol_df[UPPER_BOUND_COL] = (
-        vol_df[UPPER_BOUND_COL] - vol_df[LOWER_BOUND_COL]
-    ) * net_df[PRODUCTIVITY_TMP_COL].to_numpy()
-    return vol_df
+    vol_hydro_codes = vol_entities[HYDRO_CODE_COL]
+    net_df = net_df.filter(
+        pl.col(HYDRO_CODE_COL).is_in(vol_hydro_codes)
+        & pl.col(BLOCK_COL).is_in(hydro_blocks)
+    ).sort([HYDRO_CODE_COL, STAGE_COL, BLOCK_COL])
+    vol_df = vol_df.sort([HYDRO_CODE_COL, STAGE_COL, BLOCK_COL])
+
+    # Extract arrays for arithmetic
+    net_prod_arr = net_df[PRODUCTIVITY_TMP_COL].to_numpy()
+    val_arr = vol_df[VALUE_COL].to_numpy()
+    lb_arr = vol_df[LOWER_BOUND_COL].to_numpy()
+    ub_arr = vol_df[UPPER_BOUND_COL].to_numpy()
+
+    new_value = (val_arr - lb_arr) * net_prod_arr
+    new_upper = (ub_arr - lb_arr) * net_prod_arr
+    new_lower = np.zeros_like(lb_arr)
+
+    return vol_df.with_columns(
+        [
+            pl.Series(VALUE_COL, new_value).alias(VALUE_COL),
+            pl.Series(LOWER_BOUND_COL, new_lower).alias(LOWER_BOUND_COL),
+            pl.Series(UPPER_BOUND_COL, new_upper).alias(UPPER_BOUND_COL),
+        ]
+    )
 
 
 def stub_mappings(
@@ -409,18 +457,17 @@ def resolve_stub(
     cls: "type[OperationSynthetizer]",
     s: OperationSynthesis,
     uow: AbstractUnitOfWork,
-) -> Tuple[pd.DataFrame, bool]:
+) -> Tuple[pl.DataFrame, bool]:
     f = stub_mappings(cls, s)
     if f:
         df, is_stub = f(s, uow), True
     else:
-        df, is_stub = pd.DataFrame(), False
+        df, is_stub = pl.DataFrame(), False
     if is_stub:
-        # Stub functions return pd.DataFrame (from cache). Convert at the
-        # boundary so _post_resolve receives pl.DataFrame as required.
-        df_pl = pd_to_pl(df) if isinstance(df, pd.DataFrame) else df
-        df = post_resolve(cls, {"": df_pl}, s, uow)
+        resolved = post_resolve(cls, {"": df}, s, uow)
+        if resolved is None:
+            return pl.DataFrame(), is_stub
         from app.services.synthesis.operation.bounds import resolve_bounds
 
-        df = resolve_bounds(cls, s, df, uow)
+        df = resolve_bounds(cls, s, resolved, uow)
     return df, is_stub

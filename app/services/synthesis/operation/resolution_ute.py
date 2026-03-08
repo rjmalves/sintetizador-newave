@@ -1,7 +1,7 @@
 from concurrent.futures import ProcessPoolExecutor
 from typing import TYPE_CHECKING, Optional
 
-import pandas as pd
+import polars as pl
 
 from app.internal.constants import (
     SUBMARKET_CODE_COL,
@@ -16,7 +16,6 @@ from app.services.synthesis.operation.pipeline import (
     post_resolve_GTER_UTE_entity,
 )
 from app.services.unitofwork import AbstractUnitOfWork
-from app.utils.dataframe import pd_to_pl
 from app.utils.log import Log
 from app.utils.timing import time_and_log
 
@@ -33,11 +32,7 @@ def resolve_GTER_UTE_entity(
     sbm_index: int,
     sbm_name: str,
     deck_context: Optional[DeckContext] = None,
-) -> Optional[pd.DataFrame]:
-    """
-    Obtém os dados da síntese de operação para todas as UTE
-    de um submercado a partir do arquivo de saída do NWLISTOP.
-    """
+) -> Optional[pl.DataFrame]:
     logger_name = f"{synthesis.variable.value}_{sbm_name}"
     logger = Log.configure_process_logger(uow.queue, logger_name, sbm_index)
 
@@ -61,34 +56,25 @@ def resolve_GTER_UTE(
     uow: AbstractUnitOfWork,
     deck_context: Optional[DeckContext] = None,
     executor: Optional[ProcessPoolExecutor] = None,
-) -> pd.DataFrame:
-    """
-    Obtem os dados da síntese de operação da geração térmica
-    para as UTE de um submercado a partir dos arquivos
-    de saída do NWLISTOP.
-    """
-
+) -> Optional[pl.DataFrame]:
     def _sort_thermals(
-        s: OperationSynthesis, df: pd.DataFrame, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
-        df = df.sort_values(
-            s.spatial_resolution.sorting_synthesis_df_columns
-        ).reset_index(drop=True)
-        return df
+        s: OperationSynthesis, df: pl.DataFrame, uow: AbstractUnitOfWork
+    ) -> pl.DataFrame:
+        return df.sort(
+            s.spatial_resolution.sorting_synthesis_df_columns,
+            maintain_order=True,
+        )
 
-    submarkets = (
-        Deck.submarkets(uow).to_pandas().reset_index(drop=True)
-    )  # SHIM: remove after polars migration of this module
-    real_submarkets = submarkets.loc[
-        submarkets["ficticio"] == 0, :
-    ].sort_values(SUBMARKET_CODE_COL)
-    sbms_idx = real_submarkets[SUBMARKET_CODE_COL].unique()
-    sbms_name = [
-        real_submarkets.loc[
-            real_submarkets[SUBMARKET_CODE_COL] == s, SUBMARKET_NAME_COL
-        ].iloc[0]
-        for s in sbms_idx
-    ]
+    submarkets = Deck.submarkets(uow).sort(SUBMARKET_CODE_COL)
+    real_submarkets = submarkets.filter(pl.col("ficticio") == 0)
+    sbms_idx = real_submarkets[SUBMARKET_CODE_COL].to_list()
+    name_map = dict(
+        zip(
+            real_submarkets[SUBMARKET_CODE_COL].to_list(),
+            real_submarkets[SUBMARKET_NAME_COL].to_list(),
+        )
+    )
+    sbms_name = [name_map[s] for s in sbms_idx]
 
     synthesis = OperationSynthesis(
         variable=synthesis.variable,
@@ -116,15 +102,9 @@ def resolve_GTER_UTE(
         }
         dfs = {ir: f.result(timeout=3600) for ir, f in futures.items()}
 
-    # _post_resolve_GTER_UTE_entity returns pd.DataFrame (out of scope for this ticket).
-    # Convert to pl.DataFrame at the boundary before passing to _post_resolve.
-    dfs_pl = {
-        k: pd_to_pl(v) if isinstance(v, pd.DataFrame) else v
-        for k, v in dfs.items()
-    }
     df = post_resolve(
         cls,
-        dfs_pl,
+        dfs,
         synthesis,
         uow,
         early_hooks=[_sort_thermals],
@@ -138,11 +118,7 @@ def resolve_UTE(
     uow: AbstractUnitOfWork,
     deck_context: Optional[DeckContext] = None,
     executor: Optional[ProcessPoolExecutor] = None,
-) -> Optional[pd.DataFrame]:
-    """
-    Resolve a síntese de operação para uma variável operativa
-    de uma UTE a partir dos arquivos de saída do NWLISTOP.
-    """
+) -> Optional[pl.DataFrame]:
     if synthesis.variable == Variable.GERACAO_TERMICA:
         return resolve_GTER_UTE(cls, synthesis, uow, deck_context, executor)
     else:

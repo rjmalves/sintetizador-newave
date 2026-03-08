@@ -1,7 +1,7 @@
 from concurrent.futures import ProcessPoolExecutor
 from typing import TYPE_CHECKING, Optional
 
-import pandas as pd
+import polars as pl
 
 from app.model.operation.operationsynthesis import OperationSynthesis
 from app.services.deck.context import DeckContext
@@ -24,7 +24,7 @@ def resolve_SIN(
     uow: AbstractUnitOfWork,
     deck_context: Optional[DeckContext] = None,
     executor: Optional[ProcessPoolExecutor] = None,
-) -> Optional[pd.DataFrame]:
+) -> Optional[pl.DataFrame]:
     with time_and_log(
         message_root="Tempo para obter dados do SIN", logger=cls.logger
     ):

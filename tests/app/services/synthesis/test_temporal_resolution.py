@@ -1,27 +1,22 @@
 """
-Unit tests for _resolve_temporal_resolution (ticket-008).
+Unit tests for _resolve_temporal_resolution (ticket-008, updated ticket-010).
 
-Tests verify that the Polars-backed implementation returns results
-numerically identical to the pandas fallback and that error handling
-falls back correctly.
+Tests verify that the Polars-native implementation returns correct results.
+Fallback tests removed in ticket-010 (no more pandas fallback path).
 """
 
 from datetime import datetime
 from typing import List
 from unittest.mock import MagicMock, patch
 
-import logging
-
 import numpy as np
 import pandas as pd
 import polars as pl
-from polars.exceptions import ComputeError
 import pytest
 
 from app.internal.constants import (
     BLOCK_COL,
     BLOCK_DURATION_COL,
-    END_DATE_COL,
     OPERATION_SYNTHESIS_COMMON_COLUMNS,
     SCENARIO_COL,
     STAGE_COL,
@@ -31,7 +26,6 @@ from app.internal.constants import (
 )
 from app.services.deck.context import DeckContext
 from app.services.synthesis.operation import OperationSynthetizer
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -226,44 +220,6 @@ class TestResolveTemporalResolution:
             rtol=1e-10,
         )
 
-    def test_polars_path_matches_pandas_fallback(self, resolution_setup):
-        """Both Polars and pandas fallback paths must produce numerically identical pl.DataFrame results."""
-        input_df, ctx, *_ = resolution_setup
-        uow_mock = MagicMock()
-
-        # Get Polars path result (normal execution) — returns pl.DataFrame
-        result_polars = OperationSynthetizer._resolve_temporal_resolution(
-            input_df.copy(), uow_mock, ctx
-        )
-
-        # Force pandas fallback by patching pd_to_pl to raise inside _add_temporal_info_polars.
-        # The fallback uses pl.from_pandas directly, so it still returns a pl.DataFrame.
-        with patch(
-            "app.services.synthesis.operation.pd_to_pl",
-            side_effect=ComputeError("forced failure"),
-        ):
-            result_fallback = OperationSynthetizer._resolve_temporal_resolution(
-                input_df.copy(), uow_mock, ctx
-            )
-
-        assert isinstance(result_polars, pl.DataFrame)
-        assert isinstance(result_fallback, pl.DataFrame)
-
-        for col in OPERATION_SYNTHESIS_COMMON_COLUMNS:
-            if col in (START_DATE_COL, END_DATE_COL):
-                # Compare datetime values independent of numpy precision (ms vs us)
-                np.testing.assert_array_equal(
-                    result_polars[col].cast(pl.Datetime("us")).to_numpy(),
-                    result_fallback[col].cast(pl.Datetime("us")).to_numpy(),
-                    err_msg=f"Mismatch in column '{col}'",
-                )
-            else:
-                np.testing.assert_array_equal(
-                    result_polars[col].to_numpy(),
-                    result_fallback[col].to_numpy(),
-                    err_msg=f"Mismatch in column '{col}'",
-                )
-
     def test_deck_context_prevents_deck_calls(self, resolution_setup):
         """When deck_context is provided, no Deck methods should be called."""
         input_df, ctx, *_ = resolution_setup
@@ -277,48 +233,6 @@ class TestResolveTemporalResolution:
             mock_deck.internal_stages_starting_dates_final_simulation.assert_not_called()
             mock_deck.internal_stages_ending_dates_final_simulation.assert_not_called()
             mock_deck.block_lengths.assert_not_called()
-
-    def test_polars_error_falls_back_to_pandas_with_warning(
-        self, resolution_setup, caplog
-    ):
-        """When Polars path raises ComputeError, a warning is logged and result is a pl.DataFrame."""
-        input_df, ctx, *_ = resolution_setup
-        uow_mock = MagicMock()
-
-        # OperationSynthetizer._log only fires when cls.logger is not None.
-        # Wire it to a real logger so caplog can capture the warning.
-        test_logger = logging.getLogger("test_temporal_resolution")
-        original_logger = OperationSynthetizer.logger
-        OperationSynthetizer.logger = test_logger
-        try:
-            with patch(
-                "app.services.synthesis.operation.pd_to_pl",
-                side_effect=ComputeError("test compute error"),
-            ):
-                with caplog.at_level(
-                    logging.WARNING, logger="test_temporal_resolution"
-                ):
-                    result = OperationSynthetizer._resolve_temporal_resolution(
-                        input_df.copy(), uow_mock, ctx
-                    )
-        finally:
-            OperationSynthetizer.logger = original_logger
-
-        # Result must be a pl.DataFrame from the fallback path (pandas -> pl.from_pandas)
-        assert result is not None
-        assert isinstance(result, pl.DataFrame)
-        assert result.shape[0] == NUM_STAGES * NUM_SCENARIOS * NUM_BLOCKS
-        assert list(result.columns) == OPERATION_SYNTHESIS_COMMON_COLUMNS
-
-        # Warning must mention "falling back to pandas"
-        warning_messages = [
-            r.message for r in caplog.records if r.levelno == logging.WARNING
-        ]
-        assert any(
-            "falling back to pandas" in str(m) for m in warning_messages
-        ), (
-            f"Expected 'falling back to pandas' in warnings, got: {warning_messages}"
-        )
 
     def test_none_input_returns_none(self):
         """None input must return None without raising."""

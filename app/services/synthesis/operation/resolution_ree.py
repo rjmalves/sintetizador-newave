@@ -1,7 +1,6 @@
 from concurrent.futures import ProcessPoolExecutor
 from typing import TYPE_CHECKING, Optional
 
-import pandas as pd
 import polars as pl
 
 from app.internal.constants import (
@@ -34,11 +33,6 @@ def resolve_REE_entity(
     ree_name: str,
     deck_context: Optional[DeckContext] = None,
 ) -> Optional[pl.DataFrame]:
-    """
-    Obtem os dados da síntese de operação para um REE
-    a partir do arquivo de saída do NWLISTOP.
-    """
-
     logger_name = f"{synthesis.variable.value}_{ree_name}"
     logger = Log.configure_process_logger(uow.queue, logger_name, ree_index)
     with uow:
@@ -50,13 +44,13 @@ def resolve_REE_entity(
         )
 
     if deck_context is not None:
-        aux_df = deck_context.eer_submarket_map.to_pandas().set_index(
-            EER_CODE_COL
-        )  # SHIM: remove after polars migration of this module
+        aux_df = deck_context.eer_submarket_map
     else:
-        aux_df = (
-            Deck.eer_submarket_map(uow).to_pandas().set_index(EER_CODE_COL)
-        )  # SHIM: remove after polars migration of this module
+        aux_df = Deck.eer_submarket_map(uow)
+
+    sbm_code = aux_df.filter(pl.col(EER_CODE_COL) == ree_index).item(
+        0, SUBMARKET_CODE_COL
+    )
 
     return post_resolve_entity(
         cls,
@@ -64,7 +58,7 @@ def resolve_REE_entity(
         synthesis,
         {
             EER_CODE_COL: ree_index,
-            SUBMARKET_CODE_COL: aux_df.at[ree_index, SUBMARKET_CODE_COL],
+            SUBMARKET_CODE_COL: sbm_code,
         },
         uow,
         deck_context=deck_context,
@@ -77,20 +71,10 @@ def resolve_REE(
     uow: AbstractUnitOfWork,
     deck_context: Optional[DeckContext] = None,
     executor: Optional[ProcessPoolExecutor] = None,
-) -> Optional[pd.DataFrame]:
-    """
-    Resolve a síntese de operação para uma variável operativa
-    de um REE a partir dos arquivos de saída do NWLISTOP.
-    """
-
-    eers = (
-        Deck.eers(uow)
-        .to_pandas()
-        .reset_index(drop=True)
-        .sort_values(EER_CODE_COL)
-    )  # SHIM: remove after polars migration of this module
-    eers_idx = eers[EER_CODE_COL]
-    eers_name = eers[EER_NAME_COL]
+) -> Optional[pl.DataFrame]:
+    eers = Deck.eers(uow).sort(EER_CODE_COL)
+    eers_idx = eers[EER_CODE_COL].to_list()
+    eers_name = eers[EER_NAME_COL].to_list()
 
     with time_and_log(
         message_root="Tempo para ler dados de REE", logger=cls.logger

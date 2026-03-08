@@ -6,6 +6,7 @@ from traceback import print_exc
 from typing import Dict, List, Optional
 
 import pandas as pd
+import polars as pl
 
 from app.internal.constants import OPERATION_SYNTHESIS_SUBDIR
 from app.model.operation.operationsynthesis import (
@@ -57,9 +58,9 @@ class OperationSynthetizer:
     SYNTHESIS_TO_CACHE: List[OperationSynthesis] = list(
         set([p for pr in SYNTHESIS_DEPENDENCIES.values() for p in pr])
     )
-    CACHED_SYNTHESIS: Dict[OperationSynthesis, pd.DataFrame] = {}
+    CACHED_SYNTHESIS: Dict[OperationSynthesis, pl.DataFrame] = {}
     ORDERED_SYNTHESIS_ENTITIES: Dict[OperationSynthesis, Dict[str, list]] = {}
-    SYNTHESIS_STATS: Dict[SpatialResolution, List[pd.DataFrame]] = {}
+    SYNTHESIS_STATS: Dict[SpatialResolution, List[pl.DataFrame]] = {}
 
     @classmethod
     def clear_cache(cls) -> None:
@@ -194,12 +195,12 @@ class OperationSynthetizer:
         )
 
     @classmethod
-    def _get_from_cache(cls, s: OperationSynthesis) -> pd.DataFrame:
+    def _get_from_cache(cls, s: OperationSynthesis) -> pl.DataFrame:
         """Extract synthesis result from cache."""
         return _cache_mod.get_from_cache(cls, s)
 
     @classmethod
-    def _resolve_bounds(cls, s, df, uow) -> pd.DataFrame:
+    def _resolve_bounds(cls, s, df, uow) -> pl.DataFrame:
         """Compute upper and lower bounds."""
         return _bounds_mod.resolve_bounds(cls, s, df, uow)
 
@@ -223,27 +224,22 @@ class OperationSynthetizer:
         """Export synthesis statistics."""
         _export_mod.export_stats(cls, uow)
 
-    # Stubs-module delegates (deferred import to avoid circular dependency)
     @classmethod
     def _stub_mappings(cls, s):
-        """Get stub resolver function for synthesis."""
         from app.services.synthesis.operation import stubs as _stubs_mod
 
         return _stubs_mod.stub_mappings(cls, s)
 
     @classmethod
     def _resolve_stub(cls, s, uow):
-        """Resolve synthesis via stub function."""
         from app.services.synthesis.operation import stubs as _stubs_mod
 
         return _stubs_mod.resolve_stub(cls, s, uow)
 
-    # Resolution module delegates — must be classmethods for executor.submit
     @classmethod
     def _resolve_SBM_entity(
         cls, uow, synthesis, sbm_index, sbm_name, deck_context=None
     ):
-        """Get synthesis data for a submarket."""
         from app.services.synthesis.operation import resolution_sbm as _mod
 
         return _mod.resolve_SBM_entity(
@@ -261,7 +257,6 @@ class OperationSynthetizer:
         sbm2_name,
         deck_context=None,
     ):
-        """Get synthesis data for a submarket pair."""
         from app.services.synthesis.operation import resolution_sbp as _mod
 
         return _mod.resolve_SBP_entity(
@@ -279,7 +274,6 @@ class OperationSynthetizer:
     def _resolve_REE_entity(
         cls, uow, synthesis, ree_index, ree_name, deck_context=None
     ):
-        """Get synthesis data for a REE."""
         from app.services.synthesis.operation import resolution_ree as _mod
 
         return _mod.resolve_REE_entity(
@@ -290,7 +284,6 @@ class OperationSynthetizer:
     def _resolve_UHE_entity(
         cls, uow, synthesis, uhe_index, uhe_name, deck_context=None
     ):
-        """Get synthesis data for a UHE."""
         from app.services.synthesis.operation import resolution_uhe as _mod
 
         return _mod.resolve_UHE_entity(
@@ -301,7 +294,6 @@ class OperationSynthetizer:
     def _resolve_GTER_UTE_entity(
         cls, uow, synthesis, sbm_index, sbm_name, deck_context=None
     ):
-        """Get synthesis data for all UTEs in a submarket."""
         from app.services.synthesis.operation import resolution_ute as _mod
 
         return _mod.resolve_GTER_UTE_entity(
@@ -310,7 +302,6 @@ class OperationSynthetizer:
 
     @classmethod
     def _resolve_SBM_entity_MER_MERL(cls, uow, synthesis, sbm_index, sbm_name):
-        """Get synthesis data for a submarket (MER/MERL)."""
         from app.services.synthesis.operation import stubs as _stubs_mod
 
         return _stubs_mod.resolve_SBM_entity_MER_MERL(
@@ -321,7 +312,6 @@ class OperationSynthetizer:
     def _resolve_spatial_resolution(
         cls, synthesis, uow, deck_context=None, executor=None
     ):
-        """Dispatch spatial resolution function."""
         from app.services.synthesis.operation import spatial as _spatial_mod
 
         return _spatial_mod.resolve_spatial_resolution(
@@ -330,7 +320,6 @@ class OperationSynthetizer:
 
     @classmethod
     def _resolve_synthesis(cls, s, uow, deck_context=None, executor=None):
-        """Resolve synthesis with bounds."""
         from app.services.synthesis.operation import spatial as _spatial_mod
 
         return _spatial_mod.resolve_synthesis(
@@ -341,7 +330,6 @@ class OperationSynthetizer:
     def _preprocess_synthesis_variables(
         cls, variables: List[str], uow: AbstractUnitOfWork
     ) -> List[OperationSynthesis]:
-        """Pre-process synthesis variables with validation and dependencies."""
         try:
             if len(variables) == 0:
                 synthesis_variables = cls._default_args()
@@ -382,14 +370,14 @@ class OperationSynthetizer:
                 cls._log(f"Realizando sintese de {filename}")
                 df = _cache_mod.get_from_cache_if_exists(cls, s)
                 is_stub = cls._stub_mappings(s) is not None
-                if df.empty:
+                if df.is_empty():
                     df, is_stub = cls._resolve_stub(s, uow)
                     if not is_stub:
                         df = cls._resolve_synthesis(
                             s, uow, deck_context, executor
                         )
                 if df is not None:
-                    if not df.empty:
+                    if not df.is_empty():
                         found_synthesis = True
                         cls._export_scenario_synthesis(s, df, uow)
                         return s

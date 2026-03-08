@@ -1,7 +1,6 @@
 from concurrent.futures import ProcessPoolExecutor
 from typing import TYPE_CHECKING, Optional
 
-import pandas as pd
 import polars as pl
 
 from app.internal.constants import (
@@ -37,10 +36,6 @@ def resolve_SBP_entity(
     sbm2_name: str,
     deck_context: Optional[DeckContext] = None,
 ) -> Optional[pl.DataFrame]:
-    """
-    Obtém os dados da síntese de operação para um par de submercados
-    a partir do arquivo de saída do NWLISTOP.
-    """
     if sbm1_index >= sbm2_index:
         return None
     logger_name = f"{synthesis.variable.value}_{sbm1_name}_{sbm2_name}"
@@ -76,22 +71,16 @@ def resolve_SBP(
     uow: AbstractUnitOfWork,
     deck_context: Optional[DeckContext] = None,
     executor: Optional[ProcessPoolExecutor] = None,
-) -> Optional[pd.DataFrame]:
-    """
-    Resolve a síntese de operação para uma variável operativa
-    de um par de submercados a partir dos arquivos de saída do NWLISTOP.
-    """
-
-    submarkets = (
-        Deck.submarkets(uow).to_pandas().reset_index(drop=True)
-    )  # SHIM: remove after polars migration of this module
-    sbms_idx = submarkets[SUBMARKET_CODE_COL].unique()
-    sbms_name = [
-        submarkets.loc[
-            submarkets[SUBMARKET_CODE_COL] == s, SUBMARKET_NAME_COL
-        ].iloc[0]
-        for s in sbms_idx
-    ]
+) -> Optional[pl.DataFrame]:
+    submarkets = Deck.submarkets(uow)
+    sbms_idx = submarkets[SUBMARKET_CODE_COL].to_list()
+    name_map = dict(
+        zip(
+            submarkets[SUBMARKET_CODE_COL].to_list(),
+            submarkets[SUBMARKET_NAME_COL].to_list(),
+        )
+    )
+    sbms_name = [name_map[s] for s in sbms_idx]
 
     with time_and_log(
         message_root="Tempo para obter dados de SBP", logger=cls.logger
