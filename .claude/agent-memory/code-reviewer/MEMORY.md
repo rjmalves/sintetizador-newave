@@ -12,8 +12,9 @@
 
 - `Deck` facade class: delegates to domain modules (`temporal.py`, `entities.py`, etc.) with shared `DECK_DATA_CACHING: Dict[str, Any]` dict
 - `OperationSynthetizer` class: classmethods only; delegates to `pipeline.py`, `bounds.py`, `cache.py`, `export.py`, `stubs.py`, `spatial.py`, `resolution_*.py`
-- `_pkg()` pattern in `pipeline.py` and `orchestrator.py`: returns `sys.modules[__package__]` to avoid circular imports; the package `__init__.py` re-exports `Deck`, `pd_to_pl`, `pl_to_pd`, `ProcessPoolExecutor`
+- `_pkg()` pattern in `pipeline.py` and `orchestrator.py`: returns `sys.modules[__package__]` to avoid circular imports; the package `__init__.py` re-exports `Deck`, `ProcessPoolExecutor` (pd_to_pl/pl_to_pd removed in polars-native-migration)
 - Type hints use `TYPE_CHECKING` guard for `OperationSynthetizer` forward reference (circular import avoidance)
+- After polars-native-migration: all internal Deck domain module returns are `pl.DataFrame`; the Deck facade converts to pandas at the boundary for legacy callers (bounds.py etc. still on pandas). Deck methods that return `pd.DataFrame` in their type annotation call `.to_pandas()` directly in deck.py.
 
 ## Known Pre-existing Issues (do NOT flag)
 
@@ -38,6 +39,16 @@
 - epic-03: Polars hot-path in `resolve_temporal_resolution` with pandas fallback on exception
 - epic-04: `ProcessPoolExecutor` shared per spatial-resolution group in `synthetize()`; SIN uses no pool
 - epic-05: `operation.py` (2538 lines) → 17-file package; `deck.py` → facade + 11 modules; `files.py` → unchanged + `mappings/` package
+
+## Polars-Native Migration Notes (feat/polars-native-migration)
+
+- All `pd_to_pl`/`pl_to_pd` conversion utilities removed; `app/utils/dataframe.py` deleted
+- entities.py: all maps (`eers`, `hydros`, `submarkets`, etc.) now `pl.DataFrame`; no longer indexed by primary key; callers must use `.filter()/.join()` not `.at[]/.loc[index]`
+- `eer_submarket_map` now returns `[EER_CODE_COL, EER_NAME_COL, SUBMARKET_CODE_COL, SUBMARKET_NAME_COL]` — if caller's df already has `EER_NAME_COL`, polars join creates `EER_NAME_COL_right` duplicate (minor schema issue in pipeline.py `initial_stored_energy_df` SUBMERCADO path)
+- `scenario.py` retains `pd.date_range` for history date sequences (intentional, polars has no equivalent)
+- `_resolve_forward_energy_iteration` and `_resolve_backward_energy_iteration` still type-annotated as `-> pd.DataFrame` and call `.to_pandas()` — `_post_resolve` handles mixed dict via `isinstance` check
+- `storage.py` `hydro_volume_bounds_with_changes` and `_hydro_volume_bounds_in_stages` have pandas shim boundaries for `readers.apply_modif_changes_to_hydros[_in_stages]` — these convert to pandas, call readers, convert back
+- `temporal.py` no longer imports pandas; `_month_range` replaced `pd.date_range` with manual `relativedelta` loop
 
 ## Double Conversion in synthetize_pl (export.py line 84)
 
