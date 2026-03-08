@@ -30,9 +30,9 @@ Modernizacao da infraestrutura de empacotamento, CI/CD e documentacao do `sintet
 | ticket-003 | Migrate docs deployment to official GitHub Pages actions | epic-01 | completed | Detailed     | 0.97      | 1.00    | EXCELLENT  |
 | ticket-004 | Create PyPI release workflow with trusted publishing     | epic-01 | completed | Detailed     | 0.96      | 1.00    | EXCELLENT  |
 | ticket-005 | Add pre-commit hooks configuration                       | epic-01 | completed | Detailed     | 0.96      | 0.65    | BELOW GATE |
-| ticket-006 | Migrate Sphinx theme from RTD to Furo                    | epic-02 | pending   | Detailed     | 0.96      | --      | --         |
-| ticket-007 | Update sphinx-gallery examples to Polars                 | epic-02 | pending   | Detailed     | 0.95      | --      | --         |
-| ticket-008 | Update existing documentation text for Polars migration  | epic-02 | pending   | Detailed     | 0.95      | --      | --         |
+| ticket-006 | Migrate Sphinx theme from RTD to Furo                    | epic-02 | completed | Detailed     | 0.96      | 0.88    | ACCEPTABLE |
+| ticket-007 | Update sphinx-gallery examples to Polars                 | epic-02 | completed | Detailed     | 0.95      | 0.75    | ACCEPTABLE |
+| ticket-008 | Update existing documentation text for Polars migration  | epic-02 | completed | Detailed     | 0.95      | 0.93    | EXCELLENT  |
 | ticket-009 | Create architecture overview documentation page          | epic-03 | pending   | Outline      | --        | --      | --         |
 | ticket-010 | Create FAQ and troubleshooting page                      | epic-03 | pending   | Outline      | --        | --      | --         |
 | ticket-011 | Create performance tuning guide                          | epic-03 | pending   | Outline      | --        | --      | --         |

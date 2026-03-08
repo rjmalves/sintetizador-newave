@@ -1,0 +1,634 @@
+{
+ "cenario": [
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "cenario"
+  }
+ ],
+ "cenarios": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "list"
+  }
+ ],
+ "cmo": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe.frame",
+   "module_short": "polars",
+   "name": "DataFrame"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe",
+   "module_short": "polars",
+   "name": "DataFrame"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars",
+   "module_short": "polars",
+   "name": "DataFrame"
+  }
+ ],
+ "cmo.filter": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe.frame",
+   "module_short": "polars",
+   "name": "DataFrame.filter"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe",
+   "module_short": "polars",
+   "name": "DataFrame.filter"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars",
+   "module_short": "polars",
+   "name": "DataFrame.filter"
+  }
+ ],
+ "cmo.head": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe.frame",
+   "module_short": "polars",
+   "name": "DataFrame.head"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe",
+   "module_short": "polars",
+   "name": "DataFrame.head"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars",
+   "module_short": "polars",
+   "name": "DataFrame.head"
+  }
+ ],
+ "cmo.schema": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe.frame",
+   "module_short": "polars",
+   "name": "DataFrame.schema"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe",
+   "module_short": "polars",
+   "name": "DataFrame.schema"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars",
+   "module_short": "polars",
+   "name": "DataFrame.schema"
+  }
+ ],
+ "cmos_2omes": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe.frame",
+   "module_short": "polars",
+   "name": "DataFrame"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe",
+   "module_short": "polars",
+   "name": "DataFrame"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars",
+   "module_short": "polars",
+   "name": "DataFrame"
+  }
+ ],
+ "data_fim": [
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "data_fim"
+  }
+ ],
+ "data_inicio": [
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "data_inicio"
+  }
+ ],
+ "dger.dat": [
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "dger",
+   "module_short": "dger",
+   "name": "dat"
+  }
+ ],
+ "earmf": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe.frame",
+   "module_short": "polars",
+   "name": "DataFrame"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe",
+   "module_short": "polars",
+   "name": "DataFrame"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars",
+   "module_short": "polars",
+   "name": "DataFrame"
+  }
+ ],
+ "earmf.head": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe.frame",
+   "module_short": "polars",
+   "name": "DataFrame.head"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe",
+   "module_short": "polars",
+   "name": "DataFrame.head"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars",
+   "module_short": "polars",
+   "name": "DataFrame.head"
+  }
+ ],
+ "earmf.schema": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe.frame",
+   "module_short": "polars",
+   "name": "DataFrame.schema"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe",
+   "module_short": "polars",
+   "name": "DataFrame.schema"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars",
+   "module_short": "polars",
+   "name": "DataFrame.schema"
+  }
+ ],
+ "estagio": [
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "estagio"
+  }
+ ],
+ "estatisticas": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe.frame",
+   "module_short": "polars",
+   "name": "DataFrame"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe",
+   "module_short": "polars",
+   "name": "DataFrame"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars",
+   "module_short": "polars",
+   "name": "DataFrame"
+  }
+ ],
+ "estatisticas.columns": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe.frame",
+   "module_short": "polars",
+   "name": "DataFrame.columns"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe",
+   "module_short": "polars",
+   "name": "DataFrame.columns"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars",
+   "module_short": "polars",
+   "name": "DataFrame.columns"
+  }
+ ],
+ "estatisticas.head": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe.frame",
+   "module_short": "polars",
+   "name": "DataFrame.head"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe",
+   "module_short": "polars",
+   "name": "DataFrame.head"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars",
+   "module_short": "polars",
+   "name": "DataFrame.head"
+  }
+ ],
+ "fig": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "plotly.graph_objs._figure",
+   "module_short": "plotly.graph_objs",
+   "name": "Figure"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "plotly.graph_objs",
+   "module_short": "plotly.graph_objs",
+   "name": "Figure"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "plotly",
+   "module_short": "plotly",
+   "name": "Figure"
+  }
+ ],
+ "metadados": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe.frame",
+   "module_short": "polars",
+   "name": "DataFrame"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe",
+   "module_short": "polars",
+   "name": "DataFrame"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars",
+   "module_short": "polars",
+   "name": "DataFrame"
+  }
+ ],
+ "metadados.head": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe.frame",
+   "module_short": "polars",
+   "name": "DataFrame.head"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe",
+   "module_short": "polars",
+   "name": "DataFrame.head"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars",
+   "module_short": "polars",
+   "name": "DataFrame.head"
+  }
+ ],
+ "patamar": [
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "patamar"
+  }
+ ],
+ "pl.col": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.functions.col",
+   "module_short": "polars.functions.col",
+   "name": "Col"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.functions",
+   "module_short": "polars.functions",
+   "name": "Col"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars",
+   "module_short": "polars",
+   "name": "Col"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars",
+   "module_short": "polars",
+   "name": "col"
+  }
+ ],
+ "pl.read_parquet": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "function"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars",
+   "module_short": "polars",
+   "name": "read_parquet"
+  }
+ ],
+ "px.box": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "function"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "plotly.express",
+   "module_short": "plotly.express",
+   "name": "box"
+  }
+ ],
+ "px.violin": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "function"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "plotly.express",
+   "module_short": "plotly.express",
+   "name": "violin"
+  }
+ ],
+ "python": [
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "python"
+  }
+ ],
+ "ree.dat": [
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "ree",
+   "module_short": "ree",
+   "name": "dat"
+  }
+ ],
+ "sintese": [
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "sintese"
+  }
+ ],
+ "sistema.dat": [
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "sistema",
+   "module_short": "sistema",
+   "name": "dat"
+  }
+ ],
+ "submercado": [
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "submercado"
+  }
+ ],
+ "valor": [
+  {
+   "is_class": false,
+   "is_explicit": true,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "valor"
+  }
+ ],
+ "varmf": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe.frame",
+   "module_short": "polars",
+   "name": "DataFrame"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe",
+   "module_short": "polars",
+   "name": "DataFrame"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars",
+   "module_short": "polars",
+   "name": "DataFrame"
+  }
+ ],
+ "varmf.filter": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe.frame",
+   "module_short": "polars",
+   "name": "DataFrame.filter"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe",
+   "module_short": "polars",
+   "name": "DataFrame.filter"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars",
+   "module_short": "polars",
+   "name": "DataFrame.filter"
+  }
+ ],
+ "varmf.head": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe.frame",
+   "module_short": "polars",
+   "name": "DataFrame.head"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe",
+   "module_short": "polars",
+   "name": "DataFrame.head"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars",
+   "module_short": "polars",
+   "name": "DataFrame.head"
+  }
+ ],
+ "varmf.schema": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe.frame",
+   "module_short": "polars",
+   "name": "DataFrame.schema"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe",
+   "module_short": "polars",
+   "name": "DataFrame.schema"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars",
+   "module_short": "polars",
+   "name": "DataFrame.schema"
+  }
+ ],
+ "varmf_1oano": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe.frame",
+   "module_short": "polars",
+   "name": "DataFrame"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars.dataframe",
+   "module_short": "polars",
+   "name": "DataFrame"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "polars",
+   "module_short": "polars",
+   "name": "DataFrame"
+  }
+ ]
+}

@@ -39,7 +39,6 @@ dev = [
     "ruff",
     "mypy",
     "types-python-dateutil",
-    "sphinx-rtd-theme",
     "furo",
     "sphinx-gallery",
     "sphinx",
