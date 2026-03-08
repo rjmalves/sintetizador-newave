@@ -10,8 +10,7 @@ Clone o repositorio e instale as dependencias de desenvolvimento:
 ```bash
 git clone https://github.com/rjmalves/sintetizador-newave.git
 cd sintetizador-newave
-uv sync
-uv pip install -e ".[dev]"
+uv sync --all-extras
 ```
 
 > **Requisitos**: Python 3.10+ e [uv](https://docs.astral.sh/uv/) instalados.
