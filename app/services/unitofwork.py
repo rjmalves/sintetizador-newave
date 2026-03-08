@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
-from multiprocessing import Queue
 from pathlib import Path
-from typing import Dict, Type
+from typing import Any, Dict, Optional, Type
 
 from app.adapters.repository.export import (
     AbstractExportRepository,
@@ -19,7 +18,7 @@ from app.model.settings import Settings
 
 
 class AbstractUnitOfWork(ABC):
-    def __init__(self, q: Queue) -> None:
+    def __init__(self, q: Any) -> None:
         self._queue = q
         self._subdir = ""
         self._version = "latest"
@@ -27,11 +26,11 @@ class AbstractUnitOfWork(ABC):
     def __enter__(self) -> "AbstractUnitOfWork":
         return self
 
-    def __exit__(self, *args):
+    def __exit__(self, *args: Any) -> None:
         self.rollback()
 
     @abstractmethod
-    def rollback(self):
+    def rollback(self) -> None:
         raise NotImplementedError
 
     @property
@@ -49,11 +48,11 @@ class AbstractUnitOfWork(ABC):
         return self._version
 
     @version.setter
-    def version(self, s: str):
+    def version(self, s: str) -> None:
         self._version = s
 
     @property
-    def queue(self) -> Queue:
+    def queue(self) -> Any:
         return self._queue
 
     @property
@@ -61,18 +60,18 @@ class AbstractUnitOfWork(ABC):
         return self._subdir
 
     @subdir.setter
-    def subdir(self, subdir: str):
+    def subdir(self, subdir: str) -> None:
         self._subdir = subdir
 
 
 class FSUnitOfWork(AbstractUnitOfWork):
-    def __init__(self, directory: str, q: Queue):
+    def __init__(self, directory: str, q: Any) -> None:
         super().__init__(q)
         self._path = str(Path(directory).resolve())
-        self._files = None
-        self._exporter = None
+        self._files: Optional[AbstractFilesRepository] = None
+        self._exporter: Optional[AbstractExportRepository] = None
 
-    def __create_repository(self):
+    def __create_repository(self) -> None:
         if self._files is None:
             self._files = files_factory(
                 Settings().file_repository, str(self._path), self._version
@@ -92,7 +91,7 @@ class FSUnitOfWork(AbstractUnitOfWork):
         self.__create_repository()
         return super().__enter__()
 
-    def __exit__(self, *args):
+    def __exit__(self, *args: Any) -> None:
         self._files = None
         self._exporter = None
         super().__exit__(*args)
@@ -109,11 +108,11 @@ class FSUnitOfWork(AbstractUnitOfWork):
             raise RuntimeError()
         return self._exporter
 
-    def rollback(self):
+    def rollback(self) -> None:
         pass
 
 
-def factory(kind: str, *args, **kwargs) -> AbstractUnitOfWork:
+def factory(kind: str, *args: Any, **kwargs: Any) -> AbstractUnitOfWork:
     mappings: Dict[str, Type[AbstractUnitOfWork]] = {
         "FS": FSUnitOfWork,
     }

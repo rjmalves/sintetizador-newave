@@ -6,8 +6,8 @@ from typing import Dict, Type
 
 import pandas as pd
 import polars as pl
-import pyarrow as pa  # type: ignore
-import pyarrow.parquet as pq  # type: ignore
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 from app.utils.tz import enforce_utc
 
@@ -133,10 +133,12 @@ class TestExportRepository(AbstractExportRepository):
         return None
 
     def synthetize_df(self, df: pd.DataFrame, filename: str) -> bool:
-        return df
+        return True  # no-op for testing
 
 
-def factory(kind: str, *args, **kwargs) -> AbstractExportRepository:
+def factory(
+    kind: str, *args: object, **kwargs: object
+) -> AbstractExportRepository:
     mapping: Dict[str, Type[AbstractExportRepository]] = {
         "PARQUET": ParquetExportRepository,
         "CSV": CSVExportRepository,

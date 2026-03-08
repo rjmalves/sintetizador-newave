@@ -80,7 +80,7 @@ def _cast_exchange_bounds_to_MWmes(
 
 
 def exchange_block_limits(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     def _eval_pat0(df_pat: pl.DataFrame) -> pl.DataFrame:
         df_pat_0 = df_pat.filter(pl.col(BLOCK_COL) == 1).with_columns(
@@ -121,7 +121,7 @@ def exchange_block_limits(
 
 
 def exchange_bounds(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     val = cache.get("exchange_bounds")
     if val is None:

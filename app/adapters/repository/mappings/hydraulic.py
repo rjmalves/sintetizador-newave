@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from os.path import join
-from typing import TYPE_CHECKING, Callable, Dict, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, Tuple
 
 from inewave.nwlistop.hjus import Hjus
 from inewave.nwlistop.hliq import Hliq
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 def get_rules(
     repo: "RawFilesRepository",
-) -> Dict[Tuple[Variable, SpatialResolution], Callable]:
+) -> Dict[Tuple[Variable, SpatialResolution], Callable[..., Any]]:
     """Return variable-to-reader mappings for hydraulic-related variables."""
     return {
         (

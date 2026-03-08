@@ -2,7 +2,7 @@ from typing import Any, Dict
 
 import pandas as pd
 import polars as pl
-from inewave.newave import (
+from inewave.newave import (  # type: ignore[attr-defined]
     Curva,
     Dger,
     Modif,
@@ -20,7 +20,7 @@ from app.services.unitofwork import AbstractUnitOfWork
 
 
 def dger(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
 ) -> Dger:
@@ -37,7 +37,7 @@ def dger(
 
 
 def pmo(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
 ) -> Pmo:
@@ -54,7 +54,7 @@ def pmo(
 
 
 def curva(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
 ) -> Curva:
@@ -71,7 +71,7 @@ def curva(
 
 
 def modif(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
 ) -> Modif:
@@ -88,7 +88,7 @@ def modif(
 
 
 def confhd(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
 ) -> pl.DataFrame:
@@ -106,7 +106,7 @@ def confhd(
 
 
 def clast(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
 ) -> pl.DataFrame:
@@ -124,7 +124,7 @@ def clast(
 
 
 def term(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
 ) -> pl.DataFrame:
@@ -142,7 +142,7 @@ def term(
 
 
 def manutt(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
 ) -> pl.DataFrame:
@@ -175,7 +175,7 @@ def manutt(
 
 
 def expt(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
 ) -> pl.DataFrame:
@@ -193,7 +193,7 @@ def expt(
 
 
 def hidr(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
 ) -> pl.DataFrame:
@@ -211,7 +211,7 @@ def hidr(
 
 
 def newavetim(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
 ) -> Newavetim:
@@ -228,7 +228,7 @@ def newavetim(
 
 
 def engnat(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
 ) -> pl.DataFrame:
@@ -246,7 +246,7 @@ def engnat(
 
 
 def energiaf(
-    deck_cls,
+    deck_cls: Any,
     uow: AbstractUnitOfWork,
     iteracao: int,
 ) -> pl.DataFrame:
@@ -259,7 +259,7 @@ def energiaf(
 
 
 def enavazf(
-    deck_cls,
+    deck_cls: Any,
     uow: AbstractUnitOfWork,
     iteracao: int,
 ) -> pl.DataFrame:
@@ -272,7 +272,7 @@ def enavazf(
 
 
 def vazaof(
-    deck_cls,
+    deck_cls: Any,
     uow: AbstractUnitOfWork,
     iteracao: int,
 ) -> pl.DataFrame:
@@ -285,7 +285,7 @@ def vazaof(
 
 
 def energiab(
-    deck_cls,
+    deck_cls: Any,
     uow: AbstractUnitOfWork,
     iteracao: int,
 ) -> pl.DataFrame:
@@ -298,7 +298,7 @@ def energiab(
 
 
 def enavazb(
-    deck_cls,
+    deck_cls: Any,
     uow: AbstractUnitOfWork,
     iteracao: int,
 ) -> pl.DataFrame:
@@ -311,7 +311,7 @@ def enavazb(
 
 
 def vazaob(
-    deck_cls,
+    deck_cls: Any,
     uow: AbstractUnitOfWork,
     iteracao: int,
 ) -> pl.DataFrame:
@@ -329,7 +329,7 @@ def vazaob(
 
 
 def energias(
-    deck_cls,
+    deck_cls: Any,
     uow: AbstractUnitOfWork,
 ) -> pl.DataFrame:
     arq = readers.get_energias(deck_cls, uow)
@@ -341,7 +341,7 @@ def energias(
 
 
 def enavazs(
-    deck_cls,
+    deck_cls: Any,
     uow: AbstractUnitOfWork,
 ) -> pl.DataFrame:
     arq = readers.get_enavazs(deck_cls, uow)
@@ -353,7 +353,7 @@ def enavazs(
 
 
 def vazaos(
-    deck_cls,
+    deck_cls: Any,
     uow: AbstractUnitOfWork,
 ) -> pl.DataFrame:
     arq = readers.get_vazaos(deck_cls, uow)
@@ -365,7 +365,7 @@ def vazaos(
 
 
 def vazoes(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
 ) -> pl.DataFrame:
@@ -383,36 +383,38 @@ def vazoes(
 
 
 def study_title(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
 ) -> str:
-    val = cache.get("study_title")
-    if val is None:
-        dger_obj = dger(deck_cls, cache, uow)
-        val = readers.validate_data(
-            deck_cls,
-            dger_obj.nome_caso,
-            str,
-            "nome do caso (dger.dat)",
-        )
-        cache["study_title"] = val
-    return val
+    cached: str | None = cache.get("study_title")
+    if cached is not None:
+        return cached
+    dger_obj = dger(deck_cls, cache, uow)
+    val = readers.validate_data(
+        deck_cls,
+        dger_obj.nome_caso,
+        str,
+        "nome do caso (dger.dat)",
+    )
+    cache["study_title"] = val
+    return val  # type: ignore[return-value]
 
 
 def version(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
 ) -> str:
-    val = cache.get("version")
-    if val is None:
-        pmo_obj = pmo(deck_cls, cache, uow)
-        val = readers.validate_data(
-            deck_cls,
-            pmo_obj.versao_modelo,
-            str,
-            "versao do modelo (pmo.dat)",
-        )
-        cache["version"] = val
-    return val
+    cached: str | None = cache.get("version")
+    if cached is not None:
+        return cached
+    pmo_obj = pmo(deck_cls, cache, uow)
+    val = readers.validate_data(
+        deck_cls,
+        pmo_obj.versao_modelo,
+        str,
+        "versao do modelo (pmo.dat)",
+    )
+    cache["version"] = val
+    return val  # type: ignore[return-value]

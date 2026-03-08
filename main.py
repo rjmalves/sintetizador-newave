@@ -1,6 +1,7 @@
-from app.app import app
 import os
 import pathlib
+
+from app.app import app
 
 
 def main():

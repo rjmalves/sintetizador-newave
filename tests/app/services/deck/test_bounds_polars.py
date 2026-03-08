@@ -7,7 +7,6 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 import polars as pl
-import pytest
 
 from app.internal.constants import (
     BLOCK_COL,

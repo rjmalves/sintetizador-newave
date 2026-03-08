@@ -1,7 +1,7 @@
 """Private market/GUNS stub resolvers for stubs.py."""
 
 from concurrent.futures import ProcessPoolExecutor
-from typing import TYPE_CHECKING, Callable, Dict, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
 
 import polars as pl
 
@@ -105,7 +105,7 @@ def stub_MER_MERL(
             df_result = post_resolve_entity(cls, df_pl, synthesis, {}, uow)
         return post_resolve(cls, {"SIN": df_result}, synthesis, uow)
 
-    RESOLUTION_FUNCTION_MAP: Dict[SpatialResolution, Callable] = {
+    RESOLUTION_FUNCTION_MAP: Dict[SpatialResolution, Callable[..., Any]] = {
         SpatialResolution.SISTEMA_INTERLIGADO: _resolve_SIN_MER_MERL,
         SpatialResolution.SUBMERCADO: lambda s, u: _resolve_SBM_MER_MERL(
             cls, s, u
@@ -137,7 +137,7 @@ def stub_GUNS(
         df = Deck.non_simulated_generation(uow)
         df = generate_scenarios(cls, df, uow)
         df = df.sort([SUBMARKET_CODE_COL, START_DATE_COL, "serie", BLOCK_COL])
-        dfs: dict = {}
+        dfs: dict[str, Any] = {}
         for sbm_code in df[SUBMARKET_CODE_COL].unique().to_list():
             sbm_df = df.filter(pl.col(SUBMARKET_CODE_COL) == sbm_code)
             sbm_df_result = post_resolve_entity(
@@ -146,7 +146,7 @@ def stub_GUNS(
             dfs[str(sbm_code)] = sbm_df_result
         return post_resolve(cls, dfs, synthesis, uow)
 
-    RESOLUTION_FUNCTION_MAP: Dict[SpatialResolution, Callable] = {
+    RESOLUTION_FUNCTION_MAP: Dict[SpatialResolution, Callable[..., Any]] = {
         SpatialResolution.SISTEMA_INTERLIGADO: _resolve_SIN,
         SpatialResolution.SUBMERCADO: _resolve_SBM,
     }

@@ -55,10 +55,13 @@ _REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from app.model.operation.operationsynthesis import OperationSynthesis  # noqa: E402
-from app.model.operation.spatialresolution import SpatialResolution  # noqa: E402
+from app.model.operation.operationsynthesis import (  # noqa: E402
+    OperationSynthesis,
+)
+from app.model.operation.spatialresolution import (  # noqa: E402
+    SpatialResolution,
+)
 from app.model.operation.variable import Variable  # noqa: E402
-from app.services.deck.context import DeckContext  # noqa: E402
 from app.services.deck.deck import Deck  # noqa: E402
 from app.services.synthesis.operation import OperationSynthetizer  # noqa: E402
 from app.services.unitofwork import FSUnitOfWork  # noqa: E402
@@ -104,7 +107,6 @@ def _resolve_uhe_entity_worker(
     -------
     pl.DataFrame or None as returned by _resolve_UHE_entity.
     """
-    import queue as queue_mod  # stdlib; avoids multiprocessing.Queue in threads
 
     # Build a minimal queue for logging.  For processes a plain queue.Queue
     # is not shareable across process boundaries, but since each process

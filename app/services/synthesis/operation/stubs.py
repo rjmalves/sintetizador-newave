@@ -1,5 +1,5 @@
 import functools
-from typing import TYPE_CHECKING, Callable, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Optional, Tuple
 
 import numpy as np
 import polars as pl
@@ -413,7 +413,7 @@ def stub_EARM_UHE(
 
 def stub_mappings(
     cls: "type[OperationSynthetizer]", s: OperationSynthesis
-) -> Optional[Callable]:
+) -> Optional[Callable[..., Any]]:
     p = functools.partial
     v, sr = s.variable, s.spatial_resolution
     uhe = SpatialResolution.USINA_HIDROELETRICA

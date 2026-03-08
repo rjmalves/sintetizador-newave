@@ -14,13 +14,13 @@ import os
 import sys
 from datetime import date
 from typing import List
+
 import plotly.io as pio
 
 pio.renderers.default = "sphinx_gallery"
 
 sys.path.insert(0, os.path.abspath("../../"))
 from app import __version__  # noqa: E402
-
 
 # -- Project information -----------------------------------------------------
 

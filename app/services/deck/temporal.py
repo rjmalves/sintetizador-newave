@@ -8,7 +8,7 @@ import polars as pl
 
 if TYPE_CHECKING:
     import pandas as pd
-from dateutil.relativedelta import relativedelta  # type: ignore
+from dateutil.relativedelta import relativedelta
 
 from app.internal.constants import (
     START_DATE_COL,
@@ -19,7 +19,7 @@ from app.services.unitofwork import AbstractUnitOfWork
 
 
 def _dger_int(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
     key: str,
@@ -36,11 +36,11 @@ def _dger_int(
             msg,
         )
         cache[key] = val
-    return val
+    return int(val)
 
 
 def pre_study_period_starting_month(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> int:
     return _dger_int(
         deck_cls,
@@ -53,7 +53,7 @@ def pre_study_period_starting_month(
 
 
 def study_period_starting_month(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> int:
     return _dger_int(
         deck_cls,
@@ -66,7 +66,7 @@ def study_period_starting_month(
 
 
 def study_period_starting_year(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> int:
     return _dger_int(
         deck_cls,
@@ -79,7 +79,7 @@ def study_period_starting_year(
 
 
 def num_pre_study_period_years(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> int:
     return _dger_int(
         deck_cls,
@@ -92,7 +92,7 @@ def num_pre_study_period_years(
 
 
 def num_study_period_years(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> int:
     return _dger_int(
         deck_cls,
@@ -105,7 +105,7 @@ def num_study_period_years(
 
 
 def num_post_study_period_years_final_simulation(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> int:
     return _dger_int(
         deck_cls,
@@ -118,7 +118,7 @@ def num_post_study_period_years_final_simulation(
 
 
 def num_synthetic_scenarios_final_simulation(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> int:
     return _dger_int(
         deck_cls,
@@ -131,7 +131,7 @@ def num_synthetic_scenarios_final_simulation(
 
 
 def num_thermal_maintenance_years(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> int:
     return _dger_int(
         deck_cls,
@@ -144,7 +144,7 @@ def num_thermal_maintenance_years(
 
 
 def final_simulation_type(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> int:
     return _dger_int(
         deck_cls,
@@ -157,7 +157,7 @@ def final_simulation_type(
 
 
 def final_simulation_aggregation(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> int:
     return _dger_int(
         deck_cls,
@@ -170,7 +170,7 @@ def final_simulation_aggregation(
 
 
 def num_history_years(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> int:
     val = cache.get("num_history_years")
     if val is None:
@@ -180,12 +180,12 @@ def num_history_years(
         )
         if span == 1:
             dger = accessors.dger(deck_cls, cache, uow)
-            start_year = readers.validate_data(
-                deck_cls,
-                dger.ano_inicial_historico,
-                int,
-                "ano de inicio do historico (dger.dat)",
-            )
+            _start_year_raw = dger.ano_inicial_historico
+            if _start_year_raw is None:
+                raise RuntimeError(
+                    "ano_inicial_historico not found in dger.dat"
+                )
+            start_year: int = _start_year_raw
             num_input_years = (
                 accessors.vazoes(deck_cls, cache, uow).shape[0] // 12
             )
@@ -194,28 +194,26 @@ def num_history_years(
             last_year_offset = 2 if study_month != 1 else 1
             study_year = study_period_starting_year(deck_cls, cache, uow)
             last_year = min(end_year, study_year) - last_year_offset
-            span_start = readers.validate_data(
-                deck_cls,
-                shist.ano_inicio_varredura,
-                int,
-                "ano de inicio da varredura (sfhist.dat)",
-            )
+            _span_start_raw = shist.ano_inicio_varredura
+            if _span_start_raw is None:
+                raise RuntimeError(
+                    "ano_inicio_varredura not found in shist.dat"
+                )
+            span_start: int = _span_start_raw
             val = last_year - span_start + 1
         else:
-            val = len(
-                readers.validate_data(
-                    deck_cls,
-                    shist.anos_inicio_simulacoes,
-                    list,
-                    "anos de inicio das simulacoes (sfhist.dat)",
+            _anos_raw = shist.anos_inicio_simulacoes
+            if _anos_raw is None:
+                raise RuntimeError(
+                    "anos_inicio_simulacoes not found in shist.dat"
                 )
-            )
+            val = len(_anos_raw)
         cache["num_history_years"] = val
     return val
 
 
 def thermal_maintenance_end_date(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> datetime:
     val = cache.get("thermal_maintenance_end_date")
     if val is None:
@@ -227,7 +225,7 @@ def thermal_maintenance_end_date(
 
 
 def num_scenarios_final_simulation(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> int:
     val = cache.get("num_scenarios_final_simulation")
     if val is None:
@@ -240,7 +238,7 @@ def num_scenarios_final_simulation(
 
 
 def scenario_generation_model_type(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> int:
     return _dger_int(
         deck_cls,
@@ -253,7 +251,7 @@ def scenario_generation_model_type(
 
 
 def scenario_generation_model_max_order(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> int:
     return _dger_int(
         deck_cls,
@@ -266,7 +264,7 @@ def scenario_generation_model_max_order(
 
 
 def num_stages_with_past_tendency_period(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> int:
     scenario_model = scenario_generation_model_type(deck_cls, cache, uow)
     maximum_model_order = scenario_generation_model_max_order(
@@ -276,17 +274,18 @@ def num_stages_with_past_tendency_period(
 
 
 def starting_date_with_past_tendency_period(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> datetime:
     starting_year = study_period_starting_year(deck_cls, cache, uow)
     past_stages = num_stages_with_past_tendency_period(deck_cls, cache, uow)
-    return datetime(year=starting_year, month=1, day=1) - relativedelta(
-        months=past_stages
-    )
+    result: datetime = datetime(
+        year=starting_year, month=1, day=1
+    ) - relativedelta(months=past_stages)
+    return result
 
 
 def ending_date_with_post_study_period(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> datetime:
     y = study_period_starting_year(deck_cls, cache, uow)
     n = num_study_period_years(deck_cls, cache, uow)
@@ -295,7 +294,7 @@ def ending_date_with_post_study_period(
 
 
 def num_hydro_simulation_stages_policy(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
     eers_df: "pd.DataFrame",
@@ -326,7 +325,7 @@ def num_hydro_simulation_stages_policy(
 
 
 def num_hydro_simulation_stages_final_simulation(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
     eers_df: "pd.DataFrame",
@@ -357,18 +356,20 @@ def _month_range(start: datetime, end: datetime) -> List[datetime]:
     return dates
 
 
-def _npost(deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork) -> int:
+def _npost(
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
+) -> int:
     """Alias for num_post_study_period_years_final_simulation."""
     return num_post_study_period_years_final_simulation(deck_cls, cache, uow)
 
 
 def internal_stages_starting_dates_policy(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> List[datetime]:
     key = "internal_stages_starting_dates_policy"
-    val = cache.get(key)
-    if val is not None:
-        return val
+    cached: List[datetime] | None = cache.get(key)
+    if cached is not None:
+        return cached
     y = study_period_starting_year(deck_cls, cache, uow)
     n = num_study_period_years(deck_cls, cache, uow)
     val = _month_range(datetime(y, 1, 1), datetime(y + n - 1, 12, 1))
@@ -377,12 +378,12 @@ def internal_stages_starting_dates_policy(
 
 
 def internal_stages_starting_dates_policy_with_past_tendency(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> List[datetime]:
     key = "internal_stages_starting_dates_policy_with_past_tendency"
-    val = cache.get(key)
-    if val is not None:
-        return val
+    cached: List[datetime] | None = cache.get(key)
+    if cached is not None:
+        return cached
     y = study_period_starting_year(deck_cls, cache, uow)
     n = num_study_period_years(deck_cls, cache, uow)
     val = _month_range(datetime(y - 1, 1, 1), datetime(y + n - 1, 12, 1))
@@ -391,12 +392,12 @@ def internal_stages_starting_dates_policy_with_past_tendency(
 
 
 def stages_starting_dates_final_simulation(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> List[datetime]:
     key = "stages_starting_dates_final_simulation"
-    val = cache.get(key)
-    if val is not None:
-        return val
+    cached: List[datetime] | None = cache.get(key)
+    if cached is not None:
+        return cached
     y = study_period_starting_year(deck_cls, cache, uow)
     m = study_period_starting_month(deck_cls, cache, uow)
     n = num_study_period_years(deck_cls, cache, uow)
@@ -407,12 +408,12 @@ def stages_starting_dates_final_simulation(
 
 
 def internal_stages_starting_dates_final_simulation(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> List[datetime]:
     key = "internal_stages_starting_dates_final_simulation"
-    val = cache.get(key)
-    if val is not None:
-        return val
+    cached: List[datetime] | None = cache.get(key)
+    if cached is not None:
+        return cached
     y = study_period_starting_year(deck_cls, cache, uow)
     n = num_study_period_years(deck_cls, cache, uow)
     p = num_post_study_period_years_final_simulation(deck_cls, cache, uow)
@@ -422,12 +423,12 @@ def internal_stages_starting_dates_final_simulation(
 
 
 def internal_stages_ending_dates_final_simulation(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> List[datetime]:
     key = "internal_stages_ending_dates_final_simulation"
-    val = cache.get(key)
-    if val is not None:
-        return val
+    cached: List[datetime] | None = cache.get(key)
+    if cached is not None:
+        return cached
     val = [
         d + relativedelta(months=1)
         for d in internal_stages_starting_dates_final_simulation(
@@ -439,7 +440,7 @@ def internal_stages_ending_dates_final_simulation(
 
 
 def hydro_simulation_stages_ending_date_final_simulation(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
     eers_df: "pd.DataFrame",
@@ -469,7 +470,7 @@ def hydro_simulation_stages_ending_date_final_simulation(
 
 
 def configurations_pmo(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> "pl.DataFrame | None":
     pmo = accessors.pmo(deck_cls, cache, uow)
     configurations = pmo.configuracoes_qualquer_modificacao
@@ -482,7 +483,7 @@ def configurations_pmo(
 
 
 def configurations_dger(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> "pl.DataFrame":
     dates = stages_starting_dates_final_simulation(deck_cls, cache, uow)
     configurations = list(range(1, len(dates) + 1))
@@ -490,7 +491,7 @@ def configurations_dger(
 
 
 def configurations(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> "pl.DataFrame":
     val = cache.get("configurations")
     if val is None:
@@ -502,7 +503,7 @@ def configurations(
 
 
 def consider_post_study_years(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     df: "pl.DataFrame",
     uow: AbstractUnitOfWork,

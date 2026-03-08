@@ -4,7 +4,7 @@ import platform
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 from os.path import join
-from typing import Callable, Dict, Optional, Tuple, Type, TypeVar
+from typing import Any, Callable, Dict, Optional, Tuple, Type, TypeVar
 
 import numpy as np
 import pandas as pd
@@ -39,7 +39,7 @@ from inewave.newave.vazaob import Vazaob
 from inewave.newave.vazaof import Vazaof
 from inewave.newave.vazaos import Vazaos
 from inewave.newave.vazoes import Vazoes
-from inewave.nwlistcf import Estados, Nwlistcfrel
+from inewave.nwlistcf import Estados, Nwlistcfrel  # type: ignore[attr-defined]
 from inewave.nwlistop.cmarg import Cmarg
 from inewave.nwlistop.cmargmed import Cmargmed
 
@@ -55,7 +55,7 @@ if platform.system() == "Windows":
 class AbstractFilesRepository(ABC):
     T = TypeVar("T")
 
-    def _validate_data(self, data, type: Type[T]) -> T:
+    def _validate_data(self, data: Any, type: Type[T]) -> T:
         if not isinstance(data, type):
             raise RuntimeError()
         return data
@@ -148,8 +148,8 @@ class AbstractFilesRepository(ABC):
         self,
         variable: Variable,
         spatial_resolution: SpatialResolution,
-        *args,
-        **kwargs,
+        *args: Any,
+        **kwargs: Any,
     ) -> Optional[pd.DataFrame]:
         pass
 
@@ -258,9 +258,9 @@ class RawFilesRepository(AbstractFilesRepository):
         self.__hidr: Optional[Hidr] = None
         from app.adapters.repository.mappings import build_regras
 
-        self._regras: Dict[Tuple[Variable, SpatialResolution], Callable] = (
-            build_regras(self)
-        )
+        self._regras: Dict[
+            Tuple[Variable, SpatialResolution], Callable[..., Any]
+        ] = build_regras(self)
 
     def _read_nwlistop_setting_version(
         self, reader: Type[BlockFile], path: str
@@ -338,7 +338,7 @@ class RawFilesRepository(AbstractFilesRepository):
 
     @property
     def caso(self) -> Caso:
-        return self.__caso
+        return self.__caso  # type: ignore[no-any-return]
 
     @property
     def arquivos(self) -> Arquivos:
@@ -371,7 +371,10 @@ class RawFilesRepository(AbstractFilesRepository):
             if arq_dger is None:
                 raise RuntimeError("Nome do dger não encontrado")
             caminho = pathlib.Path(self.__tmppath).joinpath(arq_dger)
-            script = pathlib.Path(Settings().installdir).joinpath(
+            _installdir = Settings().installdir
+            if _installdir is None:
+                raise RuntimeError("APP_INSTALLDIR not set")
+            script = pathlib.Path(_installdir).joinpath(
                 Settings().encoding_script
             )
             asyncio.run(converte_codificacao(str(caminho), str(script)))
@@ -510,8 +513,8 @@ class RawFilesRepository(AbstractFilesRepository):
         self,
         variable: Variable,
         spatial_resolution: SpatialResolution,
-        *args,
-        **kwargs,
+        *args: Any,
+        **kwargs: Any,
     ) -> Optional[pd.DataFrame]:
         try:
             regra = self._regras.get((variable, spatial_resolution))
@@ -1036,7 +1039,7 @@ class RawFilesRepository(AbstractFilesRepository):
         return self.__engnat
 
 
-def factory(kind: str, *args, **kwargs) -> AbstractFilesRepository:
+def factory(kind: str, *args: Any, **kwargs: Any) -> AbstractFilesRepository:
     mapping: Dict[str, Type[AbstractFilesRepository]] = {
         "FS": RawFilesRepository
     }

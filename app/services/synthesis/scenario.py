@@ -3,12 +3,12 @@ from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
 from logging import ERROR, INFO
 from traceback import print_exc
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 import polars as pl
-from dateutil.relativedelta import relativedelta  # type: ignore
+from dateutil.relativedelta import relativedelta
 
 from app.internal.constants import (
     CONFIG_COL,
@@ -76,13 +76,13 @@ class ScenarioSynthetizer:
     ] = {}
 
     @classmethod
-    def clear_cache(cls):
+    def clear_cache(cls) -> None:
         cls.CACHED_SYNTHESIS.clear()
         cls.CACHED_MLT_VALUES.clear()
         cls.SYNTHESIS_STATS.clear()
 
     @classmethod
-    def _log(cls, msg: str, level: int = INFO):
+    def _log(cls, msg: str, level: int = INFO) -> None:
         if cls.logger is not None:
             cls.logger.log(level, msg)
 
@@ -540,7 +540,7 @@ class ScenarioSynthetizer:
     ) -> pl.DataFrame:
         """Get or compute LTA dataframe for variable and spatial resolution, using cache."""
         CACHING_FUNCTION_MAP: Dict[
-            Tuple[Variable, SpatialResolution], Callable
+            Tuple[Variable, SpatialResolution], Callable[..., Any]
         ] = {
             (
                 Variable.ENA_ABSOLUTA,
@@ -1106,7 +1106,9 @@ class ScenarioSynthetizer:
         :return: Os dados da variável, para a etapa, como um DataFrame.
         :rtype: pl.DataFrame
         """
-        CACHING_FUNCTION_MAP: Dict[Tuple[Variable, Step], Callable] = {
+        CACHING_FUNCTION_MAP: Dict[
+            Tuple[Variable, Step], Callable[..., Any]
+        ] = {
             (Variable.ENA_ABSOLUTA, Step.FORWARD): cls._resolve_forward_energy,
             (
                 Variable.ENA_ABSOLUTA,
@@ -1280,7 +1282,7 @@ class ScenarioSynthetizer:
         cls,
         success_synthesis: List[ScenarioSynthesis],
         uow: AbstractUnitOfWork,
-    ):
+    ) -> None:
         """
         Realiza a exportação dos metadados dos cenários sintetizados, com
         a descrição de quais sínteses foram realizadas e algumas
@@ -1331,7 +1333,9 @@ class ScenarioSynthetizer:
             )
 
     @classmethod
-    def _add_synthesis_stats(cls, s: ScenarioSynthesis, df: pl.DataFrame):
+    def _add_synthesis_stats(
+        cls, s: ScenarioSynthesis, df: pl.DataFrame
+    ) -> None:
         """
         Adiciona um DataFrame com estatísticas de uma síntese ao
         DataFrame de estatísticas da agregação espacial e etapa em questão.
@@ -1348,7 +1352,7 @@ class ScenarioSynthetizer:
     @classmethod
     def _export_scenario_synthesis(
         cls, s: ScenarioSynthesis, df: pl.DataFrame, uow: AbstractUnitOfWork
-    ):
+    ) -> None:
         """
         Realiza a exportação dos dados para uma síntese dos
         cenários desejada. Opcionalmente, os dados são armazenados
@@ -1373,7 +1377,7 @@ class ScenarioSynthetizer:
     def _export_stats(
         cls,
         uow: AbstractUnitOfWork,
-    ):
+    ) -> None:
         """
         Realiza a exportação dos dados de estatísticas de síntese
         da operação. As estatísticas são exportadas para um arquivo
@@ -1462,13 +1466,13 @@ class ScenarioSynthetizer:
                 return None
 
     @classmethod
-    def enforce_version(cls, uow: AbstractUnitOfWork):
+    def enforce_version(cls, uow: AbstractUnitOfWork) -> None:
         version = Deck.pmo(uow).versao_modelo
         if version is not None:
             uow.version = version
 
     @classmethod
-    def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
+    def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork) -> None:
         """
         Realiza a síntese dos cenários para as variáveis fornecidas,
         na agregação desejada e para a etapa escolhida. As variáveis são

@@ -118,7 +118,7 @@ def accumulate_productivity(df: pl.DataFrame) -> pl.DataFrame:
 
 
 def _hydro_accumulated_productivity_at_volume(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
     df: pl.DataFrame,
@@ -156,7 +156,7 @@ def _hydro_accumulated_productivity_at_volume(
 
 
 def _initial_stored_energy_from_pmo(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> Optional[pl.DataFrame]:
     df_pmo_pd = accessors.pmo(deck_cls, cache, uow).energia_armazenada_inicial
     if not hasattr(df_pmo_pd, "rename"):
@@ -173,7 +173,7 @@ def _initial_stored_energy_from_pmo(
 
 
 def _initial_stored_energy_from_confhd_hidr(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> Optional[pl.DataFrame]:
     from app.services.deck import hydro as hydro_mod
 
@@ -348,7 +348,7 @@ def _initial_stored_energy_from_confhd_hidr(
 
 
 def initial_stored_energy(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     val = cache.get("initial_stored_energy")
     if val is None:
@@ -367,7 +367,7 @@ def initial_stored_energy(
 
 
 def _initial_stored_volume_from_pmo(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> Optional[pl.DataFrame]:
     df_pd = accessors.pmo(deck_cls, cache, uow).volume_armazenado_inicial
     if df_pd is None:
@@ -382,7 +382,7 @@ def _initial_stored_volume_from_pmo(
 
 
 def _initial_stored_volume_from_confhd_hidr(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> Optional[pl.DataFrame]:
     from app.services.deck import hydro as hydro_mod
 
@@ -434,7 +434,10 @@ def _initial_stored_volume_from_confhd_hidr(
 
 
 def _initial_stored_volume_pre_study_condition(
-    deck_cls, cache: Dict[str, Any], df: pl.DataFrame, uow: AbstractUnitOfWork
+    deck_cls: Any,
+    cache: Dict[str, Any],
+    df: pl.DataFrame,
+    uow: AbstractUnitOfWork,
 ) -> pl.DataFrame:
     if temporal.num_pre_study_period_years(deck_cls, cache, uow) > 0:
         df = df.with_columns(
@@ -447,7 +450,7 @@ def _initial_stored_volume_pre_study_condition(
 
 
 def initial_stored_volume(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     val = cache.get("initial_stored_volume")
     if val is None:

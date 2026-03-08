@@ -12,7 +12,7 @@ from app.services.unitofwork import AbstractUnitOfWork
 
 
 def costs(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     val = cache.get("costs")
     if val is None:
@@ -29,7 +29,7 @@ def costs(
 
 
 def num_iterations(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> int:
     val = cache.get("num_iterations")
     if val is None:
@@ -38,16 +38,16 @@ def num_iterations(
         df = energy_mod.convergence(deck_cls, cache, uow)
         val = readers.validate_data(
             deck_cls,
-            int(df["iteracao"].max()),
+            int(df["iteracao"].max() or 0),  # type: ignore[arg-type]
             int,
             "numero de iteracoes na convergencia (pmo.dat)",
         )
         cache["num_iterations"] = val
-    return val
+    return int(val)
 
 
 def runtimes(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     val = cache.get("runtimes")
     if val is None:
@@ -63,7 +63,9 @@ def runtimes(
     return val
 
 
-def num_blocks(deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork) -> int:
+def num_blocks(
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
+) -> int:
     val = cache.get("num_blocks")
     if val is None:
         val = readers.validate_data(
@@ -73,11 +75,11 @@ def num_blocks(deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork) -> int:
             "numero de patamares (patamar.dat)",
         )
         cache["num_blocks"] = val
-    return val
+    return val  # type: ignore[return-value]
 
 
 def block_lengths(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     def _eval_pat0(df_pat: pl.DataFrame) -> pl.DataFrame:
         df_pat_0 = (
@@ -109,7 +111,7 @@ def block_lengths(
 
 
 def models_wind_generation(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> int:
     val = cache.get("models_wind_generation")
     if val is None:
@@ -124,19 +126,19 @@ def models_wind_generation(
 
 
 def scenario_generation_model_type(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> int:
     return temporal.scenario_generation_model_type(deck_cls, cache, uow)
 
 
 def scenario_generation_model_max_order(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> int:
     return temporal.scenario_generation_model_max_order(deck_cls, cache, uow)
 
 
 def num_forward_series(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> int:
     val = cache.get("num_forward_series")
     if val is None:
@@ -148,4 +150,4 @@ def num_forward_series(
             "número de séries forward (dger.dat)",
         )
         cache["num_forward_series"] = val
-    return val
+    return val  # type: ignore[return-value]

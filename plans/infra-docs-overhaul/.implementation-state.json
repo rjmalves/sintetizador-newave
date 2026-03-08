@@ -1,13 +1,21 @@
 {
   "plan": "infra-docs-overhaul",
-  "last_updated": "2026-03-08T12:00:00Z",
+  "last_updated": "2026-03-08T15:11:45Z",
   "progressive": true,
   "tickets": {
     "ticket-001-modernize-pyproject-toml.md": {
-      "status": "pending",
+      "status": "completed",
       "detail_level": "detailed",
       "epic": "epic-01-packaging-ci",
       "scores": {
+        "quality": 0.94,
+        "quality_breakdown": {
+          "conformance": 1.0,
+          "scope_adherence": 1.0,
+          "lint_cleanliness": 1.0,
+          "type_safety": 1.0,
+          "test_delta": 1.0
+        },
         "readiness": 0.97,
         "readiness_breakdown": {
           "structure": 1.0,
@@ -16,13 +24,23 @@
           "dependency_clarity": 1.0,
           "atomicity": 0.9
         }
-      }
+      },
+      "workflow_step": null,
+      "agent": "python-task-automation-developer"
     },
     "ticket-002-restructure-ci-workflow.md": {
-      "status": "pending",
+      "status": "completed",
       "detail_level": "detailed",
       "epic": "epic-01-packaging-ci",
       "scores": {
+        "quality": 1.0,
+        "quality_breakdown": {
+          "conformance": 1.0,
+          "scope_adherence": 1.0,
+          "lint_cleanliness": 1.0,
+          "type_safety": 1.0,
+          "test_delta": 1.0
+        },
         "readiness": 0.97,
         "readiness_breakdown": {
           "structure": 1.0,
@@ -31,13 +49,23 @@
           "dependency_clarity": 1.0,
           "atomicity": 1.0
         }
-      }
+      },
+      "workflow_step": null,
+      "agent": "python-task-automation-developer"
     },
     "ticket-003-migrate-docs-deployment.md": {
-      "status": "pending",
+      "status": "completed",
       "detail_level": "detailed",
       "epic": "epic-01-packaging-ci",
       "scores": {
+        "quality": 1.0,
+        "quality_breakdown": {
+          "conformance": 1.0,
+          "scope_adherence": 1.0,
+          "lint_cleanliness": 1.0,
+          "type_safety": 1.0,
+          "test_delta": 1.0
+        },
         "readiness": 0.97,
         "readiness_breakdown": {
           "structure": 1.0,
@@ -46,13 +74,23 @@
           "dependency_clarity": 1.0,
           "atomicity": 1.0
         }
-      }
+      },
+      "workflow_step": null,
+      "agent": "python-task-automation-developer"
     },
     "ticket-004-create-release-workflow.md": {
-      "status": "pending",
+      "status": "completed",
       "detail_level": "detailed",
       "epic": "epic-01-packaging-ci",
       "scores": {
+        "quality": 1.0,
+        "quality_breakdown": {
+          "conformance": 1.0,
+          "scope_adherence": 1.0,
+          "lint_cleanliness": 1.0,
+          "type_safety": 1.0,
+          "test_delta": 1.0
+        },
         "readiness": 0.96,
         "readiness_breakdown": {
           "structure": 1.0,
@@ -61,13 +99,23 @@
           "dependency_clarity": 1.0,
           "atomicity": 1.0
         }
-      }
+      },
+      "workflow_step": null,
+      "agent": "python-task-automation-developer"
     },
     "ticket-005-add-pre-commit-hooks.md": {
-      "status": "pending",
+      "status": "completed",
       "detail_level": "detailed",
       "epic": "epic-01-packaging-ci",
       "scores": {
+        "quality": 0.65,
+        "quality_breakdown": {
+          "conformance": 1.0,
+          "scope_adherence": 0.0,
+          "lint_cleanliness": 1.0,
+          "type_safety": 1.0,
+          "test_delta": 0.0
+        },
         "readiness": 0.96,
         "readiness_breakdown": {
           "structure": 1.0,
@@ -76,7 +124,9 @@
           "dependency_clarity": 1.0,
           "atomicity": 1.0
         }
-      }
+      },
+      "workflow_step": null,
+      "agent": "python-task-automation-developer"
     },
     "ticket-006-migrate-sphinx-theme.md": {
       "status": "pending",
@@ -176,8 +226,8 @@
   },
   "epics": {
     "epic-01-packaging-ci": {
-      "phase": "executing",
-      "learning_extracted": false
+      "phase": "completed",
+      "learning_extracted": true
     },
     "epic-02-sphinx-modernization": {
       "phase": "executing",

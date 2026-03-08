@@ -12,10 +12,12 @@ class OperationSynthesis:
     spatial_resolution: SpatialResolution
 
     def __repr__(self) -> str:
-        return "_".join([
-            self.variable.value,
-            self.spatial_resolution.value,
-        ])
+        return "_".join(
+            [
+                self.variable.value,
+                self.spatial_resolution.value,
+            ]
+        )
 
     def __hash__(self) -> int:
         return hash(
@@ -26,10 +28,12 @@ class OperationSynthesis:
         if not isinstance(o, OperationSynthesis):
             return False
         else:
-            return all([
-                self.variable == o.variable,
-                self.spatial_resolution == o.spatial_resolution,
-            ])
+            return all(
+                [
+                    self.variable == o.variable,
+                    self.spatial_resolution == o.spatial_resolution,
+                ]
+            )
 
     @classmethod
     def factory(cls, synthesis: str) -> Optional["OperationSynthesis"]:

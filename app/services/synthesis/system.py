@@ -1,11 +1,11 @@
 import logging
 from logging import ERROR, INFO
 from traceback import print_exc
-from typing import Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import pandas as pd
 import polars as pl
-from dateutil.relativedelta import relativedelta  # type: ignore
+from dateutil.relativedelta import relativedelta
 
 from app.internal.constants import (
     END_DATE_COL,
@@ -35,7 +35,7 @@ class SystemSynthetizer:
     logger: Optional[logging.Logger] = None
 
     @classmethod
-    def _log(cls, msg: str, level: int = INFO):
+    def _log(cls, msg: str, level: int = INFO) -> None:
         if cls.logger is not None:
             cls.logger.log(level, msg)
 
@@ -97,7 +97,7 @@ class SystemSynthetizer:
     def _resolve(
         cls, synthesis: SystemSynthesis, uow: AbstractUnitOfWork
     ) -> pl.DataFrame | pd.DataFrame:
-        RULES: Dict[Variable, Callable] = {
+        RULES: Dict[Variable, Callable[..., Any]] = {
             Variable.EST: cls.__resolve_EST,
             Variable.PAT: cls.__resolve_PAT,
             Variable.SBM: cls.__resolve_SBM,
@@ -152,7 +152,7 @@ class SystemSynthetizer:
         cls,
         success_synthesis: List[SystemSynthesis],
         uow: AbstractUnitOfWork,
-    ):
+    ) -> None:
         metadata_df = pd.DataFrame(
             columns=[
                 "chave",
@@ -205,13 +205,13 @@ class SystemSynthetizer:
                 return None
 
     @classmethod
-    def enforce_version(cls, uow: AbstractUnitOfWork):
+    def enforce_version(cls, uow: AbstractUnitOfWork) -> None:
         version = Deck.pmo(uow).versao_modelo
         if version is not None:
             uow.version = version
 
     @classmethod
-    def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
+    def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork) -> None:
         cls.logger = logging.getLogger("main")
         Deck.logger = cls.logger
         uow.subdir = SYSTEM_SYNTHESIS_SUBDIR

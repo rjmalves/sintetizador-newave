@@ -124,11 +124,11 @@ def resolve_UHE_entity(
         )
 
     internal_stubs = {
-        Variable.COTA_JUSANTE: _calc_block_0_weighted_mean_stub,  # noqa
-        Variable.QUEDA_LIQUIDA: _calc_block_0_weighted_mean_stub,  # noqa
-        Variable.VAZAO_TURBINADA: _calc_block_0_weighted_mean_stub,  # noqa
-        Variable.VAZAO_VERTIDA: _calc_block_0_weighted_mean_stub,  # noqa
-        Variable.VAZAO_DESVIADA: _calc_block_0_weighted_mean_stub,  # noqa
+        Variable.COTA_JUSANTE: _calc_block_0_weighted_mean_stub,
+        Variable.QUEDA_LIQUIDA: _calc_block_0_weighted_mean_stub,
+        Variable.VAZAO_TURBINADA: _calc_block_0_weighted_mean_stub,
+        Variable.VAZAO_VERTIDA: _calc_block_0_weighted_mean_stub,
+        Variable.VAZAO_DESVIADA: _calc_block_0_weighted_mean_stub,
     }
 
     if deck_context is not None:

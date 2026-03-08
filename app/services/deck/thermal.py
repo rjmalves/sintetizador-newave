@@ -40,7 +40,10 @@ def _apply_thermal_single_change(
 
 
 def _apply_thermal_bounds_maintenance_and_changes(
-    deck_cls, cache: Dict[str, Any], df: pl.DataFrame, uow: AbstractUnitOfWork
+    deck_cls: Any,
+    cache: Dict[str, Any],
+    df: pl.DataFrame,
+    uow: AbstractUnitOfWork,
 ) -> pl.DataFrame:
     def _apply_thermal_changes(df: pl.DataFrame) -> pl.DataFrame:
         expt = accessors.expt(deck_cls, cache, uow)
@@ -183,7 +186,7 @@ def _apply_thermal_bounds_maintenance_and_changes(
 
 
 def _thermal_generation_bounds_term_manutt_expt(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     def _expand_to_stages(df: pl.DataFrame) -> pl.DataFrame:
         dates = temporal.stages_starting_dates_final_simulation(
@@ -292,7 +295,7 @@ def _thermal_generation_bounds_term_manutt_expt(
 
 
 def _thermal_generation_bounds_pmo(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> Optional[pl.DataFrame]:
     pmo = accessors.pmo(deck_cls, cache, uow)
     bounds_pd = pmo.geracao_minima_usinas_termicas
@@ -318,7 +321,7 @@ def _thermal_generation_bounds_pmo(
 
 
 def thermal_generation_bounds(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     def _add_submarket_data(df: pl.DataFrame) -> pl.DataFrame:
         thermal_map = entities.thermal_submarket_map(deck_cls, cache, uow)
@@ -348,7 +351,7 @@ def thermal_generation_bounds(
 
 
 def thermal_costs(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     def _build_base_costs_df() -> pl.DataFrame:
         clast_df = accessors.clast(deck_cls, cache, uow).rename(

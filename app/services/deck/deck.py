@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, TypeVar
 
 import pandas as pd
 import polars as pl
-from inewave.newave import (
+from inewave.newave import (  # type: ignore[attr-defined]
     Curva,
     Dger,
     Modif,
@@ -195,16 +195,16 @@ class Deck:
         return _tmp.configurations(cls, cls._c(), uow)
 
     @classmethod
-    def submarkets(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def submarkets(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         return entities.submarkets(cls, cls._c(), uow)
     @classmethod
-    def eers(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def eers(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         return entities.eers(cls, cls._c(), uow)
     @classmethod
-    def hydros(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def hydros(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         return entities.hydros(cls, cls._c(), uow)
     @classmethod
-    def thermals(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def thermals(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         return entities.thermals(cls, cls._c(), uow)
     @classmethod
     def eer_code_order(cls, uow: AbstractUnitOfWork) -> List[int]:
@@ -213,22 +213,22 @@ class Deck:
     def hydro_code_order(cls, uow: AbstractUnitOfWork) -> List[int]:
         return entities.hydro_code_order(cls, cls._c(), uow)
     @classmethod
-    def hydro_eer_submarket_map(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def hydro_eer_submarket_map(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         return entities.hydro_eer_submarket_map(cls, cls._c(), uow)
     @classmethod
-    def eer_submarket_map(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def eer_submarket_map(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         return entities.eer_submarket_map(cls, cls._c(), uow)
     @classmethod
-    def thermal_submarket_map(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def thermal_submarket_map(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         return entities.thermal_submarket_map(cls, cls._c(), uow)
     @classmethod
     def hybrid_policy(cls, uow: AbstractUnitOfWork) -> bool:
         return entities.hybrid_policy(cls, cls._c(), uow)
     @classmethod
-    def flow_diversion(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def flow_diversion(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         return entities.flow_diversion(cls, cls._c(), uow)
     @classmethod
-    def non_simulated_generation(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def non_simulated_generation(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         return entities.non_simulated_generation(cls, cls._c(), uow)
 
     @classmethod
@@ -323,7 +323,7 @@ class Deck:
     def _thermal_generation_bounds_pmo(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         result = _th._thermal_generation_bounds_pmo(cls, cls._c(), uow)
         if result is None:
-            return result  # type: ignore[return-value]
+            return result
         return result.to_pandas()
     @classmethod
     def thermal_generation_bounds(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
@@ -343,25 +343,25 @@ class Deck:
     def _initial_stored_energy_from_pmo(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         result = _st._initial_stored_energy_from_pmo(cls, cls._c(), uow)
         if result is None:
-            return result  # type: ignore[return-value]
+            return result
         return result.to_pandas()
     @classmethod
     def _initial_stored_energy_from_confhd_hidr(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         result = _st._initial_stored_energy_from_confhd_hidr(cls, cls._c(), uow)
         if result is None:
-            return result  # type: ignore[return-value]
+            return result
         return result.to_pandas()
     @classmethod
     def _initial_stored_volume_from_pmo(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         result = _st._initial_stored_volume_from_pmo(cls, cls._c(), uow)
         if result is None:
-            return result  # type: ignore[return-value]
+            return result
         return result.to_pandas()
     @classmethod
     def _initial_stored_volume_from_confhd_hidr(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
         result = _st._initial_stored_volume_from_confhd_hidr(cls, cls._c(), uow)
         if result is None:
-            return result  # type: ignore[return-value]
+            return result
         return result.to_pandas()
     @classmethod
     def initial_stored_energy(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:

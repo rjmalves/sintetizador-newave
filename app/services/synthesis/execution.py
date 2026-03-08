@@ -1,7 +1,7 @@
 import logging
 from logging import ERROR, INFO
 from traceback import print_exc
-from typing import Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import pandas as pd
 import polars as pl
@@ -27,7 +27,7 @@ class ExecutionSynthetizer:
     logger: Optional[logging.Logger] = None
 
     @classmethod
-    def _log(cls, msg: str, level: int = INFO):
+    def _log(cls, msg: str, level: int = INFO) -> None:
         if cls.logger is not None:
             cls.logger.log(level, msg)
 
@@ -82,7 +82,7 @@ class ExecutionSynthetizer:
     def _resolve(
         cls, synthesis: ExecutionSynthesis, uow: AbstractUnitOfWork
     ) -> "pl.DataFrame | pd.DataFrame":
-        RULES: Dict[Variable, Callable] = {
+        RULES: Dict[Variable, Callable[..., Any]] = {
             Variable.PROGRAMA: cls._resolve_program,
             Variable.VERSAO: cls._resolve_version,
             Variable.TITULO: cls._resolve_title,
@@ -135,7 +135,7 @@ class ExecutionSynthetizer:
         cls,
         success_synthesis: List[ExecutionSynthesis],
         uow: AbstractUnitOfWork,
-    ):
+    ) -> None:
         metadata_df = pd.DataFrame(
             columns=[
                 "chave",
@@ -190,13 +190,13 @@ class ExecutionSynthetizer:
                 return None
 
     @classmethod
-    def enforce_version(cls, uow: AbstractUnitOfWork):
+    def enforce_version(cls, uow: AbstractUnitOfWork) -> None:
         version = Deck.pmo(uow).versao_modelo
         if version is not None:
             uow.version = version
 
     @classmethod
-    def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
+    def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork) -> None:
         cls.logger = logging.getLogger("main")
         Deck.logger = cls.logger
         uow.subdir = EXECUTION_SYNTHESIS_SUBDIR

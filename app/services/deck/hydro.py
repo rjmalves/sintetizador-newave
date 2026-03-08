@@ -61,7 +61,7 @@ def _max_conjuntos_from_df(df: pl.DataFrame) -> int:
 
 
 def hydro_volume_bounds(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     val = cache.get("hydro_volume_bounds")
     if val is None:
@@ -89,7 +89,7 @@ def hydro_volume_bounds(
 
 
 def hydro_volume_bounds_with_changes(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     val = cache.get("hydro_volume_bounds_with_changes")
     if val is None:
@@ -154,7 +154,7 @@ def hydro_volume_bounds_with_changes(
 
 
 def _hydro_volume_bounds_in_stages(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
     consider_lower_changes: bool = True,
@@ -225,7 +225,7 @@ def _hydro_volume_bounds_in_stages(
 
 
 def hydro_volume_bounds_in_stages(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     val = cache.get("hydro_volume_bounds_in_stages")
     if val is None:
@@ -235,7 +235,7 @@ def hydro_volume_bounds_in_stages(
 
 
 def hydro_volume_bounds_in_stages_for_rescaling(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     val = cache.get("hydro_volume_bounds_in_stages_for_rescaling")
     if val is None:
@@ -246,7 +246,7 @@ def hydro_volume_bounds_in_stages_for_rescaling(
 
 def _apply_turbined_flow_changes_pandas(
     df_pd: "pd.DataFrame",
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
 ) -> "pd.DataFrame":
@@ -266,7 +266,7 @@ def _apply_turbined_flow_changes_pandas(
 
 
 def hydro_turbined_flow_bounds(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     val = cache.get("hydro_turbined_flow_bounds")
     if val is None:
@@ -296,7 +296,7 @@ def hydro_turbined_flow_bounds(
 
 
 def hydro_turbined_flow_bounds_with_changes(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     val = cache.get("hydro_turbined_flow_bounds_with_changes")
     if val is None:
@@ -331,7 +331,7 @@ def hydro_turbined_flow_bounds_with_changes(
 
 
 def hydro_turbined_flow_bounds_in_stages(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     val = cache.get("hydro_turbined_flow_bounds_in_stages")
     if val is None:
@@ -367,7 +367,7 @@ def hydro_turbined_flow_bounds_in_stages(
 
 
 def hydro_outflow_bounds(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     val = cache.get("hydro_outflow_bounds")
     if val is None:
@@ -392,7 +392,7 @@ def hydro_outflow_bounds(
 
 
 def hydro_outflow_bounds_with_changes(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     val = cache.get("hydro_outflow_bounds_with_changes")
     if val is None:
@@ -415,7 +415,7 @@ def hydro_outflow_bounds_with_changes(
 
 
 def hydro_outflow_bounds_in_stages(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     val = cache.get("hydro_outflow_bounds_in_stages")
     if val is None:
@@ -444,7 +444,7 @@ def hydro_outflow_bounds_in_stages(
 
 
 def hydro_drops(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     val = cache.get("hydro_drops")
     if val is None:
@@ -472,7 +472,7 @@ def hydro_drops(
 
 
 def hydro_drops_in_stages(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     val = cache.get("hydro_drops_in_stages")
     if val is None:
@@ -503,7 +503,10 @@ def hydro_drops_in_stages(
 
 
 def _expand_hydro_to_stages(
-    df: pl.DataFrame, deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    df: pl.DataFrame,
+    deck_cls: Any,
+    cache: Dict[str, Any],
+    uow: AbstractUnitOfWork,
 ) -> pl.DataFrame:
     dates = temporal.stages_starting_dates_final_simulation(
         deck_cls, cache, uow
@@ -515,10 +518,10 @@ def _expand_hydro_to_stages(
 
 def _expand_to_blocks(
     df: pl.DataFrame,
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     uow: AbstractUnitOfWork,
-    misc_mod,
+    misc_mod: Any,
 ) -> pl.DataFrame:
     num_blocks = misc_mod.num_blocks(deck_cls, cache, uow) + 1
     blocks_df = pl.DataFrame({BLOCK_COL: list(range(num_blocks))})

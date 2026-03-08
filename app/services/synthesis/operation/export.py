@@ -7,7 +7,6 @@ from app.internal.constants import (
     OPERATION_SYNTHESIS_METADATA_OUTPUT,
     OPERATION_SYNTHESIS_STATS_ROOT,
     SCENARIO_COL,
-    STRING_DF_TYPE,
     VARIABLE_COL,
 )
 from app.model.operation.operationsynthesis import (

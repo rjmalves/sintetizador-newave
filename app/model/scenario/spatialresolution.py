@@ -20,7 +20,7 @@ class SpatialResolution(Enum):
                 return v
         return cls.SISTEMA_INTERLIGADO
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.value
 
     @property

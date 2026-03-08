@@ -1,7 +1,8 @@
-import pytest
-import pathlib
 import os
+import pathlib
 from multiprocessing import Manager
+
+import pytest
 
 DECK_TEST_DIR = "./tests/mocks/arquivos"
 

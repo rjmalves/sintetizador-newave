@@ -5,7 +5,7 @@ from app.utils.terminal import run_terminal_retry
 TIMEOUT_DEFAULT = 10.0
 
 
-async def converte_codificacao(path: str, script: str):
+async def converte_codificacao(path: str, script: str) -> None:
     if platform.system() == "Windows":
         return
     _, out = await run_terminal_retry([f"file -i {path}"])

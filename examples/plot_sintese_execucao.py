@@ -31,8 +31,8 @@ Síntese da Execução
 # %%
 # Os arquivos serão salvos no subdiretório `sintese`. Para realizar o processamento,
 # pode ser utilizado o próprio `python`:
-import plotly.express as px
 import pandas as pd
+import plotly.express as px
 
 convergencia = pd.read_parquet("sintese/CONVERGENCIA.parquet")
 custos = pd.read_parquet("sintese/CUSTOS.parquet")
@@ -74,7 +74,7 @@ fig
 
 # %%
 # Uma abordagem semelhante é utilizada na análise do tempo de execução:
-from datetime import timedelta
+from datetime import timedelta  # noqa: E402
 
 tempo["tempo"] = pd.to_timedelta(tempo["tempo"], unit="s") / timedelta(hours=1)
 tempo["label"] = [str(timedelta(hours=d)) for d in tempo["tempo"].tolist()]

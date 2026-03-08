@@ -26,7 +26,7 @@ from app.services.unitofwork import AbstractUnitOfWork
 
 
 def submarkets(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     val = cache.get("submarkets")
     if val is None:
@@ -50,7 +50,7 @@ def submarkets(
 
 
 def eers(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     val = cache.get("eers")
     if val is None:
@@ -74,7 +74,7 @@ def eers(
 
 
 def hydros(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     val = cache.get("hydros")
     if val is None:
@@ -98,7 +98,7 @@ def hydros(
 
 
 def thermals(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     val = cache.get("thermals")
     if val is None:
@@ -123,9 +123,9 @@ def thermals(
 
 
 def eer_code_order(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> List[int]:
-    val = cache.get("eer_code_order")
+    val: List[int] | None = cache.get("eer_code_order")
     if val is not None:
         return val
     val = eers(deck_cls, cache, uow)[EER_CODE_COL].to_list()
@@ -134,9 +134,9 @@ def eer_code_order(
 
 
 def hydro_code_order(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> List[int]:
-    val = cache.get("hydro_code_order")
+    val: List[int] | None = cache.get("hydro_code_order")
     if val is not None:
         return val
     val = hydros(deck_cls, cache, uow)[HYDRO_CODE_COL].to_list()
@@ -145,7 +145,7 @@ def hydro_code_order(
 
 
 def hydro_eer_submarket_map(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     val = cache.get("hydro_eer_submarket_map")
     if val is None:
@@ -166,7 +166,7 @@ def hydro_eer_submarket_map(
 
 
 def eer_submarket_map(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     val = cache.get("eer_submarket_map")
     if val is None:
@@ -188,7 +188,7 @@ def eer_submarket_map(
 
 
 def thermal_submarket_map(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     val = cache.get("thermal_submarket_map")
     if val is None:
@@ -205,7 +205,7 @@ def thermal_submarket_map(
 
 
 def hybrid_policy(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> bool:
     val = cache.get("hybrid_policy")
     if val is None:
@@ -225,7 +225,7 @@ def hybrid_policy(
 
 
 def flow_diversion(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     def _filter_stages(df: pl.DataFrame) -> pl.DataFrame:
         stage_dates = temporal.stages_starting_dates_final_simulation(
@@ -297,7 +297,7 @@ def flow_diversion(
 
 
 def non_simulated_generation(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     from app.services.deck import misc as misc_mod
 

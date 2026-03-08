@@ -1,10 +1,10 @@
 from logging import ERROR, INFO, Logger
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 import polars as pl
-from dateutil.relativedelta import relativedelta  # type: ignore
+from dateutil.relativedelta import relativedelta
 
 from app.internal.constants import (
     BLOCK_COL,
@@ -44,7 +44,7 @@ class OperationVariableBounds:
 
     logger: Optional[Logger] = None
 
-    MAPPINGS: Dict[OperationSynthesis, Callable] = {
+    MAPPINGS: Dict[OperationSynthesis, Callable[..., Any]] = {
         OperationSynthesis(
             Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
@@ -919,7 +919,7 @@ class OperationVariableBounds:
     }
 
     @classmethod
-    def _log(cls, msg: str, level: int = INFO):
+    def _log(cls, msg: str, level: int = INFO) -> None:
         if cls.logger is not None:
             cls.logger.log(level, msg)
 
@@ -929,7 +929,7 @@ class OperationVariableBounds:
         df: pd.DataFrame,
         uow: AbstractUnitOfWork,
         synthesis_unit: str,
-        ordered_entities: Dict[str, list],
+        ordered_entities: Dict[str, list[Any]],
         entity_column: Optional[str] = None,
         initial: bool = False,
     ) -> pd.DataFrame:
@@ -1020,7 +1020,7 @@ class OperationVariableBounds:
         num_stages: int,
         num_scenarios: int,
         num_blocks: int,
-    ):
+    ) -> np.ndarray:
         """
         Expande os dados cadastrais para cada cenário, mantendo a ordem dos
         patamares internamente.
@@ -1043,7 +1043,7 @@ class OperationVariableBounds:
         num_stages: int,
         num_scenarios: int,
         num_blocks: int,
-    ):
+    ) -> np.ndarray:
         """
         Expande os dados cadastrais para cada cenário, mantendo a ordem dos
         patamares internamente.
@@ -1178,7 +1178,7 @@ class OperationVariableBounds:
         df: pd.DataFrame,
         uow: AbstractUnitOfWork,
         synthesis_unit: str,
-        ordered_entities: Dict[str, list],
+        ordered_entities: Dict[str, list[Any]],
         entity_column: Optional[str] = None,
         initial: bool = False,
     ) -> pd.DataFrame:
@@ -1313,7 +1313,7 @@ class OperationVariableBounds:
         df: pd.DataFrame,
         uow: AbstractUnitOfWork,
         synthesis_unit: str,
-        ordered_entities: Dict[str, list],
+        ordered_entities: Dict[str, list[Any]],
         entity_column: Optional[str] = None,
     ) -> pd.DataFrame:
         """
@@ -1408,7 +1408,7 @@ class OperationVariableBounds:
         df: pd.DataFrame,
         uow: AbstractUnitOfWork,
         synthesis_unit: str,
-        ordered_entities: Dict[str, list],
+        ordered_entities: Dict[str, list[Any]],
         entity_column: Optional[str] = None,
     ) -> pd.DataFrame:
         """
@@ -1510,7 +1510,7 @@ class OperationVariableBounds:
         df: pd.DataFrame,
         uow: AbstractUnitOfWork,
         synthesis_unit: str,
-        ordered_entities: Dict[str, list],
+        ordered_entities: Dict[str, list[Any]],
         entity_column: Optional[str] = None,
     ) -> pd.DataFrame:
         """
@@ -1649,7 +1649,7 @@ class OperationVariableBounds:
         df: pd.DataFrame,
         uow: AbstractUnitOfWork,
         synthesis_unit: str,
-        ordered_entities: Dict[str, list],
+        ordered_entities: Dict[str, list[Any]],
     ) -> pd.DataFrame:
         """
         Adiciona ao DataFrame da síntese os limites inferior e superior
@@ -1758,7 +1758,7 @@ class OperationVariableBounds:
         df: pd.DataFrame,
         uow: AbstractUnitOfWork,
         synthesis_unit: str,
-        ordered_entities: Dict[str, list],
+        ordered_entities: Dict[str, list[Any]],
         entity_column: Optional[str] = None,
     ) -> pd.DataFrame:
         """
@@ -1774,7 +1774,7 @@ class OperationVariableBounds:
         """
 
         def _get_group_and_cast_bounds(
-            entity_column: Optional[str], entity_list: list
+            entity_column: Optional[str], entity_list: list[Any]
         ) -> Tuple[np.ndarray, np.ndarray]:
             bounds_df = Deck.thermal_generation_bounds(uow)
             dates = Deck.stages_starting_dates_final_simulation(uow)
@@ -1888,7 +1888,7 @@ class OperationVariableBounds:
         cls,
         s: OperationSynthesis,
         df: pl.DataFrame,
-        ordered_synthesis_entities: Dict[str, list],
+        ordered_synthesis_entities: Dict[str, list[Any]],
         uow: AbstractUnitOfWork,
         logger: Optional[Logger] = None,
     ) -> pl.DataFrame:

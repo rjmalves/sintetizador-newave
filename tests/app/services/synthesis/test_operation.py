@@ -397,7 +397,6 @@ def test_sintese_earmi_ree(test_settings):
 
 
 def test_sintese_earpi_ree(test_settings):
-    m = MagicMock(lambda df, filename: df)
     synthesis_str = "EARPI_REE"
     df, df_meta = __sintetiza_com_mock(synthesis_str)
     # TODO - implementar validação

@@ -2,7 +2,7 @@ from typing import Any, Dict
 
 import numpy as np
 import polars as pl
-from inewave.nwlistcf import Estados, Nwlistcfrel
+from inewave.nwlistcf import Estados, Nwlistcfrel  # type: ignore[attr-defined]
 
 from app.internal.constants import (
     BLOCK_COL,
@@ -52,7 +52,7 @@ _COEF_LONG: dict[int, str] = {
 
 
 def _policy_df_building_block(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     cut_df: pl.DataFrame,
     uow: AbstractUnitOfWork,
@@ -97,7 +97,7 @@ def _policy_df_building_block(
 
 
 def _rhs_entities(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     cut_df: pl.DataFrame,
     state_df: pl.DataFrame | None,
@@ -125,7 +125,7 @@ def _rhs_entities(
 
 
 def _eer_hydro_cut_entities(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     entity_col: str,
     cut_value_col: str,
@@ -165,7 +165,7 @@ def _eer_hydro_cut_entities(
 
 
 def _storage_cut_entities(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     cut_df: pl.DataFrame,
     state_df: pl.DataFrame | None,
@@ -197,7 +197,7 @@ def _storage_cut_entities(
 
 
 def _inflow_cut_entities(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     cut_df: pl.DataFrame,
     state_df: pl.DataFrame | None,
@@ -239,7 +239,7 @@ def _inflow_cut_entities(
 
 
 def _eer_in_hydro_cut_entities(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     entity_col: str,
     cut_value_col: str,
@@ -290,7 +290,7 @@ def _eer_in_hydro_cut_entities(
 
 
 def _maxviol_cut_entities(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     cut_df: pl.DataFrame,
     state_df: pl.DataFrame | None,
@@ -329,7 +329,7 @@ def _maxviol_cut_entities(
 
 
 def _submarket_cut_entities(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     entity_col: str,
     cut_value_col: str,
@@ -390,7 +390,7 @@ def _submarket_cut_entities(
 
 
 def _thermal_generation_cut_entities(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     cut_df: pl.DataFrame,
     state_df: pl.DataFrame | None,
@@ -431,7 +431,7 @@ def _thermal_generation_cut_entities(
 
 
 def common_policy_df(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     aux_df = cache.get("common_policy_df")
     if aux_df is None:
@@ -442,7 +442,7 @@ def common_policy_df(
             "Relatório de cortes do NWLISTCF",
         )
         # nwlistcfrel.cortes returns a pd.DataFrame from inewave binary files
-        cut_df = pl.from_pandas(nwlistcfrel.cortes)
+        cut_df = pl.from_pandas(nwlistcfrel.cortes)  # type: ignore[union-attr]
         cut_df = cut_df.rename({"PERIODO": STAGE_COL, "IREG": CUT_INDEX_COL})
         cut_df = cut_df.with_columns(
             (
@@ -459,7 +459,7 @@ def common_policy_df(
             Estados,
             "Relatório de estados do NWLISTCF",
         )
-        state_df_raw = estadosrel.estados
+        state_df_raw = estadosrel.estados  # type: ignore[union-attr]
         state_df: pl.DataFrame | None = None
         if state_df_raw is not None:
             # estadosrel.estados returns a pd.DataFrame from inewave binary files
@@ -499,7 +499,7 @@ def common_policy_df(
 
 
 def policy_variable_units(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     name = "policy_variable_units"
     df = cache.get(name)

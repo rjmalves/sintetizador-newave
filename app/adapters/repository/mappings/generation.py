@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from os.path import join
-from typing import TYPE_CHECKING, Callable, Dict, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, Tuple
 
 from inewave.nwlistop.corteolm import Corteolm
 from inewave.nwlistop.evert import Evert
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 def get_rules(
     repo: "RawFilesRepository",
-) -> Dict[Tuple[Variable, SpatialResolution], Callable]:
+) -> Dict[Tuple[Variable, SpatialResolution], Callable[..., Any]]:
     """Return variable-to-reader mappings for generation-related variables."""
     return {
         (

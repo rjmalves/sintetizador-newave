@@ -27,7 +27,7 @@ from app.services.unitofwork import AbstractUnitOfWork
 from app.utils.timing import time_and_log
 
 
-def _pkg():
+def _pkg() -> Any:
     return _sys.modules[__package__]
 
 
@@ -41,7 +41,7 @@ def _fetch_temporal_deck_data(
     uow: AbstractUnitOfWork,
     deck_context: Optional[DeckContext],
     num_stages: int,
-):
+) -> Any:
     """Return (num_scenarios, start_dates, end_dates, df_block_lengths)."""
     if deck_context is not None:
         return (
@@ -63,21 +63,21 @@ def get_unique_column_values_in_order(
     cls: "type[OperationSynthetizer]",
     df: pl.DataFrame,
     cols: List[str],
-) -> Dict[str, list]:
+) -> Dict[str, List[Any]]:
     return {col: df[col].unique(maintain_order=True).to_list() for col in cols}
 
 
 def set_ordered_entities(
     cls: "type[OperationSynthetizer]",
     s: OperationSynthesis,
-    entities: Dict[str, list],
+    entities: Dict[str, List[Any]],
 ) -> None:
     cls.ORDERED_SYNTHESIS_ENTITIES[s] = entities
 
 
 def get_ordered_entities(
     cls: "type[OperationSynthetizer]", s: OperationSynthesis
-) -> Dict[str, list]:
+) -> Dict[str, List[Any]]:
     return cls.ORDERED_SYNTHESIS_ENTITIES[s]
 
 
@@ -316,7 +316,7 @@ def post_resolve_entity(
     s: OperationSynthesis,
     entity_column_values: Dict[str, Any],
     uow: AbstractUnitOfWork,
-    internal_stubs: Dict = {},
+    internal_stubs: Dict[Any, Any] = {},
     deck_context: Optional[DeckContext] = None,
 ) -> Optional[pl.DataFrame]:
     if df is None:
@@ -342,8 +342,8 @@ def post_resolve(
     resolve_responses: Dict[str, Optional[pl.DataFrame]],
     s: OperationSynthesis,
     uow: AbstractUnitOfWork,
-    early_hooks: List[Callable] = [],
-    late_hooks: List[Callable] = [],
+    early_hooks: List[Callable[..., Any]] = [],
+    late_hooks: List[Callable[..., Any]] = [],
 ) -> Optional[pl.DataFrame]:
     with time_and_log(
         message_root="Tempo para compactacao dos dados", logger=cls.logger

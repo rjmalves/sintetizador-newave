@@ -2,7 +2,7 @@ from logging import ERROR
 from typing import Any, Dict, Optional, Tuple, Type, TypeVar
 
 import pandas as pd
-from inewave.newave import (
+from inewave.newave import (  # type: ignore[attr-defined]
     Clast,
     Confhd,
     Conft,
@@ -31,7 +31,7 @@ from inewave.newave import (
     Vazaos,
     Vazoes,
 )
-from inewave.nwlistcf import Estados, Nwlistcfrel
+from inewave.nwlistcf import Estados, Nwlistcfrel  # type: ignore[attr-defined]
 
 from app.services.unitofwork import AbstractUnitOfWork
 
@@ -39,12 +39,12 @@ _T = TypeVar("_T")
 T_any = None  # placeholder; real TypeVar defined in callers
 
 
-def _log(deck_cls, msg: str, level: int = 20) -> None:
+def _log(deck_cls: Any, msg: str, level: int = 20) -> None:
     if deck_cls.logger is not None:
         deck_cls.logger.log(level, msg)
 
 
-def get_dger(deck_cls, uow: AbstractUnitOfWork) -> Dger:
+def get_dger(deck_cls: Any, uow: AbstractUnitOfWork) -> Dger:
     with uow:
         dger = uow.files.get_dger()
         if dger is None:
@@ -54,7 +54,7 @@ def get_dger(deck_cls, uow: AbstractUnitOfWork) -> Dger:
         return dger
 
 
-def get_shist(deck_cls, uow: AbstractUnitOfWork) -> Shist:
+def get_shist(deck_cls: Any, uow: AbstractUnitOfWork) -> Shist:
     with uow:
         shist = uow.files.get_shist()
         if shist is None:
@@ -64,7 +64,7 @@ def get_shist(deck_cls, uow: AbstractUnitOfWork) -> Shist:
         return shist
 
 
-def get_curva(deck_cls, uow: AbstractUnitOfWork) -> Curva:
+def get_curva(deck_cls: Any, uow: AbstractUnitOfWork) -> Curva:
     with uow:
         curva = uow.files.get_curva()
         if curva is None:
@@ -74,7 +74,7 @@ def get_curva(deck_cls, uow: AbstractUnitOfWork) -> Curva:
         return curva
 
 
-def get_ree(deck_cls, uow: AbstractUnitOfWork) -> Ree:
+def get_ree(deck_cls: Any, uow: AbstractUnitOfWork) -> Ree:
     with uow:
         ree = uow.files.get_ree()
         if ree is None:
@@ -84,7 +84,7 @@ def get_ree(deck_cls, uow: AbstractUnitOfWork) -> Ree:
         return ree
 
 
-def get_confhd(deck_cls, uow: AbstractUnitOfWork) -> Confhd:
+def get_confhd(deck_cls: Any, uow: AbstractUnitOfWork) -> Confhd:
     with uow:
         confhd = uow.files.get_confhd()
         if confhd is None:
@@ -94,7 +94,7 @@ def get_confhd(deck_cls, uow: AbstractUnitOfWork) -> Confhd:
         return confhd
 
 
-def get_dsvagua(deck_cls, uow: AbstractUnitOfWork) -> Dsvagua:
+def get_dsvagua(deck_cls: Any, uow: AbstractUnitOfWork) -> Dsvagua:
     with uow:
         dsvagua = uow.files.get_dsvagua()
         if dsvagua is None:
@@ -104,7 +104,7 @@ def get_dsvagua(deck_cls, uow: AbstractUnitOfWork) -> Dsvagua:
         return dsvagua
 
 
-def get_modif(deck_cls, uow: AbstractUnitOfWork) -> Modif:
+def get_modif(deck_cls: Any, uow: AbstractUnitOfWork) -> Modif:
     with uow:
         modif = uow.files.get_modif()
         if modif is None:
@@ -114,7 +114,7 @@ def get_modif(deck_cls, uow: AbstractUnitOfWork) -> Modif:
         return modif
 
 
-def get_hidr(deck_cls, uow: AbstractUnitOfWork) -> Hidr:
+def get_hidr(deck_cls: Any, uow: AbstractUnitOfWork) -> Hidr:
     with uow:
         hidr = uow.files.get_hidr()
         if hidr is None:
@@ -124,7 +124,7 @@ def get_hidr(deck_cls, uow: AbstractUnitOfWork) -> Hidr:
         return hidr
 
 
-def get_vazoes(deck_cls, uow: AbstractUnitOfWork) -> Vazoes:
+def get_vazoes(deck_cls: Any, uow: AbstractUnitOfWork) -> Vazoes:
     with uow:
         vazoes = uow.files.get_vazoes()
         if vazoes is None:
@@ -134,7 +134,7 @@ def get_vazoes(deck_cls, uow: AbstractUnitOfWork) -> Vazoes:
         return vazoes
 
 
-def get_conft(deck_cls, uow: AbstractUnitOfWork) -> Conft:
+def get_conft(deck_cls: Any, uow: AbstractUnitOfWork) -> Conft:
     with uow:
         conft = uow.files.get_conft()
         if conft is None:
@@ -144,7 +144,7 @@ def get_conft(deck_cls, uow: AbstractUnitOfWork) -> Conft:
         return conft
 
 
-def get_sistema(deck_cls, uow: AbstractUnitOfWork) -> Sistema:
+def get_sistema(deck_cls: Any, uow: AbstractUnitOfWork) -> Sistema:
     with uow:
         sist = uow.files.get_sistema()
         if sist is None:
@@ -154,7 +154,7 @@ def get_sistema(deck_cls, uow: AbstractUnitOfWork) -> Sistema:
         return sist
 
 
-def get_clast(deck_cls, uow: AbstractUnitOfWork) -> Clast:
+def get_clast(deck_cls: Any, uow: AbstractUnitOfWork) -> Clast:
     with uow:
         clast = uow.files.get_clast()
         if clast is None:
@@ -164,7 +164,7 @@ def get_clast(deck_cls, uow: AbstractUnitOfWork) -> Clast:
         return clast
 
 
-def get_term(deck_cls, uow: AbstractUnitOfWork) -> Term:
+def get_term(deck_cls: Any, uow: AbstractUnitOfWork) -> Term:
     with uow:
         term = uow.files.get_term()
         if term is None:
@@ -174,7 +174,7 @@ def get_term(deck_cls, uow: AbstractUnitOfWork) -> Term:
         return term
 
 
-def get_manutt(deck_cls, uow: AbstractUnitOfWork) -> Manutt:
+def get_manutt(deck_cls: Any, uow: AbstractUnitOfWork) -> Manutt:
     with uow:
         manutt = uow.files.get_manutt()
         if manutt is None:
@@ -184,7 +184,7 @@ def get_manutt(deck_cls, uow: AbstractUnitOfWork) -> Manutt:
         return manutt
 
 
-def get_expt(deck_cls, uow: AbstractUnitOfWork) -> Expt:
+def get_expt(deck_cls: Any, uow: AbstractUnitOfWork) -> Expt:
     with uow:
         expt = uow.files.get_expt()
         if expt is None:
@@ -194,7 +194,7 @@ def get_expt(deck_cls, uow: AbstractUnitOfWork) -> Expt:
         return expt
 
 
-def get_patamar(deck_cls, uow: AbstractUnitOfWork) -> Patamar:
+def get_patamar(deck_cls: Any, uow: AbstractUnitOfWork) -> Patamar:
     with uow:
         pat = uow.files.get_patamar()
         if pat is None:
@@ -204,7 +204,7 @@ def get_patamar(deck_cls, uow: AbstractUnitOfWork) -> Patamar:
         return pat
 
 
-def get_pmo(deck_cls, uow: AbstractUnitOfWork) -> Pmo:
+def get_pmo(deck_cls: Any, uow: AbstractUnitOfWork) -> Pmo:
     with uow:
         pmo = uow.files.get_pmo()
         if pmo is None:
@@ -214,7 +214,7 @@ def get_pmo(deck_cls, uow: AbstractUnitOfWork) -> Pmo:
         return pmo
 
 
-def get_newavetim(deck_cls, uow: AbstractUnitOfWork) -> Newavetim:
+def get_newavetim(deck_cls: Any, uow: AbstractUnitOfWork) -> Newavetim:
     with uow:
         newavetim = uow.files.get_newavetim()
         if newavetim is None:
@@ -224,7 +224,7 @@ def get_newavetim(deck_cls, uow: AbstractUnitOfWork) -> Newavetim:
         return newavetim
 
 
-def get_engnat(deck_cls, uow: AbstractUnitOfWork) -> Engnat:
+def get_engnat(deck_cls: Any, uow: AbstractUnitOfWork) -> Engnat:
     with uow:
         engnat = uow.files.get_engnat()
         if engnat is None:
@@ -235,7 +235,7 @@ def get_engnat(deck_cls, uow: AbstractUnitOfWork) -> Engnat:
 
 
 def get_energiaf(
-    deck_cls, iteracao: int, uow: AbstractUnitOfWork
+    deck_cls: Any, iteracao: int, uow: AbstractUnitOfWork
 ) -> Optional[Energiaf]:
     with uow:
         energiaf = uow.files.get_energiaf(iteracao)
@@ -243,7 +243,7 @@ def get_energiaf(
 
 
 def get_enavazf(
-    deck_cls, iteracao: int, uow: AbstractUnitOfWork
+    deck_cls: Any, iteracao: int, uow: AbstractUnitOfWork
 ) -> Optional[Enavazf]:
     with uow:
         enavazf = uow.files.get_enavazf(iteracao)
@@ -251,7 +251,7 @@ def get_enavazf(
 
 
 def get_vazaof(
-    deck_cls, iteracao: int, uow: AbstractUnitOfWork
+    deck_cls: Any, iteracao: int, uow: AbstractUnitOfWork
 ) -> Optional[Vazaof]:
     with uow:
         vazaof = uow.files.get_vazaof(iteracao)
@@ -259,7 +259,7 @@ def get_vazaof(
 
 
 def get_energiab(
-    deck_cls, iteracao: int, uow: AbstractUnitOfWork
+    deck_cls: Any, iteracao: int, uow: AbstractUnitOfWork
 ) -> Optional[Energiab]:
     with uow:
         energiab = uow.files.get_energiab(iteracao)
@@ -267,7 +267,7 @@ def get_energiab(
 
 
 def get_enavazb(
-    deck_cls, iteracao: int, uow: AbstractUnitOfWork
+    deck_cls: Any, iteracao: int, uow: AbstractUnitOfWork
 ) -> Optional[Enavazb]:
     with uow:
         enavazb = uow.files.get_enavazb(iteracao)
@@ -275,44 +275,46 @@ def get_enavazb(
 
 
 def get_vazaob(
-    deck_cls, iteracao: int, uow: AbstractUnitOfWork
+    deck_cls: Any, iteracao: int, uow: AbstractUnitOfWork
 ) -> Optional[Vazaob]:
     with uow:
         vazaob = uow.files.get_vazaob(iteracao)
         return vazaob
 
 
-def get_energias(deck_cls, uow: AbstractUnitOfWork) -> Optional[Energias]:
+def get_energias(deck_cls: Any, uow: AbstractUnitOfWork) -> Optional[Energias]:
     with uow:
         energias = uow.files.get_energias()
         return energias
 
 
-def get_enavazs(deck_cls, uow: AbstractUnitOfWork) -> Optional[Energias]:
+def get_enavazs(deck_cls: Any, uow: AbstractUnitOfWork) -> Optional[Energias]:
     with uow:
         enavazs = uow.files.get_enavazs()
         return enavazs
 
 
-def get_vazaos(deck_cls, uow: AbstractUnitOfWork) -> Optional[Vazaos]:
+def get_vazaos(deck_cls: Any, uow: AbstractUnitOfWork) -> Optional[Vazaos]:
     with uow:
         vazaos = uow.files.get_vazaos()
         return vazaos
 
 
-def get_cortes(deck_cls, uow: AbstractUnitOfWork) -> Optional[Nwlistcfrel]:
+def get_cortes(deck_cls: Any, uow: AbstractUnitOfWork) -> Optional[Nwlistcfrel]:
     with uow:
         cortes = uow.files.get_nwlistcf_cortes()
         return cortes
 
 
-def get_estados(deck_cls, uow: AbstractUnitOfWork) -> Optional[Estados]:
+def get_estados(deck_cls: Any, uow: AbstractUnitOfWork) -> Optional[Estados]:
     with uow:
         estados = uow.files.get_nwlistcf_estados()
         return estados
 
 
-def validate_data(deck_cls, data: _T, type: Type, msg: str = "dados") -> _T:
+def validate_data(
+    deck_cls: Any, data: _T, type: Type[Any], msg: str = "dados"
+) -> _T:
     if not isinstance(data, type):
         msg = f"Erro de validação: {msg}"
         _log(deck_cls, msg, ERROR)
@@ -359,7 +361,7 @@ def get_value_and_unit_from_modif_entry(
 
 
 def apply_modif_changes_to_hydros(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     df: "pd.DataFrame",
     hydro_data_col: str,
@@ -392,7 +394,7 @@ def apply_modif_changes_to_hydros(
 
 
 def apply_modif_changes_to_hydros_in_stages(
-    deck_cls,
+    deck_cls: Any,
     cache: Dict[str, Any],
     df: "pd.DataFrame",
     hydro_data_col: str,

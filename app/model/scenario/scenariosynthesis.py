@@ -64,7 +64,10 @@ class ScenarioSynthesis:
 
     @property
     def entity_df_columns(self) -> list[str]:
-        return self.spatial_resolution.entity_df_columns + self.step.entity_df_columns
+        return (
+            self.spatial_resolution.entity_df_columns
+            + self.step.entity_df_columns
+        )
 
     @property
     def all_synthesis_df_columns(self) -> list[str]:
@@ -87,7 +90,11 @@ class ScenarioSynthesis:
     @property
     def non_entity_sorting_synthesis_df_columns(self) -> list[str]:
         sorting_columns = self.sorting_synthesis_df_columns
-        return [c for c in sorting_columns if c not in self.entity_synthesis_df_columns]
+        return [
+            c
+            for c in sorting_columns
+            if c not in self.entity_synthesis_df_columns
+        ]
 
 
 SUPPORTED_SYNTHESIS: list[str] = [

@@ -6,7 +6,7 @@ sets used by the stub dispatcher, and calc_accumulated_productivity —
 all moved out of stubs.py to keep that module within the 500-line limit.
 """
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import polars as pl
@@ -33,7 +33,7 @@ def fill_initial_storage_df(
     df: pl.DataFrame,
     indices: np.ndarray,
     values: np.ndarray,
-    entities: dict,
+    entities: dict[str, Any],
 ) -> pl.DataFrame:
     scenarios = [s for s in entities[SCENARIO_COL] if str(s).isnumeric()]
     num_scenarios = len(scenarios)
@@ -47,7 +47,7 @@ def fill_initial_storage_df(
 
 
 def build_initial_stage_indices(
-    entities: dict,
+    entities: dict[str, Any],
     num_groups: int,
 ) -> np.ndarray:
     scenarios = [s for s in entities[SCENARIO_COL] if str(s).isnumeric()]
@@ -61,7 +61,7 @@ def build_initial_stage_indices(
 
 def two_cache_op(
     cls: "type[OperationSynthetizer]",
-    synthesis,
+    synthesis: Any,
     var1: Variable,
     var2: Variable,
     op: str = "add",
@@ -84,8 +84,8 @@ def two_cache_op(
 def calc_accumulated_productivity(
     cls: "type[OperationSynthetizer]",
     df: pl.DataFrame,
-    entities: dict,
-    uow,
+    entities: dict[str, Any],
+    uow: Any,
 ) -> pl.DataFrame:
     hydro_df = Deck.hydros(uow)
     hydro_codes = entities[HYDRO_CODE_COL]
@@ -116,7 +116,7 @@ def calc_accumulated_productivity(
     unique_codes, first_indices, counts = np.unique(
         hydro_codes_in_df, return_index=True, return_counts=True
     )
-    code_to_slice: dict = {}
+    code_to_slice: dict[int, tuple[int, int]] = {}
     for code, start, count in zip(unique_codes, first_indices, counts):
         code_to_slice[int(code)] = (int(start), int(start + count))
 

@@ -3,7 +3,7 @@ import sys as _sys
 from concurrent.futures import ProcessPoolExecutor
 from logging import ERROR, INFO, WARNING
 from traceback import print_exc
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import polars as pl
 
@@ -31,7 +31,7 @@ from app.utils.regex import match_variables_with_wildcards
 from app.utils.timing import time_and_log
 
 
-def _pkg():
+def _pkg() -> Any:
     return _sys.modules[__package__]
 
 
@@ -58,7 +58,9 @@ class OperationSynthetizer:
         set([p for pr in SYNTHESIS_DEPENDENCIES.values() for p in pr])
     )
     CACHED_SYNTHESIS: Dict[OperationSynthesis, pl.DataFrame] = {}
-    ORDERED_SYNTHESIS_ENTITIES: Dict[OperationSynthesis, Dict[str, list]] = {}
+    ORDERED_SYNTHESIS_ENTITIES: Dict[
+        OperationSynthesis, Dict[str, List[Any]]
+    ] = {}
     SYNTHESIS_STATS: Dict[SpatialResolution, List[pl.DataFrame]] = {}
 
     @classmethod
@@ -69,7 +71,7 @@ class OperationSynthetizer:
         cls.SYNTHESIS_STATS.clear()
 
     @classmethod
-    def _log(cls, msg: str, level: int = INFO):
+    def _log(cls, msg: str, level: int = INFO) -> None:
         if cls.logger is not None:
             cls.logger.log(level, msg)
 
@@ -147,17 +149,25 @@ class OperationSynthetizer:
         return result
 
     @classmethod
-    def _get_ordered_entities(cls, s) -> Dict[str, list]:
+    def _get_ordered_entities(
+        cls, s: OperationSynthesis
+    ) -> Dict[str, List[Any]]:
         """Get ordered entities for a synthesis."""
         return _pipeline_mod.get_ordered_entities(cls, s)
 
     @staticmethod
-    def _resolve_temporal_resolution(df, uow, deck_context=None):
+    def _resolve_temporal_resolution(
+        df: Any,
+        uow: AbstractUnitOfWork,
+        deck_context: Optional[DeckContext] = None,
+    ) -> Any:
         """Add temporal information to synthesis DataFrame."""
         return _pipeline_mod.resolve_temporal_resolution(df, uow, deck_context)
 
     @staticmethod
-    def _resolve_starting_stage_polars(df, deck_context, uow):
+    def _resolve_starting_stage_polars(
+        df: Any, deck_context: Optional[DeckContext], uow: AbstractUnitOfWork
+    ) -> Any:
         """Polars variant of resolve_starting_stage."""
         return _pipeline_mod.resolve_starting_stage_polars(
             df, deck_context, uow
@@ -166,13 +176,13 @@ class OperationSynthetizer:
     @classmethod
     def _post_resolve_entity(
         cls,
-        df,
-        s,
-        entity_column_values,
-        uow,
-        internal_stubs=None,
-        deck_context=None,
-    ):
+        df: Any,
+        s: OperationSynthesis,
+        entity_column_values: Dict[str, Any],
+        uow: AbstractUnitOfWork,
+        internal_stubs: Optional[Dict[Any, Any]] = None,
+        deck_context: Optional[DeckContext] = None,
+    ) -> Any:
         """Post-process entity extraction."""
         return _pipeline_mod.post_resolve_entity(
             cls,
@@ -186,8 +196,13 @@ class OperationSynthetizer:
 
     @classmethod
     def _post_resolve(
-        cls, resolve_responses, s, uow, early_hooks=None, late_hooks=None
-    ):
+        cls,
+        resolve_responses: Dict[str, Any],
+        s: OperationSynthesis,
+        uow: AbstractUnitOfWork,
+        early_hooks: Optional[List[Any]] = None,
+        late_hooks: Optional[List[Any]] = None,
+    ) -> Any:
         """Post-process all synthesis data."""
         return _pipeline_mod.post_resolve(
             cls, resolve_responses, s, uow, early_hooks or [], late_hooks or []
@@ -199,46 +214,63 @@ class OperationSynthetizer:
         return _cache_mod.get_from_cache(cls, s)
 
     @classmethod
-    def _resolve_bounds(cls, s, df, uow) -> pl.DataFrame:
+    def _resolve_bounds(
+        cls, s: OperationSynthesis, df: pl.DataFrame, uow: AbstractUnitOfWork
+    ) -> pl.DataFrame:
         """Compute upper and lower bounds."""
         return _bounds_mod.resolve_bounds(cls, s, df, uow)
 
     @classmethod
-    def _export_metadata(cls, success_synthesis, uow):
+    def _export_metadata(
+        cls,
+        success_synthesis: List[OperationSynthesis],
+        uow: AbstractUnitOfWork,
+    ) -> None:
         """Export synthesis variable metadata."""
         _export_mod.export_metadata(cls, success_synthesis, uow)
 
     @classmethod
-    def _add_synthesis_stats(cls, s, df):
+    def _add_synthesis_stats(
+        cls, s: OperationSynthesis, df: pl.DataFrame
+    ) -> None:
         """Add synthesis statistics."""
         _export_mod.add_synthesis_stats(cls, s, df)
 
     @classmethod
-    def _export_scenario_synthesis(cls, s, df, uow):
+    def _export_scenario_synthesis(
+        cls, s: OperationSynthesis, df: pl.DataFrame, uow: AbstractUnitOfWork
+    ) -> None:
         """Export operation synthesis data."""
         _export_mod.export_scenario_synthesis(cls, s, df, uow)
 
     @classmethod
-    def _export_stats(cls, uow):
+    def _export_stats(cls, uow: AbstractUnitOfWork) -> None:
         """Export synthesis statistics."""
         _export_mod.export_stats(cls, uow)
 
     @classmethod
-    def _stub_mappings(cls, s):
+    def _stub_mappings(cls, s: OperationSynthesis) -> Any:
         from app.services.synthesis.operation import stubs as _stubs_mod
 
         return _stubs_mod.stub_mappings(cls, s)
 
     @classmethod
-    def _resolve_stub(cls, s, uow):
+    def _resolve_stub(
+        cls, s: OperationSynthesis, uow: AbstractUnitOfWork
+    ) -> Any:
         from app.services.synthesis.operation import stubs as _stubs_mod
 
         return _stubs_mod.resolve_stub(cls, s, uow)
 
     @classmethod
     def _resolve_SBM_entity(
-        cls, uow, synthesis, sbm_index, sbm_name, deck_context=None
-    ):
+        cls,
+        uow: AbstractUnitOfWork,
+        synthesis: OperationSynthesis,
+        sbm_index: int,
+        sbm_name: str,
+        deck_context: Optional[DeckContext] = None,
+    ) -> Any:
         from app.services.synthesis.operation import resolution_sbm as _mod
 
         return _mod.resolve_SBM_entity(
@@ -248,14 +280,14 @@ class OperationSynthetizer:
     @classmethod
     def _resolve_SBP_entity(
         cls,
-        uow,
-        synthesis,
-        sbm1_index,
-        sbm1_name,
-        sbm2_index,
-        sbm2_name,
-        deck_context=None,
-    ):
+        uow: AbstractUnitOfWork,
+        synthesis: OperationSynthesis,
+        sbm1_index: int,
+        sbm1_name: str,
+        sbm2_index: int,
+        sbm2_name: str,
+        deck_context: Optional[DeckContext] = None,
+    ) -> Any:
         from app.services.synthesis.operation import resolution_sbp as _mod
 
         return _mod.resolve_SBP_entity(
@@ -271,8 +303,13 @@ class OperationSynthetizer:
 
     @classmethod
     def _resolve_REE_entity(
-        cls, uow, synthesis, ree_index, ree_name, deck_context=None
-    ):
+        cls,
+        uow: AbstractUnitOfWork,
+        synthesis: OperationSynthesis,
+        ree_index: int,
+        ree_name: str,
+        deck_context: Optional[DeckContext] = None,
+    ) -> Any:
         from app.services.synthesis.operation import resolution_ree as _mod
 
         return _mod.resolve_REE_entity(
@@ -281,8 +318,13 @@ class OperationSynthetizer:
 
     @classmethod
     def _resolve_UHE_entity(
-        cls, uow, synthesis, uhe_index, uhe_name, deck_context=None
-    ):
+        cls,
+        uow: AbstractUnitOfWork,
+        synthesis: OperationSynthesis,
+        uhe_index: int,
+        uhe_name: str,
+        deck_context: Optional[DeckContext] = None,
+    ) -> Any:
         from app.services.synthesis.operation import resolution_uhe as _mod
 
         return _mod.resolve_UHE_entity(
@@ -291,8 +333,13 @@ class OperationSynthetizer:
 
     @classmethod
     def _resolve_GTER_UTE_entity(
-        cls, uow, synthesis, sbm_index, sbm_name, deck_context=None
-    ):
+        cls,
+        uow: AbstractUnitOfWork,
+        synthesis: OperationSynthesis,
+        sbm_index: int,
+        sbm_name: str,
+        deck_context: Optional[DeckContext] = None,
+    ) -> Any:
         from app.services.synthesis.operation import resolution_ute as _mod
 
         return _mod.resolve_GTER_UTE_entity(
@@ -300,7 +347,13 @@ class OperationSynthetizer:
         )
 
     @classmethod
-    def _resolve_SBM_entity_MER_MERL(cls, uow, synthesis, sbm_index, sbm_name):
+    def _resolve_SBM_entity_MER_MERL(
+        cls,
+        uow: AbstractUnitOfWork,
+        synthesis: OperationSynthesis,
+        sbm_index: int,
+        sbm_name: str,
+    ) -> Any:
         from app.services.synthesis.operation import stubs as _stubs_mod
 
         return _stubs_mod.resolve_SBM_entity_MER_MERL(
@@ -309,8 +362,12 @@ class OperationSynthetizer:
 
     @classmethod
     def _resolve_spatial_resolution(
-        cls, synthesis, uow, deck_context=None, executor=None
-    ):
+        cls,
+        synthesis: OperationSynthesis,
+        uow: AbstractUnitOfWork,
+        deck_context: Optional[DeckContext] = None,
+        executor: Optional[ProcessPoolExecutor] = None,
+    ) -> Any:
         from app.services.synthesis.operation import spatial as _spatial_mod
 
         return _spatial_mod.resolve_spatial_resolution(
@@ -318,7 +375,13 @@ class OperationSynthetizer:
         )
 
     @classmethod
-    def _resolve_synthesis(cls, s, uow, deck_context=None, executor=None):
+    def _resolve_synthesis(
+        cls,
+        s: OperationSynthesis,
+        uow: AbstractUnitOfWork,
+        deck_context: Optional[DeckContext] = None,
+        executor: Optional[ProcessPoolExecutor] = None,
+    ) -> Any:
         from app.services.synthesis.operation import spatial as _spatial_mod
 
         return _spatial_mod.resolve_synthesis(

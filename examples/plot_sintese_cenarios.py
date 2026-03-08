@@ -46,10 +46,8 @@ Síntese dos Cenários
 # %%
 # Os arquivos serão salvos no subdiretório `sintese`. Para realizar o processamento,
 # pode ser utilizado o próprio `python`:
-import plotly.express as px
-import plotly.graph_objects as go
 import pandas as pd
-
+import plotly.express as px
 
 # %%
 # Para a síntese dos cenários é produzido um arquivo com as informações das sínteses

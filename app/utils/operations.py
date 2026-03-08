@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 
 def fast_group_df(
     df: pd.DataFrame,
-    grouping_columns: list,
-    extract_columns: list,
+    grouping_columns: list[str],
+    extract_columns: list[str],
     operation: str,
     reset_index: bool = True,
 ) -> pd.DataFrame:

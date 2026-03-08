@@ -18,7 +18,7 @@ class Step(Enum):
                 return v
         return cls.FINAL_SIMULATION
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.value
 
     @property

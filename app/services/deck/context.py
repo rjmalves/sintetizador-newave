@@ -1,8 +1,13 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List
+from typing import TYPE_CHECKING, List
 
 import polars as pl
+
+if TYPE_CHECKING:
+    from app.services.unitofwork import AbstractUnitOfWork
 
 
 @dataclass
@@ -25,7 +30,7 @@ class DeckContext:
                 )
 
     @classmethod
-    def from_deck(cls, uow: object) -> "DeckContext":
+    def from_deck(cls, uow: "AbstractUnitOfWork") -> "DeckContext":
         from app.services.deck.deck import Deck
 
         return cls(

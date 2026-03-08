@@ -24,7 +24,7 @@ from app.services.unitofwork import AbstractUnitOfWork
 
 
 def convergence(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     val = cache.get("convergence")
     if val is None:
@@ -41,7 +41,7 @@ def convergence(
 
 
 def stored_energy_upper_bounds_inputs(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame | None:
     """
     Calcula os limites superiores de armazenamento de energia a partir
@@ -178,7 +178,7 @@ def stored_energy_upper_bounds_inputs(
 
 
 def stored_energy_upper_bounds_pmo(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame | None:
     """
     Obtem os limites superiores de armazenamento de energia para
@@ -233,7 +233,7 @@ def stored_energy_upper_bounds_pmo(
 
 
 def stored_energy_upper_bounds(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     val = cache.get("stored_energy_upper_bounds")
     if val is None:
@@ -247,7 +247,7 @@ def stored_energy_upper_bounds(
 
 
 def eer_stored_energy_lower_bounds(
-    deck_cls, cache: Dict[str, Any], uow: AbstractUnitOfWork
+    deck_cls: Any, cache: Dict[str, Any], uow: AbstractUnitOfWork
 ) -> pl.DataFrame:
     """
     Obtem os limites inferiores de armazenamento de energia para
