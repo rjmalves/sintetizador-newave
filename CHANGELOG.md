@@ -7,6 +7,17 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 
+## [2.4.0]
+
+### Changed
+
+- Dependência `inewave` atualizada para >= 1.13.0 (cfinterface >= 1.9.1)
+- API `set_version()` substituída por `read(path, version=...)` em conformidade com inewave v1.13
+
+### Removed
+
+- Suporte a Python 3.10 descontinuado. Versão mínima obrigatória: Python >= 3.11
+
 ## [2.3.0]
 
 ### Added
@@ -138,7 +149,8 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 - Primeira major release
 - Compatível com `inewave` até a versão 0.0.98 (pré 1ª major release)
 
-[Unreleased]: https://github.com/rjmalves/sintetizador-newave/compare/v2.3.0...HEAD
+[Unreleased]: https://github.com/rjmalves/sintetizador-newave/compare/v2.4.0...HEAD
+[2.4.0]: https://github.com/rjmalves/sintetizador-newave/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/rjmalves/sintetizador-newave/compare/v2.2.1...v2.3.0
 [2.2.1]: https://github.com/rjmalves/sintetizador-newave/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/rjmalves/sintetizador-newave/compare/v2.1.2...v2.2.0

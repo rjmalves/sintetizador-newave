@@ -17,9 +17,9 @@ Instalação
 Qual é a versão mínima de Python necessária?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-O *sintetizador-newave* requer **Python >= 3.10**. Versões anteriores não são
-suportadas e não recebem correções. O suporte a Python 3.8 e 3.9 foi
-descontinuado na versão ``v2.0.0`` da aplicação.
+O *sintetizador-newave* requer **Python >= 3.11**. Versões anteriores não são
+suportadas e não recebem correções. O suporte a Python 3.8–3.10 foi
+descontinuado progressivamente até a versão ``v2.4.0`` da aplicação.
 
 Para verificar a versão do Python disponível no seu ambiente:
 

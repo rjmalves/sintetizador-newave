@@ -2,7 +2,7 @@ from typing import Any, Dict
 
 import pandas as pd
 import polars as pl
-from inewave.newave import (  # type: ignore[attr-defined]
+from inewave.newave import (
     Curva,
     Dger,
     Modif,
@@ -398,7 +398,7 @@ def study_title(
         "nome do caso (dger.dat)",
     )
     cache["study_title"] = val
-    return val  # type: ignore[return-value]
+    return val  # type: ignore[no-any-return]
 
 
 def version(
@@ -417,4 +417,4 @@ def version(
         "versao do modelo (pmo.dat)",
     )
     cache["version"] = val
-    return val  # type: ignore[return-value]
+    return val  # type: ignore[no-any-return]

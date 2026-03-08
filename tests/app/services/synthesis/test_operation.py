@@ -140,8 +140,12 @@ def __compara_sintese_nwlistop(
                     df_nwlistop[col].isin(val)
                 )
 
-    dados_sintese = df_sintese.loc[filtros_sintese, "valor"].to_numpy()
-    dados_nwlistop = df_nwlistop.loc[filtros_nwlistop, "valor"].to_numpy()
+    dados_sintese = pd.to_numeric(
+        df_sintese.loc[filtros_sintese, "valor"], errors="coerce"
+    ).to_numpy()
+    dados_nwlistop = pd.to_numeric(
+        df_nwlistop.loc[filtros_nwlistop, "valor"], errors="coerce"
+    ).to_numpy()
 
     assert len(dados_sintese) > 0
     assert len(dados_nwlistop) > 0

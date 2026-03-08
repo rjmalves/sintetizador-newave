@@ -10,9 +10,9 @@ dependencies = [
     "polars>=1.0.0",
     "pyarrow>=18.0.0",
     "click>=8.1.7",
-    "inewave>=1.9.2",
+    "inewave>=1.13.0",
 ]
-requires-python = ">= 3.10"
+requires-python = ">= 3.11"
 authors = [
   {name = "Rogerio Alves", email = "rogerioalves.ee@gmail.com"},
 ]
@@ -23,7 +23,6 @@ classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -82,6 +81,17 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = ["inewave.*"]
 ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = ["cfinterface.*"]
+ignore_errors = true
+
+# inewave v1.13+ .read() classmethods return base types (SectionFile,
+# BlockFile, RegisterFile) instead of Self, causing many false-positive
+# errors throughout this module.
+[[tool.mypy.overrides]]
+module = ["app.adapters.repository.files"]
+disable_error_code = ["assignment", "return-value", "attr-defined", "unused-ignore"]
 
 [[tool.mypy.overrides]]
 module = ["dateutil.*"]

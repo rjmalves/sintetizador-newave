@@ -265,8 +265,12 @@ class RawFilesRepository(AbstractFilesRepository):
     def _read_nwlistop_setting_version(
         self, reader: Type[BlockFile], path: str
     ) -> Optional[pd.DataFrame]:
-        reader.set_version(self.__version)
-        return reader.read(path).valores
+        df: Optional[pd.DataFrame] = reader.read(  # type: ignore[union-attr]
+            path, version=self.__version
+        ).valores
+        if df is not None and "valor" in df.columns:
+            df["valor"] = pd.to_numeric(df["valor"], errors="coerce")
+        return df
 
     def _fix_indices_cenarios(self, df: pd.DataFrame) -> pd.DataFrame:
         anos = df["data"].dt.year.unique().tolist()
@@ -283,15 +287,15 @@ class RawFilesRepository(AbstractFilesRepository):
         return df
 
     def _agg_cmo_dfs(self, dir: str, submercado: int) -> pd.DataFrame:
-        Cmargmed.set_version(self.__version)
-        df_med = Cmargmed.read(
-            join(dir, f"cmarg{str(submercado).zfill(3)}-med.out")
+        df_med = Cmargmed.read(  # type: ignore[union-attr]
+            join(dir, f"cmarg{str(submercado).zfill(3)}-med.out"),
+            version=self.__version,
         ).valores
         df_med["patamar"] = 0
         df_med = self._fix_indices_cenarios(df_med)
-        Cmarg.set_version(self.__version)
-        df_pats = Cmarg.read(
-            join(dir, f"cmarg{str(submercado).zfill(3)}.out")
+        df_pats = Cmarg.read(  # type: ignore[union-attr]
+            join(dir, f"cmarg{str(submercado).zfill(3)}.out"),
+            version=self.__version,
         ).valores
         df_pats = self._fix_indices_cenarios(df_pats)
         df = pd.concat(
