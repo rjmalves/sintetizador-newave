@@ -1371,7 +1371,7 @@ class ScenarioSynthetizer:
             stats_df = calc_statistics(scenarios_pl)
             cls._add_synthesis_stats(s, stats_df)
             with uow:
-                uow.export.synthetize_df(scenarios_pl.to_pandas(), str(s))
+                uow.export.synthetize_pl(scenarios_pl, str(s))
 
     @classmethod
     def _export_stats(
@@ -1407,7 +1407,7 @@ class ScenarioSynthetizer:
                     df = pl.concat([pl.from_pandas(existing_df), df]).unique(
                         subset=dedup_subset, keep="first"
                     )
-                uow.export.synthetize_df(df.to_pandas(), filename)
+                uow.export.synthetize_pl(df, filename)
 
     @classmethod
     def _preprocess_synthesis_variables(
