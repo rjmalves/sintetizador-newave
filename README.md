@@ -25,7 +25,7 @@ A ferramenta é destinada a engenheiros, pesquisadores e desenvolvedores que tra
 - Saída em formato **Parquet** por padrão, com suporte opcional a CSV
 - Paralelização da leitura de arquivos via argumento `--processadores`
 - Seleção granular de variáveis individuais ou síntese completa com um único comando
-- Suporte a Python 3.10, 3.11, 3.12, 3.13 e 3.14
+- Suporte a Python 3.11, 3.12, 3.13 e 3.14
 
 ## Início Rápido
 

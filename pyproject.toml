@@ -10,9 +10,9 @@ dependencies = [
     "polars>=1.0.0",
     "pyarrow>=18.0.0",
     "click>=8.1.7",
-    "inewave>=1.9.2",
+    "inewave>=1.13.0",
 ]
-requires-python = ">= 3.10"
+requires-python = ">= 3.11"
 authors = [
   {name = "Rogerio Alves", email = "rogerioalves.ee@gmail.com"},
 ]
@@ -23,7 +23,6 @@ classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",

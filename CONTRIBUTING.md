@@ -13,7 +13,7 @@ cd sintetizador-newave
 uv sync --all-extras
 ```
 
-> **Requisitos**: Python 3.10+ e [uv](https://docs.astral.sh/uv/) instalados.
+> **Requisitos**: Python 3.11+ e [uv](https://docs.astral.sh/uv/) instalados.
 
 ## Pre-commit Hooks
 
