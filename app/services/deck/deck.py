@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, TypeVar
 
 import pandas as pd
 import polars as pl
-from inewave.newave import (  # type: ignore[attr-defined]
+from inewave.newave import (
     Curva,
     Dger,
     Modif,

@@ -75,7 +75,7 @@ def num_blocks(
             "numero de patamares (patamar.dat)",
         )
         cache["num_blocks"] = val
-    return val  # type: ignore[return-value]
+    return val  # type: ignore[no-any-return]
 
 
 def block_lengths(
@@ -122,7 +122,7 @@ def models_wind_generation(
             "consideracao de incerteza eolica (dger.dat)",
         )
         cache["models_wind_generation"] = val
-    return val
+    return val  # type: ignore[no-any-return]
 
 
 def scenario_generation_model_type(
@@ -150,4 +150,4 @@ def num_forward_series(
             "número de séries forward (dger.dat)",
         )
         cache["num_forward_series"] = val
-    return val  # type: ignore[return-value]
+    return val  # type: ignore[no-any-return]

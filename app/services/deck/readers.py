@@ -2,7 +2,7 @@ from logging import ERROR
 from typing import Any, Dict, Optional, Tuple, Type, TypeVar
 
 import pandas as pd
-from inewave.newave import (  # type: ignore[attr-defined]
+from inewave.newave import (
     Clast,
     Confhd,
     Conft,

@@ -84,5 +84,16 @@ module = ["inewave.*"]
 ignore_errors = true
 
 [[tool.mypy.overrides]]
+module = ["cfinterface.*"]
+ignore_errors = true
+
+# inewave v1.13+ .read() classmethods return base types (SectionFile,
+# BlockFile, RegisterFile) instead of Self, causing many false-positive
+# errors throughout this module.
+[[tool.mypy.overrides]]
+module = ["app.adapters.repository.files"]
+disable_error_code = ["assignment", "return-value", "attr-defined", "unused-ignore"]
+
+[[tool.mypy.overrides]]
 module = ["dateutil.*"]
 ignore_errors = true
