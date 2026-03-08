@@ -16,9 +16,9 @@ Modernizacao da infraestrutura de empacotamento, CI/CD e documentacao do `sintet
 
 | Epic | Nome                               | Tickets | Detail Level | Phase     |
 | ---- | ---------------------------------- | ------- | ------------ | --------- |
-| 01   | Packaging & CI Modernization       | 5       | Detailed     | Executing |
-| 02   | Sphinx Documentation Modernization | 3       | Detailed     | Executing |
-| 03   | Documentation Content Expansion    | 6       | Outline      | Outline   |
+| 01   | Packaging & CI Modernization       | 5       | Detailed     | Completed |
+| 02   | Sphinx Documentation Modernization | 3       | Detailed     | Completed |
+| 03   | Documentation Content Expansion    | 6       | Refined      | Executing |
 | 04   | Repository Polish                  | 4       | Outline      | Outline   |
 
 ## Progress
@@ -33,12 +33,12 @@ Modernizacao da infraestrutura de empacotamento, CI/CD e documentacao do `sintet
 | ticket-006 | Migrate Sphinx theme from RTD to Furo                    | epic-02 | completed | Detailed     | 0.96      | 0.88    | ACCEPTABLE |
 | ticket-007 | Update sphinx-gallery examples to Polars                 | epic-02 | completed | Detailed     | 0.95      | 0.75    | ACCEPTABLE |
 | ticket-008 | Update existing documentation text for Polars migration  | epic-02 | completed | Detailed     | 0.95      | 0.93    | EXCELLENT  |
-| ticket-009 | Create architecture overview documentation page          | epic-03 | pending   | Outline      | --        | --      | --         |
-| ticket-010 | Create FAQ and troubleshooting page                      | epic-03 | pending   | Outline      | --        | --      | --         |
-| ticket-011 | Create performance tuning guide                          | epic-03 | pending   | Outline      | --        | --      | --         |
-| ticket-012 | Create API reference with autodoc                        | epic-03 | pending   | Outline      | --        | --      | --         |
-| ticket-013 | Create v1.x to v2.x migration guide                      | epic-03 | pending   | Outline      | --        | --      | --         |
-| ticket-014 | Update index.rst with new documentation structure        | epic-03 | pending   | Outline      | --        | --      | --         |
+| ticket-009 | Create architecture overview documentation page          | epic-03 | completed | Refined      | 0.95      | 0.95    | EXCELLENT  |
+| ticket-010 | Create FAQ and troubleshooting page                      | epic-03 | completed | Refined      | 0.94      | 1.00    | EXCELLENT  |
+| ticket-011 | Create performance tuning guide                          | epic-03 | completed | Refined      | 0.94      | 1.00    | EXCELLENT  |
+| ticket-012 | Create API reference with autodoc                        | epic-03 | completed | Refined      | 0.94      | 0.96    | EXCELLENT  |
+| ticket-013 | Create v1.x to v2.x migration guide                      | epic-03 | completed | Refined      | 0.94      | 1.00    | EXCELLENT  |
+| ticket-014 | Update index.rst with new documentation structure        | epic-03 | completed | Refined      | 0.97      | 1.00    | EXCELLENT  |
 | ticket-015 | Expand README with badges and quickstart                 | epic-04 | pending   | Outline      | --        | --      | --         |
 | ticket-016 | Create CONTRIBUTING.md at repository root                | epic-04 | pending   | Outline      | --        | --      | --         |
 | ticket-017 | Reformat CHANGELOG to Keep a Changelog standard          | epic-04 | pending   | Outline      | --        | --      | --         |
