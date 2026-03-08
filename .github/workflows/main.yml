@@ -62,4 +62,4 @@ jobs:
           enable-cache: true
       - run: uv python install 3.12
       - run: uv sync --all-extras --dev
-      - run: uv run sphinx-build -W -M html docs/source docs/build
+      - run: uv run sphinx-build -W -b html docs/source docs/build
