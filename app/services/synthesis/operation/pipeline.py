@@ -178,7 +178,9 @@ def initial_stored_energy_df(
         ).alias(max_column)
     )
     if s.spatial_resolution == SpatialResolution.SUBMERCADO:
-        eer_sbm_map = _Deck.eer_submarket_map(uow)
+        eer_sbm_map = _Deck.eer_submarket_map(uow).select(
+            [EER_CODE_COL, SUBMARKET_CODE_COL]
+        )
         df = df.drop_nulls()
         df = df.join(eer_sbm_map, on=EER_CODE_COL, how="left")
         df = df.rename({SUBMARKET_CODE_COL: GROUPING_TMP_COL})
