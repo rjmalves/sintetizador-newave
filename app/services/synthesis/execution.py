@@ -1,9 +1,10 @@
 import logging
 from logging import ERROR, INFO
 from traceback import print_exc
-from typing import Callable, Dict, List, Optional, TypeVar
+from typing import Any, Callable, Dict, List, Optional
 
-import pandas as pd  # type: ignore
+import pandas as pd
+import polars as pl
 
 from app.internal.constants import (
     EXECUTION_SYNTHESIS_METADATA_OUTPUT,
@@ -19,29 +20,27 @@ from app.services.unitofwork import AbstractUnitOfWork
 from app.utils.regex import match_variables_with_wildcards
 from app.utils.timing import time_and_log
 
-# TODO - rever nomes das colunas
-# TODO - tirar tempo total
-
 
 class ExecutionSynthetizer:
     DEFAULT_EXECUTION_SYNTHESIS_ARGS: List[str] = SUPPORTED_SYNTHESIS
 
-    T = TypeVar("T")
-
     logger: Optional[logging.Logger] = None
 
     @classmethod
-    def _log(cls, msg: str, level: int = INFO):
+    def _log(cls, msg: str, level: int = INFO) -> None:
         if cls.logger is not None:
             cls.logger.log(level, msg)
 
     @classmethod
     def _default_args(cls) -> List[ExecutionSynthesis]:
-        args = [
-            ExecutionSynthesis.factory(a)
-            for a in cls.DEFAULT_EXECUTION_SYNTHESIS_ARGS
+        return [
+            arg
+            for arg in [
+                ExecutionSynthesis.factory(a)
+                for a in cls.DEFAULT_EXECUTION_SYNTHESIS_ARGS
+            ]
+            if arg is not None
         ]
-        return [arg for arg in args if arg is not None]
 
     @classmethod
     def _match_wildcards(cls, variables: List[str]) -> List[str]:
@@ -54,18 +53,16 @@ class ExecutionSynthetizer:
         cls,
         args: List[str],
     ) -> List[ExecutionSynthesis]:
-        args_data = [ExecutionSynthesis.factory(c) for c in args]
-        valid_args = [arg for arg in args_data if arg is not None]
-        return valid_args
+        return [
+            arg
+            for arg in [ExecutionSynthesis.factory(c) for c in args]
+            if arg is not None
+        ]
 
     @classmethod
     def _preprocess_synthesis_variables(
         cls, variables: List[str], uow: AbstractUnitOfWork
     ) -> List[ExecutionSynthesis]:
-        """
-        Realiza o pré-processamento das variáveis de síntese fornecidas,
-        filtrando as válidas para o caso em questão.
-        """
         try:
             if len(variables) == 0:
                 synthesis_variables = cls._default_args()
@@ -84,8 +81,8 @@ class ExecutionSynthetizer:
     @classmethod
     def _resolve(
         cls, synthesis: ExecutionSynthesis, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
-        RULES: Dict[Variable, Callable] = {
+    ) -> "pl.DataFrame | pd.DataFrame":
+        RULES: Dict[Variable, Callable[..., Any]] = {
             Variable.PROGRAMA: cls._resolve_program,
             Variable.VERSAO: cls._resolve_version,
             Variable.TITULO: cls._resolve_title,
@@ -123,23 +120,22 @@ class ExecutionSynthetizer:
         return processed_d
 
     @classmethod
-    def _resolve_cost(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def _resolve_cost(cls, uow: AbstractUnitOfWork) -> "pl.DataFrame":
         df = Deck.costs(uow)
-        return df[["parcela", "valor_esperado", "desvio_padrao"]]
+        return df.select(["parcela", "valor_esperado", "desvio_padrao"])
 
     @classmethod
-    def _resolve_runtime(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def _resolve_runtime(cls, uow: AbstractUnitOfWork) -> "pl.DataFrame":
         df = Deck.runtimes(uow)
-        df["tempo"] = df["tempo"].dt.total_seconds()
-        df = df.loc[df["etapa"] != "Tempo Total"]
-        return df
+        df = df.with_columns(pl.col("tempo").dt.total_seconds().alias("tempo"))
+        return df.filter(pl.col("etapa") != "Tempo Total")
 
     @classmethod
     def _export_metadata(
         cls,
         success_synthesis: List[ExecutionSynthesis],
         uow: AbstractUnitOfWork,
-    ):
+    ) -> None:
         metadata_df = pd.DataFrame(
             columns=[
                 "chave",
@@ -170,10 +166,6 @@ class ExecutionSynthetizer:
     def _synthetize_single_variable(
         cls, s: ExecutionSynthesis, uow: AbstractUnitOfWork
     ) -> Optional[ExecutionSynthesis]:
-        """
-        Realiza a síntese de execução para uma variável
-        fornecida.
-        """
         filename = str(s)
         with time_and_log(
             message_root=f"Tempo para sintese de {filename}",
@@ -184,7 +176,12 @@ class ExecutionSynthetizer:
                 df = cls._resolve(s, uow)
                 if df is not None:
                     with uow:
-                        uow.export.synthetize_df(df, filename)
+                        export_df = (
+                            df.to_pandas()
+                            if isinstance(df, pl.DataFrame)
+                            else df
+                        )
+                        uow.export.synthetize_df(export_df, filename)
                         return s
                 return None
             except Exception as e:
@@ -193,13 +190,13 @@ class ExecutionSynthetizer:
                 return None
 
     @classmethod
-    def enforce_version(cls, uow: AbstractUnitOfWork):
+    def enforce_version(cls, uow: AbstractUnitOfWork) -> None:
         version = Deck.pmo(uow).versao_modelo
         if version is not None:
             uow.version = version
 
     @classmethod
-    def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
+    def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork) -> None:
         cls.logger = logging.getLogger("main")
         Deck.logger = cls.logger
         uow.subdir = EXECUTION_SYNTHESIS_SUBDIR

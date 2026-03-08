@@ -1,10 +1,11 @@
 import logging
 from logging import ERROR, INFO
 from traceback import print_exc
-from typing import Callable, Dict, List, Optional, TypeVar
+from typing import Any, Callable, Dict, List, Optional
 
-import pandas as pd  # type: ignore
-from dateutil.relativedelta import relativedelta  # type: ignore
+import pandas as pd
+import polars as pl
+from dateutil.relativedelta import relativedelta
 
 from app.internal.constants import (
     END_DATE_COL,
@@ -27,28 +28,27 @@ from app.services.unitofwork import AbstractUnitOfWork
 from app.utils.regex import match_variables_with_wildcards
 from app.utils.timing import time_and_log
 
-# TODO - rever nomes das colunas
-
 
 class SystemSynthetizer:
     DEFAULT_SYSTEM_SYNTHESIS_ARGS = SUPPORTED_SYNTHESIS
 
-    T = TypeVar("T")
-
     logger: Optional[logging.Logger] = None
 
     @classmethod
-    def _log(cls, msg: str, level: int = INFO):
+    def _log(cls, msg: str, level: int = INFO) -> None:
         if cls.logger is not None:
             cls.logger.log(level, msg)
 
     @classmethod
     def _default_args(cls) -> List[SystemSynthesis]:
-        args = [
-            SystemSynthesis.factory(a)
-            for a in cls.DEFAULT_SYSTEM_SYNTHESIS_ARGS
+        return [
+            arg
+            for arg in [
+                SystemSynthesis.factory(a)
+                for a in cls.DEFAULT_SYSTEM_SYNTHESIS_ARGS
+            ]
+            if arg is not None
         ]
-        return [arg for arg in args if arg is not None]
 
     @classmethod
     def _match_wildcards(cls, variables: List[str]) -> List[str]:
@@ -61,18 +61,16 @@ class SystemSynthetizer:
         cls,
         args: List[str],
     ) -> List[SystemSynthesis]:
-        args_data = [SystemSynthesis.factory(c) for c in args]
-        valid_args = [arg for arg in args_data if arg is not None]
-        return valid_args
+        return [
+            arg
+            for arg in [SystemSynthesis.factory(c) for c in args]
+            if arg is not None
+        ]
 
     @classmethod
     def _preprocess_synthesis_variables(
         cls, variables: List[str], uow: AbstractUnitOfWork
     ) -> List[SystemSynthesis]:
-        """
-        Realiza o pré-processamento das variáveis de síntese fornecidas,
-        filtrando as válidas para o caso em questão.
-        """
         try:
             if len(variables) == 0:
                 synthesis_variables = cls._default_args()
@@ -92,15 +90,14 @@ class SystemSynthetizer:
     def filter_valid_variables(
         cls, variables: List[SystemSynthesis], uow: AbstractUnitOfWork
     ) -> List[SystemSynthesis]:
-        valid_variables = variables
-        cls._log(f"Variáveis: {valid_variables}")
-        return valid_variables
+        cls._log(f"Variáveis: {variables}")
+        return variables
 
     @classmethod
     def _resolve(
         cls, synthesis: SystemSynthesis, uow: AbstractUnitOfWork
-    ) -> pd.DataFrame:
-        RULES: Dict[Variable, Callable] = {
+    ) -> pl.DataFrame | pd.DataFrame:
+        RULES: Dict[Variable, Callable[..., Any]] = {
             Variable.EST: cls.__resolve_EST,
             Variable.PAT: cls.__resolve_PAT,
             Variable.SBM: cls.__resolve_SBM,
@@ -124,42 +121,38 @@ class SystemSynthetizer:
         )
 
     @classmethod
-    def __resolve_PAT(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
+    def __resolve_PAT(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
         df = Deck.block_lengths(uow)
-        df[VALUE_COL] *= STAGE_DURATION_HOURS
-        return df
+        return df.with_columns(pl.col(VALUE_COL) * STAGE_DURATION_HOURS)
 
     @classmethod
-    def __resolve_SBM(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        df = Deck.submarkets(uow).reset_index()
-        return df[[SUBMARKET_CODE_COL, SUBMARKET_NAME_COL]]
+    def __resolve_SBM(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
+        return Deck.submarkets(uow).select(
+            [SUBMARKET_CODE_COL, SUBMARKET_NAME_COL]
+        )
 
     @classmethod
-    def __resolve_REE(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        df = Deck.eer_submarket_map(uow)
-        return df.reset_index()
+    def __resolve_REE(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
+        return Deck.eer_submarket_map(uow)
 
     @classmethod
-    def __resolve_UTE(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        df = Deck.thermal_submarket_map(uow)
-        return df.reset_index()
+    def __resolve_UTE(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
+        return Deck.thermal_submarket_map(uow)
 
     @classmethod
     def __resolve_CVU(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        df = Deck.thermal_costs(uow)
-        return df
+        return Deck.thermal_costs(uow)
 
     @classmethod
-    def __resolve_UHE(cls, uow: AbstractUnitOfWork) -> pd.DataFrame:
-        df = Deck.hydro_eer_submarket_map(uow)
-        return df.reset_index()
+    def __resolve_UHE(cls, uow: AbstractUnitOfWork) -> pl.DataFrame:
+        return Deck.hydro_eer_submarket_map(uow)
 
     @classmethod
     def _export_metadata(
         cls,
         success_synthesis: List[SystemSynthesis],
         uow: AbstractUnitOfWork,
-    ):
+    ) -> None:
         metadata_df = pd.DataFrame(
             columns=[
                 "chave",
@@ -188,10 +181,6 @@ class SystemSynthetizer:
     def _synthetize_single_variable(
         cls, s: SystemSynthesis, uow: AbstractUnitOfWork
     ) -> Optional[SystemSynthesis]:
-        """
-        Realiza a síntese de sistema para uma variável
-        fornecida.
-        """
         filename = str(s)
         with time_and_log(
             message_root=f"Tempo para sintese de {filename}",
@@ -202,7 +191,12 @@ class SystemSynthetizer:
                 df = cls._resolve(s, uow)
                 if df is not None:
                     with uow:
-                        uow.export.synthetize_df(df, filename)
+                        export_df = (
+                            df.to_pandas()
+                            if isinstance(df, pl.DataFrame)
+                            else df
+                        )
+                        uow.export.synthetize_df(export_df, filename)
                         return s
                 return None
             except Exception as e:
@@ -211,13 +205,13 @@ class SystemSynthetizer:
                 return None
 
     @classmethod
-    def enforce_version(cls, uow: AbstractUnitOfWork):
+    def enforce_version(cls, uow: AbstractUnitOfWork) -> None:
         version = Deck.pmo(uow).versao_modelo
         if version is not None:
             uow.version = version
 
     @classmethod
-    def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
+    def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork) -> None:
         cls.logger = logging.getLogger("main")
         Deck.logger = cls.logger
         uow.subdir = SYSTEM_SYNTHESIS_SUBDIR

@@ -25,7 +25,7 @@ No caso de uma síntese do sistema, são esperados os arquivos::
     >>> UTE.parquet
 
 Para a síntese da execução::
-    
+
     $ ls sintese
     >>> CONVERGENCIA.parquet
     >>> CUSTOS.parquet
@@ -34,14 +34,14 @@ Para a síntese da execução::
     >>> TEMPO.parquet
 
 Para a síntese da política::
-    
+
     $ ls sintese
     >>> CORTES.parquet
     >>> ESTADOS.parquet
     >>> METADADOS_POLITICA.parquet
 
 Alguns dos arquivos esperados na síntese de cenários::
-    
+
     $ ls sintese
     >>> ENAA_REE_BKW.parquet
     >>> ENAA_REE_FOR.parquet
@@ -95,7 +95,7 @@ Alguns dos arquivos esperados na síntese da operação::
     >>> QAFL_UHE.parquet
     >>> QDEF_REE.parquet
     >>> QDEF_SBM.parquet
-    >>> ... 
+    >>> ...
     >>> VARMF_UHE.parquet
     >>> VARMI_REE.parquet
     >>> VARMI_SBM.parquet
@@ -111,27 +111,51 @@ Os metadados são armazenados em arquivos com o prefixo `METADADOS_` e o nome da
 
 Por exemplo, em uma síntese da operação, os metadados podem ser acessados como:
 
-    
+
 .. code-block:: python
 
-    import pandas as pd
-    meta_df = pd.read_parquet("sintese/METADADOS_OPERACAO.parquet")
-    meta_df
+    import polars as pl
+    meta_df = pl.read_parquet("sintese/METADADOS_OPERACAO.parquet")
+    print(meta_df)
 
-                chave nome_curto_variavel              nome_longo_variavel nome_curto_agregacao      nome_longo_agregacao  unidade  calculado  limitado
-    0         CMO_SBM                 CMO       Custo Marginal de Operação                  SBM                Submercado  'R$/MWh'      False     False
-    1       VAGUA_REE               VAGUA                    Valor da Água                  REE  Reservatório Equivalente  'R$/MWh'      False     False
-    2       VAGUA_UHE               VAGUA                    Valor da Água                  UHE       Usina Hidroelétrica  'R$/hm3'      False     False
-    3      VAGUAI_UHE   VAGUA Incremental        Valor da Água Incremental                  UHE       Usina Hidroelétrica  'R$/hm3'      False     False
-    4        CTER_SBM         Custo de GT         Custo de Geração Térmica                  SBM                Submercado '10^6 R$'      False     False
-    ..            ...                 ...                              ...                  ...                       ...      ...        ...       ...
-    164  VNEGEVAP_UHE  Violação Neg. EVAP  Violação Negativa de Evaporação                  UHE       Usina Hidroelétrica                False     False
-    165     VEVAP_UHE       Violação EVAP           Violação de Evaporação                  UHE       Usina Hidroelétrica     'hm3'       True     False
-    166     VEVAP_REE       Violação EVAP           Violação de Evaporação                  REE  Reservatório Equivalente     'hm3'       True     False
-    167     VEVAP_SBM       Violação EVAP           Violação de Evaporação                  SBM                Submercado     'hm3'       True     False
-    168     VEVAP_SIN       Violação EVAP           Violação de Evaporação                  SIN       Sistema Interligado     'hm3'       True     False
-    
-    [169 rows x 8 columns]
+.. code-block:: none
+
+    shape: (169, 9)
+    ┌────────────┬────────────┬───────────┬───────────┬───┬─────────┬───────────┬──────────┬───────────┐
+    │ chave      ┆ nome_curto ┆ nome_long ┆ nome_curt ┆ … ┆ unidade ┆ calculado ┆ limitado ┆ __index_l │
+    │ ---        ┆ _variavel  ┆ o_variave ┆ o_agregac ┆   ┆ ---     ┆ ---       ┆ ---      ┆ evel_0__  │
+    │ str        ┆ ---        ┆ l         ┆ ao        ┆   ┆ str     ┆ bool      ┆ bool     ┆ ---       │
+    │            ┆ str        ┆ ---       ┆ ---       ┆   ┆         ┆           ┆          ┆ i64       │
+    │            ┆            ┆ str       ┆ str       ┆   ┆         ┆           ┆          ┆           │
+    ╞════════════╪════════════╪═══════════╪═══════════╪═══╪═════════╪═══════════╪══════════╪═══════════╡
+    │ CMO_SBM    ┆ CMO        ┆ Custo     ┆ SBM       ┆ … ┆ R$/MWh  ┆ false     ┆ false    ┆ 0         │
+    │            ┆            ┆ Marginal  ┆           ┆   ┆         ┆           ┆          ┆           │
+    │            ┆            ┆ de        ┆           ┆   ┆         ┆           ┆          ┆           │
+    │            ┆            ┆ Operação  ┆           ┆   ┆         ┆           ┆          ┆           │
+    │ VAGUA_REE  ┆ VAGUA      ┆ Valor da  ┆ REE       ┆ … ┆ R$/MWh  ┆ false     ┆ false    ┆ 1         │
+    │            ┆            ┆ Água      ┆           ┆   ┆         ┆           ┆          ┆           │
+    │ VAGUA_UHE  ┆ VAGUA      ┆ Valor da  ┆ UHE       ┆ … ┆ R$/hm3  ┆ false     ┆ false    ┆ 2         │
+    │            ┆            ┆ Água      ┆           ┆   ┆         ┆           ┆          ┆           │
+    │ VAGUAI_UHE ┆ VAGUA Incr ┆ Valor da  ┆ UHE       ┆ … ┆ R$/hm3  ┆ false     ┆ false    ┆ 3         │
+    │            ┆ emental    ┆ Água Incr ┆           ┆   ┆         ┆           ┆          ┆           │
+    │            ┆            ┆ emental   ┆           ┆   ┆         ┆           ┆          ┆           │
+    │ CTER_SBM   ┆ Custo de   ┆ Custo de  ┆ SBM       ┆ … ┆ 10^6 R$ ┆ false     ┆ false    ┆ 4         │
+    │            ┆ GT         ┆ Geração   ┆           ┆   ┆         ┆           ┆          ┆           │
+    │            ┆            ┆ Térmica   ┆           ┆   ┆         ┆           ┆          ┆           │
+    │ …          ┆ …          ┆ …         ┆ …         ┆ … ┆ …       ┆ …         ┆ …        ┆ …         │
+    │ VEVAP_UHE  ┆ Violação   ┆ Violação  ┆ UHE       ┆ … ┆ hm3     ┆ true      ┆ false    ┆ 165       │
+    │            ┆ EVAP       ┆ de Evapor ┆           ┆   ┆         ┆           ┆          ┆           │
+    │            ┆            ┆ ação      ┆           ┆   ┆         ┆           ┆          ┆           │
+    │ VEVAP_REE  ┆ Violação   ┆ Violação  ┆ REE       ┆ … ┆ hm3     ┆ true      ┆ false    ┆ 166       │
+    │            ┆ EVAP       ┆ de Evapor ┆           ┆   ┆         ┆           ┆          ┆           │
+    │            ┆            ┆ ação      ┆           ┆   ┆         ┆           ┆          ┆           │
+    │ VEVAP_SBM  ┆ Violação   ┆ Violação  ┆ SBM       ┆ … ┆ hm3     ┆ true      ┆ false    ┆ 167       │
+    │            ┆ EVAP       ┆ de Evapor ┆           ┆   ┆         ┆           ┆          ┆           │
+    │            ┆            ┆ ação      ┆           ┆   ┆         ┆           ┆          ┆           │
+    │ VEVAP_SIN  ┆ Violação   ┆ Violação  ┆ SIN       ┆ … ┆ hm3     ┆ true      ┆ false    ┆ 168       │
+    │            ┆ EVAP       ┆ de Evapor ┆           ┆   ┆         ┆           ┆          ┆           │
+    │            ┆            ┆ ação      ┆           ┆   ┆         ┆           ┆          ┆           │
+    └────────────┴────────────┴───────────┴───────────┴───┴─────────┴───────────┴──────────┴───────────┘
 
 
 Formato das Estatísticas
@@ -147,24 +171,52 @@ Por exemplo, em uma síntese da operação, as estatísticas podem ser acessadas
 
 .. code-block:: python
 
-    import pandas as pd
-    hydro_df = pd.read_parquet("sintese/ESTATISTICAS_OPERACAO_UHE.parquet")
-    hydro_df
+    import polars as pl
+    hydro_df = pl.read_parquet("sintese/ESTATISTICAS_OPERACAO_UHE.parquet")
+    print(hydro_df)
 
-            variavel  estagio data_inicio   data_fim cenario  patamar  ...       valor  codigo_usina  codigo_ree  codigo_submercado  limite_inferior  limite_superior
-    0          VAGUA        1  2023-10-01 2023-11-01     max        0  ...   13.249930             1          10                  1             -inf              inf
-    1         VAGUAI        1  2023-10-01 2023-11-01     max        0  ...    2.568698             1          10                  1             -inf              inf
-    2           VTUR        1  2023-10-01 2023-11-01     max        0  ...  522.970000             1          10                  1              0.0           562.82
-    3           VVER        1  2023-10-01 2023-11-01     max        0  ...    0.850000             1          10                  1              0.0              inf
-    4           QTUR        1  2023-10-01 2023-11-01     max        0  ...  198.850000             1          10                  1              0.0           214.00
-    ...          ...      ...         ...        ...     ...      ...  ...         ...           ...         ...                ...              ...              ...
-    2451565     GHID       51  2027-12-01 2028-01-01     std        3  ...   21.759415           314           8                  4             -inf              inf
-    2451566   VGHMIN       51  2027-12-01 2028-01-01     std        3  ...    0.000000           314           8                  4             -inf              inf
-    2451567    VFPHA       51  2027-12-01 2028-01-01     std        3  ...         NaN           314           8                  4             -inf              inf
-    2451568     HJUS       51  2027-12-01 2028-01-01     std        3  ...    0.136938           314           8                  4             -inf              inf
-    2451569     HLIQ       51  2027-12-01 2028-01-01     std        3  ...    0.136938           314           8                  4             -inf              inf
-    
-    [2451570 rows x 13 columns]
+.. code-block:: none
+
+    shape: (2_466_819, 13)
+    ┌──────────┬─────────┬────────────┬────────────┬───┬───────────┬───────────┬───────────┬───────────┐
+    │ variavel ┆ estagio ┆ data_inici ┆ data_fim   ┆ … ┆ codigo_re ┆ codigo_su ┆ limite_in ┆ limite_su │
+    │ ---      ┆ ---     ┆ o          ┆ ---        ┆   ┆ e         ┆ bmercado  ┆ ferior    ┆ perior    │
+    │ str      ┆ i64     ┆ ---        ┆ datetime[n ┆   ┆ ---       ┆ ---       ┆ ---       ┆ ---       │
+    │          ┆         ┆ datetime[n ┆ s, UTC]    ┆   ┆ i64       ┆ i64       ┆ f64       ┆ f64       │
+    │          ┆         ┆ s, UTC]    ┆            ┆   ┆           ┆           ┆           ┆           │
+    ╞══════════╪═════════╪════════════╪════════════╪═══╪═══════════╪═══════════╪═══════════╪═══════════╡
+    │ VAGUA    ┆ 1       ┆ 2023-10-01 ┆ 2023-11-01 ┆ … ┆ 10        ┆ 1         ┆ -inf      ┆ inf       │
+    │          ┆         ┆ 00:00:00   ┆ 00:00:00   ┆   ┆           ┆           ┆           ┆           │
+    │          ┆         ┆ UTC        ┆ UTC        ┆   ┆           ┆           ┆           ┆           │
+    │ VAGUAI   ┆ 1       ┆ 2023-10-01 ┆ 2023-11-01 ┆ … ┆ 10        ┆ 1         ┆ -inf      ┆ inf       │
+    │          ┆         ┆ 00:00:00   ┆ 00:00:00   ┆   ┆           ┆           ┆           ┆           │
+    │          ┆         ┆ UTC        ┆ UTC        ┆   ┆           ┆           ┆           ┆           │
+    │ VTUR     ┆ 1       ┆ 2023-10-01 ┆ 2023-11-01 ┆ … ┆ 10        ┆ 1         ┆ 0.0       ┆ 562.82    │
+    │          ┆         ┆ 00:00:00   ┆ 00:00:00   ┆   ┆           ┆           ┆           ┆           │
+    │          ┆         ┆ UTC        ┆ UTC        ┆   ┆           ┆           ┆           ┆           │
+    │ VVER     ┆ 1       ┆ 2023-10-01 ┆ 2023-11-01 ┆ … ┆ 10        ┆ 1         ┆ 0.0       ┆ inf       │
+    │          ┆         ┆ 00:00:00   ┆ 00:00:00   ┆   ┆           ┆           ┆           ┆           │
+    │          ┆         ┆ UTC        ┆ UTC        ┆   ┆           ┆           ┆           ┆           │
+    │ QTUR     ┆ 1       ┆ 2023-10-01 ┆ 2023-11-01 ┆ … ┆ 10        ┆ 1         ┆ 0.0       ┆ 214.0     │
+    │          ┆         ┆ 00:00:00   ┆ 00:00:00   ┆   ┆           ┆           ┆           ┆           │
+    │          ┆         ┆ UTC        ┆ UTC        ┆   ┆           ┆           ┆           ┆           │
+    │ …        ┆ …       ┆ …          ┆ …          ┆ … ┆ …         ┆ …         ┆ …         ┆ …         │
+    │ GHID     ┆ 51      ┆ 2027-12-01 ┆ 2028-01-01 ┆ … ┆ 8         ┆ 4         ┆ -inf      ┆ inf       │
+    │          ┆         ┆ 00:00:00   ┆ 00:00:00   ┆   ┆           ┆           ┆           ┆           │
+    │          ┆         ┆ UTC        ┆ UTC        ┆   ┆           ┆           ┆           ┆           │
+    │ VGHMIN   ┆ 51      ┆ 2027-12-01 ┆ 2028-01-01 ┆ … ┆ 8         ┆ 4         ┆ -inf      ┆ inf       │
+    │          ┆         ┆ 00:00:00   ┆ 00:00:00   ┆   ┆           ┆           ┆           ┆           │
+    │          ┆         ┆ UTC        ┆ UTC        ┆   ┆           ┆           ┆           ┆           │
+    │ VFPHA    ┆ 51      ┆ 2027-12-01 ┆ 2028-01-01 ┆ … ┆ 8         ┆ 4         ┆ -inf      ┆ inf       │
+    │          ┆         ┆ 00:00:00   ┆ 00:00:00   ┆   ┆           ┆           ┆           ┆           │
+    │          ┆         ┆ UTC        ┆ UTC        ┆   ┆           ┆           ┆           ┆           │
+    │ HJUS     ┆ 51      ┆ 2027-12-01 ┆ 2028-01-01 ┆ … ┆ 8         ┆ 4         ┆ -inf      ┆ inf       │
+    │          ┆         ┆ 00:00:00   ┆ 00:00:00   ┆   ┆           ┆           ┆           ┆           │
+    │          ┆         ┆ UTC        ┆ UTC        ┆   ┆           ┆           ┆           ┆           │
+    │ HLIQ     ┆ 51      ┆ 2027-12-01 ┆ 2028-01-01 ┆ … ┆ 8         ┆ 4         ┆ -inf      ┆ inf       │
+    │          ┆         ┆ 00:00:00   ┆ 00:00:00   ┆   ┆           ┆           ┆           ┆           │
+    │          ┆         ┆ UTC        ┆ UTC        ┆   ┆           ┆           ┆           ┆           │
+    └──────────┴─────────┴────────────┴────────────┴───┴───────────┴───────────┴───────────┴───────────┘
 
 
 No arquivo de estatísticas, ao invés dos dados associados aos `N` cenários da etapa de simulação final, são armazenadas as estatísticas dos dados associados a cada entidade, em cada estágio / patamar, calculadas nos cenários.
@@ -180,21 +232,49 @@ como `CMO_SBM` e `EARMF_REE`. Para uma mesma entidade, os arquivos de todas as v
 
 .. code-block:: python
 
-    import pandas as pd
-    eer_df = pd.read_parquet("sintese/EARMF_REE.parquet")
-    eer_df
+    import polars as pl
+    eer_df = pl.read_parquet("sintese/EARMF_REE.parquet")
+    print(eer_df)
 
-           codigo_ree  codigo_submercado  estagio data_inicio   data_fim  cenario  patamar  duracao_patamar    valor  limite_inferior  limite_superior
-    0               1                  1        1  2023-10-01 2023-11-01        1        0            730.0  30647.0          10194.0          50969.0
-    1               1                  1        1  2023-10-01 2023-11-01        2        0            730.0  30494.0          10194.0          50969.0
-    2               1                  1        1  2023-10-01 2023-11-01        3        0            730.0  31585.0          10194.0          50969.0
-    3               1                  1        1  2023-10-01 2023-11-01        4        0            730.0  30273.0          10194.0          50969.0
-    4               1                  1        1  2023-10-01 2023-11-01        5        0            730.0  31046.0          10194.0          50969.0
-    ...           ...                ...      ...         ...        ...      ...      ...              ...      ...              ...              ...
-    18332          12                  1       51  2027-12-01 2028-01-01        3        0            730.0  10132.0           2027.0          11831.0
-    18333          12                  1       51  2027-12-01 2028-01-01        4        0            730.0  10132.0           2027.0          11831.0
-    18334          12                  1       51  2027-12-01 2028-01-01        5        0            730.0   3955.0           2027.0          11831.0
-    18335          12                  1       51  2027-12-01 2028-01-01        6        0            730.0   7294.0           2027.0          11831.0
-    18336          12                  1       51  2027-12-01 2028-01-01        7        0            730.0   9903.0           2027.0          11831.0
-    
-    [4284 rows x 11 columns]
+.. code-block:: none
+
+    shape: (18_337, 11)
+    ┌────────────┬────────────┬─────────┬────────────┬───┬─────────┬────────────┬────────────┬───────────┐
+    │ codigo_ree ┆ codigo_sub ┆ estagio ┆ data_inici ┆ … ┆ valor   ┆ limite_inf ┆ limite_sup ┆ __index_l │
+    │ ---        ┆ mercado    ┆ ---     ┆ o          ┆   ┆ ---     ┆ erior      ┆ erior      ┆ evel_0__  │
+    │ i64        ┆ ---        ┆ i64     ┆ ---        ┆   ┆ f64     ┆ ---        ┆ ---        ┆ ---       │
+    │            ┆ i64        ┆         ┆ datetime[n ┆   ┆         ┆ f64        ┆ f64        ┆ i64       │
+    │            ┆            ┆         ┆ s, UTC]    ┆   ┆         ┆            ┆            ┆           │
+    ╞════════════╪════════════╪═════════╪════════════╪═══╪═════════╪════════════╪════════════╪═══════════╡
+    │ 1          ┆ 1          ┆ 1       ┆ 2023-10-01 ┆ … ┆ 30647.0 ┆ 10194.0    ┆ 50969.0    ┆ 0         │
+    │            ┆            ┆         ┆ 00:00:00   ┆   ┆         ┆            ┆            ┆           │
+    │            ┆            ┆         ┆ UTC        ┆   ┆         ┆            ┆            ┆           │
+    │ 1          ┆ 1          ┆ 1       ┆ 2023-10-01 ┆ … ┆ 30494.0 ┆ 10194.0    ┆ 50969.0    ┆ 1         │
+    │            ┆            ┆         ┆ 00:00:00   ┆   ┆         ┆            ┆            ┆           │
+    │            ┆            ┆         ┆ UTC        ┆   ┆         ┆            ┆            ┆           │
+    │ 1          ┆ 1          ┆ 1       ┆ 2023-10-01 ┆ … ┆ 31585.0 ┆ 10194.0    ┆ 50969.0    ┆ 2         │
+    │            ┆            ┆         ┆ 00:00:00   ┆   ┆         ┆            ┆            ┆           │
+    │            ┆            ┆         ┆ UTC        ┆   ┆         ┆            ┆            ┆           │
+    │ 1          ┆ 1          ┆ 1       ┆ 2023-10-01 ┆ … ┆ 30273.0 ┆ 10194.0    ┆ 50969.0    ┆ 3         │
+    │            ┆            ┆         ┆ 00:00:00   ┆   ┆         ┆            ┆            ┆           │
+    │            ┆            ┆         ┆ UTC        ┆   ┆         ┆            ┆            ┆           │
+    │ 1          ┆ 1          ┆ 1       ┆ 2023-10-01 ┆ … ┆ 31046.0 ┆ 10194.0    ┆ 50969.0    ┆ 4         │
+    │            ┆            ┆         ┆ 00:00:00   ┆   ┆         ┆            ┆            ┆           │
+    │            ┆            ┆         ┆ UTC        ┆   ┆         ┆            ┆            ┆           │
+    │ …          ┆ …          ┆ …       ┆ …          ┆ … ┆ …       ┆ …          ┆ …          ┆ …         │
+    │ 12         ┆ 1          ┆ 51      ┆ 2027-12-01 ┆ … ┆ 10132.0 ┆ 2027.0     ┆ 11831.0    ┆ 18332     │
+    │            ┆            ┆         ┆ 00:00:00   ┆   ┆         ┆            ┆            ┆           │
+    │            ┆            ┆         ┆ UTC        ┆   ┆         ┆            ┆            ┆           │
+    │ 12         ┆ 1          ┆ 51      ┆ 2027-12-01 ┆ … ┆ 10132.0 ┆ 2027.0     ┆ 11831.0    ┆ 18333     │
+    │            ┆            ┆         ┆ 00:00:00   ┆   ┆         ┆            ┆            ┆           │
+    │            ┆            ┆         ┆ UTC        ┆   ┆         ┆            ┆            ┆           │
+    │ 12         ┆ 1          ┆ 51      ┆ 2027-12-01 ┆ … ┆ 3955.0  ┆ 2027.0     ┆ 11831.0    ┆ 18334     │
+    │            ┆            ┆         ┆ 00:00:00   ┆   ┆         ┆            ┆            ┆           │
+    │            ┆            ┆         ┆ UTC        ┆   ┆         ┆            ┆            ┆           │
+    │ 12         ┆ 1          ┆ 51      ┆ 2027-12-01 ┆ … ┆ 7294.0  ┆ 2027.0     ┆ 11831.0    ┆ 18335     │
+    │            ┆            ┆         ┆ 00:00:00   ┆   ┆         ┆            ┆            ┆           │
+    │            ┆            ┆         ┆ UTC        ┆   ┆         ┆            ┆            ┆           │
+    │ 12         ┆ 1          ┆ 51      ┆ 2027-12-01 ┆ … ┆ 9903.0  ┆ 2027.0     ┆ 11831.0    ┆ 18336     │
+    │            ┆            ┆         ┆ 00:00:00   ┆   ┆         ┆            ┆            ┆           │
+    │            ┆            ┆         ┆ UTC        ┆   ┆         ┆            ┆            ┆           │
+    └────────────┴────────────┴─────────┴────────────┴───┴─────────┴────────────┴────────────┴───────────┘

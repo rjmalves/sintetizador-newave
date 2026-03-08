@@ -45,50 +45,46 @@ Síntese dos Cenários
 
 # %%
 # Os arquivos serão salvos no subdiretório `sintese`. Para realizar o processamento,
-# pode ser utilizado o próprio `python`:
+# pode ser utilizado o próprio `python`. Os dados são lidos como Polars DataFrames:
+import polars as pl
 import plotly.express as px
-import plotly.graph_objects as go
-import pandas as pd
-
 
 # %%
 # Para a síntese dos cenários é produzido um arquivo com as informações das sínteses
 # que foram realizadas:
-metadados = pd.read_parquet("sintese/METADADOS_CENARIOS.parquet")
+metadados = pl.read_parquet("sintese/METADADOS_CENARIOS.parquet")
 print(metadados.head(10))
-
 
 # %%
 # Os arquivos com os nomes das sínteses de cenários armazenam os dados
-# de todos os cenários gerados.
-cenarios_uhe_for = pd.read_parquet("sintese/QINC_UHE_FOR.parquet")
-cenarios_ree_sf = pd.read_parquet("sintese/ENAA_REE_SF.parquet")
-cenarios_sin_bkw = pd.read_parquet("sintese/ENAA_SIN_BKW.parquet")
-
+# de todos os cenários gerados. Cada arquivo é lido como um Polars DataFrame:
+cenarios_uhe_for = pl.read_parquet("sintese/QINC_UHE_FOR.parquet")
+cenarios_ree_sf = pl.read_parquet("sintese/ENAA_REE_SF.parquet")
+cenarios_sin_bkw = pl.read_parquet("sintese/ENAA_SIN_BKW.parquet")
 
 # %%
 # O formato dos dados por UHE:
 print(cenarios_uhe_for.head(10))
 
 # %%
-# Os tipos de dados da síntese de cenários por UHE:
-cenarios_uhe_for.dtypes
+# O esquema de tipos de dados da síntese de cenários por UHE:
+cenarios_uhe_for.schema
 
 # %%
 # O formato dos dados por REE:
 print(cenarios_ree_sf.head(10))
 
 # %%
-# Os tipos de dados da síntese de cenários por REE:
-cenarios_ree_sf.dtypes
+# O esquema de tipos de dados da síntese de cenários por REE:
+cenarios_ree_sf.schema
 
 # %%
 # O formato dos dados para o SIN:
 print(cenarios_sin_bkw.head(10))
 
 # %%
-# Os tipos de dados da síntese de cenários para o SIN:
-cenarios_sin_bkw.dtypes
+# O esquema de tipos de dados da síntese de cenários para o SIN:
+cenarios_sin_bkw.schema
 
 # %%
 # De modo geral, os arquivos das sínteses de cenários sempre possuem as colunas
@@ -98,7 +94,7 @@ cenarios_sin_bkw.dtypes
 
 # %%
 # Da mesma maneira que para as demais sínteses, é possível produzir visualizações
-# e estatísticas a partir dos arquivos gerados.
+# e estatísticas a partir dos arquivos gerados. O plotly aceita Polars DataFrames diretamente:
 fig = px.box(
     cenarios_sin_bkw,
     x="estagio",
@@ -113,18 +109,16 @@ fig
 # Na síntese dos cenários, como os arquivos processados são os binários do modelo,
 # o estágio "1" não se refere necessariamente ao primeiro mês do período do estudo.
 
-
 # %%
 # Além dos arquivos com as sínteses dos cenários, estão disponíveis também os arquivos
 # que agregam estatísticas das previsões:
 
-estatisticas = pd.read_parquet("sintese/ESTATISTICAS_CENARIOS_UHE_FOR.parquet")
+estatisticas = pl.read_parquet("sintese/ESTATISTICAS_CENARIOS_UHE_FOR.parquet")
 print(estatisticas.head(10))
 
 # %%
 # As informações dos arquivos de estatísticas são:
 print(estatisticas.columns)
-
 
 # %%
 # As estatísticas disponíveis são os valores mínimos, máximos, médios e quantis a cada

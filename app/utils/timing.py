@@ -1,6 +1,7 @@
 import time
 from logging import INFO, Logger
-from typing import Optional
+from types import TracebackType
+from typing import Optional, Type
 
 
 class time_and_log:
@@ -14,13 +15,16 @@ class time_and_log:
         self.logger = logger
         self.level = level
 
-    def __enter__(
-        self,
-    ):
+    def __enter__(self) -> "time_and_log":
         self.start_time = time.perf_counter()
         return self
 
-    def __exit__(self, exc_type, exc_value, exc_tb):
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_value: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
         end_time = time.perf_counter()
         run_time = end_time - self.start_time
         if self.logger:

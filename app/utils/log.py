@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import errno
 import logging
 import logging.handlers
 import sys
 import time
 from multiprocessing import Process
-from multiprocessing.queues import Queue
+from multiprocessing.queues import Queue as MPQueue
 from typing import Optional
 
 from app.utils.singleton import Singleton
@@ -14,7 +16,7 @@ class Log(metaclass=Singleton):
     listener: Optional[Process] = None
 
     @classmethod
-    def logging_process(cls, q: Queue):
+    def logging_process(cls, q: MPQueue[logging.LogRecord]) -> None:
         cls.configure_queue_logger()
         while True:
             try:
@@ -30,7 +32,7 @@ class Log(metaclass=Singleton):
             time.sleep(0.1)
 
     @classmethod
-    def configure_queue_logger(cls):
+    def configure_queue_logger(cls) -> None:
         root = logging.getLogger()
         f = logging.Formatter("%(asctime)s %(levelname)s: %(message)s")
         # Logger para STDOUT
@@ -40,7 +42,9 @@ class Log(metaclass=Singleton):
         root.setLevel(logging.DEBUG)
 
     @classmethod
-    def configure_main_logger(cls, q: Queue) -> logging.Logger:
+    def configure_main_logger(
+        cls, q: MPQueue[logging.LogRecord]
+    ) -> logging.Logger:
         h = logging.handlers.QueueHandler(q)
         logger = logging.getLogger("main")
         logger.addHandler(h)
@@ -50,7 +54,7 @@ class Log(metaclass=Singleton):
     @classmethod
     def configure_process_logger(
         cls,
-        q: Queue,
+        q: MPQueue[logging.LogRecord],
         variable: str,
         member: int,
     ) -> logging.Logger:
@@ -61,10 +65,11 @@ class Log(metaclass=Singleton):
         return logger
 
     @classmethod
-    def start_logging_process(cls, q: Queue):
+    def start_logging_process(cls, q: MPQueue[logging.LogRecord]) -> None:
         cls.listener = Process(target=cls.logging_process, args=(q,))
         cls.listener.start()
 
     @classmethod
-    def terminate_logging_process(cls):
-        cls.listener.terminate()
+    def terminate_logging_process(cls) -> None:
+        if cls.listener is not None:
+            cls.listener.terminate()

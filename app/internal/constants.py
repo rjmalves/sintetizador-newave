@@ -62,8 +62,6 @@ MONTH_COL = "mes"
 DATE_COL = "data"
 CONFIG_COL = "configuracao"
 
-STATS_OR_SCENARIO_COL = "estatistica_ou_cenario"
-
 CUT_INDEX_COL = "indice_corte"
 COEF_TYPE_COL = "tipo_coeficiente"
 ENTITY_INDEX_COL = "indice_entidade"
@@ -99,7 +97,6 @@ IDENTIFICATION_COLUMNS = [
     BLOCK_COL,
     BLOCK_DURATION_COL,
     SCENARIO_COL,
-    STATS_OR_SCENARIO_COL,
 ]
 
 OPERATION_SYNTHESIS_COMMON_COLUMNS = [
@@ -138,7 +135,7 @@ SYSTEM_SYNTHESIS_SUBDIR = ""
 
 QUANTILES_FOR_STATISTICS = [0.05 * i for i in range(21)]
 
-import pandas  # type: ignore # noqa: E402
+import pandas  # noqa: E402
 
 __has_numba = find_spec("numba") is not None
 if pandas.__version__ >= "2.2.0" and __has_numba:

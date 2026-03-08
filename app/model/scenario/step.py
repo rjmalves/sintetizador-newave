@@ -1,4 +1,5 @@
 from enum import Enum
+
 from app.internal.constants import (
     ITERATION_COL,
     SPAN_COL,
@@ -17,7 +18,7 @@ class Step(Enum):
                 return v
         return cls.FINAL_SIMULATION
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.value
 
     @property

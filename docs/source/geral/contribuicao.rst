@@ -1,6 +1,12 @@
 Como contribuir?
 =================
 
+.. note::
+
+   As instrucoes mais atualizadas para contribuicao estao no arquivo
+   `CONTRIBUTING.md <https://github.com/rjmalves/sintetizador-newave/blob/main/CONTRIBUTING.md>`_
+   na raiz do repositorio.
+
 O módulo `inewave` e dependências de desenvolvimento
 ------------------------------------------------------------
 
@@ -16,7 +22,7 @@ No *sintetizador-newave* a dependência do módulo *inewave* é concentrada na c
 objetos nativos, DataFrames ou arrays para as demais partes da aplicação.
 
 Para instalar as dependências de desenvolvimento, incluindo as necessárias para a geração automática do site::
-    
+
     $ git clone https://github.com/rjmalves/sintetizador-newave.git
     $ cd sintetizador-newave
     $ pip install .[dev]
@@ -40,7 +46,7 @@ excessiva de *branches* e *loops*, o que piora e legibilidade do código. Isto p
 específicos para análise de qualidade de código, como será mencionado a seguir. A única exceção é a regra `E203 <https://www.flake8rules.com/rules/E203.html>`_.
 
 Para garantir a formatação é recomendado utilizar o módulo `ruff <https://docs.astral.sh/ruff/>`_, que realiza formatação automática e possui
-integração nativa com alguns editores de texto no formato de *plugins* ou extensões. 
+integração nativa com alguns editores de texto no formato de *plugins* ou extensões.
 
 A segunda convenção é que seja utilizada tipagem estática. Isto é, não deve ser uitilizada uma variável em código a qual possua
 tipo de dados que possa mudar durante a execução do mesmo. Além disso, não deve ser declarada uma variável cujo tipo não é possível de

@@ -13,34 +13,38 @@ from app.services.unitofwork import AbstractUnitOfWork
 
 def synthetize_system(
     command: commands.SynthetizeSystem, uow: AbstractUnitOfWork
-):
+) -> None:
     SystemSynthetizer.synthetize(command.variables, uow)
 
 
 def synthetize_execution(
     command: commands.SynthetizeExecution, uow: AbstractUnitOfWork
-):
+) -> None:
     ExecutionSynthetizer.synthetize(command.variables, uow)
 
 
 def synthetize_scenarios(
     command: commands.SynthetizeScenarios, uow: AbstractUnitOfWork
-):
+) -> None:
     ScenarioSynthetizer.synthetize(command.variables, uow)
 
 
 def synthetize_operation(
     command: commands.SynthetizeOperation, uow: AbstractUnitOfWork
-):
+) -> None:
     OperationSynthetizer.synthetize(command.variables, uow)
 
 
 def synthetize_policy(
     command: commands.SynthetizePolicy, uow: AbstractUnitOfWork
-):
+) -> None:
     PolicySynthetizer.synthetize(command.variables, uow)
 
 
-def clean():
-    path = pathlib.Path(Settings().basedir).joinpath(Settings().synthesis_dir)
+def clean() -> None:
+    settings = Settings()
+    basedir = settings.basedir
+    if basedir is None:
+        raise RuntimeError("APP_BASEDIR not set")
+    path = pathlib.Path(basedir).joinpath(settings.synthesis_dir)
     shutil.rmtree(path)

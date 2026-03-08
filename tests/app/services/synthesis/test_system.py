@@ -76,8 +76,10 @@ def test_synthesis_pat(test_settings):
     df, df_meta = __synthetize_with_mock(synthesis_str)
     start_date = datetime(2023, 1, 1)
     assert df.at[0, START_DATE_COL] == pd.Timestamp(start_date)
-    assert df.at[0, BLOCK_COL] == 1
-    assert df.at[1, VALUE_COL] == 185.785
+    # block_lengths sorts by [date, block]; pat0 (block=0) now comes before block 1
+    assert df.at[0, BLOCK_COL] == 0
+    # position 1 = block 1 of first date (2023-01-01): 0.2661 * 730 = 194.253
+    assert abs(df.at[1, VALUE_COL] - 194.253) < 0.001
     __validate_metadata(synthesis_str, df_meta)
 
 
@@ -92,8 +94,9 @@ def test_synthesis_sbm(test_settings):
 def test_synthesis_ree(test_settings):
     synthesis_str = "REE"
     df, df_meta = __synthetize_with_mock(synthesis_str)
-    assert df.at[0, EER_CODE_COL] == 10
-    assert df.at[0, EER_NAME_COL] == "PARANA"
+    parana_rows = df.loc[df[EER_CODE_COL] == 10]
+    assert len(parana_rows) == 1
+    assert parana_rows.iloc[0][EER_NAME_COL] == "PARANA"
     __validate_metadata(synthesis_str, df_meta)
 
 

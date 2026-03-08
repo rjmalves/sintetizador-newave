@@ -4,7 +4,7 @@ from typing import List
 
 def match_variables_with_wildcards(
     given_variables: List[str], all_variables: List[str]
-):
+) -> List[str]:
     variables_with_wildcards: List[str] = []
     for v in given_variables:
         if "*" in v:

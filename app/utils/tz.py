@@ -1,4 +1,4 @@
-import pandas as pd  # type: ignore
+import pandas as pd
 
 
 def enforce_utc(df: pd.DataFrame) -> pd.DataFrame:

@@ -30,13 +30,13 @@ Síntese da Execução
 
 # %%
 # Os arquivos serão salvos no subdiretório `sintese`. Para realizar o processamento,
-# pode ser utilizado o próprio `python`:
+# pode ser utilizado o próprio `python`. Os dados são lidos como Polars DataFrames:
+import polars as pl
 import plotly.express as px
-import pandas as pd
 
-convergencia = pd.read_parquet("sintese/CONVERGENCIA.parquet")
-custos = pd.read_parquet("sintese/CUSTOS.parquet")
-tempo = pd.read_parquet("sintese/TEMPO.parquet")
+convergencia = pl.read_parquet("sintese/CONVERGENCIA.parquet")
+custos = pl.read_parquet("sintese/CUSTOS.parquet")
+tempo = pl.read_parquet("sintese/TEMPO.parquet")
 
 # %%
 # O formato dos dados de CONVERGÊNCIA:
@@ -53,6 +53,7 @@ print(tempo.head(5))
 # %%
 # Cada arquivo pode ser visualizado de diferentes maneiras, a depender da aplicação.
 # Por exemplo, é comum avaliar a convergência do modelo através da variação do Zinf.
+# O plotly aceita Polars DataFrames diretamente:
 
 fig = px.line(
     convergencia,
@@ -66,22 +67,30 @@ fig
 # empilhadas ou setores:
 
 fig = px.pie(
-    custos.loc[custos["valor_esperado"] > 0],
+    custos.filter(pl.col("valor_esperado") > 0),
     values="valor_esperado",
     names="parcela",
 )
 fig
 
 # %%
-# Uma abordagem semelhante é utilizada na análise do tempo de execução:
-from datetime import timedelta
+# Uma abordagem semelhante é utilizada na análise do tempo de execução.
+# A coluna `tempo` está em segundos (float64); a conversão para horas e o label
+# formatado são calculados com expressões nativas do Polars:
+from datetime import timedelta  # noqa: E402
 
-tempo["tempo"] = pd.to_timedelta(tempo["tempo"], unit="s") / timedelta(hours=1)
-tempo["label"] = [str(timedelta(hours=d)) for d in tempo["tempo"].tolist()]
+tempo = tempo.with_columns(
+    (pl.col("tempo") / 3600).alias("tempo_horas"),
+    pl.col("tempo")
+    .map_elements(
+        lambda s: str(timedelta(seconds=int(s))), return_dtype=pl.String
+    )
+    .alias("label"),
+)
 fig = px.bar(
     tempo,
     x="etapa",
-    y="tempo",
+    y="tempo_horas",
     text="label",
     barmode="group",
 )

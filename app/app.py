@@ -1,6 +1,7 @@
 import os
 import time
 from multiprocessing import Manager
+from typing import Any, Tuple
 
 import click
 
@@ -11,7 +12,7 @@ from app.utils.log import Log
 
 
 @click.group()
-def app():
+def app() -> None:
     """
     Aplicação para realizar a síntese de informações em
     um modelo unificado de dados para o NEWAVE.
@@ -27,21 +28,21 @@ def app():
 @click.option(
     "--formato", default="PARQUET", help="formato para escrita da síntese"
 )
-def sistema(variaveis, formato):
+def sistema(variaveis: Tuple[str, ...], formato: str) -> None:
     """
     Realiza a síntese dos dados do sistema do NEWAVE.
     """
     os.environ["FORMATO_SINTESE"] = formato
 
     m = Manager()
-    q = m.Queue(-1)
+    q: Any = m.Queue(-1)
     Log.start_logging_process(q)
 
     logger = Log.configure_main_logger(q)
     logger.info("# Realizando síntese do SISTEMA #")
 
     uow = factory("FS", os.curdir, q)
-    command = commands.SynthetizeSystem(variaveis)
+    command = commands.SynthetizeSystem(list(variaveis))
     handlers.synthetize_system(command, uow)
 
     logger.info("# Fim da síntese #")
@@ -57,13 +58,13 @@ def sistema(variaveis, formato):
 @click.option(
     "--formato", default="PARQUET", help="formato para escrita da síntese"
 )
-def execucao(variaveis, formato):
+def execucao(variaveis: Tuple[str, ...], formato: str) -> None:
     """
     Realiza a síntese dos dados da execução do NEWAVE.
     """
 
     m = Manager()
-    q = m.Queue(-1)
+    q: Any = m.Queue(-1)
     Log.start_logging_process(q)
 
     logger = Log.configure_main_logger(q)
@@ -72,7 +73,7 @@ def execucao(variaveis, formato):
     logger.info("# Realizando síntese da EXECUÇÃO #")
 
     uow = factory("FS", os.curdir, q)
-    command = commands.SynthetizeExecution(variaveis)
+    command = commands.SynthetizeExecution(list(variaveis))
     handlers.synthetize_execution(command, uow)
 
     logger.info("# Fim da síntese #")
@@ -93,13 +94,15 @@ def execucao(variaveis, formato):
     default=1,
     help="numero de processadores para paralelizar",
 )
-def cenarios(variaveis, formato, processadores):
+def cenarios(
+    variaveis: Tuple[str, ...], formato: str, processadores: int
+) -> None:
     """
     Realiza a síntese dos dados de cenários do NEWAVE.
     """
 
     m = Manager()
-    q = m.Queue(-1)
+    q: Any = m.Queue(-1)
     Log.start_logging_process(q)
 
     logger = Log.configure_main_logger(q)
@@ -109,7 +112,7 @@ def cenarios(variaveis, formato, processadores):
     logger.info("# Realizando síntese de CENÁRIOS #")
 
     uow = factory("FS", os.curdir, q)
-    command = commands.SynthetizeScenarios(variaveis)
+    command = commands.SynthetizeScenarios(list(variaveis))
     handlers.synthetize_scenarios(command, uow)
 
     logger.info("# Fim da síntese #")
@@ -130,13 +133,15 @@ def cenarios(variaveis, formato, processadores):
     default=1,
     help="numero de processadores para paralelizar",
 )
-def operacao(variaveis, formato, processadores):
+def operacao(
+    variaveis: Tuple[str, ...], formato: str, processadores: int
+) -> None:
     """
     Realiza a síntese dos dados da operação do NEWAVE (NWLISTOP).
     """
 
     m = Manager()
-    q = m.Queue(-1)
+    q: Any = m.Queue(-1)
     Log.start_logging_process(q)
 
     logger = Log.configure_main_logger(q)
@@ -146,7 +151,7 @@ def operacao(variaveis, formato, processadores):
     logger.info("# Realizando síntese da OPERACAO #")
 
     uow = factory("FS", os.curdir, q)
-    command = commands.SynthetizeOperation(variaveis)
+    command = commands.SynthetizeOperation(list(variaveis))
     handlers.synthetize_operation(command, uow)
 
     logger.info("# Fim da síntese #")
@@ -162,13 +167,13 @@ def operacao(variaveis, formato, processadores):
 @click.option(
     "--formato", default="PARQUET", help="formato para escrita da síntese"
 )
-def politica(variaveis, formato):
+def politica(variaveis: Tuple[str, ...], formato: str) -> None:
     """
     Realiza a síntese dos dados da política do NEWAVE (NWLISTCF).
     """
 
     m = Manager()
-    q = m.Queue(-1)
+    q: Any = m.Queue(-1)
     Log.start_logging_process(q)
 
     logger = Log.configure_main_logger(q)
@@ -176,7 +181,7 @@ def politica(variaveis, formato):
     logger.info("# Realizando síntese da POLITICA #")
 
     uow = factory("FS", os.curdir, q)
-    command = commands.SynthetizePolicy(variaveis)
+    command = commands.SynthetizePolicy(list(variaveis))
     handlers.synthetize_policy(command, uow)
 
     logger.info("# Fim da síntese #")
@@ -185,7 +190,7 @@ def politica(variaveis, formato):
 
 
 @click.command("limpeza")
-def limpeza():
+def limpeza() -> None:
     """
     Realiza a limpeza dos dados resultantes de uma síntese.
     """
@@ -213,13 +218,20 @@ def limpeza():
     default=1,
     help="numero de processadores para paralelizar",
 )
-def completa(sistema, execucao, operacao, politica, formato, processadores):
+def completa(
+    sistema: Tuple[str, ...],
+    execucao: Tuple[str, ...],
+    operacao: Tuple[str, ...],
+    politica: Tuple[str, ...],
+    formato: str,
+    processadores: int,
+) -> None:
     """
     Realiza a síntese completa do NEWAVE.
     """
 
     m = Manager()
-    q = m.Queue(-1)
+    q: Any = m.Queue(-1)
     Log.start_logging_process(q)
 
     logger = Log.configure_main_logger(q)
@@ -228,14 +240,14 @@ def completa(sistema, execucao, operacao, politica, formato, processadores):
     logger.info("# Realizando síntese COMPLETA #")
 
     uow = factory("FS", os.curdir, q)
-    command = commands.SynthetizeSystem(sistema)
-    handlers.synthetize_system(command, uow)
-    command = commands.SynthetizeExecution(execucao)
-    handlers.synthetize_execution(command, uow)
-    command = commands.SynthetizeOperation(operacao)
-    handlers.synthetize_operation(command, uow)
-    command = commands.SynthetizePolicy(politica)
-    handlers.synthetize_policy(command, uow)
+    cmd_sistema = commands.SynthetizeSystem(list(sistema))
+    handlers.synthetize_system(cmd_sistema, uow)
+    cmd_execucao = commands.SynthetizeExecution(list(execucao))
+    handlers.synthetize_execution(cmd_execucao, uow)
+    cmd_operacao = commands.SynthetizeOperation(list(operacao))
+    handlers.synthetize_operation(cmd_operacao, uow)
+    cmd_politica = commands.SynthetizePolicy(list(politica))
+    handlers.synthetize_policy(cmd_politica, uow)
 
     logger.info("# Fim da síntese #")
     time.sleep(1.0)

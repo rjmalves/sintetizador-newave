@@ -2,6 +2,7 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
+import polars as pl
 
 from app.internal.constants import (
     LOWER_BOUND_COL,
@@ -171,35 +172,35 @@ def test_hydro_simulation_stages_ending_date_final_simulation(test_settings):
 
 def test__configurations_pmo(test_settings):
     val = deck._configurations_pmo(uow)
-    assert val.equals(
-        pd.DataFrame(
-            data={
-                START_DATE_COL: pd.date_range(
-                    datetime(2023, 1, 1), datetime(2032, 12, 1), freq="MS"
-                ),
-                VALUE_COL: [1] * 9 + list(range(1, 52)) + [51] * 60,
-            }
-        )
+    assert val is not None
+    expected = pl.DataFrame(
+        data={
+            START_DATE_COL: pd.date_range(
+                datetime(2023, 1, 1), datetime(2032, 12, 1), freq="MS"
+            ).tolist(),
+            VALUE_COL: [1] * 9 + list(range(1, 52)) + [51] * 60,
+        }
     )
+    assert val.equals(expected)
 
 
 def test__configurations_dger(test_settings):
     val = deck._configurations_dger(uow)
-    assert val.equals(
-        pd.DataFrame(
-            data={
-                START_DATE_COL: pd.date_range(
-                    datetime(2023, 10, 1), datetime(2027, 12, 1), freq="MS"
-                ),
-                VALUE_COL: list(range(1, 52)),
-            }
-        )
+    expected = pl.DataFrame(
+        data={
+            START_DATE_COL: pd.date_range(
+                datetime(2023, 10, 1), datetime(2027, 12, 1), freq="MS"
+            ).tolist(),
+            VALUE_COL: list(range(1, 52)),
+        }
     )
+    assert val.equals(expected)
 
 
 def test_configurations(test_settings):
     val = deck.configurations(uow)
     val_pmo = deck._configurations_pmo(uow)
+    assert val_pmo is not None
     assert val.equals(val_pmo)
 
 
@@ -276,12 +277,12 @@ def test_runtimes(test_settings):
 
 def test_submarkets(test_settings):
     val = deck.submarkets(uow)
-    assert val.shape == (5, 5)
+    assert val.shape == (5, 6)
 
 
 def test_eers(test_settings):
     val = deck.eers(uow)
-    assert val.shape == (12, 4)
+    assert val.shape == (12, 5)
 
 
 def test_hybrid_policy(test_settings):
@@ -291,7 +292,7 @@ def test_hybrid_policy(test_settings):
 
 def test_hydros(test_settings):
     val = deck.hydros(uow)
-    assert val.shape == (165, 9)
+    assert val.shape == (165, 10)
 
 
 def test_flow_diversion(test_settings):
@@ -301,12 +302,14 @@ def test_flow_diversion(test_settings):
 
 def test_hydro_volume_bounds(test_settings):
     val = deck.hydro_volume_bounds(uow)
-    assert val.shape == (165, 9)
+    assert isinstance(val, pl.DataFrame)
+    assert val.shape == (165, 10)
 
 
 def test_hydro_volume_bounds_with_changes(test_settings):
     val = deck.hydro_volume_bounds_with_changes(uow)
-    assert val.shape == (165, 9)
+    assert isinstance(val, pl.DataFrame)
+    assert val.shape == (165, 10)
 
 
 def test_hydro_volume_bounds_in_stages(test_settings):
@@ -316,12 +319,14 @@ def test_hydro_volume_bounds_in_stages(test_settings):
 
 def test_hydro_turbined_flow_bounds(test_settings):
     val = deck.hydro_turbined_flow_bounds(uow)
-    assert val.shape == (165, 9)
+    assert isinstance(val, pl.DataFrame)
+    assert val.shape == (165, 10)
 
 
 def test_hydro_turbined_flow_bounds_with_changes(test_settings):
     val = deck.hydro_turbined_flow_bounds_with_changes(uow)
-    assert val.shape == (165, 9)
+    assert isinstance(val, pl.DataFrame)
+    assert val.shape == (165, 10)
 
 
 def test_hydro_turbined_flow_bounds_in_stages(test_settings):
@@ -331,32 +336,36 @@ def test_hydro_turbined_flow_bounds_in_stages(test_settings):
 
 def test_hydro_outflow_bounds(test_settings):
     val = deck.hydro_outflow_bounds(uow)
-    assert val.shape == (165, 9)
+    assert isinstance(val, pl.DataFrame)
+    assert val.shape == (165, 10)
 
 
 def test_hydro_outflow_bounds_with_changes(test_settings):
     val = deck.hydro_outflow_bounds_with_changes(uow)
-    assert val.shape == (165, 9)
+    assert isinstance(val, pl.DataFrame)
+    assert val.shape == (165, 10)
 
 
 def test_hydro_outflow_bounds_in_stages(test_settings):
     val = deck.hydro_outflow_bounds_in_stages(uow)
-    assert val.shape == (165 * 51 * 4, 13)
+    assert val.shape == (165 * 51 * 4, 12)
 
 
 def test_hydro_drops(test_settings):
     val = deck.hydro_drops(uow)
-    assert val.shape == (165, 16)
+    assert isinstance(val, pl.DataFrame)
+    assert val.shape == (165, 17)
 
 
 def test_hydro_drops_in_stages(test_settings):
     val = deck.hydro_drops_in_stages(uow)
+    assert isinstance(val, pl.DataFrame)
     assert val.shape == (165 * 51, 20)
 
 
 def test_thermals(test_settings):
     val = deck.thermals(uow)
-    assert val.shape == (126, 3)
+    assert val.shape == (126, 4)
 
 
 def test_num_blocks(test_settings):
@@ -424,9 +433,9 @@ def test_hydro_code_order(test_settings):
 
 def test_eer_submarket_map(test_settings):
     val = deck.eer_submarket_map(uow)
-    assert val.shape == (12, 3)
+    assert val.shape == (12, 4)
 
 
 def test_thermal_submarket_map(test_settings):
     val = deck.thermal_submarket_map(uow)
-    assert val.shape == (126, 3)
+    assert val.shape == (126, 4)

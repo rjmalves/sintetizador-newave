@@ -54,49 +54,45 @@ Síntese da Operação
 # %%
 # Os arquivos serão salvos no subdiretório `sintese`. Para realizar o processamento,
 # pode ser utilizado o próprio `python`:
+import polars as pl
 import plotly.express as px
-import plotly.graph_objects as go
-import pandas as pd
-
 
 # %%
 # Para a síntese da operação é produzido um arquivo com as informações das sínteses
-# que foram realizadas:
-metadados = pd.read_parquet("sintese/METADADOS_OPERACAO.parquet")
+# que foram realizadas. O resultado é um Polars DataFrame:
+metadados = pl.read_parquet("sintese/METADADOS_OPERACAO.parquet")
 print(metadados.head(10))
-
 
 # %%
 # Os arquivos com os nomes das sínteses de operação armazenam os dados
-# de todos os cenários simulados.
-cmo = pd.read_parquet("sintese/CMO_SBM.parquet")
-earmf = pd.read_parquet("sintese/EARMF_SIN.parquet")
-varmf = pd.read_parquet("sintese/VARMF_UHE.parquet")
-
+# de todos os cenários simulados. Cada arquivo é lido como um Polars DataFrame:
+cmo = pl.read_parquet("sintese/CMO_SBM.parquet")
+earmf = pl.read_parquet("sintese/EARMF_SIN.parquet")
+varmf = pl.read_parquet("sintese/VARMF_UHE.parquet")
 
 # %%
 # O formato dos dados de CMO:
 print(cmo.head(10))
 
 # %%
-# Os tipos de dados da síntese de CMO:
-cmo.dtypes
+# O esquema de tipos de dados da síntese de CMO:
+cmo.schema
 
 # %%
 # O formato dos dados de EARMF:
 print(earmf.head(10))
 
 # %%
-# Os tipos de dados da síntese de EARMF:
-earmf.dtypes
+# O esquema de tipos de dados da síntese de EARMF:
+earmf.schema
 
 # %%
 # O formato dos dados de VARMF:
 print(varmf.head(10))
 
 # %%
-# Os tipos de dados da síntese de VARMF:
-varmf.dtypes
+# O esquema de tipos de dados da síntese de VARMF:
+varmf.schema
 
 # %%
 # De modo geral, os arquivos das sínteses de operação sempre possuem as colunas
@@ -109,20 +105,19 @@ varmf.dtypes
 # A coluna de cenários contém somente inteiros de 1 a N, onde N é o número de séries da
 # simulação final do modelo.
 
-cenarios = earmf["cenario"].unique().tolist()
+cenarios = earmf["cenario"].unique().to_list()
 print(cenarios)
 
 # %%
 # Através das estatísticas é possível fazer um gráfico de caixas, para ilustrar a dispersão
-# da variável da operação com os cenários:
+# da variável da operação com os cenários. O plotly aceita Polars DataFrames diretamente:
 fig = px.box(earmf, x="data_inicio", y="valor")
 fig
-
 
 # %%
 # Para variáveis da operação que possuam diferentes subconjuntos, como os submercados, podem ser utilizados
 # gráficos de violino para avaliação da dispersão:
-cmos_2omes = cmo.loc[cmo["estagio"] == 2]
+cmos_2omes = cmo.filter(pl.col("estagio") == 2)
 fig = px.violin(
     cmos_2omes,
     y="valor",
@@ -131,13 +126,12 @@ fig = px.violin(
 )
 fig
 
-
 # %%
 # Para dados por UHE, como o número de subconjuntos é muito grande, é possível
 # fazer um subconjunto dos elementos de interesse para a visualização:
-varmf_1oano = varmf.loc[
-    (varmf["estagio"] <= 12) & varmf["codigo_usina"].isin([6, 169, 251, 275])
-]
+varmf_1oano = varmf.filter(
+    (pl.col("estagio") <= 12) & pl.col("codigo_usina").is_in([6, 169, 251, 275])
+)
 fig = px.box(
     varmf_1oano,
     x="data_inicio",
@@ -147,12 +141,11 @@ fig = px.box(
 )
 fig
 
-
 # %%
 # Além dos arquivos com as sínteses dos cenários, estão disponíveis também os arquivos
 # que agregam estatísticas das previsões:
 
-estatisticas = pd.read_parquet("sintese/ESTATISTICAS_OPERACAO_UHE.parquet")
+estatisticas = pl.read_parquet("sintese/ESTATISTICAS_OPERACAO_UHE.parquet")
 print(estatisticas.head(10))
 
 # %%

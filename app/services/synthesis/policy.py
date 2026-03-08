@@ -1,9 +1,9 @@
 import logging
 from logging import ERROR, INFO
 from traceback import print_exc
-from typing import Callable, Dict, List, Optional, TypeVar
+from typing import Any, Callable, Dict, List, Optional, TypeVar
 
-import pandas as pd  # type: ignore
+import pandas as pd
 
 from app.internal.constants import (
     POLICY_SYNTHESIS_METADATA_OUTPUT,
@@ -28,7 +28,7 @@ class PolicySynthetizer:
     logger: Optional[logging.Logger] = None
 
     @classmethod
-    def _log(cls, msg: str, level: int = INFO):
+    def _log(cls, msg: str, level: int = INFO) -> None:
         if cls.logger is not None:
             cls.logger.log(level, msg)
 
@@ -82,7 +82,7 @@ class PolicySynthetizer:
     def _resolve(
         cls, synthesis: PolicySynthesis, uow: AbstractUnitOfWork
     ) -> pd.DataFrame:
-        RULES: Dict[Variable, Callable] = {
+        RULES: Dict[Variable, Callable[..., Any]] = {
             Variable.CORTES_COEFICIENTES: cls._resolve_cortes_coeficientes,
             Variable.CORTES_VARIAVEIS: cls._resolve_cortes_variaveis,
         }
@@ -107,7 +107,7 @@ class PolicySynthetizer:
         cls,
         success_synthesis: List[PolicySynthesis],
         uow: AbstractUnitOfWork,
-    ):
+    ) -> None:
         metadata_df = pd.DataFrame(
             columns=[
                 "chave",
@@ -159,7 +159,7 @@ class PolicySynthetizer:
                 return None
 
     @classmethod
-    def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork):
+    def synthetize(cls, variables: List[str], uow: AbstractUnitOfWork) -> None:
         cls.logger = logging.getLogger("main")
         uow.subdir = POLICY_SYNTHESIS_SUBDIR
         with time_and_log(

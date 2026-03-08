@@ -1,9 +1,10 @@
 from logging import ERROR, INFO, Logger
-from typing import Callable, Dict, List, Optional, Tuple, TypeVar
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
-import pandas as pd  # type: ignore
-from dateutil.relativedelta import relativedelta  # type: ignore
+import pandas as pd
+import polars as pl
+from dateutil.relativedelta import relativedelta
 
 from app.internal.constants import (
     BLOCK_COL,
@@ -41,352 +42,354 @@ class OperationVariableBounds:
     processo de síntese da operação.
     """
 
-    T = TypeVar("T")
     logger: Optional[Logger] = None
 
-    MAPPINGS: Dict[OperationSynthesis, Callable] = {
+    MAPPINGS: Dict[OperationSynthesis, Callable[..., Any]] = {
         OperationSynthesis(
             Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._stored_energy_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.MWmes.value,
-            ordered_entities=entities,
-            entity_column=EER_CODE_COL,
-            initial=True,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._stored_energy_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.MWmes.value,
+                ordered_entities=entities,
+                entity_column=EER_CODE_COL,
+                initial=True,
+            )
         ),
         OperationSynthesis(
             Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._stored_energy_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.MWmes.value,
-            ordered_entities=entities,
-            entity_column=EER_CODE_COL,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._stored_energy_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.MWmes.value,
+                ordered_entities=entities,
+                entity_column=EER_CODE_COL,
+            )
         ),
         OperationSynthesis(
             Variable.ENERGIA_ARMAZENADA_PERCENTUAL_INICIAL,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._stored_energy_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.perc_modif.value,
-            ordered_entities=entities,
-            entity_column=EER_CODE_COL,
-            initial=True,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._stored_energy_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.perc_modif.value,
+                ordered_entities=entities,
+                entity_column=EER_CODE_COL,
+                initial=True,
+            )
         ),
         OperationSynthesis(
             Variable.ENERGIA_ARMAZENADA_PERCENTUAL_FINAL,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._stored_energy_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.perc_modif.value,
-            ordered_entities=entities,
-            entity_column=EER_CODE_COL,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._stored_energy_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.perc_modif.value,
+                ordered_entities=entities,
+                entity_column=EER_CODE_COL,
+            )
         ),
         OperationSynthesis(
             Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
             SpatialResolution.SUBMERCADO,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._stored_energy_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.MWmes.value,
-            ordered_entities=entities,
-            entity_column=SUBMARKET_CODE_COL,
-            initial=True,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._stored_energy_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.MWmes.value,
+                ordered_entities=entities,
+                entity_column=SUBMARKET_CODE_COL,
+                initial=True,
+            )
         ),
         OperationSynthesis(
             Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
             SpatialResolution.SUBMERCADO,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._stored_energy_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.MWmes.value,
-            ordered_entities=entities,
-            entity_column=SUBMARKET_CODE_COL,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._stored_energy_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.MWmes.value,
+                ordered_entities=entities,
+                entity_column=SUBMARKET_CODE_COL,
+            )
         ),
         OperationSynthesis(
             Variable.ENERGIA_ARMAZENADA_PERCENTUAL_INICIAL,
             SpatialResolution.SUBMERCADO,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._stored_energy_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.perc_modif.value,
-            ordered_entities=entities,
-            entity_column=SUBMARKET_CODE_COL,
-            initial=True,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._stored_energy_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.perc_modif.value,
+                ordered_entities=entities,
+                entity_column=SUBMARKET_CODE_COL,
+                initial=True,
+            )
         ),
         OperationSynthesis(
             Variable.ENERGIA_ARMAZENADA_PERCENTUAL_FINAL,
             SpatialResolution.SUBMERCADO,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._stored_energy_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.perc_modif.value,
-            ordered_entities=entities,
-            entity_column=SUBMARKET_CODE_COL,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._stored_energy_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.perc_modif.value,
+                ordered_entities=entities,
+                entity_column=SUBMARKET_CODE_COL,
+            )
         ),
         OperationSynthesis(
             Variable.ENERGIA_ARMAZENADA_ABSOLUTA_INICIAL,
             SpatialResolution.SISTEMA_INTERLIGADO,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._stored_energy_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.MWmes.value,
-            ordered_entities=entities,
-            initial=True,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._stored_energy_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.MWmes.value,
+                ordered_entities=entities,
+                initial=True,
+            )
         ),
         OperationSynthesis(
             Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
             SpatialResolution.SISTEMA_INTERLIGADO,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._stored_energy_bounds(
-            df, uow, synthesis_unit=Unit.MWmes.value, ordered_entities=entities
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._stored_energy_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.MWmes.value,
+                ordered_entities=entities,
+            )
         ),
         OperationSynthesis(
             Variable.ENERGIA_ARMAZENADA_PERCENTUAL_INICIAL,
             SpatialResolution.SISTEMA_INTERLIGADO,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._stored_energy_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.perc_modif.value,
-            ordered_entities=entities,
-            initial=True,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._stored_energy_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.perc_modif.value,
+                ordered_entities=entities,
+                initial=True,
+            )
         ),
         OperationSynthesis(
             Variable.ENERGIA_ARMAZENADA_PERCENTUAL_FINAL,
             SpatialResolution.SISTEMA_INTERLIGADO,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._stored_energy_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.perc_modif.value,
-            ordered_entities=entities,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._stored_energy_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.perc_modif.value,
+                ordered_entities=entities,
+            )
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
             SpatialResolution.USINA_HIDROELETRICA,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._stored_volume_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.hm3_modif.value,
-            ordered_entities=entities,
-            entity_column=HYDRO_CODE_COL,
-            initial=True,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._stored_volume_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.hm3_modif.value,
+                ordered_entities=entities,
+                entity_column=HYDRO_CODE_COL,
+                initial=True,
+            )
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._stored_volume_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.hm3_modif.value,
-            ordered_entities=entities,
-            entity_column=EER_CODE_COL,
-            initial=True,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._stored_volume_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.hm3_modif.value,
+                ordered_entities=entities,
+                entity_column=EER_CODE_COL,
+                initial=True,
+            )
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
             SpatialResolution.SUBMERCADO,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._stored_volume_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.hm3_modif.value,
-            ordered_entities=entities,
-            entity_column=SUBMARKET_CODE_COL,
-            initial=True,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._stored_volume_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.hm3_modif.value,
+                ordered_entities=entities,
+                entity_column=SUBMARKET_CODE_COL,
+                initial=True,
+            )
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_ABSOLUTO_INICIAL,
             SpatialResolution.SISTEMA_INTERLIGADO,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._stored_volume_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.hm3_modif.value,
-            ordered_entities=entities,
-            entity_column=None,
-            initial=True,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._stored_volume_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.hm3_modif.value,
+                ordered_entities=entities,
+                entity_column=None,
+                initial=True,
+            )
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
             SpatialResolution.USINA_HIDROELETRICA,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._stored_volume_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.hm3_modif.value,
-            ordered_entities=entities,
-            entity_column=HYDRO_CODE_COL,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._stored_volume_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.hm3_modif.value,
+                ordered_entities=entities,
+                entity_column=HYDRO_CODE_COL,
+            )
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._stored_volume_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.hm3_modif.value,
-            ordered_entities=entities,
-            entity_column=EER_CODE_COL,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._stored_volume_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.hm3_modif.value,
+                ordered_entities=entities,
+                entity_column=EER_CODE_COL,
+            )
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
             SpatialResolution.SUBMERCADO,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._stored_volume_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.hm3_modif.value,
-            ordered_entities=entities,
-            entity_column=SUBMARKET_CODE_COL,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._stored_volume_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.hm3_modif.value,
+                ordered_entities=entities,
+                entity_column=SUBMARKET_CODE_COL,
+            )
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
             SpatialResolution.SISTEMA_INTERLIGADO,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._stored_volume_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.hm3_modif.value,
-            ordered_entities=entities,
-            entity_column=None,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._stored_volume_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.hm3_modif.value,
+                ordered_entities=entities,
+                entity_column=None,
+            )
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
             SpatialResolution.USINA_HIDROELETRICA,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._stored_volume_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.perc_modif.value,
-            ordered_entities=entities,
-            entity_column=HYDRO_CODE_COL,
-            initial=True,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._stored_volume_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.perc_modif.value,
+                ordered_entities=entities,
+                entity_column=HYDRO_CODE_COL,
+                initial=True,
+            )
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._stored_volume_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.perc_modif.value,
-            ordered_entities=entities,
-            entity_column=EER_CODE_COL,
-            initial=True,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._stored_volume_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.perc_modif.value,
+                ordered_entities=entities,
+                entity_column=EER_CODE_COL,
+                initial=True,
+            )
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
             SpatialResolution.SUBMERCADO,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._stored_volume_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.perc_modif.value,
-            ordered_entities=entities,
-            entity_column=SUBMARKET_CODE_COL,
-            initial=True,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._stored_volume_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.perc_modif.value,
+                ordered_entities=entities,
+                entity_column=SUBMARKET_CODE_COL,
+                initial=True,
+            )
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_PERCENTUAL_INICIAL,
             SpatialResolution.SISTEMA_INTERLIGADO,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._stored_volume_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.perc_modif.value,
-            ordered_entities=entities,
-            entity_column=None,
-            initial=True,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._stored_volume_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.perc_modif.value,
+                ordered_entities=entities,
+                entity_column=None,
+                initial=True,
+            )
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
             SpatialResolution.USINA_HIDROELETRICA,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._stored_volume_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.perc_modif.value,
-            ordered_entities=entities,
-            entity_column=HYDRO_CODE_COL,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._stored_volume_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.perc_modif.value,
+                ordered_entities=entities,
+                entity_column=HYDRO_CODE_COL,
+            )
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._stored_volume_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.perc_modif.value,
-            ordered_entities=entities,
-            entity_column=EER_CODE_COL,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._stored_volume_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.perc_modif.value,
+                ordered_entities=entities,
+                entity_column=EER_CODE_COL,
+            )
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
             SpatialResolution.SUBMERCADO,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._stored_volume_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.perc_modif.value,
-            ordered_entities=entities,
-            entity_column=SUBMARKET_CODE_COL,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._stored_volume_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.perc_modif.value,
+                ordered_entities=entities,
+                entity_column=SUBMARKET_CODE_COL,
+            )
         ),
         OperationSynthesis(
             Variable.VOLUME_ARMAZENADO_PERCENTUAL_FINAL,
             SpatialResolution.SISTEMA_INTERLIGADO,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._stored_volume_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.perc_modif.value,
-            ordered_entities=entities,
-            entity_column=None,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._stored_volume_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.perc_modif.value,
+                ordered_entities=entities,
+                entity_column=None,
+            )
         ),
         OperationSynthesis(
             Variable.VOLUME_AFLUENTE,
@@ -421,26 +424,26 @@ class OperationVariableBounds:
         OperationSynthesis(
             Variable.VAZAO_AFLUENTE,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
-        ): lambda df,
-        uow,
-        _: OperationVariableBounds._group_hydro_df_vol_flow_cast(
-            df, grouping_column=EER_CODE_COL
+        ): lambda df, uow, _: (
+            OperationVariableBounds._group_hydro_df_vol_flow_cast(
+                df, grouping_column=EER_CODE_COL
+            )
         ),
         OperationSynthesis(
             Variable.VAZAO_AFLUENTE,
             SpatialResolution.SUBMERCADO,
-        ): lambda df,
-        uow,
-        _: OperationVariableBounds._group_hydro_df_vol_flow_cast(
-            df, grouping_column=SUBMARKET_CODE_COL
+        ): lambda df, uow, _: (
+            OperationVariableBounds._group_hydro_df_vol_flow_cast(
+                df, grouping_column=SUBMARKET_CODE_COL
+            )
         ),
         OperationSynthesis(
             Variable.VAZAO_AFLUENTE,
             SpatialResolution.SISTEMA_INTERLIGADO,
-        ): lambda df,
-        uow,
-        _: OperationVariableBounds._group_hydro_df_vol_flow_cast(
-            df, grouping_column=None
+        ): lambda df, uow, _: (
+            OperationVariableBounds._group_hydro_df_vol_flow_cast(
+                df, grouping_column=None
+            )
         ),
         OperationSynthesis(
             Variable.VOLUME_INCREMENTAL,
@@ -475,38 +478,38 @@ class OperationVariableBounds:
         OperationSynthesis(
             Variable.VAZAO_INCREMENTAL,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
-        ): lambda df,
-        uow,
-        _: OperationVariableBounds._group_hydro_df_vol_flow_cast(
-            df, grouping_column=EER_CODE_COL
+        ): lambda df, uow, _: (
+            OperationVariableBounds._group_hydro_df_vol_flow_cast(
+                df, grouping_column=EER_CODE_COL
+            )
         ),
         OperationSynthesis(
             Variable.VAZAO_INCREMENTAL,
             SpatialResolution.SUBMERCADO,
-        ): lambda df,
-        uow,
-        _: OperationVariableBounds._group_hydro_df_vol_flow_cast(
-            df, grouping_column=SUBMARKET_CODE_COL
+        ): lambda df, uow, _: (
+            OperationVariableBounds._group_hydro_df_vol_flow_cast(
+                df, grouping_column=SUBMARKET_CODE_COL
+            )
         ),
         OperationSynthesis(
             Variable.VAZAO_INCREMENTAL,
             SpatialResolution.SISTEMA_INTERLIGADO,
-        ): lambda df,
-        uow,
-        _: OperationVariableBounds._group_hydro_df_vol_flow_cast(
-            df, grouping_column=None
+        ): lambda df, uow, _: (
+            OperationVariableBounds._group_hydro_df_vol_flow_cast(
+                df, grouping_column=None
+            )
         ),
         OperationSynthesis(
             Variable.VOLUME_TURBINADO,
             SpatialResolution.USINA_HIDROELETRICA,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._turbined_flow_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.hm3.value,
-            ordered_entities=entities,
-            entity_column=HYDRO_CODE_COL,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._turbined_flow_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.hm3.value,
+                ordered_entities=entities,
+                entity_column=HYDRO_CODE_COL,
+            )
         ),
         OperationSynthesis(
             Variable.VOLUME_TURBINADO,
@@ -529,38 +532,38 @@ class OperationVariableBounds:
         OperationSynthesis(
             Variable.VAZAO_TURBINADA,
             SpatialResolution.USINA_HIDROELETRICA,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._turbined_flow_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.m3s.value,
-            ordered_entities=entities,
-            entity_column=HYDRO_CODE_COL,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._turbined_flow_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.m3s.value,
+                ordered_entities=entities,
+                entity_column=HYDRO_CODE_COL,
+            )
         ),
         OperationSynthesis(
             Variable.VAZAO_TURBINADA,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
-        ): lambda df,
-        uow,
-        _: OperationVariableBounds._group_hydro_df_vol_flow_cast(
-            df, grouping_column=EER_CODE_COL
+        ): lambda df, uow, _: (
+            OperationVariableBounds._group_hydro_df_vol_flow_cast(
+                df, grouping_column=EER_CODE_COL
+            )
         ),
         OperationSynthesis(
             Variable.VAZAO_TURBINADA,
             SpatialResolution.SUBMERCADO,
-        ): lambda df,
-        uow,
-        _: OperationVariableBounds._group_hydro_df_vol_flow_cast(
-            df, grouping_column=SUBMARKET_CODE_COL
+        ): lambda df, uow, _: (
+            OperationVariableBounds._group_hydro_df_vol_flow_cast(
+                df, grouping_column=SUBMARKET_CODE_COL
+            )
         ),
         OperationSynthesis(
             Variable.VAZAO_TURBINADA,
             SpatialResolution.SISTEMA_INTERLIGADO,
-        ): lambda df,
-        uow,
-        _: OperationVariableBounds._group_hydro_df_vol_flow_cast(
-            df, grouping_column=None
+        ): lambda df, uow, _: (
+            OperationVariableBounds._group_hydro_df_vol_flow_cast(
+                df, grouping_column=None
+            )
         ),
         OperationSynthesis(
             Variable.VOLUME_VERTIDO,
@@ -595,26 +598,26 @@ class OperationVariableBounds:
         OperationSynthesis(
             Variable.VAZAO_VERTIDA,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
-        ): lambda df,
-        uow,
-        _: OperationVariableBounds._group_hydro_df_vol_flow_cast(
-            df, grouping_column=EER_CODE_COL
+        ): lambda df, uow, _: (
+            OperationVariableBounds._group_hydro_df_vol_flow_cast(
+                df, grouping_column=EER_CODE_COL
+            )
         ),
         OperationSynthesis(
             Variable.VAZAO_VERTIDA,
             SpatialResolution.SUBMERCADO,
-        ): lambda df,
-        uow,
-        _: OperationVariableBounds._group_hydro_df_vol_flow_cast(
-            df, grouping_column=SUBMARKET_CODE_COL
+        ): lambda df, uow, _: (
+            OperationVariableBounds._group_hydro_df_vol_flow_cast(
+                df, grouping_column=SUBMARKET_CODE_COL
+            )
         ),
         OperationSynthesis(
             Variable.VAZAO_VERTIDA,
             SpatialResolution.SISTEMA_INTERLIGADO,
-        ): lambda df,
-        uow,
-        _: OperationVariableBounds._group_hydro_df_vol_flow_cast(
-            df, grouping_column=None
+        ): lambda df, uow, _: (
+            OperationVariableBounds._group_hydro_df_vol_flow_cast(
+                df, grouping_column=None
+            )
         ),
         OperationSynthesis(
             Variable.VOLUME_DEFLUENTE,
@@ -657,38 +660,38 @@ class OperationVariableBounds:
         OperationSynthesis(
             Variable.VAZAO_DEFLUENTE,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
-        ): lambda df,
-        uow,
-        _: OperationVariableBounds._group_hydro_df_vol_flow_cast(
-            df, grouping_column=EER_CODE_COL
+        ): lambda df, uow, _: (
+            OperationVariableBounds._group_hydro_df_vol_flow_cast(
+                df, grouping_column=EER_CODE_COL
+            )
         ),
         OperationSynthesis(
             Variable.VAZAO_DEFLUENTE,
             SpatialResolution.SUBMERCADO,
-        ): lambda df,
-        uow,
-        _: OperationVariableBounds._group_hydro_df_vol_flow_cast(
-            df, grouping_column=SUBMARKET_CODE_COL
+        ): lambda df, uow, _: (
+            OperationVariableBounds._group_hydro_df_vol_flow_cast(
+                df, grouping_column=SUBMARKET_CODE_COL
+            )
         ),
         OperationSynthesis(
             Variable.VAZAO_DEFLUENTE,
             SpatialResolution.SISTEMA_INTERLIGADO,
-        ): lambda df,
-        uow,
-        _: OperationVariableBounds._group_hydro_df_vol_flow_cast(
-            df, grouping_column=None
+        ): lambda df, uow, _: (
+            OperationVariableBounds._group_hydro_df_vol_flow_cast(
+                df, grouping_column=None
+            )
         ),
         OperationSynthesis(
             Variable.VOLUME_RETIRADO,
             SpatialResolution.USINA_HIDROELETRICA,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._flow_diversion_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.hm3.value,
-            ordered_entities=entities,
-            entity_column=HYDRO_CODE_COL,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._flow_diversion_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.hm3.value,
+                ordered_entities=entities,
+                entity_column=HYDRO_CODE_COL,
+            )
         ),
         OperationSynthesis(
             Variable.VOLUME_RETIRADO,
@@ -711,46 +714,46 @@ class OperationVariableBounds:
         OperationSynthesis(
             Variable.VAZAO_RETIRADA,
             SpatialResolution.USINA_HIDROELETRICA,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._flow_diversion_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.m3s.value,
-            ordered_entities=entities,
-            entity_column=HYDRO_CODE_COL,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._flow_diversion_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.m3s.value,
+                ordered_entities=entities,
+                entity_column=HYDRO_CODE_COL,
+            )
         ),
         OperationSynthesis(
             Variable.VAZAO_RETIRADA,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
-        ): lambda df,
-        uow,
-        _: OperationVariableBounds._group_hydro_df_vol_flow_cast(
-            df, grouping_column=EER_CODE_COL
+        ): lambda df, uow, _: (
+            OperationVariableBounds._group_hydro_df_vol_flow_cast(
+                df, grouping_column=EER_CODE_COL
+            )
         ),
         OperationSynthesis(
             Variable.VAZAO_RETIRADA,
             SpatialResolution.SUBMERCADO,
-        ): lambda df,
-        uow,
-        _: OperationVariableBounds._group_hydro_df_vol_flow_cast(
-            df, grouping_column=SUBMARKET_CODE_COL
+        ): lambda df, uow, _: (
+            OperationVariableBounds._group_hydro_df_vol_flow_cast(
+                df, grouping_column=SUBMARKET_CODE_COL
+            )
         ),
         OperationSynthesis(
             Variable.VAZAO_RETIRADA,
             SpatialResolution.SISTEMA_INTERLIGADO,
-        ): lambda df,
-        uow,
-        _: OperationVariableBounds._group_hydro_df_vol_flow_cast(
-            df, grouping_column=None
+        ): lambda df, uow, _: (
+            OperationVariableBounds._group_hydro_df_vol_flow_cast(
+                df, grouping_column=None
+            )
         ),
         OperationSynthesis(
             Variable.VOLUME_DESVIADO,
             SpatialResolution.USINA_HIDROELETRICA,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._qdes_vdes_uhe_bounds(
-            df, uow, synthesis_unit=Unit.hm3.value
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._qdes_vdes_uhe_bounds(
+                df, uow, synthesis_unit=Unit.hm3.value
+            )
         ),
         OperationSynthesis(
             Variable.VOLUME_DESVIADO,
@@ -773,34 +776,34 @@ class OperationVariableBounds:
         OperationSynthesis(
             Variable.VAZAO_DESVIADA,
             SpatialResolution.USINA_HIDROELETRICA,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._qdes_vdes_uhe_bounds(
-            df, uow, synthesis_unit=Unit.m3s.value
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._qdes_vdes_uhe_bounds(
+                df, uow, synthesis_unit=Unit.m3s.value
+            )
         ),
         OperationSynthesis(
             Variable.VAZAO_DESVIADA,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
-        ): lambda df,
-        uow,
-        _: OperationVariableBounds._group_hydro_df_vol_flow_cast(
-            df, grouping_column=EER_CODE_COL
+        ): lambda df, uow, _: (
+            OperationVariableBounds._group_hydro_df_vol_flow_cast(
+                df, grouping_column=EER_CODE_COL
+            )
         ),
         OperationSynthesis(
             Variable.VAZAO_DESVIADA,
             SpatialResolution.SUBMERCADO,
-        ): lambda df,
-        uow,
-        _: OperationVariableBounds._group_hydro_df_vol_flow_cast(
-            df, grouping_column=SUBMARKET_CODE_COL
+        ): lambda df, uow, _: (
+            OperationVariableBounds._group_hydro_df_vol_flow_cast(
+                df, grouping_column=SUBMARKET_CODE_COL
+            )
         ),
         OperationSynthesis(
             Variable.VAZAO_DESVIADA,
             SpatialResolution.SISTEMA_INTERLIGADO,
-        ): lambda df,
-        uow,
-        _: OperationVariableBounds._group_hydro_df_vol_flow_cast(
-            df, grouping_column=None
+        ): lambda df, uow, _: (
+            OperationVariableBounds._group_hydro_df_vol_flow_cast(
+                df, grouping_column=None
+            )
         ),
         OperationSynthesis(
             Variable.VOLUME_EVAPORADO,
@@ -835,26 +838,26 @@ class OperationVariableBounds:
         OperationSynthesis(
             Variable.VAZAO_EVAPORADA,
             SpatialResolution.RESERVATORIO_EQUIVALENTE,
-        ): lambda df,
-        uow,
-        _: OperationVariableBounds._group_hydro_df_vol_flow_cast(
-            df, grouping_column=EER_CODE_COL
+        ): lambda df, uow, _: (
+            OperationVariableBounds._group_hydro_df_vol_flow_cast(
+                df, grouping_column=EER_CODE_COL
+            )
         ),
         OperationSynthesis(
             Variable.VAZAO_EVAPORADA,
             SpatialResolution.SUBMERCADO,
-        ): lambda df,
-        uow,
-        _: OperationVariableBounds._group_hydro_df_vol_flow_cast(
-            df, grouping_column=SUBMARKET_CODE_COL
+        ): lambda df, uow, _: (
+            OperationVariableBounds._group_hydro_df_vol_flow_cast(
+                df, grouping_column=SUBMARKET_CODE_COL
+            )
         ),
         OperationSynthesis(
             Variable.VAZAO_EVAPORADA,
             SpatialResolution.SISTEMA_INTERLIGADO,
-        ): lambda df,
-        uow,
-        _: OperationVariableBounds._group_hydro_df_vol_flow_cast(
-            df, grouping_column=None
+        ): lambda df, uow, _: (
+            OperationVariableBounds._group_hydro_df_vol_flow_cast(
+                df, grouping_column=None
+            )
         ),
         OperationSynthesis(
             Variable.INTERCAMBIO,
@@ -868,38 +871,38 @@ class OperationVariableBounds:
         OperationSynthesis(
             Variable.GERACAO_TERMICA,
             SpatialResolution.USINA_TERMELETRICA,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._thermal_generation_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.MWmes.value,
-            ordered_entities=entities,
-            entity_column=THERMAL_CODE_COL,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._thermal_generation_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.MWmes.value,
+                ordered_entities=entities,
+                entity_column=THERMAL_CODE_COL,
+            )
         ),
         OperationSynthesis(
             Variable.GERACAO_TERMICA,
             SpatialResolution.SUBMERCADO,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._thermal_generation_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.MWmes.value,
-            ordered_entities=entities,
-            entity_column=SUBMARKET_CODE_COL,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._thermal_generation_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.MWmes.value,
+                ordered_entities=entities,
+                entity_column=SUBMARKET_CODE_COL,
+            )
         ),
         OperationSynthesis(
             Variable.GERACAO_TERMICA,
             SpatialResolution.SISTEMA_INTERLIGADO,
-        ): lambda df,
-        uow,
-        entities: OperationVariableBounds._thermal_generation_bounds(
-            df,
-            uow,
-            synthesis_unit=Unit.MWmes.value,
-            ordered_entities=entities,
-            entity_column=None,
+        ): lambda df, uow, entities: (
+            OperationVariableBounds._thermal_generation_bounds(
+                df,
+                uow,
+                synthesis_unit=Unit.MWmes.value,
+                ordered_entities=entities,
+                entity_column=None,
+            )
         ),
         OperationSynthesis(
             Variable.GERACAO_USINAS_NAO_SIMULADAS,
@@ -916,7 +919,7 @@ class OperationVariableBounds:
     }
 
     @classmethod
-    def _log(cls, msg: str, level: int = INFO):
+    def _log(cls, msg: str, level: int = INFO) -> None:
         if cls.logger is not None:
             cls.logger.log(level, msg)
 
@@ -926,7 +929,7 @@ class OperationVariableBounds:
         df: pd.DataFrame,
         uow: AbstractUnitOfWork,
         synthesis_unit: str,
-        ordered_entities: Dict[str, list],
+        ordered_entities: Dict[str, list[Any]],
         entity_column: Optional[str] = None,
         initial: bool = False,
     ) -> pd.DataFrame:
@@ -1017,7 +1020,7 @@ class OperationVariableBounds:
         num_stages: int,
         num_scenarios: int,
         num_blocks: int,
-    ):
+    ) -> np.ndarray:
         """
         Expande os dados cadastrais para cada cenário, mantendo a ordem dos
         patamares internamente.
@@ -1040,7 +1043,7 @@ class OperationVariableBounds:
         num_stages: int,
         num_scenarios: int,
         num_blocks: int,
-    ):
+    ) -> np.ndarray:
         """
         Expande os dados cadastrais para cada cenário, mantendo a ordem dos
         patamares internamente.
@@ -1175,7 +1178,7 @@ class OperationVariableBounds:
         df: pd.DataFrame,
         uow: AbstractUnitOfWork,
         synthesis_unit: str,
-        ordered_entities: Dict[str, list],
+        ordered_entities: Dict[str, list[Any]],
         entity_column: Optional[str] = None,
         initial: bool = False,
     ) -> pd.DataFrame:
@@ -1310,7 +1313,7 @@ class OperationVariableBounds:
         df: pd.DataFrame,
         uow: AbstractUnitOfWork,
         synthesis_unit: str,
-        ordered_entities: Dict[str, list],
+        ordered_entities: Dict[str, list[Any]],
         entity_column: Optional[str] = None,
     ) -> pd.DataFrame:
         """
@@ -1405,7 +1408,7 @@ class OperationVariableBounds:
         df: pd.DataFrame,
         uow: AbstractUnitOfWork,
         synthesis_unit: str,
-        ordered_entities: Dict[str, list],
+        ordered_entities: Dict[str, list[Any]],
         entity_column: Optional[str] = None,
     ) -> pd.DataFrame:
         """
@@ -1507,7 +1510,7 @@ class OperationVariableBounds:
         df: pd.DataFrame,
         uow: AbstractUnitOfWork,
         synthesis_unit: str,
-        ordered_entities: Dict[str, list],
+        ordered_entities: Dict[str, list[Any]],
         entity_column: Optional[str] = None,
     ) -> pd.DataFrame:
         """
@@ -1517,7 +1520,9 @@ class OperationVariableBounds:
         """
 
         def _get_group_for_bounds() -> Tuple[np.ndarray, np.ndarray]:
-            flow_diversion_bounds = Deck.flow_diversion(uow)
+            flow_diversion_bounds = Deck.flow_diversion(
+                uow
+            ).to_pandas()  # SHIM: remove after polars migration of this module
             synthesis_hydro_codes = df[HYDRO_CODE_COL].unique().tolist()
             flow_diversion_bounds = flow_diversion_bounds.loc[
                 flow_diversion_bounds[HYDRO_CODE_COL].isin(
@@ -1634,7 +1639,6 @@ class OperationVariableBounds:
         para as variáveis de Volume Desviado (VDES) e Vazão Desviada (QDES)
         para cada UHE.
         """
-        # TODO - Procurar limite superior no modif.dat
         df[LOWER_BOUND_COL] = 0.0
         df[UPPER_BOUND_COL] = float("inf")
         return df
@@ -1645,7 +1649,7 @@ class OperationVariableBounds:
         df: pd.DataFrame,
         uow: AbstractUnitOfWork,
         synthesis_unit: str,
-        ordered_entities: Dict[str, list],
+        ordered_entities: Dict[str, list[Any]],
     ) -> pd.DataFrame:
         """
         Adiciona ao DataFrame da síntese os limites inferior e superior
@@ -1689,11 +1693,13 @@ class OperationVariableBounds:
                 exchange_block_bounds_df.loc[
                     exchange_block_bounds_df[START_DATE_COL].isin(start_dates)
                 ]
-                .sort_values([
-                    EXCHANGE_SOURCE_CODE_COL,
-                    EXCHANGE_TARGET_CODE_COL,
-                    START_DATE_COL,
-                ])
+                .sort_values(
+                    [
+                        EXCHANGE_SOURCE_CODE_COL,
+                        EXCHANGE_TARGET_CODE_COL,
+                        START_DATE_COL,
+                    ]
+                )
                 .reset_index(drop=True)
             )
 
@@ -1752,7 +1758,7 @@ class OperationVariableBounds:
         df: pd.DataFrame,
         uow: AbstractUnitOfWork,
         synthesis_unit: str,
-        ordered_entities: Dict[str, list],
+        ordered_entities: Dict[str, list[Any]],
         entity_column: Optional[str] = None,
     ) -> pd.DataFrame:
         """
@@ -1768,7 +1774,7 @@ class OperationVariableBounds:
         """
 
         def _get_group_and_cast_bounds(
-            entity_column: Optional[str], entity_list: list
+            entity_column: Optional[str], entity_list: list[Any]
         ) -> Tuple[np.ndarray, np.ndarray]:
             bounds_df = Deck.thermal_generation_bounds(uow)
             dates = Deck.stages_starting_dates_final_simulation(uow)
@@ -1881,22 +1887,32 @@ class OperationVariableBounds:
     def resolve_bounds(
         cls,
         s: OperationSynthesis,
-        df: pd.DataFrame,
-        ordered_synthesis_entities: Dict[str, list],
+        df: pl.DataFrame,
+        ordered_synthesis_entities: Dict[str, list[Any]],
         uow: AbstractUnitOfWork,
         logger: Optional[Logger] = None,
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """
         Adiciona colunas de limite inferior e superior a um DataFrame,
         calculando os valores necessários caso a variável seja limitada
         ou atribuindo -inf e +inf caso contrário.
 
+        Accepts and returns a ``pl.DataFrame``. Bounded variables are
+        processed by converting to pandas internally (the existing helper
+        methods are pandas-based) and converting back on exit.
         """
         Deck.logger = logger
         try:
             if cls.is_bounded(s):
-                return cls.MAPPINGS[s](df, uow, ordered_synthesis_entities)
+                pd_df = df.to_pandas()
+                result_pd = cls.MAPPINGS[s](
+                    pd_df, uow, ordered_synthesis_entities
+                )
+                return pl.from_pandas(result_pd)
         except ValueError as e:
             cls._log(f"Erro no calculo de limites: {e}", ERROR)
             cls._log("Considerando variavel ilimitada.", ERROR)
-        return cls._unbounded(df)
+        return df.with_columns(
+            pl.lit(-float("inf")).alias(LOWER_BOUND_COL),
+            pl.lit(float("inf")).alias(UPPER_BOUND_COL),
+        )

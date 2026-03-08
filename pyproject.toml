@@ -7,23 +7,27 @@ name = "sintetizador-newave"
 dynamic = ["version"]
 dependencies = [
     "pandas",
+    "polars>=1.0.0",
     "pyarrow>=18.0.0",
     "click>=8.1.7",
-    "numba>=0.60.0",
     "inewave>=1.9.2",
 ]
 requires-python = ">= 3.10"
 authors = [
   {name = "Rogerio Alves", email = "rogerioalves.ee@gmail.com"},
 ]
-description = "sintetizador-newave"
+description = "Aplicacao CLI para sintese de dados do modelo NEWAVE"
 readme = "README.md"
 license = {file = "LICENSE"}
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Operating System :: OS Independent",
 ]
 
@@ -31,9 +35,11 @@ classifiers = [
 dev = [
     "pytest",
     "pytest-cov",
+    "pre-commit",
     "ruff",
     "mypy",
-    "sphinx-rtd-theme",
+    "types-python-dateutil",
+    "furo",
     "sphinx-gallery",
     "sphinx",
     "numpydoc",
@@ -59,3 +65,24 @@ include = [
 
 [tool.ruff]
 line-length = 80
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.mypy]
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["inewave.*"]
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = ["dateutil.*"]
+ignore_errors = true

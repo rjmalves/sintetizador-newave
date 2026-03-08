@@ -71,6 +71,19 @@ instance/
 # Sphinx documentation
 docs/_build/
 
+# Sphinx-gallery generated artifacts
+docs/source/examples/*.ipynb
+docs/source/examples/*.codeobj.json
+docs/source/examples/*.py
+docs/source/examples/*.py.md5
+docs/source/examples/*.zip
+docs/source/examples/*.rst
+docs/source/examples/images/
+docs/source/sg_execution_times.rst
+
+# Sphinx autosummary backreferences
+docs/source/gen_modules/
+
 # PyBuilder
 target/
 
@@ -136,4 +149,3 @@ test_case/
 .vscode/
 
 # Build system
-uv.lock
