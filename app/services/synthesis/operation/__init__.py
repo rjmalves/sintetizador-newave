@@ -1,5 +1,5 @@
-import platform as _platform
 import multiprocessing as _mp
+import platform as _platform
 from concurrent.futures import ProcessPoolExecutor  # noqa: F401
 
 from app.services.deck.deck import Deck  # noqa: F401

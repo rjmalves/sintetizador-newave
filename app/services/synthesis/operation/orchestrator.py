@@ -502,9 +502,7 @@ class OperationSynthetizer:
                         current_resolution
                         != SpatialResolution.SISTEMA_INTERLIGADO
                     ):
-                        current_executor = _pkg().create_executor(
-                            n_procs
-                        )
+                        current_executor = _pkg().create_executor(n_procs)
                     else:
                         current_executor = None
                 r = cls._synthetize_single_variable(

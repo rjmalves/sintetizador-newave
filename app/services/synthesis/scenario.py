@@ -1,6 +1,6 @@
 import logging
-import platform as _platform
 import multiprocessing as _mp
+import platform as _platform
 from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
 from logging import ERROR, INFO
@@ -871,7 +871,12 @@ class ScenarioSynthetizer:
             message_root="Tempo para obter energias forward",
             logger=cls.logger,
         ):
-            with ProcessPoolExecutor(max_workers=num_procs, mp_context=_mp.get_context("spawn" if _platform.system() == "Windows" else "forkserver")) as executor:
+            with ProcessPoolExecutor(
+                max_workers=num_procs,
+                mp_context=_mp.get_context(
+                    "spawn" if _platform.system() == "Windows" else "forkserver"
+                ),
+            ) as executor:
                 futures = {
                     it: executor.submit(
                         cls._resolve_forward_energy_iteration, uow, it
@@ -919,7 +924,12 @@ class ScenarioSynthetizer:
             message_root="Tempo para obter vazoes forward",
             logger=cls.logger,
         ):
-            with ProcessPoolExecutor(max_workers=num_procs, mp_context=_mp.get_context("spawn" if _platform.system() == "Windows" else "forkserver")) as executor:
+            with ProcessPoolExecutor(
+                max_workers=num_procs,
+                mp_context=_mp.get_context(
+                    "spawn" if _platform.system() == "Windows" else "forkserver"
+                ),
+            ) as executor:
                 futures = {
                     it: executor.submit(
                         cls._resolve_forward_inflow_iteration, uow, it
@@ -976,7 +986,12 @@ class ScenarioSynthetizer:
             message_root="Tempo para obter energias backward",
             logger=cls.logger,
         ):
-            with ProcessPoolExecutor(max_workers=num_procs, mp_context=_mp.get_context("spawn" if _platform.system() == "Windows" else "forkserver")) as executor:
+            with ProcessPoolExecutor(
+                max_workers=num_procs,
+                mp_context=_mp.get_context(
+                    "spawn" if _platform.system() == "Windows" else "forkserver"
+                ),
+            ) as executor:
                 futures = {
                     it: executor.submit(
                         cls._resolve_backward_energy_iteration, uow, it
@@ -1024,7 +1039,12 @@ class ScenarioSynthetizer:
             message_root="Tempo para obter vazoes backward",
             logger=cls.logger,
         ):
-            with ProcessPoolExecutor(max_workers=num_procs, mp_context=_mp.get_context("spawn" if _platform.system() == "Windows" else "forkserver")) as executor:
+            with ProcessPoolExecutor(
+                max_workers=num_procs,
+                mp_context=_mp.get_context(
+                    "spawn" if _platform.system() == "Windows" else "forkserver"
+                ),
+            ) as executor:
                 futures = {
                     it: executor.submit(
                         cls._resolve_backward_inflow_iteration, uow, it
