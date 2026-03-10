@@ -502,8 +502,8 @@ class OperationSynthetizer:
                         current_resolution
                         != SpatialResolution.SISTEMA_INTERLIGADO
                     ):
-                        current_executor = _pkg().ProcessPoolExecutor(
-                            max_workers=n_procs
+                        current_executor = _pkg().create_executor(
+                            n_procs
                         )
                     else:
                         current_executor = None

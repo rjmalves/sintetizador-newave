@@ -3154,8 +3154,8 @@ def test_executor_criado_uma_vez_por_grupo_resolucao_uhe(test_settings):
         return None
 
     with patch(
-        "app.services.synthesis.operation.ProcessPoolExecutor",
-        new=_TrackedExecutor,
+        "app.services.synthesis.operation.create_executor",
+        side_effect=lambda max_workers: _TrackedExecutor(max_workers=max_workers),
     ):
         with patch.object(
             OperationSynthetizer,
