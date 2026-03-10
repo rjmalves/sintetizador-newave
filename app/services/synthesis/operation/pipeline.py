@@ -106,9 +106,10 @@ def resolve_temporal_resolution(
     num_stages = pl_df[START_DATE_COL].n_unique()
     blocks = pl_df[BLOCK_COL].unique(maintain_order=True).to_list()
     num_blocks = len(blocks)
-    num_sc, _start_dates, end_dates, df_block_lengths = (
-        _fetch_temporal_deck_data(uow, deck_context, num_stages)
+    _, _start_dates, end_dates, df_block_lengths = _fetch_temporal_deck_data(
+        uow, deck_context, num_stages
     )
+    num_sc = pl_df.height // (num_blocks * num_stages)
     pl_df = pl_df.with_columns(
         pl.Series(
             SCENARIO_COL,
@@ -244,9 +245,10 @@ def resolve_temporal_resolution_GTER_UTE(
     thermals = pl_df[THERMAL_CODE_COL].unique(maintain_order=True).to_list()
     num_thermals = len(thermals)
 
-    num_sc, _start_dates, end_dates, df_block_lengths = (
-        _fetch_temporal_deck_data(uow, deck_context, num_stages)
+    _, _start_dates, end_dates, df_block_lengths = _fetch_temporal_deck_data(
+        uow, deck_context, num_stages
     )
+    num_sc = pl_df.height // (num_blocks * num_stages * num_thermals)
 
     pl_df = pl_df.with_columns(
         pl.Series(
