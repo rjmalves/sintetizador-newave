@@ -1,8 +1,5 @@
 """Private market/GUNS stub resolvers for stubs.py."""
 
-import multiprocessing as _mp
-import platform as _platform
-from concurrent.futures import ProcessPoolExecutor
 from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
 
 import polars as pl
@@ -25,6 +22,7 @@ from app.services.synthesis.operation.pipeline import (
 )
 from app.services.unitofwork import AbstractUnitOfWork
 from app.utils.log import Log
+from app.utils.parallel import create_executor
 from app.utils.timing import time_and_log
 
 if TYPE_CHECKING:
@@ -77,12 +75,7 @@ def _resolve_SBM_MER_MERL(
     with time_and_log(
         message_root="Tempo para obter dados de SBM", logger=cls.logger
     ):
-        with ProcessPoolExecutor(
-            max_workers=n_procs,
-            mp_context=_mp.get_context(
-                "spawn" if _platform.system() == "Windows" else "forkserver"
-            ),
-        ) as executor:
+        with create_executor(n_procs) as executor:
             futures = {
                 idx: executor.submit(
                     cls._resolve_SBM_entity_MER_MERL, uow, synthesis, idx, name
