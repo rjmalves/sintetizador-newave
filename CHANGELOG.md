@@ -7,6 +7,17 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 
+## [2.4.3]
+
+### Fixed
+
+- Correção de `ThreadPoolBuildError` / `BrokenProcessPool` ao executar a síntese da operação com alto valor de `--processadores` em hosts grandes. Cada worker do `ProcessPoolExecutor` herdava o pool de threads padrão de polars/Rayon, OpenBLAS e jemalloc, multiplicando para N × `num_cpus()` threads e exaurindo o `RLIMIT_NPROC` do sistema. Workers agora iniciam com `POLARS_MAX_THREADS=OPENBLAS_NUM_THREADS=...=1` via `initializer` do pool, eliminando a oversubscription. O processo principal mantém o pool de threads padrão do polars (sem cap), preservando o desempenho das sínteses SIN e da agregação de resultados.
+
+### Changed
+
+- `--processadores` é clampeado internamente a `os.cpu_count()` (núcleos lógicos), com aviso no logger quando o valor solicitado excede o disponível.
+- Construção do `ProcessPoolExecutor` centralizada em `app/utils/parallel.py`, removendo boilerplate `forkserver`/`spawn` duplicado em `operation/__init__.py`, `scenario.py` e `_stubs_market.py`.
+
 ## [2.4.0]
 
 ### Changed
