@@ -601,7 +601,7 @@ class RawFilesRepository(AbstractFilesRepository):
             yield ("",)
         elif spatial_resolution == SpatialResolution.USINA_HIDROELETRICA:
             for code in self._probe_hydro_codes():
-                yield (code,)  
+                yield (code,)
         else:
             yield ()
 
