@@ -64,6 +64,21 @@ def get_shist(deck_cls: Any, uow: AbstractUnitOfWork) -> Shist:
         return shist
 
 
+def get_num_scenarios_from_output(
+    deck_cls: Any, uow: AbstractUnitOfWork
+) -> int:
+    with uow:
+        num_scenarios = uow.files.get_num_scenarios_from_output()
+        if num_scenarios is None:
+            msg = (
+                "Erro ao obter o número de cenários da simulação final a"
+                + " partir dos arquivos de saída do nwlistop"
+            )
+            _log(deck_cls, msg, ERROR)
+            raise RuntimeError(msg)
+        return num_scenarios
+
+
 def get_curva(deck_cls: Any, uow: AbstractUnitOfWork) -> Curva:
     with uow:
         curva = uow.files.get_curva()

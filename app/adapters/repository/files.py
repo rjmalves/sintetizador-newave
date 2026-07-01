@@ -4,7 +4,7 @@ import platform
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 from os.path import join
-from typing import Any, Callable, Dict, Optional, Tuple, Type, TypeVar
+from typing import Any, Callable, Dict, Iterator, Optional, Tuple, Type, TypeVar
 
 import numpy as np
 import pandas as pd
@@ -50,6 +50,48 @@ from app.utils.encoding import converte_codificacao
 
 if platform.system() == "Windows":
     Dger.ENCODING = "iso-8859-1"
+
+_NON_DIMENSION_COLUMNS = frozenset({"serie", "valor"})
+
+
+def _num_scenarios_in_first_year_block(df: pd.DataFrame) -> int:
+    anos = df["data"].dt.year.unique().tolist()
+    first_block = df.loc[df["data"].dt.year == anos[0]]
+    divisor = 1
+    for col in first_block.columns:
+        if col not in _NON_DIMENSION_COLUMNS:
+            divisor *= int(first_block[col].nunique())
+    return int(first_block.shape[0] // divisor)
+
+
+# nwlistop outputs used to read the true final-simulation scenario count
+_SCENARIO_COUNT_PROBE_CANDIDATES: list[Tuple[Variable, SpatialResolution]] = [
+    (Variable.GERACAO_TERMICA, SpatialResolution.SISTEMA_INTERLIGADO),
+    (
+        Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
+        SpatialResolution.SISTEMA_INTERLIGADO,
+    ),
+    (
+        Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA,
+        SpatialResolution.SISTEMA_INTERLIGADO,
+    ),
+    (Variable.CUSTO_MARGINAL_OPERACAO, SpatialResolution.SUBMERCADO),
+    (Variable.GERACAO_TERMICA, SpatialResolution.SUBMERCADO),
+    (
+        Variable.ENERGIA_ARMAZENADA_ABSOLUTA_FINAL,
+        SpatialResolution.RESERVATORIO_EQUIVALENTE,
+    ),
+    (
+        Variable.ENERGIA_NATURAL_AFLUENTE_ABSOLUTA,
+        SpatialResolution.RESERVATORIO_EQUIVALENTE,
+    ),
+    (Variable.GERACAO_HIDRAULICA, SpatialResolution.USINA_HIDROELETRICA),
+    (Variable.VAZAO_AFLUENTE, SpatialResolution.USINA_HIDROELETRICA),
+    (
+        Variable.VOLUME_ARMAZENADO_ABSOLUTO_FINAL,
+        SpatialResolution.USINA_HIDROELETRICA,
+    ),
+]
 
 
 class AbstractFilesRepository(ABC):
@@ -154,6 +196,10 @@ class AbstractFilesRepository(ABC):
         pass
 
     @abstractmethod
+    def get_num_scenarios_from_output(self) -> Optional[int]:
+        pass
+
+    @abstractmethod
     def get_nwlistcf_cortes(self) -> Optional[Nwlistcfrel]:
         raise NotImplementedError
 
@@ -222,6 +268,7 @@ class RawFilesRepository(AbstractFilesRepository):
     def __init__(self, tmppath: str, version: str = "latest"):
         self.__tmppath = tmppath
         self.__version = version
+        self.__num_scenarios_from_output: Optional[int] = None
         self.__caso = Caso.read(join(str(self.__tmppath), "caso.dat"))
         self.__arquivos: Optional[Arquivos] = None
         self.__indices: Optional[pd.DataFrame] = None
@@ -525,9 +572,48 @@ class RawFilesRepository(AbstractFilesRepository):
             if regra is None:
                 return None
             df = regra(self.__tmppath, *args, **kwargs)
+            if (
+                self.__num_scenarios_from_output is None
+                and df is not None
+                and not df.empty
+                and "data" in df.columns
+            ):
+                self.__num_scenarios_from_output = (
+                    _num_scenarios_in_first_year_block(df)
+                )
             return df
         except Exception:
             return None
+
+    def _probe_hydro_codes(self) -> list[int]:
+        confhd = self.get_confhd()
+        if confhd is None:
+            return []
+        usinas = confhd.usinas
+        if usinas is None or usinas.empty:
+            return []
+        return [int(c) for c in usinas["codigo_usina"].tolist()]
+
+    def _probe_call_args(
+        self, spatial_resolution: SpatialResolution
+    ) -> Iterator[Tuple[Any, ...]]:
+        if spatial_resolution == SpatialResolution.SISTEMA_INTERLIGADO:
+            yield ("",)
+        elif spatial_resolution == SpatialResolution.USINA_HIDROELETRICA:
+            for code in self._probe_hydro_codes():
+                yield (code,)  
+        else:
+            yield ()
+
+    def get_num_scenarios_from_output(self) -> Optional[int]:
+        if self.__num_scenarios_from_output is not None:
+            return self.__num_scenarios_from_output
+        for variable, spatial_resolution in _SCENARIO_COUNT_PROBE_CANDIDATES:
+            for probe_args in self._probe_call_args(spatial_resolution):
+                self.get_nwlistop(variable, spatial_resolution, *probe_args)
+                if self.__num_scenarios_from_output is not None:
+                    return self.__num_scenarios_from_output
+        return None
 
     def get_nwlistcf_cortes(self) -> Optional[Nwlistcfrel]:
         if self.__nwlistcf is None:

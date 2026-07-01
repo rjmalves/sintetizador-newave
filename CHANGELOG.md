@@ -7,6 +7,16 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 
+## [2.4.4]
+
+### Fixed
+
+- Correção de erro de incompatibilidade de dimensões (`ShapeError`) na síntese da operação de decks com simulação final **histórica**. O número de cenários era estimado por uma heurística baseada em `dger.dat`/`shist.dat` (comprimento do histórico de vazões + deslocamento do _ring buffer_ do NEWAVE), que podia divergir do total efetivamente presente na saída do NWLISTOP e, ao ser usado para replicar variáveis determinísticas por cenário (`MER`, `MERL`, `GUNS` em `generate_scenarios`), gerava dimensão inconsistente com as demais variáveis.
+
+### Changed
+
+- O número de cenários da simulação final passa a ser lido diretamente da saída do NWLISTOP (`num_scenarios_final_simulation`), e não mais da heurística `num_history_years`. A contagem é derivada de forma genérica a partir do primeiro bloco anual de qualquer arquivo `valores` — `linhas / ∏ distinto(dimensão)` sobre todas as colunas exceto `serie` e `valor` — o que a torna correta para estudos que iniciam fora de janeiro (meses ausentes/nulos) e independente dos rótulos de cenário deslocados pelo _ring buffer_ histórico. A contagem é capturada, sem leitura extra, do primeiro arquivo já lido durante a síntese; na ausência dela, há sondagem por ordem de prioridade (SIN → submercado/REE → por usina hidroelétrica).
+
 ## [2.4.3]
 
 ### Fixed

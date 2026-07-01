@@ -1,4 +1,5 @@
 from datetime import datetime
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -56,6 +57,19 @@ def test_num_synthetic_scenarios_final_simulation(test_settings):
 def test_num_history_years(test_settings):
     val = deck.num_history_years(uow)
     assert val == 90
+
+
+def test_num_scenarios_final_simulation_historical_reads_from_output(
+    test_settings,
+):
+    # For a historical final simulation the count must come from the actual
+    # nwlistop output (7 series in the mock), not the dger/shist heuristic
+    # (num_history_years == 90) which can disagree with the real output.
+    from app.services.deck import temporal
+
+    with patch.object(temporal, "final_simulation_type", return_value=2):
+        val = temporal.num_scenarios_final_simulation(Deck, {}, uow)
+    assert val == 7
 
 
 def test_num_thermal_maintenance_years(test_settings):

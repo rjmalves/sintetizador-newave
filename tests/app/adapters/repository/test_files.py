@@ -1,6 +1,14 @@
+import itertools
+from datetime import datetime
+from unittest import mock
+
+import numpy as np
 import pandas as pd
 
-from app.adapters.repository.files import factory
+from app.adapters.repository.files import (
+    _num_scenarios_in_first_year_block,
+    factory,
+)
 from app.model.operation import (
     spatialresolution as operationspatialresolution,
 )
@@ -860,3 +868,118 @@ def test_get_nwlistop(test_settings):
         ),
         pd.DataFrame,
     )
+
+
+def _build_valores(
+    labels_per_year,
+    *,
+    num_patamares=0,
+    entities=(),
+    null_months=(),
+):
+    patamares = list(range(1, num_patamares + 1)) if num_patamares else [None]
+    ents = list(entities) if entities else [None]
+    records = []
+    for year_offset, labels in enumerate(labels_per_year):
+        year = 2027 + year_offset
+        for month, serie, pat, ent in itertools.product(
+            range(1, 13), labels, patamares, ents
+        ):
+            rec = {
+                "data": datetime(year, month, 1),
+                "serie": serie,
+                "valor": np.nan if month in null_months else 1.0,
+            }
+            if pat is not None:
+                rec["patamar"] = pat
+            if ent is not None:
+                rec["classe"] = ent
+            records.append(rec)
+    return pd.DataFrame.from_records(records)
+
+
+def test_num_scenarios_first_block_synthetic_contiguous():
+    df = _build_valores([[1, 2, 3, 4, 5]] * 3, num_patamares=2)
+    assert _num_scenarios_in_first_year_block(df) == 5
+
+
+def test_num_scenarios_first_block_ignores_ring_buffer_labels():
+    # Per-block count is 4, but the union of shifting history-year labels is
+    # 5 (the trap): the count must not be derived from distinct serie labels.
+    df = _build_valores(
+        [[1942, 1943, 2023, 1931], [1943, 2023, 1931, 1932]],
+        num_patamares=3,
+    )
+    assert df["serie"].nunique() == 5
+    assert _num_scenarios_in_first_year_block(df) == 4
+
+
+def test_num_scenarios_first_block_midyear_nulls_kept():
+    df = _build_valores(
+        [[1, 2, 3]] * 2, num_patamares=2, null_months=range(1, 9)
+    )
+    assert _num_scenarios_in_first_year_block(df) == 3
+
+
+def test_num_scenarios_first_block_midyear_nulls_dropped():
+    df = _build_valores(
+        [[1, 2, 3]] * 2, num_patamares=2, null_months=range(1, 9)
+    )
+    df = df.dropna(subset=["valor"]).reset_index(drop=True)
+    assert _num_scenarios_in_first_year_block(df) == 3
+
+
+def test_num_scenarios_first_block_by_plant_entity():
+    df = _build_valores(
+        [[1, 2, 3, 4]] * 2, num_patamares=2, entities=(10, 20, 30)
+    )
+    assert _num_scenarios_in_first_year_block(df) == 4
+
+
+def test_num_scenarios_first_block_no_patamar():
+    df = _build_valores([[1, 2, 3, 4, 5, 6]] * 2)
+    assert _num_scenarios_in_first_year_block(df) == 6
+
+
+def test_get_num_scenarios_from_output(test_settings):
+    repo = factory("FS", DECK_TEST_DIR)
+    assert repo.get_num_scenarios_from_output() == 7
+
+
+def test_get_nwlistop_captures_scenario_count(test_settings):
+    repo = factory("FS", DECK_TEST_DIR)
+    # Reading any output caches the count, so no dedicated re-read is needed.
+    repo.get_nwlistop(
+        operationvariable.Variable.CUSTO_MARGINAL_OPERACAO,
+        operationspatialresolution.SpatialResolution.SUBMERCADO,
+    )
+    assert repo.get_num_scenarios_from_output() == 7
+
+
+def test_probe_call_args_by_resolution(test_settings):
+    repo = factory("FS", DECK_TEST_DIR)
+    sr = operationspatialresolution.SpatialResolution
+    assert list(repo._probe_call_args(sr.SISTEMA_INTERLIGADO)) == [("",)]
+    assert list(repo._probe_call_args(sr.SUBMERCADO)) == [()]
+    assert list(repo._probe_call_args(sr.RESERVATORIO_EQUIVALENTE)) == [()]
+    uhe_args = list(repo._probe_call_args(sr.USINA_HIDROELETRICA))
+    assert len(uhe_args) == len(repo._probe_hydro_codes())
+    assert uhe_args and all(len(a) == 1 for a in uhe_args)
+
+
+def test_get_num_scenarios_from_output_uhe_fallback(test_settings):
+    import app.adapters.repository.files as files_mod
+
+    # Force the per-plant (lowest-priority) branch: it must still find the
+    # count by iterating actual hydro codes to a plant that has output.
+    only_uhe = [
+        (
+            operationvariable.Variable.GERACAO_HIDRAULICA,
+            operationspatialresolution.SpatialResolution.USINA_HIDROELETRICA,
+        ),
+    ]
+    repo = factory("FS", DECK_TEST_DIR)
+    with mock.patch.object(
+        files_mod, "_SCENARIO_COUNT_PROBE_CANDIDATES", only_uhe
+    ):
+        assert repo.get_num_scenarios_from_output() == 7

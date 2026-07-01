@@ -230,7 +230,7 @@ def num_scenarios_final_simulation(
     val = cache.get("num_scenarios_final_simulation")
     if val is None:
         if final_simulation_type(deck_cls, cache, uow) == 2:
-            val = num_history_years(deck_cls, cache, uow)
+            val = readers.get_num_scenarios_from_output(deck_cls, uow)
         else:
             val = num_synthetic_scenarios_final_simulation(deck_cls, cache, uow)
         cache["num_scenarios_final_simulation"] = val
