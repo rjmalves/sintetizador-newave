@@ -22,7 +22,7 @@ from app.services.synthesis.operation.pipeline import (
 )
 from app.services.unitofwork import AbstractUnitOfWork
 from app.utils.log import Log
-from app.utils.parallel import create_executor
+from app.utils.parallel import executor_scope
 from app.utils.timing import time_and_log
 
 if TYPE_CHECKING:
@@ -75,7 +75,7 @@ def _resolve_SBM_MER_MERL(
     with time_and_log(
         message_root="Tempo para obter dados de SBM", logger=cls.logger
     ):
-        with create_executor(n_procs) as executor:
+        with executor_scope(n_procs) as executor:
             futures = {
                 idx: executor.submit(
                     cls._resolve_SBM_entity_MER_MERL, uow, synthesis, idx, name

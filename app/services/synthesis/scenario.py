@@ -46,7 +46,7 @@ from app.services.deck.deck import Deck
 from app.services.unitofwork import AbstractUnitOfWork
 from app.utils.log import Log
 from app.utils.operations import calc_statistics
-from app.utils.parallel import create_executor
+from app.utils.parallel import executor_scope
 from app.utils.regex import match_variables_with_wildcards
 from app.utils.timing import time_and_log
 
@@ -869,7 +869,7 @@ class ScenarioSynthetizer:
             message_root="Tempo para obter energias forward",
             logger=cls.logger,
         ):
-            with create_executor(num_procs) as executor:
+            with executor_scope(num_procs) as executor:
                 futures = {
                     it: executor.submit(
                         cls._resolve_forward_energy_iteration, uow, it
@@ -917,7 +917,7 @@ class ScenarioSynthetizer:
             message_root="Tempo para obter vazoes forward",
             logger=cls.logger,
         ):
-            with create_executor(num_procs) as executor:
+            with executor_scope(num_procs) as executor:
                 futures = {
                     it: executor.submit(
                         cls._resolve_forward_inflow_iteration, uow, it
@@ -974,7 +974,7 @@ class ScenarioSynthetizer:
             message_root="Tempo para obter energias backward",
             logger=cls.logger,
         ):
-            with create_executor(num_procs) as executor:
+            with executor_scope(num_procs) as executor:
                 futures = {
                     it: executor.submit(
                         cls._resolve_backward_energy_iteration, uow, it
@@ -1022,7 +1022,7 @@ class ScenarioSynthetizer:
             message_root="Tempo para obter vazoes backward",
             logger=cls.logger,
         ):
-            with create_executor(num_procs) as executor:
+            with executor_scope(num_procs) as executor:
                 futures = {
                     it: executor.submit(
                         cls._resolve_backward_inflow_iteration, uow, it

@@ -1,6 +1,7 @@
 import logging
 import sys as _sys
 from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures.process import BrokenProcessPool
 from logging import ERROR, INFO, WARNING
 from traceback import print_exc
 from typing import Any, Dict, List, Optional
@@ -450,6 +451,13 @@ class OperationSynthetizer:
                         WARNING,
                     )
                 return None
+            except BrokenProcessPool:
+                # A worker died abruptly (e.g. polars ThreadPoolBuildError
+                # from thread/memory exhaustion). The pool is unusable and
+                # continuing would only log the same failure per remaining
+                # variable and then hang at interpreter exit joining the
+                # dead pool. Propagate so synthetize() aborts the run.
+                raise
             except Exception as e:
                 print_exc()
                 cls._log(str(e), ERROR)
@@ -490,29 +498,47 @@ class OperationSynthetizer:
             success_synthesis: List[OperationSynthesis] = []
             current_resolution: Optional[SpatialResolution] = None
             current_executor: Optional[ProcessPoolExecutor] = None
-            for s in synthesis_with_dependencies:
-                if s.spatial_resolution != current_resolution:
-                    # Resolution boundary: shut down the old executor (if any)
-                    # and open a new one for the incoming resolution group.
-                    if current_executor is not None:
-                        current_executor.shutdown(wait=True)
-                    current_resolution = s.spatial_resolution
-                    # SIN variables do not use a pool; skip executor creation.
-                    if (
-                        current_resolution
-                        != SpatialResolution.SISTEMA_INTERLIGADO
-                    ):
-                        current_executor = _pkg().create_executor(n_procs)
-                    else:
-                        current_executor = None
-                r = cls._synthetize_single_variable(
-                    s, uow, deck_context, current_executor
+            try:
+                for s in synthesis_with_dependencies:
+                    if s.spatial_resolution != current_resolution:
+                        # Resolution boundary: shut down the old executor
+                        # (if any) and open a new one for the incoming group.
+                        if current_executor is not None:
+                            current_executor.shutdown(wait=True)
+                        current_resolution = s.spatial_resolution
+                        # SIN variables do not use a pool; skip creation.
+                        if (
+                            current_resolution
+                            != SpatialResolution.SISTEMA_INTERLIGADO
+                        ):
+                            current_executor = _pkg().create_executor(n_procs)
+                        else:
+                            current_executor = None
+                    r = cls._synthetize_single_variable(
+                        s, uow, deck_context, current_executor
+                    )
+                    if r:
+                        success_synthesis.append(r)
+                # Shut down the final group's executor after the loop.
+                if current_executor is not None:
+                    current_executor.shutdown(wait=True)
+                    current_executor = None
+            except BrokenProcessPool:
+                # Never wait() on a dead pool — that is the hang that leaves
+                # the Slurm job running forever. Cancel pending work and
+                # re-raise; the CLI entrypoint turns this into a non-zero
+                # exit so the batch job returns.
+                if current_executor is not None:
+                    current_executor.shutdown(wait=False, cancel_futures=True)
+                    current_executor = None
+                cls._log(
+                    "Pool de processos inutilizavel: um worker terminou "
+                    "abruptamente (provavel exaustao de threads/memoria com "
+                    f"PROCESSADORES={n_procs}). Abortando a sintese da "
+                    "operacao.",
+                    ERROR,
                 )
-                if r:
-                    success_synthesis.append(r)
-            # Shut down the final group's executor after the loop completes.
-            if current_executor is not None:
-                current_executor.shutdown(wait=True)
+                raise
 
             cls._export_stats(uow)
             cls._export_metadata(success_synthesis, uow)

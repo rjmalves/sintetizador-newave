@@ -66,7 +66,14 @@ class Log(metaclass=Singleton):
 
     @classmethod
     def start_logging_process(cls, q: MPQueue[logging.LogRecord]) -> None:
-        cls.listener = Process(target=cls.logging_process, args=(q,))
+        # daemon=True so multiprocessing's atexit handler terminates this
+        # ``while True`` listener instead of join()-ing it forever. Without
+        # it, an error path that skips terminate_logging_process() (e.g. a
+        # BrokenProcessPool abort) leaves the process hanging at exit and the
+        # Slurm batch job never returns.
+        cls.listener = Process(
+            target=cls.logging_process, args=(q,), daemon=True
+        )
         cls.listener.start()
 
     @classmethod

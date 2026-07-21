@@ -7,6 +7,17 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 
+## [2.4.5]
+
+### Fixed
+
+- Recorrência de `ThreadPoolBuildError`/`BrokenProcessPool` (`Resource temporarily unavailable`, `errno 11`) na síntese em nós grandes de HPC/nuvem, mesmo após o cap de threads por worker da 2.4.3. Duas causas remanescentes foram tratadas: (1) o número de workers era limitado por `os.cpu_count()`, que reporta os núcleos do **nó inteiro** e ignora a fatia efetivamente alocada ao job (cpuset do Slurm/cgroup, `taskset`), permitindo super-lotação; agora o teto usa `os.sched_getaffinity` e as variáveis `SLURM_CPUS_PER_TASK`/`SLURM_CPUS_ON_NODE`. (2) Nada limitava o número de workers contra o **orçamento de threads por usuário** (`RLIMIT_NPROC`/`ulimit -u` e `pids.max` do cgroup); o número de workers agora é reduzido para caber nesse orçamento, com aviso no logger indicando a restrição vigente.
+- Travamento em que o job do Slurm nunca retornava quando um worker morria abruptamente. O processo _listener_ de logging (`multiprocessing.Process` em laço `while True`) não era daemon e não era encerrado no caminho de erro, fazendo o _atexit_ do `multiprocessing` bloquear indefinidamente no `join()`. O _listener_ passa a ser daemon; um pool corrompido é encerrado sem `wait=True` (novo `executor_scope`) e o ponto de entrada da CLI captura `BrokenProcessPool`, registra a causa provável e força saída imediata com código não-zero, de modo que o job em lote sempre retorne.
+
+### Added
+
+- No início da CLI, o limite _soft_ de `RLIMIT_NPROC` é elevado ao limite _hard_ (`raise_soft_nproc_limit`), dando ao pool de workers a maior folga de threads que o host permite sem exigir `ulimit -u` no _launcher_. Os processos filhos (workers e _forkserver_) herdam o limite elevado. Melhor esforço: silencioso onde `resource` não existe (Windows) ou a chamada é recusada.
+
 ## [2.4.4]
 
 ### Fixed
