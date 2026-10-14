@@ -7,6 +7,16 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 
+## [2.4.6]
+
+### Fixed
+
+- Falha da síntese da operação (`ValueError: year 0 is out of range`, ao ler o `patamar.dat` para obter a duração dos patamares) em decks cujo bloco de usinas não simuladas rotula a fonte no cabeçalho de cada submercado/bloco (p.ex. `   1   1 SUDESTE BIO`). O inewave 1.13.0 fixado no `uv.lock` lia esses cabeçalhos como linhas de dados; a leitura foi corrigida no inewave 1.14.0 ([inewave#119](https://github.com/rjmalves/inewave/issues/119)).
+
+### Changed
+
+- Dependência mínima `inewave>=1.16.1` (antes `>=1.13.0`), com o `uv.lock` atualizado para inewave 1.16.1 e cfinterface 1.10.1. Instalações com `uv sync --frozen` passam a receber a leitura corrigida.
+
 ## [2.4.5]
 
 ### Fixed

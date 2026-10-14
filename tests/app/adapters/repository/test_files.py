@@ -1,4 +1,7 @@
 import itertools
+import pathlib
+import re
+import shutil
 from datetime import datetime
 from unittest import mock
 
@@ -56,6 +59,28 @@ def test_get_patamar(test_settings):
     repo = factory("FS", DECK_TEST_DIR)
     patamar = repo.get_patamar()
     assert isinstance(patamar.usinas_nao_simuladas, pd.DataFrame)
+
+
+def test_get_patamar_unsi_header_with_source_label(test_settings, tmp_path):
+    # Decks que rotulam a fonte no cabeçalho do bloco de usinas não simuladas
+    # ("   1   1 SUDESTE BIO") faziam o inewave < 1.14 ler o cabeçalho como
+    # linha de dados: tabela errada ou "year 0 is out of range".
+    for name in ("caso.dat", "arquivos.dat"):
+        shutil.copy(pathlib.Path(DECK_TEST_DIR, name), tmp_path)
+    original = pathlib.Path(DECK_TEST_DIR, "patamar.dat").read_text()
+    marker = original.index("BLOCO DE USINAS NAO SIMULADAS")
+    unsi_block, n_headers = re.subn(
+        r"(?m)^( +\d+ +\d+)$", r"\1 SUDESTE BIO", original[marker:]
+    )
+    assert n_headers > 0
+    (tmp_path / "patamar.dat").write_text(original[:marker] + unsi_block)
+
+    expected = factory("FS", DECK_TEST_DIR).get_patamar().usinas_nao_simuladas
+    unsi = factory("FS", str(tmp_path)).get_patamar().usinas_nao_simuladas
+
+    columns = ["codigo_submercado", "indice_bloco", "data", "patamar", "valor"]
+    pd.testing.assert_frame_equal(unsi[columns], expected[columns])
+    assert set(unsi["fonte"].str.strip()) == {"SUDESTE BIO"}
 
 
 def test_get_newavetim(test_settings):

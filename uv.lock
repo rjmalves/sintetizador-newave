@@ -6,10 +6,10 @@ resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'emscripten'",
     "python_full_version >= '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'win32'",
-    "python_full_version < '3.12' and sys_platform == 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'emscripten'",
-    "python_full_version < '3.12' and sys_platform == 'emscripten'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version < '3.12' and sys_platform == 'win32'",
+    "python_full_version < '3.12' and sys_platform == 'emscripten'",
     "python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 
@@ -76,14 +76,14 @@ wheels = [
 
 [[package]]
 name = "cfinterface"
-version = "1.9.1"
+version = "1.10.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/90/e1/68740564e0e1b2ae65c87d129a1f168b25446184297d4b9a6c128718af70/cfinterface-1.9.1.tar.gz", hash = "sha256:dac30e7b42f01856645787ac36d56340e8e8ccc9d05ab515522d74bb591e72aa", size = 251514, upload-time = "2026-03-08T19:16:10.571Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/fb/b9/425e3eb6bf06778e55771a057db1f6f696ea53cae826ad1851062cc96c19/cfinterface-1.10.1.tar.gz", hash = "sha256:18cbefd0e3cde531a76040cc8aae99584a03bfccb066bec489d55a18e0a09944", size = 82009, upload-time = "2026-04-13T13:17:05.169Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e9/08/5f1d8d17561fa9e8d9524a83e7504d2e9bc444cdc605fac825f77172b39c/cfinterface-1.9.1-py3-none-any.whl", hash = "sha256:2220f560680ae2460e812d24d9336baf34a3e8d4c0ac43fe2163de0866060068", size = 41970, upload-time = "2026-03-08T19:16:09.103Z" },
+    { url = "https://files.pythonhosted.org/packages/08/41/70bd41267a4bc8f26bd96faea977f853f3f7b72776a44503042a412e7943/cfinterface-1.10.1-py3-none-any.whl", hash = "sha256:9de23ac94ac2f8ba56d215d773df32ce429ad2db2260894356913e961cc7ef82", size = 42112, upload-time = "2026-04-13T13:17:03.649Z" },
 ]
 
 [[package]]
@@ -497,16 +497,16 @@ wheels = [
 
 [[package]]
 name = "inewave"
-version = "1.13.0"
+version = "1.16.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cfinterface" },
     { name = "numpy" },
     { name = "pandas" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1b/bb/1c6df246d3c5252dc7605e290147560c6182b3000ceccffb8469c94255f7/inewave-1.13.0.tar.gz", hash = "sha256:7156352bac195f1342e19e20b798528edfdd0a839c2816d5c3a0f1112478c3b3", size = 14236085, upload-time = "2026-03-08T19:34:09.045Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/11/1d/b910f7368cd589412c29dbda48fd2d019ceefac6cf2669fcc6f01cc87964/inewave-1.16.1.tar.gz", hash = "sha256:b5d0f8f4a2d19e33d9a9ed791d76a535bc6d58d3ed0bdd2bc3dba1d371a5e282", size = 14297913, upload-time = "2026-09-30T12:21:06.365Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d2/d0/207376c2b1aafd88ddf035e564def2ef103cca8cfcc3bbaa8598cf52cbf8/inewave-1.13.0-py3-none-any.whl", hash = "sha256:8e0afa54c85ea87c4b8194667049536e3e7a0b89a1f58410675a7ac543cafd15", size = 440654, upload-time = "2026-03-08T19:34:06.963Z" },
+    { url = "https://files.pythonhosted.org/packages/33/88/59abcdbeca7e50a58c8bcd80914d42db576e774ea16cd4ca8a5fae533075/inewave-1.16.1-py3-none-any.whl", hash = "sha256:bb8237b0283f840181570de7ed0fe469c6fde0ff6e61f8ff0c7a1de93f795a09", size = 455632, upload-time = "2026-09-30T12:21:04.386Z" },
 ]
 
 [[package]]
@@ -1488,7 +1488,7 @@ dev = [
 requires-dist = [
     { name = "click", specifier = ">=8.1.7" },
     { name = "furo", marker = "extra == 'dev'" },
-    { name = "inewave", specifier = ">=1.13.0" },
+    { name = "inewave", specifier = ">=1.16.1" },
     { name = "matplotlib", marker = "extra == 'dev'" },
     { name = "mypy", marker = "extra == 'dev'" },
     { name = "numpydoc", marker = "extra == 'dev'" },
@@ -1543,23 +1543,23 @@ resolution-markers = [
     "python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "alabaster", marker = "python_full_version < '3.12'" },
-    { name = "babel", marker = "python_full_version < '3.12'" },
-    { name = "colorama", marker = "python_full_version < '3.12' and sys_platform == 'win32'" },
-    { name = "docutils", marker = "python_full_version < '3.12'" },
-    { name = "imagesize", marker = "python_full_version < '3.12'" },
-    { name = "jinja2", marker = "python_full_version < '3.12'" },
-    { name = "packaging", marker = "python_full_version < '3.12'" },
-    { name = "pygments", marker = "python_full_version < '3.12'" },
-    { name = "requests", marker = "python_full_version < '3.12'" },
-    { name = "roman-numerals", marker = "python_full_version < '3.12'" },
-    { name = "snowballstemmer", marker = "python_full_version < '3.12'" },
-    { name = "sphinxcontrib-applehelp", marker = "python_full_version < '3.12'" },
-    { name = "sphinxcontrib-devhelp", marker = "python_full_version < '3.12'" },
-    { name = "sphinxcontrib-htmlhelp", marker = "python_full_version < '3.12'" },
-    { name = "sphinxcontrib-jsmath", marker = "python_full_version < '3.12'" },
-    { name = "sphinxcontrib-qthelp", marker = "python_full_version < '3.12'" },
-    { name = "sphinxcontrib-serializinghtml", marker = "python_full_version < '3.12'" },
+    { name = "alabaster" },
+    { name = "babel" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "docutils" },
+    { name = "imagesize" },
+    { name = "jinja2" },
+    { name = "packaging" },
+    { name = "pygments" },
+    { name = "requests" },
+    { name = "roman-numerals" },
+    { name = "snowballstemmer" },
+    { name = "sphinxcontrib-applehelp" },
+    { name = "sphinxcontrib-devhelp" },
+    { name = "sphinxcontrib-htmlhelp" },
+    { name = "sphinxcontrib-jsmath" },
+    { name = "sphinxcontrib-qthelp" },
+    { name = "sphinxcontrib-serializinghtml" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/42/50/a8c6ccc36d5eacdfd7913ddccd15a9cee03ecafc5ee2bc40e1f168d85022/sphinx-9.0.4.tar.gz", hash = "sha256:594ef59d042972abbc581d8baa577404abe4e6c3b04ef61bd7fc2acbd51f3fa3", size = 8710502, upload-time = "2025-12-04T07:45:27.343Z" }
 wheels = [
@@ -1579,23 +1579,23 @@ resolution-markers = [
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "alabaster", marker = "python_full_version >= '3.12'" },
-    { name = "babel", marker = "python_full_version >= '3.12'" },
-    { name = "colorama", marker = "python_full_version >= '3.12' and sys_platform == 'win32'" },
-    { name = "docutils", marker = "python_full_version >= '3.12'" },
-    { name = "imagesize", marker = "python_full_version >= '3.12'" },
-    { name = "jinja2", marker = "python_full_version >= '3.12'" },
-    { name = "packaging", marker = "python_full_version >= '3.12'" },
-    { name = "pygments", marker = "python_full_version >= '3.12'" },
-    { name = "requests", marker = "python_full_version >= '3.12'" },
-    { name = "roman-numerals", marker = "python_full_version >= '3.12'" },
-    { name = "snowballstemmer", marker = "python_full_version >= '3.12'" },
-    { name = "sphinxcontrib-applehelp", marker = "python_full_version >= '3.12'" },
-    { name = "sphinxcontrib-devhelp", marker = "python_full_version >= '3.12'" },
-    { name = "sphinxcontrib-htmlhelp", marker = "python_full_version >= '3.12'" },
-    { name = "sphinxcontrib-jsmath", marker = "python_full_version >= '3.12'" },
-    { name = "sphinxcontrib-qthelp", marker = "python_full_version >= '3.12'" },
-    { name = "sphinxcontrib-serializinghtml", marker = "python_full_version >= '3.12'" },
+    { name = "alabaster" },
+    { name = "babel" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "docutils" },
+    { name = "imagesize" },
+    { name = "jinja2" },
+    { name = "packaging" },
+    { name = "pygments" },
+    { name = "requests" },
+    { name = "roman-numerals" },
+    { name = "snowballstemmer" },
+    { name = "sphinxcontrib-applehelp" },
+    { name = "sphinxcontrib-devhelp" },
+    { name = "sphinxcontrib-htmlhelp" },
+    { name = "sphinxcontrib-jsmath" },
+    { name = "sphinxcontrib-qthelp" },
+    { name = "sphinxcontrib-serializinghtml" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/cd/bd/f08eb0f4eed5c83f1ba2a3bd18f7745a2b1525fad70660a1c00224ec468a/sphinx-9.1.0.tar.gz", hash = "sha256:7741722357dd75f8190766926071fed3bdc211c74dd2d7d4df5404da95930ddb", size = 8718324, upload-time = "2025-12-31T15:09:27.646Z" }
 wheels = [
