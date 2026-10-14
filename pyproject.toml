@@ -10,7 +10,7 @@ dependencies = [
     "polars>=1.0.0",
     "pyarrow>=18.0.0",
     "click>=8.1.7",
-    "inewave>=1.13.0",
+    "inewave>=1.16.1",
 ]
 requires-python = ">= 3.11"
 authors = [
